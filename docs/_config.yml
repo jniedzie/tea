@@ -25,7 +25,7 @@ email: jeremi.niedziela@cern.ch
 description: >- # this means to ignore newlines until "baseurl:"
   Documentation website for TEA -- Toolkit for Efficient Analysis.
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+url: "https://jniedzie.github.io/tea/"
 github_username:  jniedzie
 
 # Build settings
