@@ -21,3 +21,50 @@ Upcoming features:
 - calculating limits with Combine, 
 
 For these instructions we will use a scenario in which you start working on a ttH analysis.
+
+
+<!-- [<img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" width="100" height="100">]("{{site.baseurl}}/docs/general_concepts/") -->
+
+
+<div class="grid-container">
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="20" height="20">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+    </a>
+  </div>
+</div>

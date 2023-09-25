@@ -28,3 +28,53 @@
   background-color: #EB6864;
   color: #fff;
 }
+
+/* CSS for the image link */
+.image-link {
+  position: relative;
+  display: inline-block; /* Ensure it takes the size of its content */
+}
+
+.image-link a {
+  display: block; /* Make the anchor fill the entire container */
+}
+
+.image-link img {
+  width: 100%; /* Ensure the image takes the full width of the container */
+  height: auto; /* Maintain the image's aspect ratio */
+  transition: transform 0.3s;
+}
+
+/* Hover effect */
+.image-link:hover img {
+  transform: scale(1.1); /* Increase size by 5% on hover */
+  /* box-shadow: 0 0 0 5px rgba(255, 0, 0, 0.5); */
+}
+
+/* CSS for the grid container */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Adjust the number of columns as needed */
+  gap: 10px; /* Adjust the gap between buttons */
+}
+
+/* CSS for the image links */
+.image-link {
+  position: relative;
+  display: inline-block;
+}
+
+.image-link a {
+  display: block;
+}
+
+.image-link img {
+  width: 100%;
+  height: auto;
+  transition: transform 0.3s;
+}
+
+/* Hover effect */
+.image-link:hover img {
+  transform: scale(1.05);
+}
