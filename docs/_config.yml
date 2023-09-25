@@ -29,6 +29,8 @@ bootwatch: paper
 # bootwatch: united
 # bootwatch: yeti
 
+theme: minima
+
 #
 # Build settings
 markdown: kramdown
