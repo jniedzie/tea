@@ -1,2 +1,0 @@
-/Users/jeremi/miniforge3/envs/tta/bin/arm64-apple-darwin20.0.0-ar qc libcore.a CMakeFiles/core.dir/src/ConfigManager.cpp.o CMakeFiles/core.dir/src/CutFlowManager.cpp.o CMakeFiles/core.dir/src/Event.cpp.o CMakeFiles/core.dir/src/EventReader.cpp.o CMakeFiles/core.dir/src/EventWriter.cpp.o CMakeFiles/core.dir/src/PhysicsObject.cpp.o
-/Users/jeremi/miniforge3/envs/tta/bin/llvm-ranlib libcore.a

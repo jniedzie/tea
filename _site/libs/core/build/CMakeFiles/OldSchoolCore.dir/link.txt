@@ -1,2 +1,0 @@
-/Users/jeremi/miniforge3/envs/tta/bin/arm64-apple-darwin20.0.0-ar qc libOldSchoolCore.a CMakeFiles/OldSchoolCore.dir/src/EventReader.cpp.o CMakeFiles/OldSchoolCore.dir/src/EventWriter.cpp.o CMakeFiles/OldSchoolCore.dir/src/Event.cpp.o CMakeFiles/OldSchoolCore.dir/src/PhysicsObject.cpp.o
-/Users/jeremi/miniforge3/envs/tta/bin/llvm-ranlib libOldSchoolCore.a
