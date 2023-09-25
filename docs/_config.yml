@@ -41,7 +41,7 @@ plugins:
   - jekyll-sitemap
 
 exclude:
-  - Gemfile
+  # - Gemfile
   - Gemfile.lock
   - .idea/
   - .gitignore
