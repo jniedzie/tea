@@ -3,3 +3,4 @@ build/*
 plots/*
 
 .vscode/*
+docs/_site/*
