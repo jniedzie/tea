@@ -1,0 +1,2 @@
+/Users/jeremi/miniforge3/envs/tta/bin/arm64-apple-darwin20.0.0-ar qc libhistogramming.a CMakeFiles/histogramming.dir/src/HistogramsHandler.cpp.o
+/Users/jeremi/miniforge3/envs/tta/bin/llvm-ranlib libhistogramming.a

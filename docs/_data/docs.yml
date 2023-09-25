@@ -1,0 +1,14 @@
+- title: Getting Started
+  docs:
+  - home
+  - repo_setup
+  - conda_env
+  - build
+
+- title: Developing your tea-based analysis
+  docs:
+  - general_concepts
+  - apps
+  - configs
+  - libs
+  

@@ -1,0 +1,82 @@
+[
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o CMakeFiles/histogrammer.dir/apps/examples/histogrammer.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/apps/examples/histogrammer.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/apps/examples/histogrammer.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o CMakeFiles/skimmer.dir/apps/examples/skimmer.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/apps/examples/skimmer.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/apps/examples/skimmer.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o CMakeFiles/core_test.dir/apps/tests/core_test.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/apps/tests/core_test.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/apps/tests/core_test.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o CMakeFiles/extensions_test.dir/apps/tests/extensions_test.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/apps/tests/extensions_test.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/apps/tests/extensions_test.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o CMakeFiles/histogramming_test.dir/apps/tests/histogramming_test.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/apps/tests/histogramming_test.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/apps/tests/histogramming_test.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/core/CMakeFiles/core.dir/src/ConfigManager.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/ConfigManager.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/ConfigManager.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/core/CMakeFiles/core.dir/src/CutFlowManager.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/CutFlowManager.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/CutFlowManager.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/core/CMakeFiles/core.dir/src/Event.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/Event.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/Event.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/core/CMakeFiles/core.dir/src/EventReader.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/EventReader.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/EventReader.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/core/CMakeFiles/core.dir/src/EventWriter.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/EventWriter.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/EventWriter.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/core/CMakeFiles/core.dir/src/PhysicsObject.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/PhysicsObject.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/core/src/PhysicsObject.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11 -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/extensions/CMakeFiles/extensions.dir/src/EventProcessor.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/EventProcessor.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/EventProcessor.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11 -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/extensions/CMakeFiles/extensions.dir/src/GenParticle.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/GenParticle.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/GenParticle.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11 -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/extensions/CMakeFiles/extensions.dir/src/HepMCParticle.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/HepMCParticle.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/HepMCParticle.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11 -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/extensions/CMakeFiles/extensions.dir/src/HistogramsFiller.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/HistogramsFiller.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/src/HistogramsFiller.cpp"
+},
+{
+  "directory": "/Users/jeremi/Documents/Physics/tea.nosync/build",
+  "command": "/usr/bin/clang++ -I/opt/homebrew/Cellar/root/6.28.04/include/root -I/Users/jeremi/Documents/Physics/tea.nosync/libs/core/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/extensions/include -I/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/include -I/usr/local/Frameworks/Python.framework/Versions/3.11/include/python3.11   -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++  -std=c++17 -m64 -pipe -fsigned-char -fno-common -Qunused-arguments -pthread -stdlib=libc++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk -mmacosx-version-min=13.2 -std=gnu++17 -o libs/histogramming/CMakeFiles/histogramming.dir/src/HistogramsHandler.cpp.o -c /Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/src/HistogramsHandler.cpp",
+  "file": "/Users/jeremi/Documents/Physics/tea.nosync/libs/histogramming/src/HistogramsHandler.cpp"
+}
+]

@@ -1,0 +1,2 @@
+/Users/jeremi/miniforge3/envs/tta/bin/arm64-apple-darwin20.0.0-ar qc libextensions.a CMakeFiles/extensions.dir/src/EventProcessor.cpp.o CMakeFiles/extensions.dir/src/GenParticle.cpp.o CMakeFiles/extensions.dir/src/HepMCParticle.cpp.o CMakeFiles/extensions.dir/src/HistogramsFiller.cpp.o
+/Users/jeremi/miniforge3/envs/tta/bin/llvm-ranlib libextensions.a
