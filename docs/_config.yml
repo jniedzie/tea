@@ -5,8 +5,8 @@ description: >
   Documentation for the tea [Toolkit for Efficient Analysis]
 lang: en-US
 
-baseurl: "/docs" # the subpath of your site, e.g. /blog/
-url: https://jniedzie.github.io/tea # the base hostname & protocol for your site
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: "" # the base hostname & protocol for your site
 git_address: https://github.com/jniedzie/tea
 
 # theme options from https://bootswatch.com/3/

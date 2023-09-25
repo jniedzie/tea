@@ -5,28 +5,28 @@
     
     {
       "title": "Welcome to tea!",
-      "url": "/docs/docs/home/"
+      "url": "/docs/home/"
     },
   
     
     
     {
       "title": "Repositories setup",
-      "url": "/docs/docs/repo_setup/"
+      "url": "/docs/repo_setup/"
     },
   
     
     
     {
       "title": "Conda environment",
-      "url": "/docs/docs/conda_env/"
+      "url": "/docs/conda_env/"
     },
   
     
     
     {
       "title": "Build the project",
-      "url": "/docs/docs/build/"
+      "url": "/docs/build/"
     },
   
 
@@ -35,28 +35,28 @@
     
     {
       "title": "General concepts",
-      "url": "/docs/docs/general_concepts/"
+      "url": "/docs/general_concepts/"
     },
   
     
     
     {
       "title": "Apps",
-      "url": "/docs/docs/apps/"
+      "url": "/docs/apps/"
     },
   
     
     
     {
       "title": "Configs",
-      "url": "/docs/docs/configs/"
+      "url": "/docs/configs/"
     },
   
     
     
     {
       "title": "Libs",
-      "url": "/docs/docs/libs/"
+      "url": "/docs/libs/"
     },
   
 
