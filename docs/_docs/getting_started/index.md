@@ -29,42 +29,42 @@ For these instructions we will use a scenario in which you start working on a tt
 <div class="grid-container">
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="20" height="20">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text" width="30" height="30">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
 </div>
