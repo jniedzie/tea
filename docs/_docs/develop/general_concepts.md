@@ -3,7 +3,7 @@ title: General concepts
 permalink: /docs/general_concepts/
 ---
 
-TEA has a very simple structure, with libraries, apps and configs:
+`tea` has a very simple structure, with libraries, apps and configs:
 
 ```
 \apps

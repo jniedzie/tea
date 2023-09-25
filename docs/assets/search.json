@@ -1,6 +1,7 @@
 ---
 permalink: search.json
 ---
+
 [
 {% for section in site.data.docs %}
   {% for item in section.docs %}
@@ -16,6 +17,7 @@ permalink: search.json
   {% for post in site.posts %}
   {
   "title": "{{ post.title | escape }}",
+  // "body": "{{ page.content | strip_html | strip_newlines | replace: '\', '\\\\' | replace: '"', '\\"' | replace: '	', '    '  }}",
   "url": "{{ post.url | relative_url }}"
   }{% unless forloop.last %},{% endunless %}
   {% endfor %}

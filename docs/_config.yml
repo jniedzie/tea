@@ -10,26 +10,8 @@ url: "" # the base hostname & protocol for your site
 git_address: https://github.com/jniedzie/tea
 
 # theme options from https://bootswatch.com/3/
-# comment out this to use default Bootstrap
-bootwatch: paper
-# bootwatch: cosmo
-# bootwatch: custom
-# bootwatch: cyborg
-# bootwatch: darkly
-# bootwatch: flatly
-# bootwatch: journal
-# bootwatch: lumen
-# bootwatch: readable
-# bootwatch: sandstone
-# bootwatch: simplex
-# bootwatch: slate
-# bootwatch: solar
-# bootwatch: spacelab
-# bootwatch: superhero
-# bootwatch: united
-# bootwatch: yeti
+bootwatch: simplex ## would be nice to modify red to be like in journal
 
-#
 # Build settings
 markdown: kramdown
 highlighter: rouge

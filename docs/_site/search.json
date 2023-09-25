@@ -4,29 +4,29 @@
     
     
     {
-      "title": "Welcome to tea!",
-      "url": "/docs/home/"
+      "title": "Welcome to <code class="monospace">tea</code>!",
+      "url": "/tea/docs/home/"
     },
   
     
     
     {
       "title": "Repositories setup",
-      "url": "/docs/repo_setup/"
+      "url": "/tea/docs/repo_setup/"
     },
   
     
     
     {
       "title": "Conda environment",
-      "url": "/docs/conda_env/"
+      "url": "/tea/docs/conda_env/"
     },
   
     
     
     {
       "title": "Build the project",
-      "url": "/docs/build/"
+      "url": "/tea/docs/build/"
     },
   
 
@@ -35,28 +35,28 @@
     
     {
       "title": "General concepts",
-      "url": "/docs/general_concepts/"
+      "url": "/tea/docs/general_concepts/"
     },
   
     
     
     {
       "title": "Apps",
-      "url": "/docs/apps/"
+      "url": "/tea/docs/apps/"
     },
   
     
     
     {
       "title": "Configs",
-      "url": "/docs/configs/"
+      "url": "/tea/docs/configs/"
     },
   
     
     
     {
       "title": "Libs",
-      "url": "/docs/libs/"
+      "url": "/tea/docs/libs/"
     },
   
 

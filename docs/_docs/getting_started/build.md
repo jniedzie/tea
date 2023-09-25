@@ -3,7 +3,7 @@ title: Build the project
 permalink: /docs/build/
 ---
 
-Building TEA together with your analysis files is very straighforward:
+Building `tea` together with your analysis files is very straighforward:
 
 ```
 mkdir build
