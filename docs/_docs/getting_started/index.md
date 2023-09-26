@@ -34,37 +34,37 @@ For these instructions we will use a scenario in which you start working on a tt
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_writer.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_grid.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_plotting.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_nano.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_hepmc.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_hist.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_skimming.png" alt="Alt Text">
     </a>
   </div>
 </div>
