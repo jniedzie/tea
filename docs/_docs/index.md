@@ -4,8 +4,13 @@ permalink: /docs/home/
 redirect_from: /docs/index.html
 ---
 
-## Introduction
-`tea` stands for Toolkit for Efficient Analysis. It is a set of loop-based tools built in C++ and Python, which will help you with:
+## About `tea`
+`tea` stands for Toolkit for Efficient Analysis. It is a set of loop-based tools built in C++ and Python developed at DESY. So far, it has been used by the following analyses:
+- [Search for long-lived ALPs in tt̄ events](https://github.com/jniedzie/tea_ttalps)
+- [Search for Hexaquarks](https://github.com/jniedzie/tea_hexaquarks)
+
+## Features
+The framework will help you with:
 - reading any kind of flat ntuples stored in ROOT files (e.g. NanoAOD or HEPMC converted to ROOT),
 - applying selections,
 - saving skimmed trees,
@@ -19,12 +24,6 @@ Upcoming features:
 - estimation of systematic uncertainties,
 - applying correction (e.g. Jet Energy Corrections, Jet Energy Resolution, Pile-Up reweighting, etc.),
 - calculating limits with Combine, 
-
-For these instructions we will use a scenario in which you start working on a ttH analysis.
-
-
-<!-- [<img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" width="100" height="100">]("{{site.baseurl}}/docs/general_concepts/") -->
-
 
 <div class="grid-container">
   <div class="image-link">

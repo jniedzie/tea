@@ -1,6 +1,9 @@
-- title: Getting Started
+- title: About <code class="monospace">tea</code>
   docs:
   - home
+
+- title: Getting Started
+  docs:
   - repo_setup
   - conda_env
   - build
