@@ -1,6 +1,8 @@
-*
-
-!docs/*
-
+# ignore all files except for "docs" directory, unless it's in docs/_site/
+# (this is a bit of a hack, but it works)
+!docs
+docs/*
+!docs/_site
 docs/_site/*
-docs/_site/
+
+*
