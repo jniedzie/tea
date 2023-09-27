@@ -1,7 +1,6 @@
-bin/*
-build/*
-plots/*
+*
 
-.vscode/*
+!docs/*
+
 docs/_site/*
 docs/_site/
