@@ -1,11 +1,12 @@
 - title: About <code class="monospace">tea</code>
   docs:
   - home
+  - example_app
+  - framework_structure
 
 - title: Getting Started
   docs:
   - repo_setup
-  - conda_env
   - build
 
 - title: Developing your <code class="monospace">tea</code>-based analysis

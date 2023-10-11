@@ -5,9 +5,9 @@ redirect_from: /docs/index.html
 ---
 
 ## About `tea`
-`tea` stands for Toolkit for Efficient Analysis. It is a set of loop-based tools built in C++ and Python developed at DESY. So far, it has been used by the following analyses:
-- [Search for long-lived ALPs in tt̄ events](https://github.com/jniedzie/tea_ttalps)
-- [Search for Hexaquarks](https://github.com/jniedzie/tea_hexaquarks)
+`tea`, which stands for Toolkit for Efficient Analysis, is a set of tools developed at DESY for analysis of any ROOT trees. It is designed for speed (CPU-intensive operations implemented in C++), based on intuitive loop-based logic, while hidding most of the tricky and tedious operations behind a user-friendly API.
+
+To get a feel for how a `tea` app looks like, have a look at an [example app]({{site.baseurl}}/docs/example_app/)
 
 ## Features
 The framework will help you with:
@@ -16,10 +16,11 @@ The framework will help you with:
 - saving skimmed trees,
 - creating cut flow tables,
 - creating histograms,
-- plotting histograms.
+- plotting histograms,
+- submission to HTCondor based grid systems (e.g. lxplus or NAF),
 
 Upcoming features:
-- submission to HTCondor based grid systems (e.g. lxplus or NAF),
+
 - optimization and verification of ABCD method for background estimation,
 - estimation of systematic uncertainties,
 - applying correction (e.g. Jet Energy Corrections, Jet Energy Resolution, Pile-Up reweighting, etc.),
@@ -67,3 +68,12 @@ Upcoming features:
     </a>
   </div>
 </div>
+
+## Analyses implemented with `tea`
+So far, `tea` has been used by the following analyses:
+- [Search for long-lived ALPs in tt̄ events](https://github.com/jniedzie/tea_ttalps)
+- [CMS HGCal beam-test analysis](https://github.com/jniedzie/tea_hgcal)
+- [Search for Hexaquarks](https://github.com/jniedzie/tea_hexaquarks)
+
+We would be more than happy to welcome you and your analysis on board! 
+You are also invited to contribute to `tea` - help us make it better and more suited for a wide range of scenarios by [creating PRs](https://github.com/jniedzie/tea/pulls), [reporting bugs and creating requests for features](https://github.com/jniedzie/tea/issues).
