@@ -1,4 +1,0 @@
-/Users/jeremi/Documents/Physics/DESY/ttalps_cms.nosync/ttalps_cms/core/build/CMakeFiles/core_test.dir
-/Users/jeremi/Documents/Physics/DESY/ttalps_cms.nosync/ttalps_cms/core/build/CMakeFiles/OldSchoolCore.dir
-/Users/jeremi/Documents/Physics/DESY/ttalps_cms.nosync/ttalps_cms/core/build/CMakeFiles/edit_cache.dir
-/Users/jeremi/Documents/Physics/DESY/ttalps_cms.nosync/ttalps_cms/core/build/CMakeFiles/rebuild_cache.dir
