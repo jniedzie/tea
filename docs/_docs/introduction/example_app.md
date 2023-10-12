@@ -13,8 +13,8 @@ Imagine a scenario in which you have a ROOT tree with branches such as "Muon_pt"
 #include "EventReader.hpp"
 
 int main() {
-  auto config = make_shared<ConfigManager>("config.py");
-  auto eventReader = make_shared<EventReader>(config);
+  ConfigManager::Initialize("config.py");
+  auto eventReader = make_shared<EventReader>();
   
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
     auto event = eventReader->GetEvent(iEvent);
@@ -48,11 +48,11 @@ Now, imagine you want to store transverse momenta of all muons in all events in 
 #include "HistogramsFiller.hpp"
 
 int main() {
-  auto config = make_shared<ConfigManager>("config.py");
-  auto eventReader = make_shared<EventReader>(config);
+  ConfigManager::Initialize("config.py");
+  auto eventReader = make_shared<EventReader>();
   
-  auto histogramsHandler = make_shared<HistogramsHandler>(config);
-  auto histogramsFiller = make_unique<HistogramsFiller>(config, histogramsHandler);
+  auto histogramsHandler = make_shared<HistogramsHandler>();
+  auto histogramsFiller = make_unique<HistogramsFiller>(histogramsHandler);
 
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
     auto event = eventReader->GetEvent(iEvent);
@@ -89,9 +89,9 @@ Finally, let's consider a scenario in which you only want to keep events which c
 #include "EventWriter.hpp"
 
 int main() {
-  auto config = make_shared<ConfigManager>("config.py");
-  auto eventReader = make_shared<EventReader>(config);
-  auto eventWriter = make_shared<EventWriter>(config, eventReader);
+  ConfigManager::Initialize("config.py");
+  auto eventReader = make_shared<EventReader>();
+  auto eventWriter = make_shared<EventWriter>(eventReader);
 
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
     auto event = eventReader->GetEvent(iEvent);
