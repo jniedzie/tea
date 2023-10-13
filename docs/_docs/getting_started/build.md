@@ -5,17 +5,30 @@ permalink: /docs/build/
 
 ## Pre-requisites
 
-To make sure you're using supported versions of Python and ROOT, we recommend to craete a conda environment for `tea`:
+`tea` only depends on ROOT libraries, however we need to make sure the correct versions of ROOT, Python and GCC are installed. There are many ways to achieve that - here we propose two: 
+- option 1: using packages installed on CVMFS (available on lxplus)
+- option 2: using Conda to setup an environment,
+
+### Option 1: Setting environment from CVMFS
+
+If you're working on lxplus, or other system with access to CVMFS, you can simply source a version of ROOT available there:
+
+```bash
+source /cvmfs/sft.cern.ch/lcg/releases/LCG_104/ROOT/6.28.04/x86_64-centos7-gcc11-opt/ROOT-env.sh
+```
+
+### Option 2: Setting environment with Conda
+
+First, make sure you have Miniconda or Anaconda installed on your machine - see [Conda installation instructions](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
+Then, create a new conda environment for `tea` (this may take a longer while):
 
 ```bash
 conda create -c conda-forge --name tea root python=3.8
-```
-
-Then, activate it (has to be repeated in each new session, or added to `~/.bash_profile`):
-
-```bash
 conda activate tea
 ```
+
+The activate command has to be repeated in each new session, or added to `~/.bash_profile`.
 
 ## Build & run
 
