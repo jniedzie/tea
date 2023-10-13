@@ -27,9 +27,10 @@ git remote add upstream git@github.com:jniedzie/tea.git
 git push origin main
 ```
 
-5. Prepare .gitignore file for your repo:
+5. Prepare .gitignore and README files for your repo:
 ```bash
 cp .gitignore_user .gitignore
+cp .github/README_user.md .github/README.md
 ```
 
 #### Updating your analysis
@@ -48,3 +49,5 @@ From time to time you can also pull changes from `tea` repository. Before you do
 ```bash
 ./update_tea.sh
 ```
+
+When running the script, you will see output from git reporting unstaged changes in README.md and .gitignore - this is expected and after the process is complete there should be no actual changes in these files.

@@ -4,10 +4,14 @@ permalink: /docs/home/
 redirect_from: /docs/index.html
 ---
 
-## About `tea`
-`tea`, which stands for Toolkit for Efficient Analysis, is a set of tools developed at DESY for analysis of any ROOT trees. It is designed for speed (CPU-intensive operations implemented in C++), based on intuitive loop-based logic, while hidding most of the tricky and tedious operations behind a user-friendly API.
+<img src="{{site.baseurl}}//assets/img/tea_logo_black_extended_inv.jpg" alt="tea_logo" width="400" align="right"/>
+
+`tea` (toolkit for efficient analysis) is a set of tools developed at DESY for analysis of any ROOT trees. 
+
+It is designed for speed (CPU-intensive operations implemented in C++), based on intuitive loop-based logic, while hidding most of the tricky and tedious operations behind a user-friendly API and using Python for configuration and lightweight operations.
 
 To get a feel for how a `tea` app looks like, have a look at an [example app]({{site.baseurl}}/docs/example_app/)
+
 
 ## Features
 The framework will help you with:

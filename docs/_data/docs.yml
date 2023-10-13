@@ -15,4 +15,8 @@
   - apps
   - configs
   - libs
+
+- title: <code class="monospace">tea</code> workflow
+  docs:
+  - job_submission
   
