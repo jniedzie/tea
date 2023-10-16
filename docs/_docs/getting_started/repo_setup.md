@@ -18,19 +18,16 @@ cd tea_ttH_analysis
 git clone https://github.com/jniedzie/tea.git .
 ```
 
-3. Create your analysis repository on github (go to your profile -> repositories -> new, pick a suitable name and create). Don't add any README, licence or gitignore.
+3. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). Don't add any README, licence or gitignore.
 
-4. Setup git remotes:
+4. Setup git remote to point to your newly created repo:
 ```bash
 git remote set-url origin git@github.com:your_username/your_repo.git
-git remote add upstream git@github.com:jniedzie/tea.git
-git push origin main
 ```
 
-5. Prepare .gitignore and README files for your repo:
+5. Run initialization script:
 ```bash
-cp .gitignore_user .gitignore
-cp .github/README_user.md .github/README.md
+./init.sh
 ```
 
 #### Updating your analysis
