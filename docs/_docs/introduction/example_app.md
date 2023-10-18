@@ -3,6 +3,8 @@ title: Example apps
 permalink: /docs/example_app/
 ---
 
+This page is supposed to give you a general feel for how `tea` apps and configs look like. To actually learn step by step about different topics, such as skimming, histogramming, plotting, etc., have a look at the tutorial pages in the navigation bar on the left.
+
 ---
 ## Printing variables from a tree
 

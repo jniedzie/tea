@@ -3,20 +3,30 @@
   - home
   - example_app
   - framework_structure
-
+  - types_in_tea
+  
 - title: Getting Started
   docs:
   - repo_setup
   - build
 
+- title: Tutorial
+  docs:
+  - my_first_histogrammer
+  - plotting
+  - my_first_skimming
+  - custom_app_printer
+  - extra_event_collections
+  - custom_histogrammer
+  - custom_physics_objects
+  - custom_events
+  - job_submission
+
 - title: Developing your <code class="monospace">tea</code>-based analysis
   docs:
   - general_concepts
+  - create_script
   - apps
   - configs
   - libs
-
-- title: <code class="monospace">tea</code> workflow
-  docs:
-  - job_submission
   
