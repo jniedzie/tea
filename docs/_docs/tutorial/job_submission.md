@@ -113,4 +113,15 @@ Once you prepared your app, config and files config, it's time to test the submi
 python submitter.py --app histogrammer --config histogrammer_config --files_config input_file_list --condor --dry
 ```
 
-This will produce a few temporary files in `bin/tmp/` directory. 
+This will produce a few temporary files in `bin/tmp/` directory.
+
+## Advanced submitter options
+
+There are a few more advanced options for very specific cases:
+- you can specify a job number to resubmit, which is useful if you know that, e.g. job number 77 failed. Simply add `--resubmit_job 77` to your command to only run this one
+- in the files config, you can use a DAS dataset name as the input path. For this to work you need to first create a VOMS proxy, e.g.:
+
+```bash
+voms-proxy-init --rfc --voms cms -valid 100:00
+```
+- you also have an option to limit the number of files you run on (`max_files` variable) or specify an input file name (`file_name` variable), which may be useful for tests, or in case you know a job for a specific file failed.
