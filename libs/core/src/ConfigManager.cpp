@@ -249,6 +249,37 @@ void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vect
   }
 }
 
+template <>
+void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vector<vector<int>>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
+
+  PyObject *pKey, *pOuterList;
+  Py_ssize_t pos = 0;
+
+  while (PyDict_Next(pythonDict, &pos, &pKey, &pOuterList)) {
+    if (!PyUnicode_Check(pKey) || (!PyList_Check(pOuterList) && !PyTuple_Check(pOuterList))) {
+      error() << "Failed retriving python key-value pair (int-vector<vector<int>>)" << endl;
+      continue;
+    }
+    
+    vector<vector<int>> outerVector;
+
+    for (Py_ssize_t i = 0; i < GetCollectionSize(pOuterList); ++i) {
+      PyObject *pInnerList = GetItem(pOuterList, i);
+
+      vector<int> innerVector;
+
+      for (Py_ssize_t j = 0; j < GetCollectionSize(pInnerList); ++j) {
+        PyObject *pValue = GetItem(pInnerList, j);
+        innerVector.push_back(PyLong_AsLong(pValue));
+      }
+
+      outerVector.push_back(innerVector);
+    }
+    outputMap[stoi(PyUnicode_AsUTF8(pKey))] = outerVector;
+  }
+}
+
 //-------------------------------------------------------------------------------------------------
 // Other methods
 //-------------------------------------------------------------------------------------------------

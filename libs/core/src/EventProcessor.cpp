@@ -12,7 +12,7 @@ EventProcessor::EventProcessor() {
   try {
     config.GetVector("triggerSelection", triggerNames);
   } catch (const Exception &e) {
-    warn() << "Couldn't read triggerSelection from _ file ";
+    warn() << "Couldn't read triggerSelection from file ";
     warn() << "(which may be fine if you're not tyring to apply trigger selection)" << endl;
   }
 
@@ -27,6 +27,31 @@ EventProcessor::EventProcessor() {
   } catch (const Exception &e) {
     warn() << "Couldn't read requiredFlags from config file " << endl;
   }
+
+  try {
+    config.GetMap("goldenJson", goldenJson);
+  } catch (const Exception &e) {
+    warn() << "Couldn't read goldenJson from file ";
+    warn() << "(which may be fine if you're not tyring to apply golden JSON)" << endl;
+  }
+}
+
+bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
+  bool passes = true;
+  
+  uint run = event->Get("run");
+  uint lumi = event->Get("luminosityBlock");
+
+  if(run == 1) return true; // MC
+
+  if (goldenJson.find(run) == goldenJson.end()) return false;
+
+  for (auto &lumiRange : goldenJson[run]) {
+    if (lumi >= lumiRange[0] && lumi <= lumiRange[1]) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool EventProcessor::PassesTriggerSelections(const shared_ptr<Event> event) {
