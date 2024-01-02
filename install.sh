@@ -21,7 +21,7 @@ git commit -m "Add tea as a submodule"
 
 # copy and removing files
 echo "Copying CMakelists.txt from tea"
-cp tea/user_files/CMakeLists.txt .
+cp tea/templates/CMakeLists.template.txt CMakeLists.txt
 rm install.sh
 
 # setup remote
