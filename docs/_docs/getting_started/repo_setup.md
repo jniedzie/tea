@@ -1,5 +1,5 @@
 ---
-title: Repositories setup
+title: Installation
 permalink: /docs/repo_setup/
 ---
 
@@ -8,27 +8,30 @@ We highly recommend that you keep your analysis code in a git repository, while 
 
 To set up `tea` together with your analysis code:
 
-1. Create an empty directory for your analysis:
-```bash
-mkdir tea_ttH_analysis
-cd tea_ttH_analysis
+1. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). You can choose to add README, licence or gitignore. When the repo is ready, save the URL it gave you, something like: 
+
 ```
-2. Clone `tea` repository:
-```bash
-git clone https://github.com/jniedzie/tea.git .
+git@github.com:your_username/tea_analysis.git
 ```
 
-3. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). Don't add any README, licence or gitignore.
-
-4. Setup git remote to point to your newly created repo:
+2. Create an empty directory for your analysis:
 ```bash
-git remote set-url origin git@github.com:your_username/your_repo.git
+mkdir tea_analysis
+cd tea_analysis
 ```
 
-5. Run initialization script:
+3. Get `tea` install script:
 ```bash
-./init.sh
+curl -O https://raw.githubusercontent.com/jniedzie/tea/main/install.sh .
 ```
+
+4. Run `tea` install script, providing URL to your repo as an argument, e.g.:
+```bash
+chmod 700 install.sh
+./install.sh git@github.com:your_username/tea_analysis.git
+```
+
+After following these steps, you should see a directory structure in your project including the `tea` directory. Your code was pushed to your repo, so you can also see it online (although you won't see empty directories there - this is expected).
 
 #### Updating your analysis
 
@@ -41,10 +44,12 @@ git push origin main
 
 #### Updating tea
 
-From time to time you can also pull changes from `tea` repository. Before you do that, **make sure all your changes are commited and pushed to your repository!!** Then, run the script which will update `tea` and push its new version to your repository:
+From time to time you can also pull changes from `tea` repository. Before you do that, **make sure all your changes are commited and pushed to your repository!!** Then, run the script which will update `tea`:
 
 ```bash
-./update_tea.sh
+./tea/update.sh
 ```
 
-When running the script, you will see output from git reporting unstaged changes in README.md and .gitignore - this is expected and after the process is complete there should be no actual changes in these files.
+#### Contributing to `tea`
+
+You can also contribute to the `tea` framework itself! `tea` directory is a git sub-module - you can go there (`cd tea`) and setup your own branch, commit to it and eventually create Pull Requests to include your changes in the main branch.
