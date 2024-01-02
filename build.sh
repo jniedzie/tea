@@ -11,4 +11,4 @@ cmake ..
 make -j install 
 cd ..
 
-source tea/setup.sh
+export PYTHONPATH="$PYTHONPATH:$(pwd)/bin/"
