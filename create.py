@@ -5,7 +5,6 @@ import os
 args = argparse.ArgumentParser()
 args.add_argument("--name", help="Name of the class/app to add", required=True)
 args.add_argument("--type", help="Type of the extension to add: PhysicsObject, Event, HistogramsFiller, app, printer, histogrammer", required=True)
-args.add_argument("--path", help="In case the type is app/printer/histogrammer, specify the directory name in which to put it", required=False, default="")
 args = args.parse_args()
 
 def replace_string_in_file(file_path, old_string, new_string):
@@ -68,28 +67,28 @@ def main():
   
   files_to_copy = {
     "PhysicsObject": (
-      ("templates/PhysicsObject.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
-      ("templates/PhysicsObject.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
+      ("tea/templates/PhysicsObject.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
+      ("tea/templates/PhysicsObject.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
     ),
     "HistogramsFiller": (
-      ("templates/HistogramsFiller.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
-      ("templates/HistogramsFiller.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
+      ("tea/templates/HistogramsFiller.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
+      ("tea/templates/HistogramsFiller.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
     ),
     "Event": (
-      ("templates/Event.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
-      ("templates/Event.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
+      ("tea/templates/Event.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
+      ("tea/templates/Event.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
     ),
     "app":(
-      ("templates/app.template.cpp", f"apps/{args.path}/{class_name}.cpp"),
-      ("templates/config.template.py", f"configs/{args.path}/{class_name}_config.py"),
+      ("tea/templates/app.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/templates/config.template.py", f"configs/{class_name}_config.py"),
     ),
     "printer":(
-      ("templates/printer.template.cpp", f"apps/{args.path}/{class_name}.cpp"),
-      ("templates/printer_config.template.py", f"configs/{args.path}/{class_name}_config.py"),
+      ("tea/templates/printer.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/templates/printer_config.template.py", f"configs/{class_name}_config.py"),
     ),
     "histogrammer":(
-      ("templates/histogrammer.template.cpp", f"apps/{args.path}/{class_name}.cpp"),
-      ("templates/histogrammer_config.template.py", f"configs/{args.path}/{class_name}_config.py"),
+      ("tea/templates/histogrammer.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/templates/histogrammer_config.template.py", f"configs/{class_name}_config.py"),
     ),
   }
   
