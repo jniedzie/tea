@@ -3,8 +3,8 @@ from scale_factors_config import *
 nEvents = -1
 printEveryNevents = 1000
 
-inputFilePath = "../samples/background_dy.root"
-histogramsOutputFilePath = "../samples/histograms/background_dy.root"
+inputFilePath = "../tea/samples/background_dy.root"
+histogramsOutputFilePath = "../tea/samples/histograms/background_dy.root"
 
 extraEventCollections = {
     "GoodLeptons": {
