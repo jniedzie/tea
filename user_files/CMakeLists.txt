@@ -47,7 +47,9 @@ endforeach()
 
 # add user-defined libraries
 file(GLOB_RECURSE USER_LIBS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/libs/*/*.cpp") # Assuming the source files are in .cpp format
-add_library(user_libs ${USER_LIBS_SRC})
+if(USER_LIBS_SRC)
+    add_library(user_libs ${USER_LIBS_SRC})
+endif()
 
 # add user-defined apps
 file(GLOB_RECURSE USER_APPS_SRC "apps/*.cpp")
