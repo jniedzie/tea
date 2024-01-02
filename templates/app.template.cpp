@@ -27,9 +27,10 @@ int main(int argc, char **argv) {
   // Initialize ConfigManager with the path passed as an argument to the app
   ConfigManager::Initialize(argv[1]);
 
+  auto &config = ConfigManager::GetInstance();
+
   // If you want to override input/output paths, you can do it here  
-  if(argc == 4){
-    auto &config = ConfigManager::GetInstance();
+  if(argc == 4){    
     config.SetInputPath(argv[2]);
     config.SetOutputPath(argv[3]);
   }
@@ -56,7 +57,7 @@ int main(int argc, char **argv) {
 
   // You can also read any additional parameter from the config file
   int myParameter;
-  config->GetValue("myParameter", myParameter);
+  config.GetValue("myParameter", myParameter);
 
   // You can use logger functionalities to print different types of messages
   info() << "Print some info" << endl;
@@ -67,12 +68,16 @@ int main(int argc, char **argv) {
   // In case you're worried about the performance and want to measure how much time different operations take,
   // simply surround them with Start/Stop calls to the profiler
   profiler.Start("my_first_measurement");
-  sleep(10);  // perform some task
+  sleep(1);  // perform some task
   profiler.Stop("my_first_measurement");
 
   profiler.Start("my_second_measurement");
-  sleep(7);  // perform some task
+  sleep(2);  // perform some task
   profiler.Stop("my_second_measurement");
+
+  cutFlowManager->RegisterCut("initial");
+  cutFlowManager->RegisterCut("trigger");
+  cutFlowManager->RegisterCut("nMuons");
 
   // Start the event loop
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
@@ -80,7 +85,7 @@ int main(int argc, char **argv) {
     auto event = eventReader->GetEvent(iEvent);
 
     // If you want to do something with one of the collections, extract it here and loop over it
-    auto physicsObjects = event->GetCollection("Particle");
+    auto physicsObjects = event->GetCollection("Muon");
     for (auto physicsObject : *physicsObjects) {
       float pt = physicsObject->Get("pt");
       info() << "Physics object pt: " << pt << endl;
@@ -97,7 +102,7 @@ int main(int argc, char **argv) {
     // You can apply some cuts on the event and update the cut flow
     cutFlowManager->UpdateCutFlow("initial");
 
-    bool passesTrigger = event->Get("someTriggerName");
+    bool passesTrigger = event->Get("HLT_IsoMu27");
     if(!passesTrigger) continue;
     cutFlowManager->UpdateCutFlow("trigger");
 
@@ -114,6 +119,7 @@ int main(int argc, char **argv) {
 
   // Tell CutFlowManager to save the cut flow
   cutFlowManager->SaveCutFlow();
+  cutFlowManager->Print();
 
   // Tell EventWriter to save the output tree
   eventWriter->Save();

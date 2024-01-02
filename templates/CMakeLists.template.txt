@@ -56,7 +56,12 @@ file(GLOB_RECURSE USER_APPS_SRC "apps/*.cpp")
 foreach(APP_SRC ${USER_APPS_SRC})
     get_filename_component(APP_NAME ${APP_SRC} NAME_WE) # Get the name without extension
     add_executable(${APP_NAME} ${APP_SRC})
-    target_link_libraries(${APP_NAME} user_libs tea_libs ${ROOT_LIBRARIES} ${PYTHON_LIBRARIES})
+
+    if(DEFINED user_libs)
+        target_link_libraries(${APP_NAME} user_libs tea_libs ${ROOT_LIBRARIES} ${PYTHON_LIBRARIES})
+    else()
+        target_link_libraries(${APP_NAME} tea_libs ${ROOT_LIBRARIES} ${PYTHON_LIBRARIES})
+    endif()
 
     if(TARGET user_extensions)
         target_link_libraries(${APP_NAME} user_extensions)
