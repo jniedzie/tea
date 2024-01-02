@@ -84,7 +84,7 @@ float CutFlowManager::GetCurrentEventWeight() {
   float weight = 1.0;
   try {
     weight = eventReader->currentEvent->Get(weightsBranchName);
-  } catch (...) {
+  } catch (const Exception &e) {
     if (!weightsBranchWarningPrinted) {
       error() << "Could not find weights branch " << weightsBranchName << endl;
       weightsBranchWarningPrinted = true;

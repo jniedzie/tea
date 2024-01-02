@@ -18,7 +18,7 @@ Event::Event() {
 
   try {
     config.GetExtraEventCollections(extraCollectionsDescriptions);
-  } catch (...) {
+  } catch (const Exception &e) {
     info() << "No extra event collections found" << endl;
     hasExtraCollections = false;
   }

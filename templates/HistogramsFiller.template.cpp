@@ -27,7 +27,7 @@ float TemplateName::GetWeight(const std::shared_ptr<Event> event) {
   float weight = 1.0;
   try {
     weight = event->Get(weightsBranchName);
-  } catch (...) {
+  } catch (const Exception &e) {
   }
   return weight;
 }
