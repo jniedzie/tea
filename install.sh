@@ -8,7 +8,7 @@ fi
 
 # create necessary directories
 echo "Creating necessary directories"
-mkdir -p apps bin build configs libs
+mkdir -p apps bin build configs libs/user_extensions/include
 
 # initialize git repository
 echo "Initializing git repository"
@@ -22,6 +22,7 @@ git commit -m "Add tea as a submodule"
 # copy and removing files
 echo "Copying CMakelists.txt from tea"
 cp tea/templates/CMakeLists.template.txt CMakeLists.txt
+cp tea/templates/UserExtensionsHelpers.template.hpp libs/user_extensions/include/UserExtensionsHelpers.hpp
 rm install.sh
 
 # setup remote
