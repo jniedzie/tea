@@ -2,7 +2,7 @@ nEvents = -1
 printEveryNevents = 1000
 
 inputFilePath = "../tea/samples/background_dy.root"
-treeOutputFilePath = "../background_dy_skimmed.root"
+treeOutputFilePath = "background_dy_skimmed.root"
 
 weightsBranchName = "genWeight"
 
