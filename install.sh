@@ -31,4 +31,6 @@ git remote add origin $1
 git add .
 git commit -m "Initial commit"
 
+# take what's in the repo already (like gitignore, README, etc.) and push all other files
+git pull --rebase origin main
 git push -u origin main
