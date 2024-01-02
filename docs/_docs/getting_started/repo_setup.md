@@ -9,22 +9,18 @@ We highly recommend that you keep your analysis code in a git repository, while 
 To set up `tea` together with your analysis code:
 
 1. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). You can choose to add README, licence or gitignore. When the repo is ready, save the URL it gave you, something like: 
-
 ```
 git@github.com:your_username/tea_analysis.git
 ```
-
 2. Create an empty directory for your analysis:
 ```bash
 mkdir tea_analysis
 cd tea_analysis
 ```
-
 3. Get `tea` install script:
 ```bash
 curl -O https://raw.githubusercontent.com/jniedzie/tea/main/install.sh .
 ```
-
 4. Run `tea` install script, providing URL to your repo as an argument, e.g.:
 ```bash
 chmod 700 install.sh
