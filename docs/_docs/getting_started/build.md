@@ -34,8 +34,8 @@ Also in this case, the activate command has to be repeated in each new session, 
 
 Building `tea` together with your analysis files is very straighforward. Simply source the build script:
 
-```
-source build.sh
+```bash
+./tea/build.sh
 ```
 
 Once compiled, you can go to `bin` directory and execute any of the apps directly from there (all configs will also be installed in this directory), e.g.: 
@@ -47,7 +47,13 @@ cd bin
 
 ## Repeated compilation
 
-The above script is useful for first-time build, as well as for when major changes to the project are introduced. However, it is a bit slower, since it always removes `build` and `bin` directories and sets everything up from scratch. If you want to re-compile the project quickly, simply go to `build` directory and run:
+The above script is useful for first-time build, as well as for when major changes to the project are introduced. However, it is a bit slower, since it always removes `build` and `bin` directories and sets everything up from scratch. If you want to re-compile the project quickly, make sure python paths are set up (only needed once per session, and is done automatically when using `build.sh` script):
+
+```bash
+source tea/setup.sh
+```
+
+Then, simply go to `build` directory and run:
 
 ```bash
 cd build

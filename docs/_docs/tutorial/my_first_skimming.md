@@ -11,8 +11,7 @@ Skimming using existing branches is simple in `tea` and we won’t need to creat
 Copy the example skimmer config:
 ￼
 ```bash
-mkdir -p configs/ttZ_analysis
-cp configs/examples/skimmer_config.py configs/ttZ_analysis/my_skimmer_config.py
+cp tea/configs/examples/skimmer_config.py configs/my_skimmer_config.py
 ```
 
 Open the config and make the necessary modifications. You could comment out a few things we won’t use:
@@ -30,7 +29,7 @@ Our config could look like this:
 nEvents = -1
 printEveryNevents = 1000
 
-inputFilePath = "../samples/background_dy.root"
+inputFilePath = "../tea/samples/background_dy.root"
 treeOutputFilePath = "../samples/skimmed/background_dy.root"
 
 weightsBranchName = "genWeight"

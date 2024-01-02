@@ -8,7 +8,7 @@ We highly recommend that you keep your analysis code in a git repository, while 
 
 To set up `tea` together with your analysis code:
 
-1. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). You can choose to add README, licence or gitignore. When the repo is ready, save the URL it gave you, something like: 
+1. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). You can choose to add README, licence or gitignore. When the repo is ready, save the URL it gave you (or click on "Code" button to find it), something like: 
 ```
 git@github.com:your_username/tea_analysis.git
 ```

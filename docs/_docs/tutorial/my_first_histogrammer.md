@@ -10,8 +10,7 @@ In our first example we will produce a ROOT file with histograms of transverse m
 Creating histograms for default branches is trivial in `tea` - we will use the default `histogrammer` app for that. We will need a config, and since we don’t want to modify anything that’s part of `tea`, let’s copy the example histogrammer config:
 
 ```bash
-mkdir -p configs/ttZ_analysis
-cp configs/examples/histogrammer_config.py configs/ttZ_analysis/my_histogrammer_config.py
+cp tea/configs/examples/histogrammer_config.py configs/my_histogrammer_config.py
 ```
 
 Open the config and make the necessary modifications:
@@ -27,7 +26,7 @@ An example config could look like this:
 nEvents = -1
 printEveryNevents = 1000
 
-inputFilePath = "../samples/background_dy.root"
+inputFilePath = "../tea/samples/background_dy.root"
 histogramsOutputFilePath = "../samples/histograms/background_dy.root"
 
 defaultHistParams = (
@@ -44,7 +43,7 @@ weightsBranchName = "genWeight"
 Then, build the project and run `histogrammer`, specifying the corresponding config file:
 
 ```bash
-source build.sh
+./tea/build.sh
 cd bin
 ./histogrammer my_histogrammer_config.py
 ```

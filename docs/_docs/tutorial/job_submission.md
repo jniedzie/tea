@@ -58,9 +58,9 @@ List input files and specify one output directory. Output files will have the sa
 
 ```python
 input_file_list = (
-  "samples/background_dy.root",
-  "samples/signal_ttz.root"
-  "samples/data.root"
+  "tea/samples/background_dy.root",
+  "tea/samples/signal_ttz.root"
+  "tea/samples/data.root"
 )
 output_dir = "histograms"
 ```
@@ -71,8 +71,8 @@ List input files and for each of them specify the exact output file. This can be
 
 ```python
 input_output_file_list = (
-  ("samples/background_dy.root", "background_hists/background_dy.root"),
-  ("samples/signal_ttz.root", "signal_hists/signal_ttz.root"),
+  ("tea/samples/background_dy.root", "background_hists/background_dy.root"),
+  ("tea/samples/signal_ttz.root", "signal_hists/signal_ttz.root"),
 )
 ```
 
@@ -82,7 +82,7 @@ The favorite option of CMS useres: you can simply specify a DAS dataset name and
 
 ```python
 dataset = "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM"
-output_dir = "samples/ttbar_hists"
+output_dir = "../samples/ttbar_hists"
 max_files = 10
 ```
 
@@ -92,7 +92,7 @@ This is an extension of **option 3**, allowing to run on one specific file from 
 
 ```python
 dataset = "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18NanoAODv7-Nano02Apr2020_102X_upgrade2018_realistic_v21-v1/NANOAODSIM"
-output_dir = "samples/ttbar_hists"
+output_dir = "../samples/ttbar_hists"
 file_name = "8ED6072D-6880-724A-A0E2-A57C700C78CC.root"
 ```
 

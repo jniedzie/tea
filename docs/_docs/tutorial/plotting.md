@@ -10,8 +10,7 @@ The goal of this exercise is to create PDF files with plots of pt and η of elec
 Start by copying an example plotter config:
 
 ```bash
-mkdir -p configs/ttZ_analysis
-cp configs/examples/minimal_plotter_config.py configs/ttZ_analysis/my_plotter_config.py
+cp tea/configs/examples/minimal_plotter_config.py configs/my_plotter_config.py
 ```
 
 Open the file and apply modifications listed in the following subsections.
@@ -120,7 +119,7 @@ show_ratio_plots = False
 Now we are ready to build and run:
 
 ```bash
-source build.sh
+./tea/build.sh
 cd bin
 python plotter.py my_plotter_config.py
 ```

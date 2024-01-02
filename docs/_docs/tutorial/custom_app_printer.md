@@ -10,7 +10,7 @@ The goal of this exercise is to create an app which prints values of some branch
 Please refer to [create.py script]({{site.baseurl}}/docs/create_script/) page for detailed explanation on how we create things in `tea`. For this excercise, we will create a printer:
 
 ```bash
-python create.py --name ttZ_analysis_print_events --type printer --path ttZ_analysis
+python tea/create.py --name ttZ_analysis_print_events --type printer
 ```
 
 ## Modify the app
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 Next, we need to modify the config file (name ending with `_config.py`). Specify the input path and the number of events to run on:
 
 ```python
-inputFilePath = "../samples/background_dy.root"
+inputFilePath = "../tea/samples/background_dy.root"
 
 nEvents = 5
 printEveryNevents = 1

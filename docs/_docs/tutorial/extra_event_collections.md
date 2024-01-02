@@ -10,8 +10,7 @@ Let's say we want to produce a ROOT file with 2 histograms: transverse momenta a
 For this we can use the existing `histogrammer` app and copy the example histogrammer config:
 
 ```bash
-mkdir -p configs/ttZ_analysis
-cp configs/examples/histogrammer_config.py configs/ttZ_analysis/my_histogrammer_config.py
+cp tea/configs/examples/histogrammer_config.py configs/my_histogrammer_config.py
 ```
 
 We will use a feature called `extraEventCollections` to achieve our goal. It allows us to define new collections on the fly. All we need to provide are:
@@ -45,7 +44,7 @@ defaultHistParams = (
 Then, build the project and run `histogrammer`, specifying the corresponding config file:
 
 ```bash
-source build.sh
+./tea/build.sh
 cd bin
 ./histogrammer my_histogrammer_config.py
 ```
