@@ -38,6 +38,8 @@ def main():
   plotter.addHists2D(input_files[sample.name], sample)
   plotter.drawStacks()
   plotter.drawHists2D()
+  
+  print_logger()
 
 if __name__ == "__main__":
   main()

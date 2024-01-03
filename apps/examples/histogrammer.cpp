@@ -4,6 +4,7 @@
 #include "ExtensionsHelpers.hpp"
 #include "HistogramsFiller.hpp"
 #include "HistogramsHandler.hpp"
+#include "Logger.hpp"
 
 using namespace std;
 
