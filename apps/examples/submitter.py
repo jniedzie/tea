@@ -131,7 +131,7 @@ def main():
     if submission_system == SubmissionSystem.condor:
       submission_manager.run_condor(args.job_flavour, args.resubmit_job, args.dry)
   
-  print_logger()  
+  logger_print()
 
 if __name__ == "__main__":
   main()

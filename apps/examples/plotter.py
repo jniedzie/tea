@@ -39,7 +39,7 @@ def main():
   plotter.drawStacks()
   plotter.drawHists2D()
   
-  print_logger()
+  logger_print()
 
 if __name__ == "__main__":
   main()
