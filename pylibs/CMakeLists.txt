@@ -1,8 +1,8 @@
 project(pytea)
 
-file(GLOB_RECURSE PYTHON_MODULES "${CMAKE_SOURCE_DIR}/tea/pylibs/*.py")
-file(GLOB_RECURSE PYTHON_SCRIPTS "${CMAKE_SOURCE_DIR}/tea/apps/*.py")
-file(GLOB_RECURSE PYTHON_CONFIGS "${CMAKE_SOURCE_DIR}/tea/configs/*.py")
+file(GLOB_RECURSE PYTHON_MODULES "${CMAKE_SOURCE_DIR}/tea/pylibs/*.py" "${CMAKE_SOURCE_DIR}/pylibs/*.py")
+file(GLOB_RECURSE PYTHON_SCRIPTS "${CMAKE_SOURCE_DIR}/tea/apps/*.py" "${CMAKE_SOURCE_DIR}/apps/*.py")
+file(GLOB_RECURSE PYTHON_CONFIGS "${CMAKE_SOURCE_DIR}/tea/configs/*.py" "${CMAKE_SOURCE_DIR}/configs/*.py")
 
 set(PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}")
 
