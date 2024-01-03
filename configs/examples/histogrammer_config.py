@@ -4,7 +4,10 @@ nEvents = -1
 printEveryNevents = 1000
 
 inputFilePath = "../tea/samples/background_dy.root"
-histogramsOutputFilePath = "../tea/samples/histograms/background_dy.root"
+# or in case you run tea standalone, without specific analysis code:
+# inputFilePath = "../samples/background_dy.root"
+
+histogramsOutputFilePath = "./background_dy_histograms.root"
 
 extraEventCollections = {
     "GoodLeptons": {

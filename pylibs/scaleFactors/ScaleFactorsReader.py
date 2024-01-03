@@ -5,9 +5,26 @@ class ScaleFactorsReader:
   def __init__(self):
     self.jsonSubLevelKey = "abseta_pt"
   
+  def __getFile(self, filePath):
+    file = None
+    
+    try:
+      with open(filePath) as json_file:
+        file = json.load(json_file)
+    except FileNotFoundError:
+      warn("Couldn't find the file: " + filePath + ". Trying to open the file without the tea path.")
+      try:
+        with open(filePath.replace("tea", "")) as json_file:
+          file = json.load(json_file)
+      except FileNotFoundError:
+        fatal("Couldn't find the file: " + filePath + ".")
+        exit(1)
+    
+    return file
+  
   def getMuonScaleFactors(self, filePath):
-    with open(filePath) as jsonFile:
-      json_content = json.load(jsonFile)
+    
+    json_content = self.__getFile(filePath)
     
     result = {}
     
@@ -35,8 +52,8 @@ class ScaleFactorsReader:
     return result
   
   def getMuonTriggerScaleFactors(self, filePath):
-    with open(filePath) as jsonFile:
-      json_content = json.load(jsonFile)
+    
+    json_content = self.__getFile(filePath)
     
     result = {}
     
@@ -65,8 +82,8 @@ class ScaleFactorsReader:
     return result
 
   def getBtaggingScaleFactors(self, filePath):
-    with open(filePath) as jsonFile:
-      json_content = json.load(jsonFile)
+    
+    json_content = self.__getFile(filePath)
     
     result = {}
     

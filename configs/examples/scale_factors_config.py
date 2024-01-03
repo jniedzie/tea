@@ -22,5 +22,3 @@ bTaggingSFs = {
   # B-tagging SFs
   **scaleFactorsReader.getBtaggingScaleFactors("../tea/data/b_tagging/btagging_UL2018.json"),
 }
-
-print("loaded SFs")
