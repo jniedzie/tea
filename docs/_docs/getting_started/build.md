@@ -7,6 +7,16 @@ permalink: /docs/build/
 
 `tea` only depends on ROOT libraries, but we need to make sure the correct versions of ROOT, Python, GCC, and other packages are installed. We propose to use a Conda environment (however, you may be able to achive it with other solutions too).
 
+### Running on lxplus
+
+The only important thing is to use lxplus9, where new versions of cmake, GCC, etc. are available by default. Simply login using:
+
+```bash
+ssh -Y username@lxplus9.cern.ch
+```
+
+Then, no special setup is needed - you can skip conda environment setup completely and jump directly to "Build & run".
+
 ### Setting environment with Conda
 
 First, make sure you have Miniconda or Anaconda installed on your machine - see [Conda installation instructions](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
