@@ -24,6 +24,9 @@ private:
 
   std::shared_ptr<EventReader> eventReader;
 
+  std::vector<std::string> branchesToKeep;
+  std::vector<std::string> branchesToRemove;
+
   void SetupOutputTree(std::string outFileName);
 
   friend class CutFlowManager;

@@ -26,3 +26,18 @@ eventSelections = {
     "nMuon": (1, 9999999),
     "nGoodLeptons": (1, 9999999),
 }
+
+
+# First, branches to keep will be marked to be kept (empty tuple would result in no branches being kept)
+branchesToKeep = (
+    "*",
+    # "Muon_*",
+)
+
+# then, on top of that, branches to remove will be marked to be removed (can be an empty tuple)
+branchesToRemove = (
+    "L1*",
+    "HLT*",
+    "Flag*",
+    "SubJet",
+)
