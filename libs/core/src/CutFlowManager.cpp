@@ -124,7 +124,7 @@ void CutFlowManager::Print() {
     sortedWeightsAfterCuts[index] = {cutName, sumOfWeights};
   }
 
-  info() << "CutFlow:" << endl;
+  info() << "CutFlow (sum of gen weights):" << endl;
   for (auto &[index, values] : sortedWeightsAfterCuts) {
     info() << get<0>(values) << " " << get<1>(values) << endl;
   }
