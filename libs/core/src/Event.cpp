@@ -3,9 +3,10 @@
 //  Created by Jeremi Niedziela on 04/08/2023.
 
 #include "Event.hpp"
+
+#include "EventProcessor.hpp"
 #include "Helpers.hpp"
 #include "ScaleFactorsManager.hpp"
-#include "EventProcessor.hpp"
 
 using namespace std;
 
@@ -26,19 +27,26 @@ Event::Event() {
 
 Event::~Event() {}
 
-void Event::Reset() {
-  // for (auto &[key, value] : valuesUint) value = 0;
-  // for (auto &[key, value] : valuesInt) value = 0;
-  // for (auto &[key, value] : valuesBool) value = 0;
-  // for (auto &[key, value] : valuesFloat) value = 0;
-  // for (auto &[key, value] : valuesUlong) value = 0;
-  // for (auto &[key, value] : valuesUchar) value = 0;
+void Event::Reset() { extraCollections.clear(); }
 
-  // for (auto &[name, collection] : collections) {
-  //   for (auto element : *collection) element->Reset();
-  // }
+template <typename First, typename... Rest>
+bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {
+  try {
+    First value = physicsObject->Get(branchName);
+    return value >= cuts.first && value <= cuts.second;
+  } catch (BadTypeException &e) {
+    if constexpr (sizeof...(Rest) > 0) {
+      return tryGet<Rest...>(physicsObject, branchName, cuts);
+    } else {
+      fatal() << e.what() << endl;
+      gErrorIgnoreLevel = kFatal;
+      exit(0);
+    }
+  }
+}
 
-  extraCollections.clear();
+bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {
+  return tryGet<Bool_t, UChar_t, UInt_t, Int_t, Short_t, Float_t>(physicsObject, branchName, cuts);
 }
 
 void Event::AddExtraCollections() {
@@ -50,60 +58,22 @@ void Event::AddExtraCollections() {
     for (auto inputCollectionName : extraCollection.inputCollections) {
       auto inputCollection = GetCollection(inputCollectionName);
 
-      int n = 0;
       for (auto physicsObject : *inputCollection) {
-        n++;
-
         bool passes = true;
 
-        for (auto &[branchName, cuts] : extraCollection.selections) {
-          float value = physicsObject->Get(branchName);
-
-          if (value < cuts.first || value > cuts.second) {
-            passes = false;
-            break;
-          }
-        }
-
         for (auto &[branchName, flag] : extraCollection.flags) {
-          bool value = physicsObject->Get(branchName);
-
-          if (value != flag) {
-            passes = false;
-            break;
-          }
+          passes = checkCuts(physicsObject, branchName, {flag, flag});
+          if (!passes) break;
         }
+        if (!passes) continue;
 
-        for (auto &[branchName, option] : extraCollection.options) {
-          try {
-            UChar_t value = physicsObject->Get(branchName);
-            if (value != option) {
-              passes = false;
-              break;
-            }
-          } catch (BadTypeException &e) {
-            try {
-              Int_t value = physicsObject->Get(branchName);
-              if (value != option) {
-                passes = false;
-                break;
-              }
-            } catch (BadTypeException &e) {
-              fatal() << e.what() << endl;
-            }
-          }
+        for (auto &[branchName, cuts] : extraCollection.selections) {
+          passes = checkCuts(physicsObject, branchName, cuts);
+          if (!passes) break;
         }
+        if (!passes) continue;
 
-        for (auto &[branchName, cuts] : extraCollection.optionRanges) {
-          UChar_t value = physicsObject->Get(branchName);
-
-          if (value < cuts.first || value > cuts.second) {
-            passes = false;
-            break;
-          }
-        }
-
-        if (passes) newCollection->push_back(physicsObject);
+        newCollection->push_back(physicsObject);
       }
     }
     extraCollections.insert({name, newCollection});
@@ -147,37 +117,37 @@ float Event::GetAsFloat(string branchName) {
     Float_t value = Get(branchName);
     defaultCollectionsTypes[branchName] = "Float_t";
     return value;
-  } catch (BadTypeException& e) {
+  } catch (BadTypeException &e) {
     try {
       Int_t value = Get(branchName);
       defaultCollectionsTypes[branchName] = "Int_t";
       return value;
-    } catch (BadTypeException& e) {
+    } catch (BadTypeException &e) {
       try {
         UChar_t value = Get(branchName);
         defaultCollectionsTypes[branchName] = "UChar_t";
         return value;
-      } catch (BadTypeException& e) {
+      } catch (BadTypeException &e) {
         try {
           UShort_t value = Get(branchName);
           defaultCollectionsTypes[branchName] = "UShort_t";
           return value;
-        } catch (BadTypeException& e) {
+        } catch (BadTypeException &e) {
           try {
             Short_t value = Get(branchName);
             defaultCollectionsTypes[branchName] = "Short_t";
             return value;
-          } catch (BadTypeException& e) {
+          } catch (BadTypeException &e) {
             try {
               UInt_t value = Get(branchName);
               defaultCollectionsTypes[branchName] = "UInt_t";
               return value;
-            } catch (BadTypeException& e) {
+            } catch (BadTypeException &e) {
               try {
                 Bool_t value = Get(branchName);
                 defaultCollectionsTypes[branchName] = "Bool_t";
                 return value;
-              } catch (BadTypeException& e) {
+              } catch (BadTypeException &e) {
                 error() << "Couldn't get value for branch " << branchName << endl;
               }
             }

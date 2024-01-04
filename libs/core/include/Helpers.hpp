@@ -94,10 +94,8 @@ inline bool FileExists(const std::string& name) {
 struct ExtraCollection {
   std::vector<std::string> inputCollections;
   std::map<std::string, std::pair<float, float>> selections;
-  std::map<std::string, bool> flags;
-  std::map<std::string, int> options;
-  std::map<std::string, std::pair<int, int>> optionRanges;
-
+  std::map<std::string, int> flags;
+  
   void Print() {
     info() << "Input collections: " << std::endl;
     for (std::string name : inputCollections) info() << name << std::endl;
@@ -106,14 +104,9 @@ struct ExtraCollection {
     for (auto &[name, cuts] : selections) {
       info() << "\t" << name << ": " << cuts.first << ", " << cuts.second << std::endl;
     }
+    info() << "Flags: " << std::endl;
     for (auto &[name, flag] : flags) {
       info() << "\t" << name << ": " << flag << std::endl;
-    }
-    for (auto &[name, option] : options) {
-      info() << "\t" << name << ": " << option << std::endl;
-    }
-    for (auto &[name, optionRange] : optionRanges) {
-      info() << "\t" << name << ": " << optionRange.first << ", " << optionRange.second << std::endl;
     }
   }
 };

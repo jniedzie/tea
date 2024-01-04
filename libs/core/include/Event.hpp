@@ -96,6 +96,11 @@ class Event {
   friend class EventReader;
   template <typename T>
   friend class Multitype;
+
+  template <typename First, typename... Rest>
+  bool tryGet(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
+
+  bool checkCuts(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
 };
 
 #endif /* Event_hpp */

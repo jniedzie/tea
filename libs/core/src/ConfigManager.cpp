@@ -310,19 +310,9 @@ void ConfigManager::GetExtraEventCollections(map<string, ExtraCollection> &extra
       } else if (PyTuple_Check(pyValue)) {
         PyObject *min = GetItem(pyValue, 0);
         PyObject *max = GetItem(pyValue, 1);
-        if(PyFloat_Check(min) && PyFloat_Check(max)){
-          extraCollection.selections[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
-        }
-        else if(PyLong_Check(min) && PyLong_Check(max)){
-          extraCollection.optionRanges[keyStr] = {PyLong_AsLong(min), PyLong_AsLong(max)};
-        }
-        else{
-          error() << "Failed retriving python tuple (float,float) or (int,int)" << endl;
-        }
-      } else if (PyBool_Check(pyValue)) {
+        extraCollection.selections[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
+      } else {
         extraCollection.flags[keyStr] = PyLong_AsLong(pyValue);
-      } else if (PyLong_Check(pyValue)) {
-        extraCollection.options[keyStr] = PyLong_AsLong(pyValue);
       }
     }
 
