@@ -47,6 +47,7 @@ endforeach()
 
 # add user-defined libraries
 file(GLOB_RECURSE USER_LIBS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/libs/*/*.cpp") # Assuming the source files are in .cpp format
+message(STATUS "Found user libs: ${USER_LIBS_SRC}")
 if(USER_LIBS_SRC)
     add_library(user_libs ${USER_LIBS_SRC})
 endif()
@@ -57,14 +58,12 @@ foreach(APP_SRC ${USER_APPS_SRC})
     get_filename_component(APP_NAME ${APP_SRC} NAME_WE) # Get the name without extension
     add_executable(${APP_NAME} ${APP_SRC})
 
-    if(DEFINED user_libs)
+    if(USER_LIBS_SRC)
+        message(STATUS "Linking with user, tea, ROOT, and Python libs")
         target_link_libraries(${APP_NAME} user_libs tea_libs ${ROOT_LIBRARIES} ${PYTHON_LIBRARIES})
     else()
+        message(STATUS "Linking with tea, ROOT, and Python libs")
         target_link_libraries(${APP_NAME} tea_libs ${ROOT_LIBRARIES} ${PYTHON_LIBRARIES})
-    endif()
-
-    if(TARGET user_extensions)
-        target_link_libraries(${APP_NAME} user_extensions)
     endif()
 
     set_property(TARGET ${APP_NAME} PROPERTY CXX_STANDARD 17)
