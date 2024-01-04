@@ -142,8 +142,8 @@ class SubmissionManager:
     self.input_files_list_file_name = f"tmp/input_files_{hash_string}.txt"
     
   def __copy_templates(self):
-    os.system(f"cp ../templates/condor_config.template.sub {self.condor_config_name}")
-    os.system(f"cp ../templates/condor_run.template.sh {self.condor_run_script_name}")
+    os.system(f"cp ../tea/templates/condor_config.template.sub {self.condor_config_name}")
+    os.system(f"cp ../tea/templates/condor_run.template.sh {self.condor_run_script_name}")
     os.system(f"chmod 700 {self.condor_run_script_name}")
     info(f"Stored condor config at: {self.condor_config_name}")
     info(f"Stored run shell script at: {self.condor_run_script_name}")
