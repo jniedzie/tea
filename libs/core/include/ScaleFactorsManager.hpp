@@ -38,14 +38,19 @@ class ScaleFactorsManager {
     return instance;
   }
   std::map<std::string, bool> applyScaleFactors;
-
   std::map<std::string, TH2D *> muonSFvalues;
+  TH1D *pileupSFvalues;
+  std::map<std::string, TF1*> btaggingSFvalues;
+
+  void ReadScaleFactorFlags();
+  void ReadMuonSFs();
+  void ReadPileupSFs();
+  void ReadBtaggingSFs();
+
   void CreateMuonSFsHistogram(const ScaleFactorsMap &muonSFs, std::string outputPath, std::string histName);
   void BringEtaPtToHistRange(TH2D *hist, float &eta, float &pt);
   float GetScaleFactor(std::string name, float eta, float pt);
-
-  TH1D *pileupSFvalues;
-  std::map<std::string, TF1*> btaggingSFvalues;
+  
 };
 
 struct MuonID {

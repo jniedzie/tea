@@ -5,12 +5,19 @@
 #include "ScaleFactorsManager.hpp"
 
 #include "ConfigManager.hpp"
+#include "correction.h"
 
 using namespace std;
 
 ScaleFactorsManager::ScaleFactorsManager() {
-  auto &config = ConfigManager::GetInstance();
+  ReadScaleFactorFlags();
+  if (applyScaleFactors["muon"] || applyScaleFactors["muonTrigger"]) ReadMuonSFs();
+  if (applyScaleFactors["pileup"]) ReadPileupSFs();
+  if (applyScaleFactors["bTagging"]) ReadBtaggingSFs();
+}
 
+void ScaleFactorsManager::ReadScaleFactorFlags() {
+  auto &config = ConfigManager::GetInstance();
   config.GetMap("applyScaleFactors", applyScaleFactors);
 
   info() << "\n------------------------------------" << endl;
@@ -19,42 +26,48 @@ ScaleFactorsManager::ScaleFactorsManager() {
     info() << "  " << name << ": " << apply << endl;
   }
   info() << "------------------------------------\n" << endl;
+}
 
-  if (applyScaleFactors["muon"] || applyScaleFactors["muonTrigger"]) {
-    map<string, ScaleFactorsMap> muonSFs;
-    config.GetScaleFactors("muonSFs", muonSFs);
+void ScaleFactorsManager::ReadMuonSFs() {
+  auto &config = ConfigManager::GetInstance();
 
-    for (auto &[name, values] : muonSFs) {
-      string path = "../data/muon_SFs/" + name + ".root";
-      if (!FileExists(path)) {
-        ScaleFactorsMap muonSFs;
-        CreateMuonSFsHistogram(values, path, name);
-      }
-      muonSFvalues[name] = (TH2D *)TFile::Open(path.c_str())->Get(name.c_str());
+  map<string, ScaleFactorsMap> muonSFs;
+  config.GetScaleFactors("muonSFs", muonSFs);
+
+  for (auto &[name, values] : muonSFs) {
+    string path = "../data/muon_SFs/" + name + ".root";
+    if (!FileExists(path)) {
+      ScaleFactorsMap muonSFs;
+      CreateMuonSFsHistogram(values, path, name);
     }
+    muonSFvalues[name] = (TH2D *)TFile::Open(path.c_str())->Get(name.c_str());
   }
+}
 
-  if (applyScaleFactors["pileup"]) {
-    string pileupScaleFactorsPath, pileupScaleFactorsHistName;
-    config.GetValue("pileupScaleFactorsPath", pileupScaleFactorsPath);
-    config.GetValue("pileupScaleFactorsHistName", pileupScaleFactorsHistName);
-    info() << "Reading pileup scale factors from file: " << pileupScaleFactorsPath << "\thistogram: " << pileupScaleFactorsHistName << endl;
-    pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
-  }
+void ScaleFactorsManager::ReadPileupSFs() {
+  auto &config = ConfigManager::GetInstance();
 
-  if (applyScaleFactors["bTagging"]) {
-    map<string, ScaleFactorsTuple> bTaggingSFs;
-    config.GetScaleFactors("bTaggingSFs", bTaggingSFs);
+  string pileupScaleFactorsPath, pileupScaleFactorsHistName;
+  config.GetValue("pileupScaleFactorsPath", pileupScaleFactorsPath);
+  config.GetValue("pileupScaleFactorsHistName", pileupScaleFactorsHistName);
+  info() << "Reading pileup scale factors from file: " << pileupScaleFactorsPath << "\thistogram: " << pileupScaleFactorsHistName << endl;
+  pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
+}
 
-    for (auto &[name, values] : bTaggingSFs) {
-      string formula = get<0>(values);
-      auto function = new TF1(name.c_str(), formula.c_str());
-      vector<float> params = get<1>(values);
-      for (int i = 0; i < params.size(); i++) {
-        function->SetParameter(i, params[i]);
-      }
-      btaggingSFvalues[name] = function;
+void ScaleFactorsManager::ReadBtaggingSFs() {
+  auto &config = ConfigManager::GetInstance();
+
+  map<string, ScaleFactorsTuple> bTaggingSFs;
+  config.GetScaleFactors("bTaggingSFs", bTaggingSFs);
+
+  for (auto &[name, values] : bTaggingSFs) {
+    string formula = get<0>(values);
+    auto function = new TF1(name.c_str(), formula.c_str());
+    vector<float> params = get<1>(values);
+    for (int i = 0; i < params.size(); i++) {
+      function->SetParameter(i, params[i]);
     }
+    btaggingSFvalues[name] = function;
   }
 }
 
@@ -80,7 +93,7 @@ void ScaleFactorsManager::CreateMuonSFsHistogram(const ScaleFactorsMap &muonSFs,
     float eta = (get<1>(etaRange) + get<0>(etaRange)) / 2.;
     for (auto &[ptRange, values] : valuesForEta) {
       float pt = (get<1>(ptRange) + get<0>(ptRange)) / 2.;
-      if(!values.count("value")){
+      if (!values.count("value")) {
         error() << "Scale factor value for " << histName << " not defined for eta: " << eta << " pt: " << pt << endl;
       }
       hist->Fill(eta, pt, values.at("value"));
@@ -183,12 +196,12 @@ float ScaleFactorsManager::GetMuonTriggerScaleFactor(float eta, float pt, string
 
 float ScaleFactorsManager::GetScaleFactor(string name, float eta, float pt) {
   TH2D *hist = muonSFvalues[name];
-  
+
   BringEtaPtToHistRange(hist, eta, pt);
 
   int etaBin = hist->GetXaxis()->FindBin(eta);
   int ptBin = hist->GetYaxis()->FindBin(pt);
-  
+
   return hist->GetBinContent(etaBin, ptBin);
 }
 
