@@ -22,13 +22,13 @@ The framework will help you with:
 - creating histograms,
 - plotting histograms,
 - submission to HTCondor based grid systems (e.g. lxplus or NAF),
+- applying correction (e.g. Pile-Up reweighting, b-tagging SFs, muon SFs, etc.).
 
 Upcoming features:
 
 - optimization and verification of ABCD method for background estimation,
 - estimation of systematic uncertainties,
-- applying correction (e.g. Jet Energy Corrections, Jet Energy Resolution, Pile-Up reweighting, etc.),
-- calculating limits with Combine, 
+- calculating limits with Combine.
 
 <div class="grid-container">
   <div class="image-link">

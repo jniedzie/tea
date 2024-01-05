@@ -30,6 +30,12 @@ conda activate tea
 
 The activate command has to be repeated in each new session, or added to `~/.bash_profile`.
 
+Then, we need to install `correctionlib`, which is a package that helps us to deal with scale factors and other corrections:
+
+```bash
+python3 -m pip install correctionlib
+```
+
 ### Conda on NAF
 
 If you're working on NAF, you can use an existing Conda environment:
