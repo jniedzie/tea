@@ -29,7 +29,7 @@ class Jet {
 
   TLorentzVector GetFourVector();
 
-  float GetScaleFactor(std::string ID);
+  float GetBtaggingScaleFactor(std::string workingPoint);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

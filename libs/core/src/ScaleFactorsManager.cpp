@@ -5,9 +5,10 @@
 #include "ScaleFactorsManager.hpp"
 
 #include "ConfigManager.hpp"
-#include "correction.h"
+
 
 using namespace std;
+using correction::CorrectionSet;
 
 ScaleFactorsManager::ScaleFactorsManager() {
   ReadScaleFactorFlags();
@@ -60,6 +61,8 @@ void ScaleFactorsManager::ReadBtaggingSFs() {
   map<string, ScaleFactorsTuple> bTaggingSFs;
   config.GetScaleFactors("bTaggingSFs", bTaggingSFs);
 
+  info() << "Loaded b-tagging SFs from config file" << endl;
+
   for (auto &[name, values] : bTaggingSFs) {
     string formula = get<0>(values);
     auto function = new TF1(name.c_str(), formula.c_str());
@@ -67,7 +70,25 @@ void ScaleFactorsManager::ReadBtaggingSFs() {
     for (int i = 0; i < params.size(); i++) {
       function->SetParameter(i, params[i]);
     }
+    info() << "Adding formula for b-tagging SF: " << name << endl;
     btaggingSFvalues[name] = function;
+  }
+
+
+  // using correctionlib:
+  string bTaggingSFsPath, bTaggingSFsType;
+  config.GetValue("bTaggingSFsPath", bTaggingSFsPath);
+  config.GetValue("bTaggingSFsType", bTaggingSFsType);
+  auto cset = correction::CorrectionSet::from_file(bTaggingSFsPath);
+
+  try{
+    bTaggingCorrections = cset->at(bTaggingSFsType);
+  }
+  catch (std::out_of_range& e){
+    fatal() << "Incorrect b-tagging correction type: " << bTaggingSFsType << endl;
+    fatal() << "Available corrections: " << endl;
+    for (auto &[name, corr] : *cset) fatal() << name << endl;
+    exit(0);
   }
 }
 
@@ -238,7 +259,7 @@ float ScaleFactorsManager::GetPileupScaleFactor(int nVertices) {
   return sf;
 }
 
-float ScaleFactorsManager::GetBTagScaleFactor(float pt, std::string ID) {
+float ScaleFactorsManager::GetBTagScaleFactorOld(float pt, std::string ID) {
   if (!applyScaleFactors["b_tagging"]) return 1.0;
 
   if (pt < 20) {
@@ -251,5 +272,13 @@ float ScaleFactorsManager::GetBTagScaleFactor(float pt, std::string ID) {
   }
 
   float sf = btaggingSFvalues["deepJet_mujets_" + ID]->Eval(pt);
+  return sf;
+}
+
+
+float ScaleFactorsManager::GetBTagScaleFactor(float eta, float pt, string workingPoint) {
+  if (!applyScaleFactors["b_tagging"]) return 1.0;
+
+  double sf = bTaggingCorrections->evaluate({"central", workingPoint, 5, eta, pt});
   return sf;
 }

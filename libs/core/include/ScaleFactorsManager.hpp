@@ -6,6 +6,7 @@
 #define ScaleFactorsManager_hpp
 
 #include "Helpers.hpp"
+#include "correction.h"
 
 struct MuonID;
 struct MuonIso;
@@ -27,7 +28,7 @@ class ScaleFactorsManager {
 
   float GetPileupScaleFactor(int nVertices);
 
-  float GetBTagScaleFactor(float pt, std::string ID);
+  float GetBTagScaleFactor(float eta, float pt, std::string workingPoint); // working point can be "L", "M", or "T"
 
  private:
   ScaleFactorsManager();
@@ -38,6 +39,9 @@ class ScaleFactorsManager {
     return instance;
   }
   std::map<std::string, bool> applyScaleFactors;
+  
+  correction::Correction::Ref bTaggingCorrections;
+  
   std::map<std::string, TH2D *> muonSFvalues;
   TH1D *pileupSFvalues;
   std::map<std::string, TF1*> btaggingSFvalues;

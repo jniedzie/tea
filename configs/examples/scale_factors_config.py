@@ -29,15 +29,17 @@ bTaggingSFs = {
   **scaleFactorsReader.getBtaggingScaleFactors("../tea/data/b_tagging/btagging_UL2018.json"),
 }
 
+info(f"b tagging sfs: {bTaggingSFs}")
+
 bTaggingSFsURL = "https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/POG/BTV/2018_UL/btagging.json.gz"
-bTaggingSFsPath = "../tea/data/b_tagging/btagging.json.gz"
+bTaggingSFsPath = "../tea/data/b_tagging/btagging.json"
 
 if not os.path.exists(bTaggingSFsPath):  
   info(f"Downloading b-tagging SFs from URL: {bTaggingSFsURL}")
-  urllib.request.urlretrieve(bTaggingSFsURL, bTaggingSFsPath)
+  urllib.request.urlretrieve(bTaggingSFsURL, bTaggingSFsPath+".gz")
   
-  # print("Unzipping b-tagging SFs...")
-  # with gzip.open(bTaggingSFsPath, "rb") as f_in:
-  #   with open(bTaggingSFsPath.replace(".gz", ""), "wb") as f_out:
-  #     f_out.write(f_in.read())
-  # print("Done.")
+  info(f"Unzipping b-tagging SFs: {bTaggingSFsPath}.gz")
+  with gzip.open(bTaggingSFsPath+".gz", "rb") as f_in:
+    with open(bTaggingSFsPath, "wb") as f_out:
+      f_out.write(f_in.read())
+  print("Done.")
