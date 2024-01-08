@@ -1,0 +1,3 @@
+[submodule "jsonPOG"]
+	path = jsonPOG
+	url = ssh://git@gitlab.cern.ch:7999/cms-nanoAOD/jsonpog-integration.git
