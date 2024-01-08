@@ -1,7 +1,7 @@
 from HistogramPlotter import HistogramPlotter
 from Logger import *
 
-from ROOT import TFile
+from ROOT import TFile, gROOT
 import importlib
 import sys
 
@@ -15,6 +15,7 @@ def getConfig():
 
 
 def main():
+  gROOT.SetBatch(True)
 
   config = getConfig()
   plotter = HistogramPlotter(config)
