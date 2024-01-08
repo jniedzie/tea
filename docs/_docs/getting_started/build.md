@@ -33,7 +33,13 @@ The activate command has to be repeated in each new session, or added to `~/.bas
 Then, we need to install `correctionlib`, which is a package that helps us to deal with scale factors and other corrections:
 
 ```bash
-python3 -m pip install correctionlib
+python3 -m pip install correctionlib --no-binary=correctionlib
+```
+
+In case you see some errors related to `correctionlib`, you can also try installing the latest development version instead (more information [here](https://cms-nanoaod.github.io/correctionlib/install.html)):
+
+```bash
+python3 -m pip install git+https://github.com/cms-nanoAOD/correctionlib.git
 ```
 
 ### Conda on NAF
