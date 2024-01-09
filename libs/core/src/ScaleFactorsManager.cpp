@@ -86,6 +86,13 @@ float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt) 
   return TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
 }
 
+float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
+  if (!applyScaleFactors["pileup"]) return 1.0;
+
+  auto extraArgs = correctionsExtraArgs[name];
+  return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
+}
+
 float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &correction, const vector<std::variant<int, double, std::string>> &args) {
   try {
     return correction->evaluate(args);
@@ -107,7 +114,7 @@ float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &corr
   }
 }
 
-float ScaleFactorsManager::GetPileupScaleFactor(int nVertices) {
+float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
   if (!applyScaleFactors["pileup"]) return 1.0;
 
   if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {

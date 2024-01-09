@@ -68,10 +68,9 @@ scaleFactors = {
   },
   
   # Pileup
-  # "pileup": {
-  #   "path": "../tea/jsonPOG/POG/LUM/2018_UL/puWeights.json.gz",
-  #   "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
-  #   "year": "2018_UL",
-  #   "ValType": "sf",
-  # },
+  "pileup": {
+    "path": "../tea/jsonPOG/POG/LUM/2018_UL/puWeights.json.gz",
+    "type": "Collisions18_UltraLegacy_goldenJSON",
+    "weights": "nominal",
+  },
 }

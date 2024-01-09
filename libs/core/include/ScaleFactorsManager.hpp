@@ -25,7 +25,8 @@ class ScaleFactorsManager {
   float GetMuonTriggerScaleFactor(std::string name, float eta, float pt);
   float GetBTagScaleFactor(std::string name, float eta, float pt);
 
-  float GetPileupScaleFactor(int nVertices);
+  float GetPileupScaleFactorCustom(int nVertices);
+  float GetPileupScaleFactor(std::string name, float nVertices);
 
  private:
   ScaleFactorsManager();

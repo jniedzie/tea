@@ -15,7 +15,7 @@ class NanoEventProcessor {
   NanoEventProcessor();
 
   float GetGenWeight(const std::shared_ptr<NanoEvent> event);
-  float GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event);
+  float GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event, std::string name);
   float GetMuonTriggerScaleFactor(const std::shared_ptr<NanoEvent> event, std::string name);
 
   std::pair<std::shared_ptr<Muon>, std::shared_ptr<Muon>> GetMuonPairClosestToZ(const std::shared_ptr<NanoEvent> event, std::string collection);
