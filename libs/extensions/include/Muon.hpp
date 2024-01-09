@@ -29,7 +29,7 @@ class Muon {
 
   TLorentzVector GetFourVector();
 
-  float GetScaleFactor(std::string ptRange, std::string id, std::string iso);
+  float GetScaleFactor(std::string nameID, std::string nameIso, std::string nameReco);
 
   MuonID GetID();
   MuonIso GetIso();

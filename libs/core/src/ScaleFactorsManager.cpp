@@ -6,15 +6,41 @@
 
 #include "ConfigManager.hpp"
 
-
 using namespace std;
 using correction::CorrectionSet;
 
 ScaleFactorsManager::ScaleFactorsManager() {
   ReadScaleFactorFlags();
-  if (applyScaleFactors["muon"] || applyScaleFactors["muonTrigger"]) ReadMuonSFs();
+  ReadScaleFactors();
   if (applyScaleFactors["pileup"]) ReadPileupSFs();
-  if (applyScaleFactors["bTagging"]) ReadBtaggingSFs();
+}
+
+void ScaleFactorsManager::ReadScaleFactors() {
+  auto &config = ConfigManager::GetInstance();
+
+  map<string, map<string, string>> scaleFactors;
+  config.GetMap("scaleFactors", scaleFactors);
+  
+  for (auto &[name, values] : scaleFactors) {
+    auto cset = correction::CorrectionSet::from_file(values["path"]);
+    map<string, string> extraArgs;
+
+    for (auto &[key, value] : values) {
+      if (key == "path" || key == "type") continue;
+      extraArgs[key] = value;
+    }
+    if (corrections.count(name)) continue;
+
+    try {
+      corrections[name] = cset->at(values["type"]);
+      correctionsExtraArgs[name] = extraArgs;
+    } catch (std::out_of_range &e) {
+      fatal() << "Incorrect correction type: " << values["type"] << endl;
+      fatal() << "Available corrections: " << endl;
+      for (auto &[name, corr] : *cset) fatal() << name << endl;
+      exit(0);
+    }
+  }
 }
 
 void ScaleFactorsManager::ReadScaleFactorFlags() {
@@ -29,22 +55,6 @@ void ScaleFactorsManager::ReadScaleFactorFlags() {
   info() << "------------------------------------\n" << endl;
 }
 
-void ScaleFactorsManager::ReadMuonSFs() {
-  auto &config = ConfigManager::GetInstance();
-
-  map<string, ScaleFactorsMap> muonSFs;
-  config.GetScaleFactors("muonSFs", muonSFs);
-
-  for (auto &[name, values] : muonSFs) {
-    string path = "../data/muon_SFs/" + name + ".root";
-    if (!FileExists(path)) {
-      ScaleFactorsMap muonSFs;
-      CreateMuonSFsHistogram(values, path, name);
-    }
-    muonSFvalues[name] = (TH2D *)TFile::Open(path.c_str())->Get(name.c_str());
-  }
-}
-
 void ScaleFactorsManager::ReadPileupSFs() {
   auto &config = ConfigManager::GetInstance();
 
@@ -55,191 +65,45 @@ void ScaleFactorsManager::ReadPileupSFs() {
   pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
 }
 
-void ScaleFactorsManager::ReadBtaggingSFs() {
-  auto &config = ConfigManager::GetInstance();
-
-  map<string, ScaleFactorsTuple> bTaggingSFs;
-  config.GetScaleFactors("bTaggingSFs", bTaggingSFs);
-
-  info() << "Loaded b-tagging SFs from config file" << endl;
-
-  for (auto &[name, values] : bTaggingSFs) {
-    string formula = get<0>(values);
-    auto function = new TF1(name.c_str(), formula.c_str());
-    vector<float> params = get<1>(values);
-    for (int i = 0; i < params.size(); i++) {
-      function->SetParameter(i, params[i]);
-    }
-    info() << "Adding formula for b-tagging SF: " << name << endl;
-    btaggingSFvalues[name] = function;
-  }
-
-
-  // using correctionlib:
-  string bTaggingSFsPath, bTaggingSFsType;
-  config.GetValue("bTaggingSFsPath", bTaggingSFsPath);
-  config.GetValue("bTaggingSFsType", bTaggingSFsType);
-  auto cset = correction::CorrectionSet::from_file(bTaggingSFsPath);
-
-  try{
-    bTaggingCorrections = cset->at(bTaggingSFsType);
-  }
-  catch (std::out_of_range& e){
-    fatal() << "Incorrect b-tagging correction type: " << bTaggingSFsType << endl;
-    fatal() << "Available corrections: " << endl;
-    for (auto &[name, corr] : *cset) fatal() << name << endl;
-    exit(0);
-  }
-}
-
-void ScaleFactorsManager::CreateMuonSFsHistogram(const ScaleFactorsMap &muonSFs, string outputPath, string histName) {
-  set<float> etaBinsSet, ptBinsSet;
-
-  for (auto &[etaRange, valuesForEta] : muonSFs) {
-    etaBinsSet.insert(get<0>(etaRange));
-    etaBinsSet.insert(get<1>(etaRange));
-
-    for (auto &[ptRange, values] : valuesForEta) {
-      ptBinsSet.insert(get<0>(ptRange));
-      ptBinsSet.insert(get<1>(ptRange));
-    }
-  }
-
-  vector<float> etaBins(etaBinsSet.begin(), etaBinsSet.end());
-  vector<float> ptBins(ptBinsSet.begin(), ptBinsSet.end());
-
-  auto hist = new TH2D(histName.c_str(), histName.c_str(), etaBins.size() - 1, etaBins.data(), ptBins.size() - 1, ptBins.data());
-
-  for (auto &[etaRange, valuesForEta] : muonSFs) {
-    float eta = (get<1>(etaRange) + get<0>(etaRange)) / 2.;
-    for (auto &[ptRange, values] : valuesForEta) {
-      float pt = (get<1>(ptRange) + get<0>(ptRange)) / 2.;
-      if (!values.count("value")) {
-        error() << "Scale factor value for " << histName << " not defined for eta: " << eta << " pt: " << pt << endl;
-      }
-      hist->Fill(eta, pt, values.at("value"));
-    }
-  }
-  makeParentDirectories(outputPath);
-  hist->SaveAs(outputPath.c_str());
-}
-
-float ScaleFactorsManager::GetMuonRecoScaleFactor(float eta, float pt, string ptRange) {
+float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt) {
   if (!applyScaleFactors["muon"]) return 1.0;
 
-  string name = "";
-
-  if (ptRange == "lowPt" || ptRange == "midPt") {
-    name = "NUM_TrackerMuons_DEN_genTracks";
-  } else if (ptRange == "highPt") {
-    name = "NUM_GlobalMuons_DEN_TrackerMuons";
-  } else {
-    error() << "Muon reco SFs not defined for pt range: " << ptRange << endl;
-    return 1;
-  }
-
-  return GetScaleFactor(name, eta, pt);
+  auto extraArgs = correctionsExtraArgs[name];
+  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
 }
 
-float ScaleFactorsManager::GetMuonIDScaleFactor(float eta, float pt, string id) {
-  if (!applyScaleFactors["muon"]) return 1.0;
-
-  // ID options:
-  // SoftID
-  // TightID
-  // MediumID
-  // LooseID
-  // MediumPromptID
-  // HighPtID
-  // TrkHighPtID
-
-  string name = "NUM_" + id + "_DEN_TrackerMuons";
-
-  if (!muonSFvalues.count(name)) {
-    warn() << "Muon ID SFs not defined for ID: " << id << endl;
-    return 1;
-  }
-  return GetScaleFactor(name, eta, pt);
-}
-
-float ScaleFactorsManager::GetMuonIsoScaleFactor(float eta, float pt, string id, string iso) {
-  if (!applyScaleFactors["muon"]) return 1.0;
-
-  // ID options:
-  // TrkHighPtID
-  // HighPtID
-  // TightID
-  // MediumPromptID
-  // MediumID
-  // LooseID
-
-  // Iso options:
-  // TightRelTkIso
-  // LooseRelTkIso
-  // TightRelIso
-  // LooseRelIso
-
-  if (id == "TrkHighPtID" || id == "HighPtID" || id == "TightID") id += "andIPCut";
-  string name = "NUM_" + iso + "_DEN_" + id;
-
-  if (!muonSFvalues.count(name)) {
-    warn() << "Muon Iso SFs not defined for combination of ID & Iso: " << id << " -- " << iso << endl;
-    return 1;
-  }
-  return GetScaleFactor(name, eta, pt);
-}
-
-float ScaleFactorsManager::GetMuonTriggerScaleFactor(float eta, float pt, string id, string iso, string triggers) {
+float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, float pt) {
   if (!applyScaleFactors["muonTrigger"]) return 1.0;
-  // ID options:
-  // IdTight
-  // IdMedium
-  // IdGlobalHighPt
 
-  // Iso options:
-  // PFIsoTight
-  // PFIsoMedium
-  // TkIsoLoose
-
-  // Trigger options:
-  // IsoMu24
-  // IsoMu24_or_Mu50
-  // Mu50_or_OldMu100_or_TkMu100
-
-  string name = "NUM_" + triggers + "_DEN_CutBased" + id + "_and_" + iso;
-
-  if (!muonSFvalues.count(name)) {
-    warn() << "Muon Trigger SFs not defined for combination of triggers & ID & Iso: " << triggers << " -- " << id << " -- " << iso << endl;
-    return 1;
-  }
-  return GetScaleFactor(name, eta, pt);
+  auto extraArgs = correctionsExtraArgs[name];
+  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
 }
 
-float ScaleFactorsManager::GetScaleFactor(string name, float eta, float pt) {
-  TH2D *hist = muonSFvalues[name];
+float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt) {
+  if (!applyScaleFactors["b_tagging"]) return 1.0;
 
-  BringEtaPtToHistRange(hist, eta, pt);
-
-  int etaBin = hist->GetXaxis()->FindBin(eta);
-  int ptBin = hist->GetYaxis()->FindBin(pt);
-
-  return hist->GetBinContent(etaBin, ptBin);
+  auto extraArgs = correctionsExtraArgs[name];
+  return TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
 }
 
-void ScaleFactorsManager::BringEtaPtToHistRange(TH2D *hist, float &eta, float &pt) {
-  if (eta < hist->GetXaxis()->GetBinLowEdge(1)) {
-    eta = hist->GetXaxis()->GetBinLowEdge(1) + 0.01;
-  }
-  if (eta > hist->GetXaxis()->GetBinUpEdge(hist->GetNbinsX())) {
-    eta = hist->GetXaxis()->GetBinUpEdge(hist->GetNbinsX()) - 0.01;
-  }
+float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &correction, const vector<std::variant<int, double, std::string>> &args) {
+  try {
+    return correction->evaluate(args);
+  } catch (std::runtime_error &e) {
+    string errorMessage = e.what();
+    error() << "Error while evaluating SF: " << errorMessage << endl;
 
-  if (pt < hist->GetYaxis()->GetBinLowEdge(1)) {
-    pt = hist->GetYaxis()->GetBinLowEdge(1) + 0.01;
-  }
-
-  if (pt > hist->GetYaxis()->GetBinUpEdge(hist->GetNbinsY())) {
-    pt = hist->GetYaxis()->GetBinUpEdge(hist->GetNbinsY()) - 0.01;
+    if (errorMessage.find("inputs") != string::npos) {
+      fatal() << "Expected inputs: " << endl;
+      for (auto corr : correction->inputs()) fatal() << corr.name() << "\t" << corr.description() << endl;
+      exit(0);
+    } else if (errorMessage.find("bounds") != string::npos) {
+      warn() << "Encountered a value out of SF bounds. Will assume SF = 1.0 " << endl;
+      return 1.0;
+    } else {
+      fatal() << "Unhandled error while evaluating SF: " << errorMessage << endl;
+      exit(0);
+    }
   }
 }
 
@@ -259,26 +123,4 @@ float ScaleFactorsManager::GetPileupScaleFactor(int nVertices) {
   return sf;
 }
 
-float ScaleFactorsManager::GetBTagScaleFactorOld(float pt, std::string ID) {
-  if (!applyScaleFactors["b_tagging"]) return 1.0;
 
-  if (pt < 20) {
-    warn() << "Jet pt is lower than the lowest allowed value in b-tagging SF histogram" << endl;
-    return 1.0;
-  }
-  if (pt > 1000) {
-    warn() << "Jet pt is higher than the highest allowed value in b-tagging SF histogram" << endl;
-    return 1.0;
-  }
-
-  float sf = btaggingSFvalues["deepJet_mujets_" + ID]->Eval(pt);
-  return sf;
-}
-
-
-float ScaleFactorsManager::GetBTagScaleFactor(float eta, float pt, string workingPoint) {
-  if (!applyScaleFactors["b_tagging"]) return 1.0;
-
-  double sf = bTaggingCorrections->evaluate({"central", workingPoint, 5, eta, pt});
-  return sf;
-}

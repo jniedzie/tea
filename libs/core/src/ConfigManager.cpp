@@ -250,6 +250,31 @@ void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vect
 }
 
 template <>
+void ConfigManager::GetMap<string, map<string, string>>(string name, map<string, map<string, string>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
+
+  PyObject *pKey, *pValue;
+  Py_ssize_t pos = 0;
+
+  while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
+    if (!PyUnicode_Check(pKey) || !PyDict_Check(pValue)) {
+      error() << "Failed retriving python key-value pair (string-map<string, string>)" << endl;
+      continue;
+    }
+    map<string, string> tmpMap;
+    PyObject *pKeyInner, *pValueInner;
+    Py_ssize_t posInner = 0;
+
+    while (PyDict_Next(pValue, &posInner, &pKeyInner, &pValueInner)) {
+      if(PyUnicode_Check(pValueInner)){
+        tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner);
+      }
+    }
+    outputMap[PyUnicode_AsUTF8(pKey)] = tmpMap;
+  }
+}
+
+template <>
 void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vector<vector<int>>> &outputMap) {
   PyObject *pythonDict = GetPythonDict(name);
 

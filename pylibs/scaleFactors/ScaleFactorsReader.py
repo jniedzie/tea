@@ -94,8 +94,7 @@ class ScaleFactorsReader:
       name = correction_dict["name"]
       if "deepJet_mujets" not in name:
         continue
-      print(f"{name=}")
-      
+
       if "generic_formulas" in correction_dict:
         generic_formula = correction_dict["generic_formulas"][0]
         expression = generic_formula["expression"]

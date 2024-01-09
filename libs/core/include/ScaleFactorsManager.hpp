@@ -21,14 +21,11 @@ class ScaleFactorsManager {
   ScaleFactorsManager(ScaleFactorsManager const &) = delete;
   void operator=(ScaleFactorsManager const &) = delete;
 
-  float GetMuonRecoScaleFactor(float eta, float pt, std::string ptRange);
-  float GetMuonIDScaleFactor(float eta, float pt, std::string id);
-  float GetMuonIsoScaleFactor(float eta, float pt, std::string id, std::string iso);
-  float GetMuonTriggerScaleFactor(float eta, float pt, std::string id, std::string iso, std::string triggers);
+  float GetMuonScaleFactor(std::string name, float eta, float pt);
+  float GetMuonTriggerScaleFactor(std::string name, float eta, float pt);
+  float GetBTagScaleFactor(std::string name, float eta, float pt);
 
   float GetPileupScaleFactor(int nVertices);
-
-  float GetBTagScaleFactor(float eta, float pt, std::string workingPoint); // working point can be "L", "M", or "T"
 
  private:
   ScaleFactorsManager();
@@ -39,22 +36,22 @@ class ScaleFactorsManager {
     return instance;
   }
   std::map<std::string, bool> applyScaleFactors;
-  
+
   correction::Correction::Ref bTaggingCorrections;
-  
+  correction::Correction::Ref muonCorrections;
+
+  std::map<std::string, correction::Correction::Ref> corrections;
+  std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
+
   std::map<std::string, TH2D *> muonSFvalues;
   TH1D *pileupSFvalues;
-  std::map<std::string, TF1*> btaggingSFvalues;
+  std::map<std::string, TF1 *> btaggingSFvalues;
 
   void ReadScaleFactorFlags();
-  void ReadMuonSFs();
+  void ReadScaleFactors();
   void ReadPileupSFs();
-  void ReadBtaggingSFs();
 
-  void CreateMuonSFsHistogram(const ScaleFactorsMap &muonSFs, std::string outputPath, std::string histName);
-  void BringEtaPtToHistRange(TH2D *hist, float &eta, float &pt);
-  float GetScaleFactor(std::string name, float eta, float pt);
-  
+  float TryToEvaluate(const correction::Correction::Ref &correction, const std::vector<std::variant<int, double, std::string>> &args);
 };
 
 struct MuonID {

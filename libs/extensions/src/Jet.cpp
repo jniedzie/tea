@@ -12,8 +12,8 @@ TLorentzVector Jet::GetFourVector() {
   return v;
 }
 
-float Jet::GetBtaggingScaleFactor(string workingPoint) {
+float Jet::GetBtaggingScaleFactor(string name) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  float sf = scaleFactorsManager.GetBTagScaleFactor(GetEta(), GetPt(), workingPoint);
+  float sf = scaleFactorsManager.GetBTagScaleFactor(name, GetEta(), GetPt());
   return sf;
 }

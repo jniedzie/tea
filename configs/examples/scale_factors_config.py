@@ -29,17 +29,70 @@ bTaggingSFs = {
   **scaleFactorsReader.getBtaggingScaleFactors("../tea/data/b_tagging/btagging_UL2018.json"),
 }
 
-info(f"b tagging sfs: {bTaggingSFs}")
+muonSFsPath = "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz"
 
-bTaggingSFsURL = "https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/POG/BTV/2018_UL/btagging.json.gz"
-bTaggingSFsPath = "../tea/data/b_tagging/btagging.json"
-
-if not os.path.exists(bTaggingSFsPath):  
-  info(f"Downloading b-tagging SFs from URL: {bTaggingSFsURL}")
-  urllib.request.urlretrieve(bTaggingSFsURL, bTaggingSFsPath+".gz")
+scaleFactors = {
+  "bTaggingMedium": {
+    "path": "../tea/jsonPOG/POG/BTV/2018_UL/btagging.json.gz",
+    "type": "deepJet_mujets",
+    "systematic": "central",
+    "workingPoint": "M",
+    "jetID": "5",
+  },
+  "bTaggingTight": {
+    "path": "../tea/jsonPOG/POG/BTV/2018_UL/btagging.json.gz",
+    "type": "deepJet_mujets",
+    "workingPoint": "T",
+    "systematic": "central",
+    "workingPoint": "M",
+    "jetID": "5",
+  },
   
-  info(f"Unzipping b-tagging SFs: {bTaggingSFsPath}.gz")
-  with gzip.open(bTaggingSFsPath+".gz", "rb") as f_in:
-    with open(bTaggingSFsPath, "wb") as f_out:
-      f_out.write(f_in.read())
-  print("Done.")
+  "muonReco": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_TrackerMuons_DEN_genTracks",
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  
+  "muonIDLoose": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_LooseID_DEN_TrackerMuons", 
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  "muonIDMedium": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_MediumID_DEN_TrackerMuons", 
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  "muonIDTight": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_TightID_DEN_TrackerMuons", 
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  
+  "muonIsoLoose": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_LooseRelIso_DEN_LooseID",
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  "muonIsoTight": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_TightRelIso_DEN_TightIDandIPCut",
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  
+  "muonTriggerIsoMu24": {
+    "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
+    "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+    "year": "2018_UL",
+    "ValType": "sf",
+  },
+  
+  
+}
