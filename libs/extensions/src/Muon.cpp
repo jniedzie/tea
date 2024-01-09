@@ -12,13 +12,16 @@ TLorentzVector Muon::GetFourVector() {
 }
 
 float Muon::GetScaleFactor(string nameID, string nameIso, string nameReco) {
+  if(scaleFactor > 0) return scaleFactor;
+  
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   
   float idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
   float recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
   
-  return recoSF * idSF * isoSF;
+  scaleFactor = recoSF * idSF * isoSF;
+  return scaleFactor;
 }
 
 MuonID Muon::GetID() {

@@ -17,10 +17,16 @@ class NanoEvent {
   TLorentzVector GetMetFourVector();
   float GetMetPt();
 
+  std::shared_ptr<Event> GetEvent() { return event; }
+
   std::shared_ptr<PhysicsObjects> GetAllMuons(float matchingDeltaR = 0.1);
+
+  float GetMuonTriggerSF() { return muonTriggerSF; }
+  void SetMuonTriggerSF(float sf) { muonTriggerSF = sf; }
 
  private:
   std::shared_ptr<Event> event;
+  float muonTriggerSF = -1;
 };
 
 #endif /* NanoEvent_hpp */

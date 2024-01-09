@@ -19,7 +19,7 @@ NanoEventProcessor::NanoEventProcessor() {
 
 }
 
-float NanoEventProcessor::GetGenWeight(const std::shared_ptr<Event> event) {
+float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
   float weight = 1.0;
   try {
     weight = event->Get(weightsBranchName);
@@ -29,7 +29,7 @@ float NanoEventProcessor::GetGenWeight(const std::shared_ptr<Event> event) {
   return weight;
 }
 
-float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<Event> event) {
+float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   int nVertices = event->Get("PV_npvsGood");
@@ -38,15 +38,20 @@ float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<Event> even
   return pileupSF;
 }
 
-float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<Event> event, string name) {
+float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> event, string name) {
+  if(event->GetMuonTriggerSF() > 0) return event->GetMuonTriggerSF();
+  
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  auto leadingMuon = asMuon(eventProcessor->GetMaxPtObject(event, "Muon"));
+  
+  auto leadingMuon = asMuon(eventProcessor->GetMaxPtObject(event->GetEvent(), "Muon"));
+
   float scaleFactor = scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
+  event->SetMuonTriggerSF(scaleFactor);
 
   return scaleFactor;
 }
 
-pair<shared_ptr<Muon>, shared_ptr<Muon>> NanoEventProcessor::GetMuonPairClosestToZ(const std::shared_ptr<Event> event, string collection) {
+pair<shared_ptr<Muon>, shared_ptr<Muon>> NanoEventProcessor::GetMuonPairClosestToZ(const std::shared_ptr<NanoEvent> event, string collection) {
   auto muons = event->GetCollection(collection);
   if(muons->size() < 2) return {nullptr, nullptr};
 

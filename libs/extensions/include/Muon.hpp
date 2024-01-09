@@ -42,6 +42,7 @@ class Muon {
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
+  float scaleFactor = -1;
 };
 
 #endif /* Muon_hpp */
