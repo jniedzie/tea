@@ -35,6 +35,7 @@ class HistogramPlotter:
     self.histosamples = []
     self.histosamples2D = []
     self.data_integral = {}
+    self.background_integral = {}
     
     if not os.path.exists(self.config.output_path):
       os.makedirs(self.config.output_path)
@@ -72,6 +73,11 @@ class HistogramPlotter:
     if input_hist.getName() in self.data_integral.keys():
       return self.data_integral[input_hist.getName()]
     return None
+
+  def __getBackgroundIntegral(self, input_hist):
+    if input_hist.getName() in self.background_integral.keys():
+      return self.background_integral[input_hist.getName()]
+    return None
   
   def __sortHistosamples(self):
     if hasattr(self.config, "custom_stacks_order"):
@@ -95,8 +101,32 @@ class HistogramPlotter:
       if not hist.isGood():
         warn(f"No good histogram {hist.getName()} for sample {sample.name}")
         continue
+
+      if sample.type != SampleType.background:
+        continue
+
+      self.normalizer.normalize(hist, sample, self.__getDataIntegral(hist), self.__getBackgroundIntegral(hist))
+
+      if hist.getName() in self.background_integral:
+        self.background_integral[hist.getName()] += hist.hist.Integral()
+      else:
+        self.background_integral[hist.getName()] = hist.hist.Integral()
+    
+    for hist, sample in self.histosamples:
+      if not hist.isGood():
+        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
+        continue
+        
+      if sample.type == SampleType.background:
+        continue
+
+      self.normalizer.normalize(hist, sample, self.__getDataIntegral(hist), self.__getBackgroundIntegral(hist))
+
+    for hist, sample in self.histosamples:
+      if not hist.isGood():
+        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
+        continue
       
-      self.normalizer.normalize(hist, sample, self.__getDataIntegral(hist))
       hist.setup(sample)
       
       self.stacks[sample.type][hist.getName()].Add(hist.hist)

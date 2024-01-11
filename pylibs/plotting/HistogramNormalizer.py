@@ -25,11 +25,11 @@ class HistogramNormalizer:
     if normalize_hists:
       self.__setBackgroundEntries()
   
-  def normalize(self, hist, sample, data_integral=None):
+  def normalize(self, hist, sample, data_integral=None, background_integral=None):
     if hist.norm_type == NormalizationType.to_one:
-      self.__normalizeToOne(hist, sample)
+      self.__normalizeToOne(hist, sample, background_integral)
     elif hist.norm_type == NormalizationType.to_background:
-      self.__normalizeToBackground(hist, sample)
+      self.__normalizeToBackground(hist, sample, background_integral)
     elif hist.norm_type == NormalizationType.to_lumi:
       self.__normalizeToLumi(hist, sample)
     elif hist.norm_type == NormalizationType.to_data:
@@ -41,13 +41,13 @@ class HistogramNormalizer:
     else:
       hist.hist.Scale(1./hist.hist.Integral())
   
-  def __normalizeToBackground(self, hist, sample):
+  def __normalizeToBackground(self, hist, sample, background_integral):
     if sample.type == SampleType.background:
       hist.hist.Scale(self.config.luminosity*sample.cross_section/self.background_initial_sum_weights[sample.name])
     elif sample.type == SampleType.signal:
-      hist.hist.Scale(self.total_background/self.signal_final_sum_weights[sample.name])
+      hist.hist.Scale(background_integral/hist.hist.Integral())
     elif sample.type == SampleType.data:
-      hist.hist.Scale(self.total_background/self.data_final_entries[sample.name])
+      hist.hist.Scale(background_integral/self.data_final_entries[sample.name])
   
   def __normalizeToLumi(self, hist, sample):
     scale = self.config.luminosity*sample.cross_section
