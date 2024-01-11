@@ -22,9 +22,14 @@ class CmsLabelsManager:
     self.cmsTextSize = 0.75
     self.cmsTextOffset = 0.1
 
-    self.relPosX = 0.045
-    self.relPosY = 0.035
-    self.relExtraDY = 1.2
+    if config.show_ratio_plots:
+      self.relPosX = 0.045
+      self.relPosY = 0.035
+      self.relExtraDY = 1.2
+    else:
+      self.relPosX = 0.045
+      self.relPosY = 0.070
+      self.relExtraDY = 1.2
 
     self.extraOverCmsTextSize  = 0.76
 
