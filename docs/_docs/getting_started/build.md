@@ -15,7 +15,17 @@ The only important thing is to use lxplus9, where new versions of cmake, GCC, et
 ssh -Y username@lxplus9.cern.ch
 ```
 
-Then, no special setup is needed - you can skip conda environment setup completely and jump directly to "Build & run".
+Then, we need to install `correctionlib`, which is a package that helps us to deal with scale factors and other corrections:
+
+```bash
+python3 -m pip install correctionlib --no-binary=correctionlib
+```
+
+In case you see some errors related to `correctionlib`, you can also try installing the latest development version instead (more information [here](https://cms-nanoaod.github.io/correctionlib/install.html)):
+
+```bash
+python3 -m pip install git+https://github.com/cms-nanoAOD/correctionlib.git
+```
 
 ### Setting environment with Conda
 
