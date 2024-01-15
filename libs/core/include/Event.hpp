@@ -35,26 +35,6 @@ class Event {
     exit(1);
   }
 
-  inline UInt_t GetCollectionSize(std::string name) {
-    if (collections.count(name)) {
-      try {
-        UInt_t size = Get("n" + name);
-        return size;
-      } catch (BadTypeException &e) {
-        try {
-          Int_t size = Get("n" + name);
-          return size;
-        } catch (BadTypeException &e) {
-          error() << "Couldn't get size of collection: " << name << " (tried with UIint_t and Int_t)" << std::endl;
-          return 0;
-        }
-      }
-    }
-    if (extraCollections.count(name)) return extraCollections.at(name)->size();
-    fatal() << "Tried to get size of a collection that doesn't exist: " << name << std::endl;
-    exit(1);
-  }
-
   void AddExtraCollections();
 
  private:
@@ -85,6 +65,10 @@ class Event {
   std::map<std::string, UInt_t[maxCollectionElements]> valuesUintVector;
   std::map<std::string, UShort_t[maxCollectionElements]> valuesUshortVector;
   std::map<std::string, Short_t[maxCollectionElements]> valuesShortVector;
+
+  std::map<std::string, std::vector<float>*> valuesStdFloatVector;
+  std::map<std::string, std::vector<int>*> valuesStdIntVector;
+  std::map<std::string, std::vector<unsigned int>*> valuesStdUintVector;
 
   std::map<std::string, std::shared_ptr<PhysicsObjects>> collections;
   std::map<std::string, std::shared_ptr<PhysicsObjects>> extraCollections;
