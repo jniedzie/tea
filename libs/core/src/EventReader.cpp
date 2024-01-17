@@ -143,7 +143,7 @@ void EventReader::SetupBranches() {
 
       auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
       isCollectionAnStdVector[collectionName] = branchType.find("vector") != string::npos;
-      
+
       bool branchIsVector = isCollectionAnStdVector[collectionName] || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
       if (branchIsVector) {
         SetupVectorBranch(branchName, branchType, eventsTreeName);

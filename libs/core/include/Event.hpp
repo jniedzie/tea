@@ -36,6 +36,7 @@ class Event {
   }
 
   void AddExtraCollections();
+  void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection});}
 
  private:
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
