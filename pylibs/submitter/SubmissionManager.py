@@ -124,6 +124,7 @@ class SubmissionManager:
         return
       
       input_file_name = input_file_path.strip().split("/")[-1]
+      os.system(f"mkdir -p {self.files_config.output_dir}")
       output_file_path = f"{self.files_config.output_dir}/{input_file_name}"
       command_for_file = f"{self.command} {input_file_path} {output_file_path}"
       self.__run_command(command_for_file)
@@ -171,6 +172,10 @@ class SubmissionManager:
       os.system(f"sed -i 's/<file_name>/--file_name {self.files_config.file_name}/g' {self.condor_run_script_name}")
     else:
       os.system(f"sed -i 's/<file_name>//g' {self.condor_run_script_name}")
+    
+    # set working directory
+    workDir = os.getcwd().replace("/", "\/")
+    os.system(f"sed -i 's/<work_dir>/{workDir}/g' {self.condor_run_script_name}")
     
     self.__set_python_executable()
     
