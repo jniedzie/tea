@@ -25,7 +25,7 @@ class SubmissionManager:
       self.__create_condor_directories()
   
   def run_locally(self):
-    executor = f"python " if self.app_name[-3:] == ".py" else f"./"
+    executor = f"python3 " if self.app_name[-3:] == ".py" else f"./"
     self.command = f"{executor}{self.app_name} {self.config_path}"
     
     if hasattr(self.files_config, "output_dir"): # option 1 & 3, 4, 5
@@ -159,7 +159,7 @@ class SubmissionManager:
     os.system(f"sed -i 's/<voms_proxy>/{voms_proxy_path}/g' {self.condor_run_script_name}")
   
   def __set_python_executable(self):
-    python_executable = os.popen("which python").read().strip()
+    python_executable = os.popen("which python3").read().strip()
     python_executable = python_executable.replace("/", "\/")
     os.system(f"sed -i 's/<python_path>/{python_executable}/g' {self.condor_run_script_name}")
   
