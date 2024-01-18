@@ -31,8 +31,8 @@ class Event {
   inline std::shared_ptr<PhysicsObjects> GetCollection(std::string name) const {
     if (collections.count(name)) return collections.at(name);
     if (extraCollections.count(name)) return extraCollections.at(name);
-    fatal() << "Tried to get a collection that doesn't exist: " << name << std::endl;
-    exit(1);
+    std::string message = "Tried to get a collection that doesn't exist: " + name;
+    throw Exception(message.c_str());
   }
 
   void AddExtraCollections();

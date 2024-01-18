@@ -90,6 +90,8 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
 void EventReader::SetupTrees() {
   vector<string> treeNames = getListOfTrees(inputFile);
   for (string treeName : treeNames) {
+    if (inputTrees.find(treeName) != inputTrees.end()) continue;
+
     cout << "Loading tree: " << treeName << endl;
     inputTrees[treeName] = (TTree *)inputFile->Get(treeName.c_str());
   }

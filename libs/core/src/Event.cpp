@@ -46,7 +46,8 @@ bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, p
 }
 
 bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {
-  return tryGet<Bool_t, UChar_t, UInt_t, Int_t, Short_t, Float_t>(physicsObject, branchName, cuts);
+  // important: checking float first makes things much faster, since most branches are floats
+  return tryGet<Float_t, Bool_t, UChar_t, UInt_t, Int_t, Short_t>(physicsObject, branchName, cuts);
 }
 
 void Event::AddExtraCollections() {
@@ -56,7 +57,16 @@ void Event::AddExtraCollections() {
     auto newCollection = make_shared<PhysicsObjects>();
 
     for (auto inputCollectionName : extraCollection.inputCollections) {
-      auto inputCollection = GetCollection(inputCollectionName);
+      
+      shared_ptr<PhysicsObjects> inputCollection; 
+      
+      try{
+        inputCollection = GetCollection(inputCollectionName);
+      }
+      catch(Exception &e){
+        error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
+        continue;
+      }
 
       for (auto physicsObject : *inputCollection) {
         bool passes = true;
