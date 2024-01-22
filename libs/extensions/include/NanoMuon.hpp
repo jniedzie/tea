@@ -2,8 +2,8 @@
 //
 //  Created by Jeremi Niedziela on 10/08/2023.
 
-#ifndef Muon_hpp
-#define Muon_hpp
+#ifndef NanoMuon_hpp
+#define NanoMuon_hpp
 
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
@@ -45,4 +45,4 @@ class NanoMuon {
   float scaleFactor = -1;
 };
 
-#endif /* Muon_hpp */
+#endif /* NanoMuon_hpp */
