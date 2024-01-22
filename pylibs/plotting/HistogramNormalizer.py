@@ -96,7 +96,7 @@ class HistogramNormalizer:
         error(f"Couldn't find cut flow histogram for sample {sample.name}")
         continue
       
-      initial_weight_sum = cut_flow.GetBinContent(1)
+      initial_weight_sum = sample.initial_weight_sum if sample.initial_weight_sum > 0 else cut_flow.GetBinContent(1)
       final_weight_sum = cut_flow.GetBinContent(cut_flow.GetNbinsX())
       
       if initial_weight_sum == 0:

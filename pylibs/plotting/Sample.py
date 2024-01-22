@@ -18,6 +18,7 @@ class Sample:
   type: SampleType = SampleType.background
   cross_section: float = -1
   cross_sections: dict = None
+  initial_weight_sum: float = -1
   line_color: int = ROOT.kBlack
   line_style: int = ROOT.kSolid
   line_alpha: float = 1.0
