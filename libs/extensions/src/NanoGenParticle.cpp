@@ -1,24 +1,24 @@
-//  GenParticle.cpp
+//  NanoGenParticle.cpp
 //
 //  Created by Jeremi Niedziela on 08/08/2023.
 
-#include "GenParticle.hpp"
+#include "NanoGenParticle.hpp"
 
 using namespace std;
 
-int GenParticle::GetPdgId() { return physicsObject->Get("pdgId"); }
+int NanoGenParticle::GetPdgId() { return physicsObject->Get("pdgId"); }
 
-bool GenParticle::IsGoodBottomQuark(shared_ptr<GenParticle> mother) {
+bool NanoGenParticle::IsGoodBottomQuark(shared_ptr<NanoGenParticle> mother) {
   if (!IsFirstCopy()) return false;
   return abs(mother->GetPdgId()) == 6;  // mother must be a top
 }
 
-bool GenParticle::IsGoodUdscQuark(shared_ptr<GenParticle> mother) {
+bool NanoGenParticle::IsGoodUdscQuark(shared_ptr<NanoGenParticle> mother) {
   if (!IsFirstCopy()) return false;
   return abs(mother->GetPdgId()) == 24;  // mother must be a W
 }
 
-bool GenParticle::IsGoodLepton(shared_ptr<GenParticle> mother) {
+bool NanoGenParticle::IsGoodLepton(shared_ptr<NanoGenParticle> mother) {
   if (!IsFirstCopy()) return false;
 
   // we don't want leptons from some intermediate W's
@@ -30,9 +30,9 @@ bool GenParticle::IsGoodLepton(shared_ptr<GenParticle> mother) {
   return true;
 }
 
-bool GenParticle::IsJet() {
+bool NanoGenParticle::IsJet() {
   if (GetPdgId() == 21 || (abs(GetPdgId()) >= 1 && abs(GetPdgId()) <= 5)) return true;
   return false;
 }
 
-bool GenParticle::IsTop() { return abs(GetPdgId()) == 6; }
+bool NanoGenParticle::IsTop() { return abs(GetPdgId()) == 6; }

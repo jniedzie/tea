@@ -1,19 +1,19 @@
-//  Electron.hpp
+//  NanoElectron.hpp
 //
 //  Created by Jeremi Niedziela on 10/08/2023.
 
-#ifndef Electron_hpp
-#define Electron_hpp
+#ifndef NanoElectron_hpp
+#define NanoElectron_hpp
 
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 
-class Electron;
-typedef Collection<std::shared_ptr<Electron>> Electrons;
+class NanoElectron;
+typedef Collection<std::shared_ptr<NanoElectron>> NanoElectrons;
 
-class Electron {
+class NanoElectron {
  public:
-  Electron(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
+  NanoElectron(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
   auto Get(std::string branchName) { return physicsObject->Get(branchName); }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
@@ -28,4 +28,4 @@ class Electron {
   std::shared_ptr<PhysicsObject> physicsObject;
 };
 
-#endif /* Electron_hpp */
+#endif /* NanoElectron_hpp */

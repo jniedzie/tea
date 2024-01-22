@@ -1,4 +1,4 @@
-//  GenParticle.hpp
+//  NanoGenParticle.hpp
 //
 //  Created by Jeremi Niedziela on 08/08/2023.
 
@@ -8,12 +8,12 @@
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 
-class GenParticle;
-typedef Collection<std::shared_ptr<GenParticle>> GenParticles;
+class NanoGenParticle;
+typedef Collection<std::shared_ptr<NanoGenParticle>> GenParticles;
 
-class GenParticle {
+class NanoGenParticle {
  public:
-  GenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
+  NanoGenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
   int GetPdgId();
   int GetMotherIndex() { return physicsObject->Get("genPartIdxMother"); }
@@ -22,9 +22,9 @@ class GenParticle {
   bool IsLastCopy() { return (GetStatusFlags() & isLastCopy); }
   bool IsFirstCopy() { return (GetStatusFlags() & isFirstCopy); }
 
-  bool IsGoodBottomQuark(std::shared_ptr<GenParticle> mother);
-  bool IsGoodUdscQuark(std::shared_ptr<GenParticle> mother);
-  bool IsGoodLepton(std::shared_ptr<GenParticle> mother);
+  bool IsGoodBottomQuark(std::shared_ptr<NanoGenParticle> mother);
+  bool IsGoodUdscQuark(std::shared_ptr<NanoGenParticle> mother);
+  bool IsGoodLepton(std::shared_ptr<NanoGenParticle> mother);
 
   bool IsJet();
   bool IsTop();

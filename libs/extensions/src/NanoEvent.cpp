@@ -20,11 +20,11 @@ shared_ptr<PhysicsObjects> NanoEvent::GetAllMuons(float matchingDeltaR)
 
   auto allMuons = make_shared<PhysicsObjects>();
   for(auto muon : *looseMuons){
-    auto muonP4 = asMuon(muon)->GetFourVector();
+    auto muonP4 = asNanoMuon(muon)->GetFourVector();
   
     allMuons->push_back(muon);
     for(auto dsaMuon : *looseDsaMuons){
-      auto dsaMuonP4 = asMuon(dsaMuon)->GetFourVector();
+      auto dsaMuonP4 = asNanoMuon(dsaMuon)->GetFourVector();
       if(muonP4.DeltaR(dsaMuonP4) < matchingDeltaR) continue;
       allMuons->push_back(dsaMuon);
     }
