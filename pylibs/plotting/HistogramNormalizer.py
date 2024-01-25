@@ -27,7 +27,7 @@ class HistogramNormalizer:
   
   def normalize(self, hist, sample, data_integral=None, background_integral=None):
     if hist.norm_type == NormalizationType.to_one:
-      self.__normalizeToOne(hist, sample, background_integral)
+      self.__normalizeToOne(hist, sample)
     elif hist.norm_type == NormalizationType.to_background:
       self.__normalizeToBackground(hist, sample, background_integral)
     elif hist.norm_type == NormalizationType.to_lumi:
