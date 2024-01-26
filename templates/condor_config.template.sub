@@ -7,7 +7,7 @@ output                = output/$(ClusterId).$(ProcId).out
 error                 = error/$(ClusterId).$(ProcId).err
 log                   = log/$(ClusterId).log
 requirements 	        = (OpSysAndVer =?= "CentOS7")
-request_memory        = 4 GB
+# request_memory        = 4 GB
 +JobFlavour           = "<job_flavour>"
 
 queue <n_jobs>
