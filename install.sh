@@ -8,7 +8,7 @@ fi
 
 # create necessary directories
 echo "Creating necessary directories"
-mkdir -p apps bin build configs libs/user_extensions/include
+mkdir -p apps bin build configs utils libs/user_extensions/include
 
 # initialize git repository
 echo "Initializing git repository"
