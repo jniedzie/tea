@@ -28,6 +28,7 @@ class Sample:
   marker_size: float = 1.0
   fill_color: int = ROOT.kGreen
   fill_alpha: float = 0.7
+  fill_style: int = 1001
   legend_description: str = ""
   plotting_options: str = ""
   custom_legend: Legend = None

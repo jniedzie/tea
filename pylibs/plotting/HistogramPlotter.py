@@ -226,6 +226,7 @@ class HistogramPlotter:
       canvas.Divide(1, 1)
       self.styler.setup_main_pad_without_ratio(canvas.GetPad(1))
     
+    canvas.GetPad(1).SetLogx(hist.log_x)
     canvas.GetPad(1).SetLogy(hist.log_y)
   
   def drawStacks(self):
