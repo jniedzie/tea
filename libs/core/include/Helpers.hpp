@@ -30,6 +30,8 @@
 #include "TBox.h"
 #include "TMath.h"
 #include "TPolyLine.h"
+#include "TROOT.h"
+#include "TSystem.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 
