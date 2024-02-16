@@ -18,6 +18,7 @@ class Histogram:
   x_label: str = ""
   y_label: str = ""
   suffix: str = ""
+  error: float = -1.0
   
   def __post_init__(self):
     self.hist = None
