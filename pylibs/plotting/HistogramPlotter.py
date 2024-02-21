@@ -327,7 +327,9 @@ class HistogramPlotter:
         if hist.error > 0:
             for i in range(1, uncertainty_hist.GetNbinsX()+1):
                 bin_content = uncertainty_hist.GetBinContent(i)
-                uncertainty_hist.SetBinError(i, bin_content*0.2)
+                stat_error = uncertainty_hist.GetBinError(i)
+                syst_error = bin_content * hist.error
+                uncertainty_hist.SetBinError(i, (stat_error**2 + syst_error**2)**(1/2))
 
         return uncertainty_hist
 
