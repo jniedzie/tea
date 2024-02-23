@@ -31,6 +31,7 @@ histParams2D = (
 
 # specify name of the branch containing event weights
 weightsBranchName = "genWeight"
+eventsTreeName = "Events"
 
 # define extra collections:
 # - give it a name: e.g. GoodLeptons
@@ -61,6 +62,11 @@ eventSelections = {
 
 # you can add some custom parameters here
 myParameter = 777
+
+# In most cases branch size will be deduced automatically, but if you have some special cases, list them here
+specialBranchSizes = {
+    "Particle": "Event_numberP",
+}
 
 # First, branches to keep will be marked to be kept (empty tuple would result in no branches being kept)
 branchesToKeep = (

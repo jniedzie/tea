@@ -20,6 +20,8 @@ class Collection : public std::vector<T> {
     ++stopIndex;
   }
 
+  size_t size() const { return stopIndex; }
+
   class Iterator {
    public:
     Iterator(Collection &v, size_t index) : vec(v), currentIndex(index) {}

@@ -86,6 +86,10 @@ class Event {
   std::map<std::string, UShort_t[maxCollectionElements]> valuesUshortVector;
   std::map<std::string, Short_t[maxCollectionElements]> valuesShortVector;
 
+  std::map<std::string, std::vector<float>*> valuesStdFloatVector;
+  std::map<std::string, std::vector<int>*> valuesStdIntVector;
+  std::map<std::string, std::vector<unsigned int>*> valuesStdUintVector;
+
   std::map<std::string, std::shared_ptr<PhysicsObjects>> collections;
   std::map<std::string, std::shared_ptr<PhysicsObjects>> extraCollections;
 

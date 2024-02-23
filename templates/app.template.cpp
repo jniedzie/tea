@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     if(!passesTrigger) continue;
     cutFlowManager->UpdateCutFlow("trigger");
 
-    int nMuons = event->GetCollectionSize("Muon");
+    int nMuons = event->GetCollection("Muon")->size();
     if(nMuons < 2) continue;
     cutFlowManager->UpdateCutFlow("nMuons");
 

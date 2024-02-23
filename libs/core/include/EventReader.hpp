@@ -31,9 +31,15 @@ private:
   void SetupVectorBranch(std::string branchName, std::string branchType);
   void InitializeCollection(std::string collectionName);
 
-  void SetCollectionSizeFromHepMC(std::shared_ptr<PhysicsObjects> collection, std::string name);
-
   std::vector<std::string> sizeWarningsPrinted;
+
+  std::string eventsTreeName;
+  std::map<std::string, std::string> specialBranchSizes;
+  std::map<std::string, bool> isCollectionAnStdVector;
+  std::map<std::string, std::string> branchNamesAndTypes;
+
+  template <typename First, typename... Rest>
+  int tryGet(std::shared_ptr<Event> event, std::string branchName);
 
   friend class EventWriter;
   friend class CutFlowManager;

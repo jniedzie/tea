@@ -11,7 +11,6 @@ class TemplateName {
   auto Get(std::string branchName) { return event->Get(branchName); }
   float GetAsFloat(std::string branchName) { return event->GetAsFloat(branchName); }
   std::shared_ptr<PhysicsObjects> GetCollection(std::string name) const { return event->GetCollection(name); }
-  int GetCollectionSize(std::string name) { return event->GetCollectionSize(name); }
   void AddExtraCollections() { event->AddExtraCollections(); }
 
  private:
