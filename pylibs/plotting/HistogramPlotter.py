@@ -84,7 +84,6 @@ class HistogramPlotter:
           # self.histosamples.append((copy.deepcopy(hist_nom), sample))
         if not any(h.name == hist_denom.getName() and s.name == sample.name for h, s in self.histosamples):
           self.histosamples.append((copy.deepcopy(hist_denom), sample))
-    
 
     def setupLegends(self):
         already_added = []
@@ -147,7 +146,8 @@ class HistogramPlotter:
                 hist), self.__getBackgroundIntegral(hist))
 
             if hist.getName() in self.background_integral:
-                self.background_integral[hist.getName()] += hist.hist.Integral()
+                self.background_integral[hist.getName()
+                                         ] += hist.hist.Integral()
             else:
                 self.background_integral[hist.getName()] = hist.hist.Integral()
 
@@ -277,8 +277,6 @@ class HistogramPlotter:
         firstPlotted = False
 
         for sample_type in SampleType:
-            # if sample_type == SampleType.background or sample_type == SampleType.data:
-            #     continue
             options = self.config.plotting_options[sample_type]
             options = f"{options} same" if firstPlotted else options
             stack = self.stacks[sample_type][hist.getName()]
@@ -365,7 +363,8 @@ class HistogramPlotter:
         base_sample_type = SampleType.data if doRatio else SampleType.background
 
         try:
-            base_hist = self.stacks[base_sample_type][hist.getName()].GetHists()[0]
+            base_hist = self.stacks[base_sample_type][hist.getName()].GetHists()[
+                0]
         except Exception:
             return None
 
@@ -400,7 +399,9 @@ class HistogramPlotter:
         if hist.error > 0:
             for i in range(1, uncertainty_hist.GetNbinsX()+1):
                 bin_content = uncertainty_hist.GetBinContent(i)
-                uncertainty_hist.SetBinError(i, bin_content*0.2)
+                stat_error = uncertainty_hist.GetBinError(i)
+                syst_error = bin_content * hist.error
+                uncertainty_hist.SetBinError(i, (stat_error**2 + syst_error**2)**(1/2))
 
         return uncertainty_hist
 
@@ -419,5 +420,3 @@ class HistogramPlotter:
             hists_dict[hist_nom.getName()+'_ratio'] = ROOT.THStack(title, title)
 
         return hists_dict
-
-  

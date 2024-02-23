@@ -22,6 +22,7 @@ git commit -m "Add tea as a submodule"
 # copy and removing files
 echo "Copying CMakelists.txt from tea"
 cp tea/templates/CMakeLists.template.txt CMakeLists.txt
+cp tea/templates/gitignore.template .gitignore
 cp tea/templates/UserExtensionsHelpers.template.hpp libs/user_extensions/include/UserExtensionsHelpers.hpp
 rm install.sh
 

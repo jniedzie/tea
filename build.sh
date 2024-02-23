@@ -7,7 +7,8 @@ rm -fr build/*
 rm -fr bin/*
 
 cd build
-cmake $(correction config --cmake --cflags) ..
+# cmake $(correction config --cmake --cflags) ..
+cmake $(correction config --cmake) ..
 make -j install 
 cd ..
 
