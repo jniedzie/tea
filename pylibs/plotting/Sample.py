@@ -18,6 +18,7 @@ class Sample:
   type: SampleType = SampleType.background
   cross_section: float = -1
   cross_sections: dict = None
+  initial_weight_sum: float = -1
   line_color: int = ROOT.kBlack
   line_style: int = ROOT.kSolid
   line_alpha: float = 1.0
@@ -27,6 +28,7 @@ class Sample:
   marker_size: float = 1.0
   fill_color: int = ROOT.kGreen
   fill_alpha: float = 0.7
+  fill_style: int = 1001
   legend_description: str = ""
   plotting_options: str = ""
   custom_legend: Legend = None

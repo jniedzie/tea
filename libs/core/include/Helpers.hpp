@@ -26,6 +26,12 @@
 #include "TLorentzVector.h"
 #include "TStyle.h"
 #include "TTree.h"
+#include "TEllipse.h"
+#include "TBox.h"
+#include "TMath.h"
+#include "TPolyLine.h"
+#include "TROOT.h"
+#include "TSystem.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 

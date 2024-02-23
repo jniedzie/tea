@@ -8,12 +8,12 @@
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 
-class Jet;
-typedef Collection<std::shared_ptr<Jet>> Jets;
+class NanoJet;
+typedef Collection<std::shared_ptr<NanoJet>> NanoJets;
 
-class Jet {
+class NanoJet {
  public:
-  Jet(std::shared_ptr<PhysicsObject> physicsObject_);
+  NanoJet(std::shared_ptr<PhysicsObject> physicsObject_);
 
   auto Get(std::string branchName) { return physicsObject->Get(branchName); }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }

@@ -44,6 +44,12 @@ scaleFactors = {
     "year": "2018_UL",
     "ValType": "sf",
   },
+  "dsamuonID": {
+    "path": "../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
+    "type": "NUM_DisplacedID_DEN_dSAMuons", 
+    "year": "2018_preUL",
+    "ValType": "sf",
+  },
   
   # Muon Iso
   "muonIsoLoose": {

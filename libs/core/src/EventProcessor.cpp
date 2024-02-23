@@ -93,7 +93,8 @@ bool EventProcessor::PassesEventSelections(const shared_ptr<Event> event, shared
       float metPt = event->Get("MET_pt");
       if (!inRange(metPt, cutValues)) return false;
     } else {
-      if (!inRange(event->GetCollectionSize(cutName.substr(1)), cutValues)) return false;
+      auto cutCollection = event->GetCollection(cutName.substr(1));
+      if (!inRange(cutCollection->size(), cutValues)) return false;
     }
     cutFlowManager->UpdateCutFlow(cutName);
   }

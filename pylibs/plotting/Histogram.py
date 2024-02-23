@@ -7,6 +7,7 @@ from ROOT import TObject
 class Histogram:
   name: str = ""
   title: str = ""
+  log_x: bool = False
   log_y: bool = False
   norm_type: str = "norm1"
   rebin: int = 1
@@ -17,6 +18,7 @@ class Histogram:
   x_label: str = ""
   y_label: str = ""
   suffix: str = ""
+  error: float = -1.0
   
   def __post_init__(self):
     self.hist = None
@@ -48,6 +50,7 @@ class Histogram:
     self.hist.SetMarkerColor(sample.marker_color)
     self.hist.SetLineColorAlpha(sample.line_color, sample.line_alpha)
     self.hist.SetFillColorAlpha(sample.fill_color, sample.fill_alpha)
+    self.hist.SetFillStyle(sample.fill_style)
     self.hist.Rebin(self.rebin)
     self.hist.Scale(1./self.rebin)
 

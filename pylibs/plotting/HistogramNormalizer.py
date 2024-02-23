@@ -27,7 +27,7 @@ class HistogramNormalizer:
   
   def normalize(self, hist, sample, data_integral=None, background_integral=None):
     if hist.norm_type == NormalizationType.to_one:
-      self.__normalizeToOne(hist, sample, background_integral)
+      self.__normalizeToOne(hist, sample)
     elif hist.norm_type == NormalizationType.to_background:
       self.__normalizeToBackground(hist, sample, background_integral)
     elif hist.norm_type == NormalizationType.to_lumi:
@@ -96,7 +96,7 @@ class HistogramNormalizer:
         error(f"Couldn't find cut flow histogram for sample {sample.name}")
         continue
       
-      initial_weight_sum = cut_flow.GetBinContent(1)
+      initial_weight_sum = sample.initial_weight_sum if sample.initial_weight_sum > 0 else cut_flow.GetBinContent(1)
       final_weight_sum = cut_flow.GetBinContent(cut_flow.GetNbinsX())
       
       if initial_weight_sum == 0:

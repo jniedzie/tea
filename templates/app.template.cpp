@@ -127,5 +127,9 @@ int main(int argc, char **argv) {
   // Print results of time measurements
   profiler.Print();
 
+  // Print cumulative logs
+  auto &logger = Logger::GetInstance();
+  logger.Print();
+
   return 0;
 }

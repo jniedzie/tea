@@ -42,7 +42,8 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
     if (collectionName == "Event") {
       float eventVariable;
       if (branchName[0] == 'n') {
-        eventVariable = event->GetCollectionSize(branchName.substr(1));
+        auto collection = event->GetCollection(branchName.substr(1));
+        eventVariable = collection->size();
       } else {
         eventVariable = event->GetAsFloat(branchName);
       }

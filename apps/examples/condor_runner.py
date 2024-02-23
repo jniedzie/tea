@@ -25,7 +25,7 @@ def main():
 
   args = get_args()
   app_name = args.app
-  executor = f"python " if app_name[-3:] == ".py" else f"./"
+  executor = f"python3 " if app_name[-3:] == ".py" else f"./"
   command = f"{executor}{app_name} {args.config}"
 
   input_files = open(args.input_files_file_name).read().splitlines()

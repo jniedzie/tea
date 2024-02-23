@@ -1,29 +1,29 @@
 #ifndef ExtensionsHelpers_hpp
 #define ExtensionsHelpers_hpp
 
-#include "Electron.hpp"
-#include "GenParticle.hpp"
+#include "NanoElectron.hpp"
+#include "NanoGenParticle.hpp"
 #include "Helpers.hpp"
 #include "HepMCParticle.hpp"
-#include "Jet.hpp"
-#include "Muon.hpp"
+#include "NanoJet.hpp"
+#include "NanoMuon.hpp"
 #include "NanoEvent.hpp"
 #include "PhysicsObject.hpp"
 
-inline std::shared_ptr<GenParticle> asGenParticle(const std::shared_ptr<PhysicsObject> physicsObject) {
-  return std::make_shared<GenParticle>(physicsObject);
+inline std::shared_ptr<NanoGenParticle> asNanoGenParticle(const std::shared_ptr<PhysicsObject> physicsObject) {
+  return std::make_shared<NanoGenParticle>(physicsObject);
 }
 
-inline std::shared_ptr<Muon> asMuon(const std::shared_ptr<PhysicsObject> physicsObject) {
-  return std::make_shared<Muon>(physicsObject);
+inline std::shared_ptr<NanoMuon> asNanoMuon(const std::shared_ptr<PhysicsObject> physicsObject) {
+  return std::make_shared<NanoMuon>(physicsObject);
 }
 
-inline std::shared_ptr<Electron> asElectron(const std::shared_ptr<PhysicsObject> physicsObject) {
-  return std::make_shared<Electron>(physicsObject);
+inline std::shared_ptr<NanoElectron> asNanoElectron(const std::shared_ptr<PhysicsObject> physicsObject) {
+  return std::make_shared<NanoElectron>(physicsObject);
 }
 
-inline std::shared_ptr<Jet> asJet(const std::shared_ptr<PhysicsObject> physicsObject) {
-  return std::make_shared<Jet>(physicsObject);
+inline std::shared_ptr<NanoJet> asNanoJet(const std::shared_ptr<PhysicsObject> physicsObject) {
+  return std::make_shared<NanoJet>(physicsObject);
 }
 
 inline std::shared_ptr<HepMCParticle> asHepMCParticle(const std::shared_ptr<PhysicsObject> physicsObject, int index = -1,

@@ -5,19 +5,19 @@
 #ifndef EventReader_hpp
 #define EventReader_hpp
 
+#include "ConfigManager.hpp"
 #include "Event.hpp"
 #include "Helpers.hpp"
-#include "ConfigManager.hpp"
 
 class EventReader {
-public:
+ public:
   EventReader();
   ~EventReader();
 
   long long GetNevents() const;
   std::shared_ptr<Event> GetEvent(int iEvent);
 
-private:
+ private:
   int maxEvents;
   int printEveryNevents;
 
@@ -25,15 +25,26 @@ private:
   std::map<std::string, TTree *> inputTrees;
   std::shared_ptr<Event> currentEvent;
 
-  void SetupBranches(std::string inputPath);
+  std::tuple<std::string, std::string> GetCollectionAndVariableNames(std::string branchName);
 
-  void SetupScalarBranch(std::string branchName, std::string branchType);
-  void SetupVectorBranch(std::string branchName, std::string branchType);
+  void SetupTrees();
+  void SetupBranches();
+
+  void SetupScalarBranch(std::string branchName, std::string branchType, std::string eventsTreeName);
+  void SetupVectorBranch(std::string branchName, std::string branchType, std::string eventsTreeName);
   void InitializeCollection(std::string collectionName);
 
-  void SetCollectionSizeFromHepMC(std::shared_ptr<PhysicsObjects> collection, std::string name);
-
   std::vector<std::string> sizeWarningsPrinted;
+
+  std::vector<std::string> eventsTreeNames;
+  std::map<std::string, std::string> specialBranchSizes;
+  std::map<std::string, bool> isCollectionAnStdVector;
+  std::map<std::string, std::string> branchNamesAndTypes;
+
+  TLeaf *GetLeaf(TBranch *branch);
+
+  template <typename First, typename... Rest>
+  int tryGet(std::shared_ptr<Event> event, std::string branchName);
 
   friend class EventWriter;
   friend class CutFlowManager;

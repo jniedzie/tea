@@ -9,299 +9,415 @@ from Styler import Styler
 from HistogramNormalizer import HistogramNormalizer
 from CmsLabelsManager import CmsLabelsManager
 from Logger import *
+from Histogram import Histogram
 
 
 class HistogramPlotter:
-  def __init__(self, config):
-    gStyle.SetOptStat(0)
-    
-    self.config = config
-    
-    self.normalizer = HistogramNormalizer(config)
-    self.styler = Styler(config)
-    self.cmsLabelsManager = CmsLabelsManager(config)
-    
-    self.legends = {}
-    
-    self.stacks = {sample_type: self.__getStackDict(sample_type) for sample_type in SampleType}
-    self.histsAndSamples = {}
-    self.hists2d = {sample_type: {} for sample_type in SampleType}
-    
-    self.data_included = any(sample.type == SampleType.data for sample in self.config.samples)
-    self.backgrounds_included = any(sample.type == SampleType.background for sample in self.config.samples)
-    
-    self.show_ratios = self.backgrounds_included and self.data_included and self.config.show_ratio_plots
-    
-    self.histosamples = []
-    self.histosamples2D = []
-    self.data_integral = {}
-    self.background_integral = {}
-    
-    if not os.path.exists(self.config.output_path):
-      os.makedirs(self.config.output_path)
+    def __init__(self, config):
+        gStyle.SetOptStat(0)
 
-  def addHistosample(self, hist, sample, input_file):
-    hist.load(input_file)
-    
-    if not hist.isGood():
-      warn(f"No good histogram {hist.getName()} for sample {sample.name}")
-      return
-    
-    self.histosamples.append((copy.deepcopy(hist), sample))
-    
-    if sample.type is SampleType.data:
-      self.data_integral[hist.getName()] = hist.hist.Integral()
-  
-  def addHistosample2D(self, hist, sample, input_file):
-    hist.load(input_file)
-    self.histosamples2D.append((copy.deepcopy(hist), sample))
-  
-  def setupLegends(self):
-    already_added = []
-    
-    for hist, sample in self.histosamples:
-      if hist.getName() not in self.legends.keys():
-        self.legends[hist.getName()] = {}
-      
-      if sample.custom_legend is not None:
-        self.legends[hist.getName()][sample.name] = sample.custom_legend.getRootLegend()
-      elif (hist.getName(), sample.type) not in already_added:
-        self.legends[hist.getName()][sample.type] = self.config.legends[sample.type].getRootLegend()
-        already_added.append((hist.getName(), sample.type))
-  
-  def __getDataIntegral(self, input_hist):
-    if input_hist.getName() in self.data_integral.keys():
-      return self.data_integral[input_hist.getName()]
-    return None
+        self.config = config
 
-  def __getBackgroundIntegral(self, input_hist):
-    if input_hist.getName() in self.background_integral.keys():
-      return self.background_integral[input_hist.getName()]
-    return None
-  
-  def __sortHistosamples(self):
-    if hasattr(self.config, "custom_stacks_order"):
-      try:
-        self.histosamples.sort(key=lambda x: self.config.custom_stacks_order.index(x[1].name))
-      except ValueError:
-        error("Couldn't sort histograms by custom order. Falling back to default order.")
+        self.normalizer = HistogramNormalizer(config)
+        self.styler = Styler(config)
+        self.cmsLabelsManager = CmsLabelsManager(config)
+
+        self.legends = {}
+
+        self.stacks = {sample_type: self.__getStackDict(
+            sample_type) for sample_type in SampleType}
+        self.histsAndSamples = {}
+        self.hists2d = {sample_type: {} for sample_type in SampleType}
+
+        self.data_included = any(
+            sample.type == SampleType.data for sample in self.config.samples)
+        self.backgrounds_included = any(
+            sample.type == SampleType.background for sample in self.config.samples)
+
+        self.show_ratios = self.backgrounds_included and self.data_included and self.config.show_ratio_plots
+
+        self.histosamples = []
+        self.histosamples2D = []
+        self.data_integral = {}
+        self.background_integral = {}
+
+        if not os.path.exists(self.config.output_path):
+            os.makedirs(self.config.output_path)
+
+    def addHistosample(self, hist, sample, input_file):
+        hist.load(input_file)
+
+        if not hist.isGood():
+            warn(
+                f"No good histogram {hist.getName()} for sample {sample.name}")
+            return
+
+        self.histosamples.append((copy.deepcopy(hist), sample))
+
+        if sample.type is SampleType.data:
+            self.data_integral[hist.getName()] = hist.hist.Integral()
+
+    def addHistosample2D(self, hist, sample, input_file):
+        hist.load(input_file)
+        self.histosamples2D.append((copy.deepcopy(hist), sample))
+
+    def addHistosampleRatio(self, input_hist_nom, input_hist_denom, sample, input_file):
+        input_hist_nom.load(input_file)
+        input_hist_denom.load(input_file)
         
-        for _, sample in self.histosamples:
-          if sample.name not in self.config.custom_stacks_order:
-            error(f"Couldn't find sample {sample.name} in custom order list.")
+        if not input_hist_nom.isGood():
+            warn(
+                f"No good histogram {hist.getName()} for sample {sample.name}")
+            return
+        if not input_hist_denom.isGood():
+            warn(
+                f"No good histogram {hist.getName()} for sample {sample.name}")
+            return
+
+        hist_ratio = copy.deepcopy(input_hist_nom)
+        hist_ratio.name = input_hist_nom.getName()+'_ratio'
+        hist_denom = copy.deepcopy(input_hist_denom)
+        hist_denom.name = input_hist_denom.getName()+'_denom'
         
-        self.histosamples.sort(key=lambda x: x[1].cross_section, reverse=False)
-    else:
-      self.histosamples.sort(key=lambda x: x[1].cross_section, reverse=False)
+        self.histosamples.append((copy.deepcopy(hist_ratio), sample))
+        # if not any(hist.name == hist_nom.getName() and histosample.name == sample.name for hist, histosample in self.histosamples):
+          # self.histosamples.append((copy.deepcopy(hist_nom), sample))
+        if not any(h.name == hist_denom.getName() and s.name == sample.name for h, s in self.histosamples):
+          self.histosamples.append((copy.deepcopy(hist_denom), sample))
     
-  def buildStacks(self):
-    self.__sortHistosamples()
-    
-    for hist, sample in self.histosamples:
-      if not hist.isGood():
-        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
-        continue
 
-      if sample.type != SampleType.background:
-        continue
+    def setupLegends(self):
+        already_added = []
 
-      self.normalizer.normalize(hist, sample, self.__getDataIntegral(hist), self.__getBackgroundIntegral(hist))
+        for hist, sample in self.histosamples:
+            if hist.getName() not in self.legends.keys():
+                self.legends[hist.getName()] = {}
 
-      if hist.getName() in self.background_integral:
-        self.background_integral[hist.getName()] += hist.hist.Integral()
-      else:
-        self.background_integral[hist.getName()] = hist.hist.Integral()
-    
-    for hist, sample in self.histosamples:
-      if not hist.isGood():
-        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
-        continue
-        
-      if sample.type == SampleType.background:
-        continue
+            if sample.custom_legend is not None:
+                self.legends[hist.getName(
+                )][sample.name] = sample.custom_legend.getRootLegend()
+            elif (hist.getName(), sample.type) not in already_added:
+                self.legends[hist.getName(
+                )][sample.type] = self.config.legends[sample.type].getRootLegend()
+                already_added.append((hist.getName(), sample.type))
 
-      self.normalizer.normalize(hist, sample, self.__getDataIntegral(hist), self.__getBackgroundIntegral(hist))
+    def __getDataIntegral(self, input_hist):
+        if input_hist.getName() in self.data_integral.keys():
+            return self.data_integral[input_hist.getName()]
+        return None
 
-    for hist, sample in self.histosamples:
-      if not hist.isGood():
-        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
-        continue
+    def __getBackgroundIntegral(self, input_hist):
+        if input_hist.getName() in self.background_integral.keys():
+            return self.background_integral[input_hist.getName()]
+        return None
+
+    def __sortHistosamples(self):
+        if hasattr(self.config, "custom_stacks_order"):
+            try:
+                self.histosamples.sort(
+                    key=lambda x: self.config.custom_stacks_order.index(x[1].name))
+            except ValueError:
+                error(
+                    "Couldn't sort histograms by custom order. Falling back to default order.")
+
+                for _, sample in self.histosamples:
+                    if sample.name not in self.config.custom_stacks_order:
+                        error(
+                            f"Couldn't find sample {sample.name} in custom order list.")
+
+                self.histosamples.sort(
+                    key=lambda x: x[1].cross_section, reverse=False)
+        else:
+            self.histosamples.sort(
+                key=lambda x: x[1].cross_section, reverse=False)
+
+    def buildStacks(self):
+        self.__sortHistosamples()
+
+        for hist, sample in self.histosamples:
+            if not hist.isGood():
+                warn(
+                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                continue
+
+            if sample.type != SampleType.background:
+                continue
+
+            self.normalizer.normalize(hist, sample, self.__getDataIntegral(
+                hist), self.__getBackgroundIntegral(hist))
+
+            if hist.getName() in self.background_integral:
+                self.background_integral[hist.getName()] += hist.hist.Integral()
+            else:
+                self.background_integral[hist.getName()] = hist.hist.Integral()
+
+        for hist, sample in self.histosamples:
+            if not hist.isGood():
+                warn(
+                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                continue
+
+            if sample.type == SampleType.background:
+                continue
+
+            self.normalizer.normalize(hist, sample, self.__getDataIntegral(
+                hist), self.__getBackgroundIntegral(hist))
+
+        for hist, sample in self.histosamples:
+            if not hist.isGood():
+                warn(
+                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                continue
+
+            if hist.getName().endswith('_ratio') or hist.getName().endswith('_denom'):
+                continue
+
+            hist.setup(sample)
+
+            self.stacks[sample.type][hist.getName()].Add(hist.hist)
+
+            key = sample.type if sample.custom_legend is None else sample.name
+
+            self.legends[hist.getName()][key].AddEntry(
+                hist.hist, sample.legend_description, self.config.legends[sample.type].options)
+
+    def addHists2D(self, input_file, sample):
+        if not hasattr(self.config, "histograms2D"):
+            return
+
+        for hist in self.config.histograms2D:
+            hist.load(input_file)
+
+            if not hist.isGood():
+                warn(
+                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                continue
+
+            hist.setup()
+            self.hists2d[sample.type][hist.getName()] = hist.hist
+
+    def buildStacksRatio(self):
+        if not hasattr(self.config, "histogramsRatio"):
+            return
+
+        for input_hist_nom, input_hist_denom in self.config.histogramsRatio:
+            histosamples_nom = [(h, s) for h, s in self.histosamples if h.getName() == input_hist_nom.getName()+'_ratio']
+            histosamples_denom = [(h, s) for h, s in self.histosamples if h.getName() == input_hist_denom.getName()+'_denom']
+
+            for hist_nom, sample in histosamples_nom:
+                hist_denom = next((h for h, s in histosamples_denom if s.name == sample.name), None)
+
+                hist_ratio = copy.deepcopy(hist_nom)
+                hist_ratio.hist.Divide(hist_denom.hist)
+
+                hist_ratio.setup(sample)
+                self.stacks[sample.type][hist_ratio.getName()].Add(hist_ratio.hist)
+                key = sample.type if sample.custom_legend is None else sample.name
+
+                self.legends[hist_ratio.getName()][key].AddEntry(hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
+
+    def __drawLineAtOne(self, canvas, hist):
+        if not self.show_ratios:
+            return
+
+        global line
+        line = ROOT.TLine(hist.x_min, 1, hist.x_max, 1)
+        line.SetLineColor(ROOT.kBlack)
+        line.SetLineStyle(ROOT.kDashed)
+
+        canvas.cd(2)
+        line.Draw()
+
+    def __drawRatioPlot(self, canvas, hist):
+        if not self.show_ratios:
+            return
+
+        global ratio_hist
+        ratio_hist = self.__getRatioStack(hist)
+        if ratio_hist:
+
+            canvas.cd(2)
+            ratio_hist.Draw("p")
+            self.styler.setupFigure(ratio_hist, hist, is_ratio=True)
+
+    def __drawUncertainties(self, canvas, hist):
+        global background_uncertainty_hist
+        background_uncertainty_hist = self.__getBackgroundUncertaintyHist(hist)
+        if background_uncertainty_hist is None:
+            return
+
+        canvas.cd(1)
+        self.styler.setupUncertaintyHistogram(background_uncertainty_hist)
+        background_uncertainty_hist.Draw("same e2")
+
+        if not self.show_ratios:
+            return
+
+        global ratio_uncertainty
+        ratio_uncertainty = background_uncertainty_hist.Clone(
+            "ratio_uncertainty_"+hist.getName())
+        ratio_uncertainty.Divide(ratio_uncertainty)
+
+        canvas.cd(2)
+        ratio_uncertainty.Draw("same e2")
+
+    def __drawLegends(self, canvas, hist):
+        canvas.cd(1)
+
+        if hist.getName() not in self.legends:
+            warn(f"Couldn't find legends for histogram: {hist.getName()}")
+            return
+
+        for legend in self.legends[hist.getName()].values():
+            legend.Draw()
+
+    def __drawHists(self, canvas, hist):
+        canvas.cd(1)
+
+        firstPlotted = False
+
+        for sample_type in SampleType:
+            # if sample_type == SampleType.background or sample_type == SampleType.data:
+            #     continue
+            options = self.config.plotting_options[sample_type]
+            options = f"{options} same" if firstPlotted else options
+            stack = self.stacks[sample_type][hist.getName()]
+            if stack.GetNhists() > 0:
+                stack.Draw(options)
+                self.styler.setupFigure(stack, hist)
+                firstPlotted = True
+
+    def __setup_canvas(self, canvas, hist):
+        if self.show_ratios:
+            canvas.Divide(1, 2)
+            self.styler.setup_ratio_pad(canvas.GetPad(2))
+            self.styler.setup_main_pad_with_ratio(canvas.GetPad(1))
+        else:
+            canvas.Divide(1, 1)
+            self.styler.setup_main_pad_without_ratio(canvas.GetPad(1))
+
+        canvas.GetPad(1).SetLogx(hist.log_x)
+        canvas.GetPad(1).SetLogy(hist.log_y)
+
+    def drawStacks(self):
+
+        for hist in self.config.histograms:
+            canvas = TCanvas(hist.getName(), hist.getName(
+            ), self.config.canvas_size[0], self.config.canvas_size[1])
+            self.__setup_canvas(canvas, hist)
+
+            self.__drawRatioPlot(canvas, hist)
+            self.__drawLineAtOne(canvas, hist)
+            self.__drawHists(canvas, hist)
+            self.__drawUncertainties(canvas, hist)
+            self.__drawLegends(canvas, hist)
+            self.cmsLabelsManager.drawLabels(canvas)
+
+            canvas.Update()
+
+            originalErrorLevel = ROOT.gErrorIgnoreLevel
+            ROOT.gErrorIgnoreLevel = ROOT.kError
+            path = self.config.output_path+"/"+hist.getName()+".pdf"
+            info(f"Saving file: {path}")
+            canvas.SaveAs(path)
+            ROOT.gErrorIgnoreLevel = originalErrorLevel
+
+    def drawHists2D(self):
+        if not hasattr(self.config, "histograms2D"):
+            return
+
+        for hist, sample in self.histosamples2D:
+            title = hist.getName() + "_" + sample.name
+            canvas = TCanvas(
+                title, title, self.config.canvas_size[0], self.config.canvas_size[1])
+            canvas.cd()
+            hist.hist.Draw("colz")
+            self.styler.setupFigure2D(hist.hist, hist)
+
+            canvas.Update()
+            canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
+
+    def drawRatioStacks(self):
       
-      hist.setup(sample)
-      
-      self.stacks[sample.type][hist.getName()].Add(hist.hist)
-      
-      key = sample.type if sample.custom_legend is None else sample.name
-      
-      self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, self.config.legends[sample.type].options)  
-  
-  def addHists2D(self, input_file, sample):
-    if not hasattr(self.config, "histograms2D"):
-      return
-    
-    for hist in self.config.histograms2D:
-      hist.load(input_file)
-      
-      if not hist.isGood():
-        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
-        continue
-      
-      hist.setup()
-      self.hists2d[sample.type][hist.getName()] = hist.hist
-  
-  def __drawLineAtOne(self, canvas, hist):
-    if not self.show_ratios:
-      return
-    
-    global line
-    line = ROOT.TLine(hist.x_min, 1, hist.x_max, 1)
-    line.SetLineColor(ROOT.kBlack)
-    line.SetLineStyle(ROOT.kDashed)
-    
-    canvas.cd(2)
-    line.Draw()
-  
-  def __drawRatioPlot(self, canvas, hist):
-    if not self.show_ratios:
-      return
-    
-    global ratio_hist
-    ratio_hist = self.__getRatioStack(hist)
-    if ratio_hist:
-      
-      canvas.cd(2)
-      ratio_hist.Draw("p")
-      self.styler.setupFigure(ratio_hist, hist, is_ratio=True)
-  
-  def __drawUncertainties(self, canvas, hist):
-    global background_uncertainty_hist
-    background_uncertainty_hist = self.__getBackgroundUncertaintyHist(hist)
-    if background_uncertainty_hist is  None:
-      return
-    
-    canvas.cd(1)
-    self.styler.setupUncertaintyHistogram(background_uncertainty_hist)
-    background_uncertainty_hist.Draw("same e2")
-  
-    if not self.show_ratios:
-      return
-    
-    global ratio_uncertainty
-    ratio_uncertainty = background_uncertainty_hist.Clone("ratio_uncertainty_"+hist.getName())
-    ratio_uncertainty.Divide(ratio_uncertainty)
-    
-    canvas.cd(2)
-    ratio_uncertainty.Draw("same e2")
-    
-  def __drawLegends(self, canvas, hist):
-    canvas.cd(1)
-    
-    if hist.getName() not in self.legends:
-      warn(f"Couldn't find legends for histogram: {hist.getName()}")
-      return
-    
-    for legend in self.legends[hist.getName()].values():
-      legend.Draw()
-    
-  def __drawHists(self, canvas, hist):
-    canvas.cd(1)
-    
-    firstPlotted = False
-    
-    for sample_type in SampleType:
-      options = self.config.plotting_options[sample_type]
-      options = f"{options} same" if firstPlotted else options
-      stack = self.stacks[sample_type][hist.getName()]
-      if stack.GetNhists() > 0:
-        stack.Draw(options)
-        self.styler.setupFigure(stack, hist)
-        firstPlotted = True
-  
-  def __setup_canvas(self, canvas, hist):
-    if self.show_ratios:
-      canvas.Divide(1, 2)
-      self.styler.setup_ratio_pad(canvas.GetPad(2))
-      self.styler.setup_main_pad_with_ratio(canvas.GetPad(1))
-    else:
-      canvas.Divide(1, 1)
-      self.styler.setup_main_pad_without_ratio(canvas.GetPad(1))
-    
-    canvas.GetPad(1).SetLogy(hist.log_y)
-  
-  def drawStacks(self):
-    
-    for hist in self.config.histograms:
-      canvas = TCanvas(hist.getName(), hist.getName(), self.config.canvas_size[0], self.config.canvas_size[1])
-      self.__setup_canvas(canvas, hist)
-      
-      self.__drawRatioPlot(canvas, hist)
-      self.__drawLineAtOne(canvas, hist)
-      self.__drawHists(canvas, hist)
-      self.__drawUncertainties(canvas, hist)
-      self.__drawLegends(canvas, hist)
-      self.cmsLabelsManager.drawLabels(canvas)
+        for hist_nom, hist_denom in self.config.histogramsRatio:
+            hist_nom.name = hist_nom.getName()+'_ratio'
+
+            canvas = TCanvas(hist_nom.getName(), hist_nom.getName(), self.config.canvas_size[0], self.config.canvas_size[1])
+            self.__setup_canvas(canvas, hist_nom)
             
-      canvas.Update()
-      
-      originalErrorLevel = ROOT.gErrorIgnoreLevel
-      ROOT.gErrorIgnoreLevel = ROOT.kError
-      path = self.config.output_path+"/"+hist.getName()+".pdf"
-      info(f"Saving file: {path}")
-      canvas.SaveAs(path)
-      ROOT.gErrorIgnoreLevel = originalErrorLevel
+            self.__drawRatioPlot(canvas, hist_nom)
+            self.__drawLineAtOne(canvas, hist_nom)
+            self.__drawHists(canvas, hist_nom)
+            self.__drawUncertainties(canvas, hist_nom)
+            self.__drawLegends(canvas, hist_nom)
+            self.cmsLabelsManager.drawLabels(canvas)
+                  
+            canvas.Update()
+            
+            originalErrorLevel = ROOT.gErrorIgnoreLevel
+            ROOT.gErrorIgnoreLevel = ROOT.kError
+            path = self.config.output_path+"/"+hist_nom.getName()+".pdf"
+            info(f"Saving file: {path}")
+            canvas.SaveAs(path)
+            ROOT.gErrorIgnoreLevel = originalErrorLevel
 
-  def drawHists2D(self):
-    if not hasattr(self.config, "histograms2D"):
-      return
+    def __get_hists_sum(self, hist, doRatio=False):
+        base_sample_type = SampleType.data if doRatio else SampleType.background
 
-    for hist, sample in self.histosamples2D:  
-      title = hist.getName() + "_" + sample.name
-      canvas = TCanvas(title, title, self.config.canvas_size[0], self.config.canvas_size[1])  
-      canvas.cd()
-      hist.hist.Draw("colz")
-      self.styler.setupFigure2D(hist.hist, hist)
-    
-      canvas.Update()
-      canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
-  
-  def __get_hists_sum(self, hist, doRatio = False):
-    base_sample_type = SampleType.data if doRatio else SampleType.background
-    
-    try:
-      base_hist = self.stacks[base_sample_type][hist.getName()].GetHists()[0]
-    except Exception:
-      return None
-    
-    title = "backgrounds_" + ("sum" if doRatio else "unc" ) + "_" + hist.getName()
-    backgrounds_sum = base_hist.Clone(title) 
-    backgrounds_sum.Reset()
-    
-    for background_hist in self.stacks[SampleType.background][hist.getName()].GetHists():
-      backgrounds_sum.Add(background_hist)
-    
-    if not doRatio:
-      return backgrounds_sum
+        try:
+            base_hist = self.stacks[base_sample_type][hist.getName()].GetHists()[0]
+        except Exception:
+            return None
 
-    ratio_hist = base_hist.Clone("ratio_"+hist.getName())
-    ratio_hist.Divide(backgrounds_sum)
-    ratio_stack = THStack("ratio_stack_"+hist.getName(), "ratio_stack_"+hist.getName())
-    ratio_stack.Add(ratio_hist)
-    
-    return ratio_stack
-  
-  def __getRatioStack(self, hist):
-    return self.__get_hists_sum(hist, doRatio = True)
-  
-  def __getBackgroundUncertaintyHist(self, hist):
-    return self.__get_hists_sum(hist, doRatio = False)
-  
-  def __getStackDict(self, sample_type):
-    hists_dict = {}
-    
-    for hist in self.config.histograms:
-      title = hist.getName() + sample_type.name
-      hists_dict[hist.getName()] = ROOT.THStack(title, title)
+        title = "backgrounds_" + \
+            ("sum" if doRatio else "unc") + "_" + hist.getName()
+        backgrounds_sum = base_hist.Clone(title)
+        backgrounds_sum.Reset()
 
-    return hists_dict
+        for background_hist in self.stacks[SampleType.background][hist.getName()].GetHists():
+            backgrounds_sum.Add(background_hist)
+
+        if not doRatio:
+            return backgrounds_sum
+
+        ratio_hist = base_hist.Clone("ratio_"+hist.getName())
+        ratio_hist.Divide(backgrounds_sum)
+        ratio_stack = THStack("ratio_stack_"+hist.getName(),
+                              "ratio_stack_"+hist.getName())
+        ratio_stack.Add(ratio_hist)
+
+        return ratio_stack
+
+    def __getRatioStack(self, hist):
+        return self.__get_hists_sum(hist, doRatio=True)
+
+    def __getBackgroundUncertaintyHist(self, hist):
+        uncertainty_hist = self.__get_hists_sum(hist, doRatio=False)
+        
+        if uncertainty_hist is None:
+            return None
+        
+        if hist.error > 0:
+            for i in range(1, uncertainty_hist.GetNbinsX()+1):
+                bin_content = uncertainty_hist.GetBinContent(i)
+                uncertainty_hist.SetBinError(i, bin_content*0.2)
+
+        return uncertainty_hist
+
+    def __getStackDict(self, sample_type):
+        hists_dict = {}
+
+        for hist in self.config.histograms:
+            title = hist.getName() + sample_type.name
+            hists_dict[hist.getName()] = ROOT.THStack(title, title)
+
+        for hist_nom, hist_denom in self.config.histogramsRatio:
+            if not hist_denom.getName()+'_denom' in hists_dict:
+                title = hist_denom.getName() + sample_type.name
+                hists_dict[hist_denom.getName()+'_denom'] = ROOT.THStack(title, title)
+            title = hist_nom.getName() + '_ratio' + sample_type.name
+            hists_dict[hist_nom.getName()+'_ratio'] = ROOT.THStack(title, title)
+
+        return hists_dict
 
   

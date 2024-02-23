@@ -28,16 +28,20 @@ def main():
     for hist in config.histograms:
       plotter.addHistosample(hist, sample, input_files[sample.name])
     
-    if not hasattr(config, "histograms2D"):
-      continue
-    
-    for hist in config.histograms2D:
-      plotter.addHistosample2D(hist, sample, input_files[sample.name])
-  
+    if hasattr(config, "histograms2D"):    
+      for hist in config.histograms2D:
+        plotter.addHistosample2D(hist, sample, input_files[sample.name])
+
+    if hasattr(config, "histogramsRatio"):    
+      for histpair in config.histogramsRatio:
+        plotter.addHistosampleRatio(histpair[0], histpair[1], sample, input_files[sample.name])
+
   plotter.setupLegends()
   plotter.buildStacks()
+  plotter.buildStacksRatio()
   plotter.addHists2D(input_files[sample.name], sample)
   plotter.drawStacks()
+  plotter.drawRatioStacks()
   plotter.drawHists2D()
   
   logger_print()
