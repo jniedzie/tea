@@ -262,7 +262,15 @@ class HistogramPlotter:
             self.__drawUncertainties(canvas, hist)
             self.__drawLegends(canvas, hist)
             self.cmsLabelsManager.drawLabels(canvas)
-
+            
+            # make sure plot border is on top of everything else
+            canvas.GetPad(1).GetFrame().SetLineWidth(2)
+            canvas.GetPad(1).GetFrame().SetBorderSize(2)
+            canvas.GetPad(1).GetFrame().SetBorderMode(0)
+            canvas.GetPad(1).GetFrame().SetFillColor(0)
+            canvas.GetPad(1).GetFrame().SetFillStyle(0)
+            canvas.GetPad(1).RedrawAxis()
+            canvas.RedrawAxis()
             canvas.Update()
 
             originalErrorLevel = ROOT.gErrorIgnoreLevel
