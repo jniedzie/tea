@@ -446,7 +446,9 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histograms
     HistogramParams histParams;
     string title;
 
-    if (GetCollectionSize(params) == 6) {
+    auto nParams = GetCollectionSize(params);
+
+    if (nParams == 6) {
       histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
       histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
       histParams.nBins = PyLong_AsLong(GetItem(params, 2));
@@ -454,7 +456,7 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histograms
       histParams.max = PyFloat_AsDouble(GetItem(params, 4));
       histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5));
       title = histParams.collection + "_" + histParams.variable;
-    } else {
+    } else if (nParams == 5) {
       histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
       histParams.nBins = PyLong_AsLong(GetItem(params, 1));
       histParams.min = PyFloat_AsDouble(GetItem(params, 2));
