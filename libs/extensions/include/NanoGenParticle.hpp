@@ -15,11 +15,7 @@ class NanoGenParticle {
  public:
   NanoGenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-  TLorentzVector GetFourVector() {
-    TLorentzVector v;
-    v.SetPtEtaPhiM(physicsObject->Get("pt"), physicsObject->Get("eta"), physicsObject->Get("phi"), 0.105);
-    return v;
-  }
+  TLorentzVector GetFourVector(float mass);
 
   float GetMass() { return physicsObject->Get("mass"); }
   float GetPt() { return physicsObject->Get("pt"); }

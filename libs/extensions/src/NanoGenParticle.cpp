@@ -6,6 +6,12 @@
 
 using namespace std;
 
+TLorentzVector NanoGenParticle::GetFourVector(float mass) {
+    TLorentzVector v;
+    v.SetPtEtaPhiM(physicsObject->Get("pt"), physicsObject->Get("eta"), physicsObject->Get("phi"), mass);
+    return v;
+  }
+
 float NanoGenParticle::GetDxy(float pv_x, float pv_y) {
   float vx = physicsObject->Get("vx");
   float vy = physicsObject->Get("vy");
