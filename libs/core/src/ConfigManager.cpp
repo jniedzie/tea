@@ -287,7 +287,7 @@ void ConfigManager::GetMap<string, map<string, string>>(string name, map<string,
     Py_ssize_t posInner = 0;
 
     while (PyDict_Next(pValue, &posInner, &pKeyInner, &pValueInner)) {
-      if(PyUnicode_Check(pValueInner)){
+      if (PyUnicode_Check(pValueInner)) {
         tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner);
       }
     }
@@ -307,7 +307,7 @@ void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vecto
       error() << "Failed retriving python key-value pair (int-vector<vector<int>>)" << endl;
       continue;
     }
-    
+
     vector<vector<int>> outerVector;
 
     for (Py_ssize_t i = 0; i < GetCollectionSize(pOuterList); ++i) {
@@ -425,19 +425,19 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple> 
 
     PyObject *tupleFormula = GetItem(SFvalues, 0);
     string formulaString = PyUnicode_AsUTF8(tupleFormula);
-    
+
     PyObject *tupleParams = GetItem(SFvalues, 1);
-    
+
     vector<float> params;
     for (Py_ssize_t i = 0; i < GetCollectionSize(tupleParams); ++i) {
       PyObject *item = GetItem(tupleParams, i);
       params.push_back(PyFloat_AsDouble(item));
     }
-    scaleFactors[SFnameStr] = {formulaString, params};    
+    scaleFactors[SFnameStr] = {formulaString, params};
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histogramsParams, string collectionName) {
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histogramsParams, string collectionName) {
   PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
@@ -446,7 +446,9 @@ void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histo
     HistogramParams histParams;
     string title;
 
-    if (GetCollectionSize(params) == 6) {
+    auto nParams = GetCollectionSize(params);
+
+    if (nParams == 6) {
       histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
       histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
       histParams.nBins = PyLong_AsLong(GetItem(params, 2));
@@ -454,7 +456,7 @@ void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histo
       histParams.max = PyFloat_AsDouble(GetItem(params, 4));
       histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5));
       title = histParams.collection + "_" + histParams.variable;
-    } else {
+    } else if (nParams == 5) {
       histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
       histParams.nBins = PyLong_AsLong(GetItem(params, 1));
       histParams.min = PyFloat_AsDouble(GetItem(params, 2));
@@ -466,7 +468,32 @@ void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histo
   }
 }
 
-void ConfigManager::GetHistogramsParams(std::map<std::string, HistogramParams2D> &histogramsParams, string collectionName) {
+void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams> &histogramsParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject *params = GetItem(pythonList, i);
+
+    IrregularHistogramParams histParams;
+    string title;
+
+    histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
+    histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
+
+    PyObject *binEdges = GetItem(params, 2);
+    for (Py_ssize_t i = 0; i < GetCollectionSize(binEdges); ++i) {
+      PyObject *item = GetItem(binEdges, i);
+      histParams.binEdges.push_back(PyFloat_AsDouble(item));
+    }
+
+    histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3));
+    title = histParams.collection + "_" + histParams.variable;
+
+    histogramsParams[title] = histParams;
+  }
+}
+
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogramsParams, string collectionName) {
   PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {

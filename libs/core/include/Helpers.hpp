@@ -130,6 +130,11 @@ struct HistogramParams {
   }
 };
 
+struct IrregularHistogramParams {
+  std::string collection, variable, directory;
+  std::vector<float> binEdges;
+};
+
 struct HistogramParams2D {
   std::string variable, directory;
   int nBinsX, nBinsY;

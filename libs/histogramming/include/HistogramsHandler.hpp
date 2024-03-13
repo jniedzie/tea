@@ -26,6 +26,7 @@ class HistogramsHandler {
   std::map<std::string, TH2D*> histograms2D;
 
   std::map<std::string, HistogramParams> histParams;
+  std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
   std::string outputPath;
 

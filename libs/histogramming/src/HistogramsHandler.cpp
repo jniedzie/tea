@@ -27,6 +27,13 @@ HistogramsHandler::HistogramsHandler() {
   }
 
   try{
+    config.GetHistogramsParams(irregularHistParams, "irregularHistParams");
+  }
+  catch(const Exception& e){
+    info() << "No irregularHistParams found in config file" << endl;
+  }
+
+  try{
   config.GetHistogramsParams(histParams2D, "histParams2D");
   }
   catch(const Exception& e){
@@ -48,6 +55,10 @@ HistogramsHandler::~HistogramsHandler() {}
 void HistogramsHandler::SetupHistograms() {
   for (auto &[title, params] : histParams) {
     histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+  }
+
+  for (auto &[title, params] : irregularHistParams) {
+    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
   for (auto &[name, params] : histParams2D) {
