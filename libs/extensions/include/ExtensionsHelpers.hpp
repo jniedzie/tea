@@ -7,6 +7,7 @@
 #include "HepMCParticle.hpp"
 #include "NanoJet.hpp"
 #include "NanoMuon.hpp"
+#include "NanoDimuonVertex.hpp"
 #include "NanoEvent.hpp"
 #include "PhysicsObject.hpp"
 
@@ -16,6 +17,10 @@ inline std::shared_ptr<NanoGenParticle> asNanoGenParticle(const std::shared_ptr<
 
 inline std::shared_ptr<NanoMuon> asNanoMuon(const std::shared_ptr<PhysicsObject> physicsObject) {
   return std::make_shared<NanoMuon>(physicsObject);
+}
+
+inline std::shared_ptr<NanoDimuonVertex> asNanoDimuonVertex(const std::shared_ptr<PhysicsObject> physicsObject) {
+  return std::make_shared<NanoDimuonVertex>(physicsObject);
 }
 
 inline std::shared_ptr<NanoElectron> asNanoElectron(const std::shared_ptr<PhysicsObject> physicsObject) {

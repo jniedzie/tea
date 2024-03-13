@@ -3,6 +3,7 @@
 
 #include "Event.hpp"
 #include "Helpers.hpp"
+#include "NanoDimuonVertex.hpp"
 
 class NanoEvent {
  public:
@@ -20,18 +21,22 @@ class NanoEvent {
 
   std::shared_ptr<PhysicsObjects> GetDRMatchedMuons(float matchingDeltaR = 0.1);
   std::shared_ptr<PhysicsObjects> GetOuterDRMatchedMuons(float matchingDeltaR = 0.1);
-  std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(int minMatches = 0);
+  std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(float minMatchRatio = float(2/3));
   
-  std::shared_ptr<PhysicsObjects> GetAllMuonVertexCollections();
+  std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<PhysicsObjects> muonCollection);
   std::shared_ptr<PhysicsObjects> GetVertexForDimuon(std::shared_ptr<PhysicsObject> muon1, std::shared_ptr<PhysicsObject> muon2);
-  std::pair<std::shared_ptr<PhysicsObject>,std::shared_ptr<PhysicsObject>> GetLooseMuonsInVertex(std::shared_ptr<PhysicsObject> muonVertex);
 
-  bool IndexExist(std::shared_ptr<PhysicsObjects> objectCollection, float index, bool isDSAMuon=false);
+  bool MuonIndexExist(std::shared_ptr<PhysicsObjects> objectCollection, float index, bool isDSAMuon=false);
   float DeltaR(float eta1, float phi1, float eta2, float phi2);
 
   float GetMuonTriggerSF() { return muonTriggerSF; }
   void SetMuonTriggerSF(float sf) { muonTriggerSF = sf; }
+
+  float GetNDSAMuon(std::string collectionName);
+  float GetNMuon(std::string collectionName);
+
+  std::shared_ptr<PhysicsObject> GetMuonWithIndex(int muon_idx, std::string collectionName, bool isDSAMuon);
 
  private:
   std::shared_ptr<Event> event;
