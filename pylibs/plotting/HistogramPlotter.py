@@ -1,4 +1,4 @@
-from ROOT import TCanvas, gStyle, THStack
+from ROOT import TCanvas, gStyle, THStack, TEfficiency, TMultiGraph
 import ROOT
 import os
 import os.path
@@ -6,7 +6,7 @@ import copy
 
 from Sample import SampleType
 from Styler import Styler
-from HistogramNormalizer import HistogramNormalizer
+from HistogramNormalizer import HistogramNormalizer,NormalizationType
 from CmsLabelsManager import CmsLabelsManager
 from Logger import *
 from Histogram import Histogram
@@ -26,6 +26,8 @@ class HistogramPlotter:
 
         self.stacks = {sample_type: self.__getStackDict(
             sample_type) for sample_type in SampleType}
+        self.ratiohists = {sample_type: self.__getRatioDict(
+            sample_type) for sample_type in SampleType}
         self.histsAndSamples = {}
         self.hists2d = {sample_type: {} for sample_type in SampleType}
 
@@ -37,6 +39,7 @@ class HistogramPlotter:
         self.show_ratios = self.backgrounds_included and self.data_included and self.config.show_ratio_plots
 
         self.histosamples = []
+        self.ratiosamples = []
         self.histosamples2D = []
         self.data_integral = {}
         self.background_integral = {}
@@ -59,31 +62,35 @@ class HistogramPlotter:
 
     def addHistosample2D(self, hist, sample, input_file):
         hist.load(input_file)
+
+        if not hist.isGood():
+            warn(
+                f"No good histogram {hist.getName()} for sample {sample.name}")
+            return
+        
+        
+
         self.histosamples2D.append((copy.deepcopy(hist), sample))
 
-    def addHistosampleRatio(self, input_hist_nom, input_hist_denom, sample, input_file):
-        input_hist_nom.load(input_file)
-        input_hist_denom.load(input_file)
+    def addHistosampleRatio(self, input_hist_pass, input_hist_tot, sample, input_file):
+        input_hist_pass.load(input_file)
+        input_hist_tot.load(input_file)
         
-        if not input_hist_nom.isGood():
+        if not input_hist_pass.isGood():
             warn(
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
-        if not input_hist_denom.isGood():
+        if not input_hist_tot.isGood():
             warn(
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
 
-        hist_ratio = copy.deepcopy(input_hist_nom)
-        hist_ratio.name = input_hist_nom.getName()+'_ratio'
-        hist_denom = copy.deepcopy(input_hist_denom)
-        hist_denom.name = input_hist_denom.getName()+'_denom'
+        hist_pass = copy.deepcopy(input_hist_pass)
+        hist_pass.name = input_hist_pass.getName()+'_pass'
+        hist_tot = copy.deepcopy(input_hist_tot)
+        hist_tot.name = input_hist_tot.getName()+'_tot'
         
-        self.histosamples.append((copy.deepcopy(hist_ratio), sample))
-        # if not any(hist.name == hist_nom.getName() and histosample.name == sample.name for hist, histosample in self.histosamples):
-          # self.histosamples.append((copy.deepcopy(hist_nom), sample))
-        if not any(h.name == hist_denom.getName() and s.name == sample.name for h, s in self.histosamples):
-          self.histosamples.append((copy.deepcopy(hist_denom), sample))
+        self.ratiosamples.append((copy.deepcopy(hist_pass), copy.deepcopy(hist_tot), sample))
 
     def setupLegends(self):
         already_added = []
@@ -92,6 +99,20 @@ class HistogramPlotter:
             if hist.getName() not in self.legends.keys():
                 self.legends[hist.getName()] = {}
 
+            if sample.custom_legend is not None:
+                self.legends[hist.getName(
+                )][sample.name] = sample.custom_legend.getRootLegend()
+            elif (hist.getName(), sample.type) not in already_added:
+                self.legends[hist.getName(
+                )][sample.type] = self.config.legends[sample.type].getRootLegend()
+                already_added.append((hist.getName(), sample.type))
+        
+        for hist_pass, hist_tot, sample in self.ratiosamples:
+            hist = copy.deepcopy(hist_pass)
+            hist.name = hist.name.replace("pass", "ratio")
+            if hist.getName() not in self.legends.keys():
+                self.legends[hist.getName()] = {}
+            
             if sample.custom_legend is not None:
                 self.legends[hist.getName(
                 )][sample.name] = sample.custom_legend.getRootLegend()
@@ -200,21 +221,35 @@ class HistogramPlotter:
         if not hasattr(self.config, "histogramsRatio"):
             return
 
-        for input_hist_nom, input_hist_denom in self.config.histogramsRatio:
-            histosamples_nom = [(h, s) for h, s in self.histosamples if h.getName() == input_hist_nom.getName()+'_ratio']
-            histosamples_denom = [(h, s) for h, s in self.histosamples if h.getName() == input_hist_denom.getName()+'_denom']
+        for hist_pass, hist_tot, sample in self.ratiosamples:
 
-            for hist_nom, sample in histosamples_nom:
-                hist_denom = next((h for h, s in histosamples_denom if s.name == sample.name), None)
+            self.normalizer.normalize(hist_pass, sample, self.__getDataIntegral(
+                hist_pass), self.__getBackgroundIntegral(hist_pass))
+            self.normalizer.normalize(hist_tot, sample, self.__getDataIntegral(
+                hist_tot), self.__getBackgroundIntegral(hist_tot))
 
-                hist_ratio = copy.deepcopy(hist_nom)
-                hist_ratio.hist.Divide(hist_denom.hist)
+            hist_pass.setup(sample)
+            hist_tot.setup(sample)
 
-                hist_ratio.setup(sample)
-                self.stacks[sample.type][hist_ratio.getName()].Add(hist_ratio.hist)
-                key = sample.type if sample.custom_legend is None else sample.name
+            hist_ratio = copy.deepcopy(hist_pass)
+            hist_ratio.name = hist_ratio.name.replace("pass", "ratio")
+            hist = TEfficiency()
+            hist.SetName(hist_ratio.getName())
+            hist.SetTitle(hist_ratio.getName())
 
-                self.legends[hist_ratio.getName()][key].AddEntry(hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
+            hist_pass.hist.Sumw2(False)
+            hist_tot.hist.Sumw2(False)
+            hist.SetPassedHistogram(hist_pass.hist, "f")
+            hist.SetTotalHistogram(hist_tot.hist, "f")
+
+            graph = hist.CreateGraph()
+            hist_ratio.hist = graph
+
+            hist_ratio.setupRatio(sample)
+            self.ratiohists[sample.type][hist_ratio.getName()].Add(hist_ratio.hist)
+
+            key = sample.type if sample.custom_legend is None else sample.name
+            self.legends[hist_ratio.getName()][key].AddEntry(hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)            
 
     def __drawLineAtOne(self, canvas, hist):
         if not self.show_ratios:
@@ -285,6 +320,20 @@ class HistogramPlotter:
                 self.styler.setupFigure(stack, hist)
                 firstPlotted = True
 
+    def __drawRatioHists(self, canvas, hist):
+        canvas.cd(1)
+
+        firstPlotted = False
+
+        for sample_type in SampleType:
+            options = ""
+            options = f"{options} same" if firstPlotted else options
+            ratio = self.ratiohists[sample_type][hist.getName()]
+            ratio.Draw(options)
+            self.styler.setupFigure(ratio, hist, False)
+
+            firstPlotted = True
+
     def __setup_canvas(self, canvas, hist):
         if self.show_ratios:
             canvas.Divide(1, 2)
@@ -325,13 +374,16 @@ class HistogramPlotter:
             return
 
         for hist, sample in self.histosamples2D:
+            self.normalizer.normalize(hist, sample)
+
             title = hist.getName() + "_" + sample.name
             canvas = TCanvas(
-                title, title, self.config.canvas_size[0], self.config.canvas_size[1])
+                title, title, self.config.canvas_size[0], self.config.canvas_size[0])
             canvas.cd()
             hist.hist.Draw("colz")
             self.styler.setupFigure2D(hist.hist, hist)
 
+            canvas.SetLogz(hist.log_z)
             canvas.Update()
             canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
 
@@ -343,10 +395,7 @@ class HistogramPlotter:
             canvas = TCanvas(hist_nom.getName(), hist_nom.getName(), self.config.canvas_size[0], self.config.canvas_size[1])
             self.__setup_canvas(canvas, hist_nom)
             
-            self.__drawRatioPlot(canvas, hist_nom)
-            self.__drawLineAtOne(canvas, hist_nom)
-            self.__drawHists(canvas, hist_nom)
-            self.__drawUncertainties(canvas, hist_nom)
+            self.__drawRatioHists(canvas, hist_nom)
             self.__drawLegends(canvas, hist_nom)
             self.cmsLabelsManager.drawLabels(canvas)
                   
@@ -412,11 +461,13 @@ class HistogramPlotter:
             title = hist.getName() + sample_type.name
             hists_dict[hist.getName()] = ROOT.THStack(title, title)
 
+        return hists_dict
+
+    def __getRatioDict(self, sample_type):
+        hists_dict = {}
+
         for hist_nom, hist_denom in self.config.histogramsRatio:
-            if not hist_denom.getName()+'_denom' in hists_dict:
-                title = hist_denom.getName() + sample_type.name
-                hists_dict[hist_denom.getName()+'_denom'] = ROOT.THStack(title, title)
-            title = hist_nom.getName() + '_ratio' + sample_type.name
-            hists_dict[hist_nom.getName()+'_ratio'] = ROOT.THStack(title, title)
+            title = hist_nom.getName() + '_ratio_' + sample_type.name
+            hists_dict[hist_nom.getName()+'_ratio'] = TMultiGraph(title,title)
 
         return hists_dict
