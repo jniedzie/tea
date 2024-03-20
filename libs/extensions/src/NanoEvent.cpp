@@ -44,12 +44,12 @@ shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDelta
     allMuons->push_back(muon);
   }
   for(auto dsaMuon : *looseDsaMuons){
-    float eta1 = dsaMuon->Get("outerEta");
-    float phi1 = dsaMuon->Get("outerPhi");
+    float eta1 = asNanoMuon(dsaMuon)->GetOuterEta();
+    float phi1 = asNanoMuon(dsaMuon)->GetOuterPhi();
     bool matchFound = false;
     for(auto muon : *looseMuons){
-      float eta2 = muon->Get("outerEta");
-      float phi2 = muon->Get("outerPhi");
+      float eta2 = asNanoMuon(muon)->GetOuterEta();
+      float phi2 = asNanoMuon(muon)->GetOuterPhi();
       if(DeltaR(eta1, phi1, eta2, phi2) < matchingDeltaR) matchFound = true;
     }
     if(matchFound == false) allMuons->push_back(dsaMuon);
