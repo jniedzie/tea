@@ -50,3 +50,13 @@ float NanoMuon::GetMatchesForNBestMatch(int N) {
  if (!isDSAMuon()) matchString = "dsaMatch" + to_string(N);
  return GetAsFloat(matchString);
 }
+
+float NanoMuon::OuterDeltaRtoMuon(NanoMuon muon) {
+  float muonEta = muon.GetOuterEta();
+  float muonPhi = muon.GetOuterPhi();
+  float eta = GetOuterPhi();
+  float phi = GetOuterPhi();
+  float dEta = eta - muonEta;
+  float dPhi = TVector2::Phi_mpi_pi(phi - muonPhi);
+  return TMath::Sqrt(dEta*dEta + dPhi*dPhi);
+}

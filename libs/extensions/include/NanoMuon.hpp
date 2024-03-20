@@ -41,6 +41,8 @@ class NanoMuon {
   MuonID GetID();
   MuonIso GetIso();
 
+  float OuterDeltaRtoMuon(NanoMuon muon);
+
   void Print(){
     info()<<"NanoMuon: pt="<<GetPt()<<" eta="<<GetEta()<<" phi="<<GetPhi()<<std::endl;
     GetID().Print();
