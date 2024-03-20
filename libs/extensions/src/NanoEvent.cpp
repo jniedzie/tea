@@ -44,13 +44,9 @@ shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDelta
     allMuons->push_back(muon);
   }
   for(auto dsaMuon : *looseDsaMuons){
-    float eta1 = asNanoMuon(dsaMuon)->GetOuterEta();
-    float phi1 = asNanoMuon(dsaMuon)->GetOuterPhi();
     bool matchFound = false;
     for(auto muon : *looseMuons){
-      float eta2 = asNanoMuon(muon)->GetOuterEta();
-      float phi2 = asNanoMuon(muon)->GetOuterPhi();
-      if(DeltaR(eta1, phi1, eta2, phi2) < matchingDeltaR) matchFound = true;
+      if(asNanoMuon(dsaMuon)->OuterDeltaRtoMuon(*asNanoMuon(muon)) < matchingDeltaR) matchFound = true;
     }
     if(matchFound == false) allMuons->push_back(dsaMuon);
   }
@@ -187,7 +183,7 @@ shared_ptr<PhysicsObject> NanoEvent::GetMuonWithIndex(int muon_idx, string colle
   for(auto object : *collection) {
     float idx = object->Get("idx");
     bool isDSA = asNanoMuon(object)->isDSAMuon();
-    if(idx != muon_idx) return nullptr;
+    if(idx != muon_idx) continue;
     if(isDSA && isDSAMuon) return object;
     if(!isDSA && !isDSAMuon) return object;
   }
