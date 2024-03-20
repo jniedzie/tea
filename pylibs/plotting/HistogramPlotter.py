@@ -385,12 +385,14 @@ class HistogramPlotter:
         for hist, sample in self.histosamples2D:
             self.normalizer.normalize(hist, sample)
 
+            hist_rebinned = hist.hist.Rebin2D(hist.x_rebin,hist.y_rebin)
+
             title = hist.getName() + "_" + sample.name
             canvas = TCanvas(
-                title, title, self.config.canvas_size[0], self.config.canvas_size[0])
+                title, title, self.config.canvas_size_2Dhists[0], self.config.canvas_size_2Dhists[1])
             canvas.cd()
-            hist.hist.Draw("colz")
-            self.styler.setupFigure2D(hist.hist, hist)
+            hist_rebinned.Draw("colz")
+            self.styler.setupFigure2D(hist_rebinned, hist)
 
             canvas.SetLogz(hist.log_z)
             canvas.Update()
