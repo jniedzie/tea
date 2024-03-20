@@ -31,6 +31,9 @@ class NanoMuon {
   inline float GetOuterEta() { return physicsObject->Get("outerEta"); }
   inline float GetOuterPhi() { return physicsObject->Get("outerPhi"); }
 
+  float GetMatchIdxForNBestMatch(int N);
+  float GetMatchesForNBestMatch(int N);
+
   TLorentzVector GetFourVector();
 
   float GetScaleFactor(std::string nameID, std::string nameIso, std::string nameReco);

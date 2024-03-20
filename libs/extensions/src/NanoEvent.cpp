@@ -73,27 +73,13 @@ shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio
     
     bool matchFound = false;
     float ratio_tmp = float(dsaMuon->Get("muonMatch1")) / nHits;
-    if(ratio_tmp >= minMatchRatio) {
-      if(MuonIndexExist(looseMuons, dsaMuon->Get("muonMatch1idx")),true) matchFound = true;
-    }
-    ratio_tmp = float(dsaMuon->Get("muonMatch2")) / nHits;
-    if(!matchFound && ratio_tmp >= minMatchRatio) {
-      if(MuonIndexExist(looseMuons, dsaMuon->Get("muonMatch2idx")),true) matchFound = true;
-    }
-    ratio_tmp = float(dsaMuon->Get("muonMatch3")) / nHits;
-    if(!matchFound && ratio_tmp >= minMatchRatio) {
-      if(MuonIndexExist(looseMuons, dsaMuon->Get("muonMatch3idx")),true) matchFound = true;
-    }
-    ratio_tmp = float(dsaMuon->Get("muonMatch4")) / nHits;
-    if(!matchFound && ratio_tmp >= minMatchRatio) {
-      if(MuonIndexExist(looseMuons, dsaMuon->Get("muonMatch4idx")),true) matchFound = true;
-    }
-    ratio_tmp = float(dsaMuon->Get("muonMatch5")) / nHits;
-    if(!matchFound && ratio_tmp >= minMatchRatio) {
-      if(MuonIndexExist(looseMuons, dsaMuon->Get("muonMatch5idx")),true) matchFound = true;
+    for(int i=1; i<=5; i++) {
+      float ratio_tmp = asNanoMuon(dsaMuon)->GetMatchesForNBestMatch(i) / nHits;
+      if(!matchFound && ratio_tmp >= minMatchRatio) {
+        if(MuonIndexExist(looseMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNBestMatch(i)),true) matchFound = true;
+      }
     }
     if(matchFound == false) allMuons->push_back(dsaMuon);
-
   }
 
   return allMuons;
@@ -101,18 +87,9 @@ shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio
 
 bool NanoEvent::MuonIndexExist(shared_ptr<PhysicsObjects> objectCollection, float index, bool isDSAMuon) {
   for(auto object : *objectCollection) {
-    // cout << "idx: " << float(object->Get("idx")) << endl;
-    // cout << "isDSAMuon(): " << float(asNanoMuon(object)->isDSAMuon()) << endl;
-    // cout << "isDSAMuon: " << isDSAMuon << endl;
     if(float(object->Get("idx")) == index) {
-      if(isDSAMuon && asNanoMuon(object)->isDSAMuon()) {
-        // cout << "true dsa" << endl;
-        return true;
-      }
-      if(!isDSAMuon && !asNanoMuon(object)->isDSAMuon()) {
-        // cout << "true muon" << endl;
-        return true;
-      }
+      if(isDSAMuon && asNanoMuon(object)->isDSAMuon()) return true;
+      if(!isDSAMuon && !asNanoMuon(object)->isDSAMuon()) return true;
     }
   }
   return false;
@@ -210,11 +187,9 @@ shared_ptr<PhysicsObject> NanoEvent::GetMuonWithIndex(int muon_idx, string colle
   for(auto object : *collection) {
     float idx = object->Get("idx");
     bool isDSA = asNanoMuon(object)->isDSAMuon();
-    if(idx == muon_idx) {
-      if(isDSA && isDSAMuon) return object;
-      if(!isDSA && !isDSAMuon) return object;
-    }
+    if(idx != muon_idx) return nullptr;
+    if(isDSA && isDSAMuon) return object;
+    if(!isDSA && !isDSAMuon) return object;
   }
-  auto nullmuon = make_shared<PhysicsObject>();
-  return nullmuon;
+  return nullptr;
 }
