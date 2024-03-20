@@ -32,6 +32,8 @@
 #include "TPolyLine.h"
 #include "TROOT.h"
 #include "TSystem.h"
+#include "TVector2.h"
+#include "TRandom.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 

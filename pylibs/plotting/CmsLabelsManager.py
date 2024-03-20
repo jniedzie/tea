@@ -93,8 +93,7 @@ class CmsLabelsManager:
         latex.SetTextAlign(31)
 
         latex.SetTextSize(self.lumiTextSize*self.top)
-        latex.DrawLatex(1-self.right, 1-self.top +
-                        self.lumiTextOffset * self.top, lumiText)
+        latex.DrawLatex(1-self.right, 1-self.top + self.lumiTextOffset * self.top, lumiText)
 
     def __drawLogo(self):
         posX_ = self.left + 0.045 * \
