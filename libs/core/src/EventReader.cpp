@@ -71,16 +71,15 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
   string::size_type pos = branchName.find('_');
   string::size_type posEnd = pos + 1;
 
-  // if there is no underscode, split on the first capital letter instead:
-  if (pos == string::npos) {
-    for (int i = 0; i < branchName.size(); i++) {
-      if (isupper(branchName[i])) {
-        pos = posEnd = i;
-        break;
-      }
-    }
-  }
+  // If there's no underscore, the collection and the variable will be called the same
+  if (pos == string::npos) return make_tuple(branchName, branchName);
+  // TODO: to improve this, we could add a map in the config for custom collection/variable names.
+  // E.g. if someone has branches like "MuonPt", MuonEta",... they could define a map like:
+  // "MuonPt": ("Muon", "Pt"), "MuonEta": ("Muon", "Eta"),...
+  // and if there's some logic to how collection and variable names are formed, 
+  // they could generate it automatically in the config.
 
+  // otherwise, cut at the underscore
   string collectionName = branchName.substr(0, pos);
   string variableName = branchName.substr(posEnd);
 
@@ -143,10 +142,7 @@ void EventReader::SetupBranches() {
       if (branchType == "") error() << "Couldn't find branch type for branch: " << branchName << endl;
       branchNamesAndTypes[branchName] = branchType;
 
-      auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
-      isCollectionAnStdVector[collectionName] = branchType.find("vector") != string::npos;
-
-      bool branchIsVector = isCollectionAnStdVector[collectionName] || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
+      bool branchIsVector = branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
       if (branchIsVector) {
         SetupVectorBranch(branchName, branchType, eventsTreeName);
       } else {
@@ -184,6 +180,7 @@ void EventReader::SetupScalarBranch(string branchName, string branchType, string
 
 void EventReader::SetupVectorBranch(string branchName, string branchType, string eventsTreeName) {
   auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
+  isCollectionAnStdVector[collectionName] = branchType.find("vector") != string::npos;
   InitializeCollection(collectionName);
 
   for (int i = 0; i < maxCollectionElements; i++) {
@@ -304,7 +301,7 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
     } else if (specialBranchSizes.count(name)) {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, specialBranchSizes[name]);
     } else if (name == "") {
-      warn() << "Empty collection name - collection size not updating" << endl;
+      error() << "Empty collection name. This should never happen, so please report an issue." << endl;
       continue;
     } else {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, "n" + name);
