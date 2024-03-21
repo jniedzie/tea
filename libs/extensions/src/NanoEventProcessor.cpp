@@ -44,7 +44,7 @@ float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> 
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  auto leadingMuon = asNanoMuon(eventProcessor->GetMaxPtObject(event->GetEvent(), "NanoMuon"));
+  auto leadingMuon = asNanoMuon(eventProcessor->GetMaxPtObject(event->GetEvent(), "Muon"));
 
   float scaleFactor = scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
   event->SetMuonTriggerSF(scaleFactor);

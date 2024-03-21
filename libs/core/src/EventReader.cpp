@@ -254,7 +254,6 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
 
 void EventReader::InitializeCollection(string collectionName) {
   if (currentEvent->collections.count(collectionName)) return;
-
   currentEvent->collections[collectionName] = make_shared<PhysicsObjects>();
   for (int i = 0; i < maxCollectionElements; i++) {
     currentEvent->collections[collectionName]->push_back(make_shared<PhysicsObject>(collectionName));
@@ -266,7 +265,7 @@ int EventReader::tryGet(shared_ptr<Event> event, string branchName) {
   try {
     First value = event->Get(branchName);
     return value;
-  } catch (Exception &e) {
+  } catch (BadTypeException &e) {
     if constexpr (sizeof...(Rest) > 0) {
       return tryGet<Rest...>(event, branchName);
     } else {
@@ -304,6 +303,9 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
       }
     } else if (specialBranchSizes.count(name)) {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, specialBranchSizes[name]);
+    } else if (name == "") {
+      warn() << "Empty collection name - collection size not updating" << endl;
+      continue;
     } else {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, "n" + name);
     }

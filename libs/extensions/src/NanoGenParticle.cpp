@@ -6,7 +6,20 @@
 
 using namespace std;
 
-int NanoGenParticle::GetPdgId() { return physicsObject->Get("pdgId"); }
+TLorentzVector NanoGenParticle::GetFourVector(float mass) {
+    TLorentzVector v;
+    v.SetPtEtaPhiM(physicsObject->Get("pt"), physicsObject->Get("eta"), physicsObject->Get("phi"), mass);
+    return v;
+  }
+
+float NanoGenParticle::GetDxy(float pv_x, float pv_y) {
+  float vx = physicsObject->Get("vx");
+  float vy = physicsObject->Get("vy");
+  float phi = physicsObject->Get("phi");
+
+  float dxy = -(vx-pv_x)*sin(phi) + (vy-pv_y)*cos(phi);
+  return dxy;
+}
 
 bool NanoGenParticle::IsGoodBottomQuark(shared_ptr<NanoGenParticle> mother) {
   if (!IsFirstCopy()) return false;
@@ -30,9 +43,18 @@ bool NanoGenParticle::IsGoodLepton(shared_ptr<NanoGenParticle> mother) {
   return true;
 }
 
+bool NanoGenParticle::IsGoodParticleWithID(int pdgId) {
+  if (!IsFirstCopy()) return false;
+  if(abs(GetPdgId()) != pdgId) return false;
+
+  return true;
+}
+
 bool NanoGenParticle::IsJet() {
   if (GetPdgId() == 21 || (abs(GetPdgId()) >= 1 && abs(GetPdgId()) <= 5)) return true;
   return false;
 }
 
 bool NanoGenParticle::IsTop() { return abs(GetPdgId()) == 6; }
+
+bool NanoGenParticle::IsMuon() { return abs(GetPdgId()) == 13; }

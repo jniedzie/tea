@@ -15,9 +15,14 @@ class NanoGenParticle {
  public:
   NanoGenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-  int GetPdgId();
+  TLorentzVector GetFourVector(float mass);
+
+  float GetMass() { return physicsObject->Get("mass"); }
+  float GetPt() { return physicsObject->Get("pt"); }
+  int GetPdgId() { return physicsObject->Get("pdgId"); }
   int GetMotherIndex() { return physicsObject->Get("genPartIdxMother"); }
   int GetStatusFlags() { return physicsObject->Get("statusFlags"); }
+  float GetDxy(float pv_x, float pv_y);
 
   bool IsLastCopy() { return (GetStatusFlags() & isLastCopy); }
   bool IsFirstCopy() { return (GetStatusFlags() & isFirstCopy); }
@@ -25,9 +30,11 @@ class NanoGenParticle {
   bool IsGoodBottomQuark(std::shared_ptr<NanoGenParticle> mother);
   bool IsGoodUdscQuark(std::shared_ptr<NanoGenParticle> mother);
   bool IsGoodLepton(std::shared_ptr<NanoGenParticle> mother);
+  bool IsGoodParticleWithID(int pdgId);
 
   bool IsJet();
   bool IsTop();
+  bool IsMuon();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

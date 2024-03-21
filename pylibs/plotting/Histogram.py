@@ -2,6 +2,8 @@ from Logger import *
 
 from dataclasses import dataclass
 from ROOT import TObject
+from Sample import SampleType
+from HistogramNormalizer import NormalizationType
 
 @dataclass
 class Histogram:
@@ -9,7 +11,7 @@ class Histogram:
   title: str = ""
   log_x: bool = False
   log_y: bool = False
-  norm_type: str = "norm1"
+  norm_type: int = NormalizationType.to_lumi
   rebin: int = 1
   x_min: float = 0.0
   x_max: float = 0.0
@@ -54,10 +56,22 @@ class Histogram:
     self.hist.Rebin(self.rebin)
     self.hist.Scale(1./self.rebin)
 
+  def setupRatio(self, sample):
+    if sample.type == SampleType.background:  
+      color = sample.fill_color
+    else:
+      color = sample.line_color
+    self.hist.SetLineColor(color)
+    self.hist.SetMarkerColor(color)
+
 @dataclass
 class Histogram2D:
   name: str = ""
   title: str = ""
+  log_x: bool = False
+  log_y: bool = False
+  log_z: bool = False
+  norm_type: int = NormalizationType.to_lumi
   x_rebin: int = 1
   y_rebin: int = 1
   x_min: float = 0.0
