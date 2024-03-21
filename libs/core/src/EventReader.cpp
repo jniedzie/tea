@@ -304,6 +304,7 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
     } else if (specialBranchSizes.count(name)) {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, specialBranchSizes[name]);
     } else if (name == "") {
+      warn() << "Empty collection name - collection size not updating" << endl;
       continue;
     } else {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, "n" + name);
