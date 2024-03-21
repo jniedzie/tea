@@ -37,23 +37,23 @@ MuonIso NanoMuon::GetIso() {
   return MuonIso(tkIso == 1, tkIso == 2, pfIso == 1, pfIso == 2, pfIso == 3, pfIso == 4, pfIso == 5, pfIso == 6);
 }
 
-float NanoMuon::GetMatchIdxForNBestMatch(int N) {
+float NanoMuon::GetMatchIdxForNthBestMatch(int N) {
  string idxString;
  if (isDSAMuon()) idxString = "muonMatch" + to_string(N) + "idx";
  if (!isDSAMuon()) idxString = "dsaMatch" + to_string(N) + "idx";
  return GetAsFloat(idxString);
 }
 
-float NanoMuon::GetMatchesForNBestMatch(int N) {
+float NanoMuon::GetMatchesForNthBestMatch(int N) {
  string matchString;
  if (isDSAMuon()) matchString = "muonMatch" + to_string(N);
  if (!isDSAMuon()) matchString = "dsaMatch" + to_string(N);
  return GetAsFloat(matchString);
 }
 
-float NanoMuon::OuterDeltaRtoMuon(NanoMuon muon) {
-  float muonEta = muon.GetOuterEta();
-  float muonPhi = muon.GetOuterPhi();
+float NanoMuon::OuterDeltaRtoMuon(shared_ptr<NanoMuon> muon) {
+  float muonEta = muon->GetOuterEta();
+  float muonPhi = muon->GetOuterPhi();
   float eta = GetOuterPhi();
   float phi = GetOuterPhi();
   float dEta = eta - muonEta;

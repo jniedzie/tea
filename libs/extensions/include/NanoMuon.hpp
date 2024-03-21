@@ -31,8 +31,8 @@ class NanoMuon {
   inline float GetOuterEta() { return physicsObject->Get("outerEta"); }
   inline float GetOuterPhi() { return physicsObject->Get("outerPhi"); }
 
-  float GetMatchIdxForNBestMatch(int N);
-  float GetMatchesForNBestMatch(int N);
+  float GetMatchIdxForNthBestMatch(int N);
+  float GetMatchesForNthBestMatch(int N);
 
   TLorentzVector GetFourVector();
 
@@ -41,7 +41,7 @@ class NanoMuon {
   MuonID GetID();
   MuonIso GetIso();
 
-  float OuterDeltaRtoMuon(NanoMuon muon);
+  float OuterDeltaRtoMuon(std::shared_ptr<NanoMuon> muon);
 
   void Print(){
     info()<<"NanoMuon: pt="<<GetPt()<<" eta="<<GetEta()<<" phi="<<GetPhi()<<std::endl;

@@ -46,7 +46,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDelta
   for(auto dsaMuon : *looseDsaMuons){
     bool matchFound = false;
     for(auto muon : *looseMuons){
-      if(asNanoMuon(dsaMuon)->OuterDeltaRtoMuon(*asNanoMuon(muon)) < matchingDeltaR) matchFound = true;
+      if(asNanoMuon(dsaMuon)->OuterDeltaRtoMuon(asNanoMuon(muon)) < matchingDeltaR) matchFound = true;
     }
     if(matchFound == false) allMuons->push_back(dsaMuon);
   }
@@ -70,9 +70,9 @@ shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio
     bool matchFound = false;
     float ratio_tmp = float(dsaMuon->Get("muonMatch1")) / nHits;
     for(int i=1; i<=5; i++) {
-      float ratio_tmp = asNanoMuon(dsaMuon)->GetMatchesForNBestMatch(i) / nHits;
+      float ratio_tmp = asNanoMuon(dsaMuon)->GetMatchesForNthBestMatch(i) / nHits;
       if(!matchFound && ratio_tmp >= minMatchRatio) {
-        if(MuonIndexExist(looseMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNBestMatch(i)),true) matchFound = true;
+        if(MuonIndexExist(looseMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNthBestMatch(i)),true) matchFound = true;
       }
     }
     if(matchFound == false) allMuons->push_back(dsaMuon);
