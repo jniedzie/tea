@@ -3,6 +3,7 @@ from Logger import *
 from dataclasses import dataclass
 from ROOT import TObject
 from Sample import SampleType
+from HistogramNormalizer import NormalizationType
 
 @dataclass
 class Histogram:
@@ -10,7 +11,7 @@ class Histogram:
   title: str = ""
   log_x: bool = False
   log_y: bool = False
-  norm_type: str = "norm1"
+  norm_type: int = NormalizationType.to_lumi
   rebin: int = 1
   x_min: float = 0.0
   x_max: float = 0.0
@@ -70,7 +71,7 @@ class Histogram2D:
   log_x: bool = False
   log_y: bool = False
   log_z: bool = False
-  norm_type: str = "norm1"
+  norm_type: int = NormalizationType.to_lumi
   x_rebin: int = 1
   y_rebin: int = 1
   x_min: float = 0.0

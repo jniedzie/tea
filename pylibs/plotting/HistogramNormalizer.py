@@ -27,6 +27,7 @@ class HistogramNormalizer:
   
   def normalize(self, hist, sample, data_integral=None, background_integral=None):
     if hist.norm_type == NormalizationType.to_one:
+      warn("Trying to normalize to one, this is not yet implemented properly")
       self.__normalizeToOne(hist, sample)
     elif hist.norm_type == NormalizationType.to_background:
       self.__normalizeToBackground(hist, sample, background_integral)
@@ -42,6 +43,9 @@ class HistogramNormalizer:
       hist.hist.Scale(1./hist.hist.Integral())
   
   def __normalizeToBackground(self, hist, sample, background_integral):
+    if background_integral is None:
+      error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
+      return
     if sample.type == SampleType.background:
       hist.hist.Scale(self.config.luminosity*sample.cross_section/self.background_initial_sum_weights[sample.name])
     elif sample.type == SampleType.signal:
