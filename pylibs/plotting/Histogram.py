@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from ROOT import TObject
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
+import ROOT
 
 @dataclass
 class Histogram:
@@ -55,6 +56,7 @@ class Histogram:
     self.hist.SetFillStyle(sample.fill_style)
     self.hist.Rebin(self.rebin)
     self.hist.Scale(1./self.rebin)
+    self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
 
   def setupRatio(self, sample):
     if sample.type == SampleType.background:  
