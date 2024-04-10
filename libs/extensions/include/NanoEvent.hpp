@@ -21,7 +21,7 @@ class NanoEvent {
 
   std::shared_ptr<PhysicsObjects> GetDRMatchedMuons(float matchingDeltaR = 0.1);
   std::shared_ptr<PhysicsObjects> GetOuterDRMatchedMuons(float matchingDeltaR = 0.1);
-  std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(float minMatchRatio = float(2/3));
+  std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(float minMatchRatio = 2.0f/3.0f);
   
   std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<PhysicsObjects> muonCollection);
@@ -36,7 +36,11 @@ class NanoEvent {
   float GetNDSAMuon(std::string collectionName);
   float GetNMuon(std::string collectionName);
 
-  std::shared_ptr<PhysicsObject> GetMuonWithIndex(int muon_idx, std::string collectionName, bool isDSAMuon);
+  std::shared_ptr<PhysicsObject> GetMuonWithIndex(int muon_idx, std::string collectionName, bool isDSAMuon=false);
+  std::pair<float,int> GetMinDeltaRToGenMuons(std::shared_ptr<PhysicsObject> recoMuon);
+
+  std::shared_ptr<PhysicsObjects> GetDSAMuonsInCollection(std::string muonCollectionName);
+  std::shared_ptr<PhysicsObjects> GetPatMuonsInCollection(std::string muonCollectionName);
 
  private:
   std::shared_ptr<Event> event;
