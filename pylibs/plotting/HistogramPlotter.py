@@ -3,6 +3,7 @@ import ROOT
 import os
 import os.path
 import copy
+from array import array
 
 from Sample import SampleType
 from Styler import Styler
@@ -307,6 +308,26 @@ class HistogramPlotter:
         for legend in self.legends[hist.getName()].values():
             legend.Draw()
 
+    def _hist_to_graph(self, hist):
+
+        n = hist.GetNbinsX()
+        x = []
+        y = []
+        ex = []
+        ey_up = []
+        ey_down = []
+
+        for i in range(1, n+1):
+            x.append(hist.GetBinCenter(i))
+            y.append(hist.GetBinContent(i))
+            ex.append(hist.GetBinWidth(i)/2)
+            ey_up.append(hist.GetBinErrorUp(i))
+            ey_down.append(hist.GetBinErrorLow(i))
+            
+        return ROOT.TGraphAsymmErrors(n, array('d', x), array('d', y), array('d', ex), array('d', ex), array('d', ey_down), array('d', ey_up))
+
+
+
     def __drawHists(self, canvas, hist):
         canvas.cd(1)
 
@@ -317,7 +338,15 @@ class HistogramPlotter:
             options = f"{options} same" if firstPlotted else options
             stack = self.stacks[sample_type][hist.getName()]
             if stack.GetNhists() > 0:
-                stack.Draw(options)
+                # if these only one histogram in the stack, plot this histogram
+                if stack.GetNhists() == 1:
+                    graph = self._hist_to_graph(stack.GetHists()[0])
+                    graph.SetMarkerStyle(20)
+                    graph.SetMarkerSize(1)
+                    graph.SetMarkerColor(ROOT.kBlack)
+                    graph.DrawClone("PEsame")
+                else:
+                    stack.Draw(options)
                 self.styler.setupFigure(stack, hist)
                 firstPlotted = True
 
@@ -376,6 +405,7 @@ class HistogramPlotter:
             path = self.config.output_path+"/"+hist.getName()+".pdf"
             info(f"Saving file: {path}")
             canvas.SaveAs(path)
+            canvas.SaveAs(path.replace(".pdf", ".C"))
             ROOT.gErrorIgnoreLevel = originalErrorLevel
 
     def drawHists2D(self):
