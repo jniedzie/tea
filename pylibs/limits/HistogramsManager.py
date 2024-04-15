@@ -100,7 +100,7 @@ class HistogramsManager:
             
             mc_hists = hists_per_sample
             mc_hists.pop("data_obs")
-            self.datacardsProcessor.create_new_datacard(identifier, obs_hist, mc_hists, self.config.nuisances)
+            self.datacardsProcessor.create_new_datacard(identifier, obs_hist, mc_hists, self.config.nuisances, self.config.add_uncertainties_on_zero)
             
     
     def __getStackDict(self, sample_type):

@@ -10,7 +10,7 @@ class DatacardsProcessor:
         os.system(f"mkdir -p {output_path}")
         
 
-    def create_new_datacard(self, identifier, obs_hist, mc_hists, nuisances, n_channels=1):
+    def create_new_datacard(self, identifier, obs_hist, mc_hists, nuisances, add_uncertainties_on_zero=False, n_channels=1):
         self.datacards[identifier] = ""
         self.hists[identifier] = {"data_obs": obs_hist}
         
@@ -36,7 +36,7 @@ class DatacardsProcessor:
         outfile.write(self.datacards[identifier])
         
         print(f"Storing histograms in {datacard_path.replace('.txt', '.root')}")
-        self.__save_histograms(identifier)
+        self.__save_histograms(identifier, add_uncertainties_on_zero)
     
     def __add_header(self, identifier, n_channels, n_backgrounds):
         # define number of parameters
@@ -104,12 +104,13 @@ class DatacardsProcessor:
 
         return hist
 
-    def __save_histograms(self, identifier):
+    def __save_histograms(self, identifier, add_uncertainties_on_zero=False):
 
         output_file = ROOT.TFile(f"{self.output_path}/{identifier}.root", "recreate")
         
         for name, hist in self.hists[identifier].items():
-            hist = self.__add_uncertainties_on_zero(hist)
+            if add_uncertainties_on_zero and name == "data_obs":
+                hist = self.__add_uncertainties_on_zero(hist)
             hist.SetName(name)
             hist.Write()
 
