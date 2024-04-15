@@ -54,7 +54,7 @@ float NanoMuon::GetMatchesForNthBestMatch(int N) {
 float NanoMuon::OuterDeltaRtoMuon(shared_ptr<NanoMuon> muon) {
   float muonEta = muon->GetOuterEta();
   float muonPhi = muon->GetOuterPhi();
-  float eta = GetOuterPhi();
+  float eta = GetOuterEta();
   float phi = GetOuterPhi();
   float dEta = eta - muonEta;
   float dPhi = TVector2::Phi_mpi_pi(phi - muonPhi);
