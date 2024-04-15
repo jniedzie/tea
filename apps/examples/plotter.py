@@ -1,7 +1,7 @@
 from HistogramPlotter import HistogramPlotter
 from Logger import *
 
-from ROOT import TFile, gROOT
+import ROOT
 import importlib
 import sys
 
@@ -15,7 +15,7 @@ def getConfig():
 
 
 def main():
-  gROOT.SetBatch(True)
+  ROOT.gROOT.SetBatch(True)
 
   config = getConfig()
   plotter = HistogramPlotter(config)
@@ -23,7 +23,7 @@ def main():
   input_files = {}
   
   for sample in config.samples:
-    input_files[sample.name] = TFile.Open(sample.file_path, "READ")
+    input_files[sample.name] = ROOT.TFile.Open(sample.file_path, "READ")
     
     for hist in config.histograms:
       plotter.addHistosample(hist, sample, input_files[sample.name])
