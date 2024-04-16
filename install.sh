@@ -16,7 +16,8 @@ git init
 
 # add tea as a submodule
 echo "Adding tea as a submodule"
-git submodule add --recursive git@github.com:jniedzie/tea.git tea
+git submodule add git@github.com:jniedzie/tea.git tea
+git submodule update --init --recursive
 git commit -m "Add tea as a submodule"
 
 # copy and removing files
