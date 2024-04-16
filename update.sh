@@ -3,7 +3,7 @@
 # update tea
 cd tea
 git checkout main
-git pull origin main
+git pull --recurse-submodules origin main
 
 cd ..
 git add tea
