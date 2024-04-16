@@ -71,7 +71,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio
     for(int i=1; i<=5; i++) {
       float ratio_tmp = asNanoMuon(dsaMuon)->GetMatchesForNthBestMatch(i) / nSegments;
       if(!matchFound && ratio_tmp >= minMatchRatio) {
-        matchFound = PATMuonIndexExist(looseMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNthBestMatch(i))
+        matchFound = PATMuonIndexExist(looseMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNthBestMatch(i));
         break;
       }
     }
