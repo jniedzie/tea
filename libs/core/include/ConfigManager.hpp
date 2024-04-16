@@ -36,6 +36,8 @@ class ConfigManager {
 
   void GetSelections(std::vector<std::pair<std::string, std::pair<float, float>>> &selections);
 
+  void GetMuonMatchingParams(std::map<std::string, float> &muonMatchingParams);
+
   void SetInputPath(std::string path) { inputPath = path; }
   void SetOutputPath(std::string path) { outputPath = path; }
   
