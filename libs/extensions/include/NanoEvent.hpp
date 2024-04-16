@@ -19,9 +19,10 @@ class NanoEvent {
 
   std::shared_ptr<Event> GetEvent() { return event; }
 
-  std::shared_ptr<PhysicsObjects> GetDRMatchedMuons(float matchingDeltaR = 0.1);
-  std::shared_ptr<PhysicsObjects> GetOuterDRMatchedMuons(float matchingDeltaR = 0.1);
-  std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(float minMatchRatio = 2.0f/3.0f);
+  std::shared_ptr<PhysicsObjects> GetDRMatchedMuons(float matchingDeltaR = 0.1, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+  std::shared_ptr<PhysicsObjects> GetOuterDRMatchedMuons(float matchingDeltaR = 0.1, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+  std::shared_ptr<PhysicsObjects> GetProximityDRMatchedMuons(float matchingDeltaR = 0.1, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+  std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(float minMatchRatio = 2.0f/3.0f, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
   
   std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<PhysicsObjects> muonCollection);
@@ -44,7 +45,11 @@ class NanoEvent {
   std::pair<float,int> GetDeltaRandIndexOfClosestGenMuon(std::shared_ptr<PhysicsObject> recoMuon);
 
   std::shared_ptr<PhysicsObjects> GetDSAMuonsFromCollection(std::string muonCollectionName);
+  std::shared_ptr<PhysicsObjects> GetDSAMuonsFromCollection(std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection);
   std::shared_ptr<PhysicsObjects> GetPATMuonsFromCollection(std::string muonCollectionName);
+  std::shared_ptr<PhysicsObjects> GetPATMuonsFromCollection(std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection);
+
+  std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> GetAllCommonMuonsInCollections(std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection1, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection2);
 
  private:
   std::shared_ptr<Event> event;
