@@ -1,6 +1,7 @@
 #ifndef HepMCProcessor_hpp
 #define HepMCProcessor_hpp
 
+#include "ExtensionsHelpers.hpp"
 #include "Helpers.hpp"
 #include "HepMCParticle.hpp"
 #include "PhysicsObject.hpp"
@@ -9,28 +10,17 @@ class HepMCProcessor {
  public:
   HepMCProcessor() {}
 
-  bool IsLastCopy(std::shared_ptr<HepMCParticle> particle, HepMCParticles &allParticles) {
-    return particle == LastCopy(particle, allParticles);
-  }
-
-  std::shared_ptr<HepMCParticle> LastCopy(std::shared_ptr<HepMCParticle> particle, HepMCParticles &allParticles) {
-    std::shared_ptr<HepMCParticle> particleCopy = particle;
-    std::unordered_set<std::shared_ptr<HepMCParticle>> duplicatesCheck;
-    while (NextCopy(particleCopy, allParticles)) {
-      duplicatesCheck.insert(particleCopy);
-      particleCopy = NextCopy(particleCopy, allParticles);
-      if (duplicatesCheck.count(particleCopy)) return nullptr;
-    }
-    return particleCopy;
-  }
-
-  std::shared_ptr<HepMCParticle> NextCopy(std::shared_ptr<HepMCParticle> particle, HepMCParticles &allParticles) {
+  bool IsLastCopy(std::shared_ptr<HepMCParticle> particle, int particleIndex, const std::shared_ptr<PhysicsObjects> &allParticles) {
     for (int daughterIndex : particle->GetDaughters()) {
-      if(daughterIndex < 0) continue;
-      auto daughter = allParticles[daughterIndex];
-      if (daughter->GetPid() == particle->GetPid()) return daughter;
+      if (daughterIndex < 0) continue;
+      if (daughterIndex == particleIndex) return false;  // Infinite loop (particle is its own daughter)
+
+      auto daughter = asHepMCParticle(allParticles->at(daughterIndex));
+      if (daughter->GetPid() == particle->GetPid()) {
+        return false;
+      }
     }
-    return nullptr;
+    return true;
   }
 };
 

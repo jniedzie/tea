@@ -30,3 +30,8 @@ histParams2D = (
 
 # specify name of the branch containing event weights
 weightsBranchName = "genWeight"
+
+eventsTreeNames = ["Events",]
+specialBranchSizes = {
+  "Particle": "Event_numberP",
+}
