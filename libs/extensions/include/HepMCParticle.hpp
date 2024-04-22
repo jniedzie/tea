@@ -43,7 +43,8 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   int GetMother() { return mother; }
   std::vector<int>& GetMothers() { return mothers; }
 
-  bool HasMother(int motherPid, const HepMCParticles& allParticles);
+  bool FirstNonCopyMotherWithPid(int pid, const std::shared_ptr<PhysicsObjects> &allParticles);
+  bool HasMother(int motherPid, const std::shared_ptr<PhysicsObjects> &allParticles);
   bool IsMother(int motherPid, const HepMCParticles& allParticles);
 
   std::vector<int>& GetDaughters() { return daughters; }
