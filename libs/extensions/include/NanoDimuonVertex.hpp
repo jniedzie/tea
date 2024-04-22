@@ -35,7 +35,7 @@ class NanoDimuonVertex {
 
   bool PassesChi2Cut();
   bool PassesMaxDeltaRCut();
-  bool PassesMinDeltaRCut(const std::shared_ptr<Event> event);
+  bool PassesMinDeltaRCut();
   bool PassesDimuonChargeCut(const std::shared_ptr<Event> event);
 
  private:
