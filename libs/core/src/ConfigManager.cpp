@@ -530,19 +530,3 @@ void ConfigManager::GetSelections(vector<pair<string, pair<float, float>>> &sele
     selections.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
   }
 }
-
-void ConfigManager::GetMuonMatchingParams(map<string, float> &muonMatchingParams) {
-  PyObject *pythonDict = GetPythonDict("muonMatchingParams");
-
-  PyObject *matchingMethod, *matchingParam;
-  Py_ssize_t pos = 0;
-
-  while (PyDict_Next(pythonDict, &pos, &matchingMethod, &matchingParam)) {
-    if (!PyUnicode_Check(matchingMethod)) {
-      error() << "Failed retriving python muon matching name (string)" << endl;
-      continue;
-    }
-    PyObject *min = GetItem(matchingParam, 0);
-    muonMatchingParams[PyUnicode_AsUTF8(matchingMethod)] = PyFloat_AsDouble(matchingParam);
-  }
-}
