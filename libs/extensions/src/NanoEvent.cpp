@@ -12,16 +12,20 @@ TLorentzVector NanoEvent::GetMetFourVector() {
 
 float NanoEvent::GetMetPt() { return Get("MET_pt"); }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(float matchingDeltaR)
+shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(float matchingDeltaR, shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection)
 {
   auto looseMuons = GetCollection("LooseMuons");
-  auto looseDsaMuons = GetCollection("LooseDSAMuons");
+  auto looseDSAMuons = GetCollection("LooseDSAMuons");
+  if(muonCollection != nullptr) {
+    looseMuons = GetPATMuonsFromCollection(muonCollection);
+    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
+  }
 
   auto allMuons = make_shared<PhysicsObjects>();
   for(auto muon : *looseMuons){
     allMuons->push_back(muon);
   }
-  for(auto dsaMuon : *looseDsaMuons){
+  for(auto dsaMuon : *looseDSAMuons){
     auto dsaMuonP4 = asNanoMuon(dsaMuon)->GetFourVector();
     bool matchFound = false;
     for(auto muon : *looseMuons){
@@ -34,16 +38,20 @@ shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(float matchingDeltaR)
   return allMuons;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDeltaR)
+shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDeltaR, shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection)
 {
   auto looseMuons = GetCollection("LooseMuons");
-  auto looseDsaMuons = GetCollection("LooseDSAMuons");
+  auto looseDSAMuons = GetCollection("LooseDSAMuons");
+  if(muonCollection != nullptr) {
+    looseMuons = GetPATMuonsFromCollection(muonCollection);
+    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
+  }
 
   auto allMuons = make_shared<PhysicsObjects>();
   for(auto muon : *looseMuons){
     allMuons->push_back(muon);
   }
-  for(auto dsaMuon : *looseDsaMuons){
+  for(auto dsaMuon : *looseDSAMuons){
     bool matchFound = false;
     for(auto muon : *looseMuons){
       if(asNanoMuon(dsaMuon)->OuterDeltaRtoMuon(asNanoMuon(muon)) < matchingDeltaR) matchFound = true;
@@ -54,16 +62,45 @@ shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDelta
   return allMuons;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio)
+shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(float matchingDeltaR, shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection)
 {
   auto looseMuons = GetCollection("LooseMuons");
-  auto looseDsaMuons = GetCollection("LooseDSAMuons");
+  auto looseDSAMuons = GetCollection("LooseDSAMuons");
+  if(muonCollection != nullptr) {
+    looseMuons = GetPATMuonsFromCollection(muonCollection);
+    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
+  }
 
   auto allMuons = make_shared<PhysicsObjects>();
   for(auto muon : *looseMuons){
     allMuons->push_back(muon);
   }
-  for(auto dsaMuon : *looseDsaMuons){
+  for(auto dsaMuon : *looseDSAMuons){
+    bool matchFound = false;
+    for(auto muon : *looseMuons){
+      auto vertex = GetVertexForDimuon(dsaMuon, muon);
+      if(float(vertex->at(0)->Get("dRprox")) < matchingDeltaR) matchFound = true;
+    }
+    if(matchFound == false) allMuons->push_back(dsaMuon);
+  }
+
+  return allMuons;
+}
+
+shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio, shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection)
+{
+  auto looseMuons = GetCollection("LooseMuons");
+  auto looseDSAMuons = GetCollection("LooseDSAMuons");
+  if(muonCollection != nullptr) {
+    looseMuons = GetPATMuonsFromCollection(muonCollection);
+    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
+  }
+
+  auto allMuons = make_shared<PhysicsObjects>();
+  for(auto muon : *looseMuons){
+    allMuons->push_back(muon);
+  }
+  for(auto dsaMuon : *looseDSAMuons){
 
     float nSegments = float(dsaMuon->Get("nSegments"));
     
@@ -206,7 +243,7 @@ shared_ptr<PhysicsObject> NanoEvent::GetPATorDSAMuonWithIndex(int muon_idx, stri
   return nullptr;
 }
 
-std::pair<float,int> NanoEvent::GetDeltaRandIndexOfClosestGenMuon(std::shared_ptr<PhysicsObject> recoMuon) {
+pair<float,int> NanoEvent::GetDeltaRandIndexOfClosestGenMuon(shared_ptr<PhysicsObject> recoMuon) {
   
   auto genParticles = event->GetCollection("GenPart");
   float minDR = 999.;
@@ -224,23 +261,41 @@ std::pair<float,int> NanoEvent::GetDeltaRandIndexOfClosestGenMuon(std::shared_pt
       minDRIdx = idx;
     }
   }
-  return std::make_pair(minDR,minDRIdx);
+  return make_pair(minDR,minDRIdx);
 }
 
-std::shared_ptr<PhysicsObjects> NanoEvent::GetDSAMuonsFromCollection(std::string muonCollectionName) {
-  auto collection = GetCollection(muonCollectionName);
+shared_ptr<PhysicsObjects> NanoEvent::GetDSAMuonsFromCollection(string muonCollectionName) {
+  auto muonCollection = GetCollection(muonCollectionName);
+  return GetDSAMuonsFromCollection(muonCollection);
+}
+
+shared_ptr<PhysicsObjects> NanoEvent::GetDSAMuonsFromCollection(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
   auto dsaMuons = make_shared<PhysicsObjects>();
-  for(auto muon : *collection) {
+  for(auto muon : *muonCollection) {
     if(asNanoMuon(muon)->isDSAMuon()) dsaMuons->push_back(muon);
   }
   return dsaMuons;
 }
 
-std::shared_ptr<PhysicsObjects> NanoEvent::GetPATMuonsFromCollection(std::string muonCollectionName) {
-  auto collection = GetCollection(muonCollectionName);
+shared_ptr<PhysicsObjects> NanoEvent::GetPATMuonsFromCollection(string muonCollectionName) {
+  auto muonCollection = GetCollection(muonCollectionName);
+  return GetPATMuonsFromCollection(muonCollection);
+}
+
+shared_ptr<PhysicsObjects> NanoEvent::GetPATMuonsFromCollection(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
   auto patMuons = make_shared<PhysicsObjects>();
-  for(auto muon : *collection) {
+  for(auto muon : *muonCollection) {
     if(!asNanoMuon(muon)->isDSAMuon()) patMuons->push_back(muon);
   }
   return patMuons;
+}
+
+shared_ptr<Collection<shared_ptr<PhysicsObject>>> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection1, shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection2) {
+  shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection;
+  for(auto muon : *muonCollection1) {
+    if(MuonIndexExist(muonCollection2, muon->Get("idx"), asNanoMuon(muon)->isDSAMuon())) {
+      muonCollection->push_back(muon);
+    }
+  }
+  return muonCollection;
 }

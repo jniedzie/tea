@@ -1,5 +1,6 @@
 #include "NanoDimuonVertex.hpp"
 #include "ConfigManager.hpp"
+#include "ExtensionsHelpers.hpp"
 
 using namespace std;
 
@@ -51,9 +52,15 @@ pair<shared_ptr<PhysicsObject>,shared_ptr<PhysicsObject>> NanoDimuonVertex::GetM
   return make_pair(muon1,muon2);
 }
 
+float NanoDimuonVertex::GetDimuonChargeProduct(const shared_ptr<Event> event) {
+  auto muons = GetMuons(event);
+  return float(muons.first->GetAsFloat("charge")) * float(muons.second->GetAsFloat("charge"));
+}
+
 bool NanoDimuonVertex::PassesChi2Cut() { return (float)Get("chi2") < muonVertexCuts["maxChi2"]; }
 
-bool NanoDimuonVertex::PassesDeltaRCut() { return (float)Get("dR") < muonVertexCuts["maxDeltaR"]; }
+bool NanoDimuonVertex::PassesMaxDeltaRCut() { return (float)Get("dR") < muonVertexCuts["maxDeltaR"]; }
+bool NanoDimuonVertex::PassesMinDeltaRCut() { return (float)Get("dR") > muonVertexCuts["minDeltaR"]; }
 
 bool NanoDimuonVertex::PassesDimuonChargeCut(const shared_ptr<Event> event) { 
   auto muons = GetMuons(event);

@@ -31,9 +31,11 @@ class NanoDimuonVertex {
 
   std::string GetVertexCategory();
   std::pair<std::shared_ptr<PhysicsObject>,std::shared_ptr<PhysicsObject>> GetMuons(const std::shared_ptr<Event> event);
+  float GetDimuonChargeProduct(const std::shared_ptr<Event> event);
 
   bool PassesChi2Cut();
-  bool PassesDeltaRCut();
+  bool PassesMaxDeltaRCut();
+  bool PassesMinDeltaRCut();
   bool PassesDimuonChargeCut(const std::shared_ptr<Event> event);
 
  private:
