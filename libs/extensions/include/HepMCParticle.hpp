@@ -19,6 +19,11 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   float GetPx() { return physicsObject->Get("px"); }
   float GetPy() { return physicsObject->Get("py"); }
   float GetPz() { return physicsObject->Get("pz"); }
+
+  float GetX() { return physicsObject->Get("x"); } // in mm
+  float GetY() { return physicsObject->Get("y"); } // in mm
+  float GetZ() { return physicsObject->Get("z"); } // in mm
+
   float GetEnergy() { return physicsObject->Get("energy"); }
   float GetMass() { return physicsObject->Get("mass"); }
 
