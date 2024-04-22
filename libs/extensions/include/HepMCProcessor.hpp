@@ -22,6 +22,22 @@ class HepMCProcessor {
     }
     return true;
   }
+
+  std::shared_ptr<HepMCParticle> GetCommonMother(std::shared_ptr<HepMCParticle> particle1, std::shared_ptr<HepMCParticle> particle2, const std::shared_ptr<PhysicsObjects> &allParticles) {
+    // Get mother of particle1 and check if it's the same as mother of particle2
+    auto mother1 = particle1->GetMother(allParticles);    
+    if(!mother1) return nullptr;
+
+    // loop over daughters of mother1 and check if one of them is particle2
+    for (int daughterIndex : mother1->GetDaughters()) {
+      if (daughterIndex < 0) continue;
+      auto daughter = asHepMCParticle(allParticles->at(daughterIndex));
+      if (daughter->GetIndex() == particle2->GetIndex()) {
+        return mother1;
+      }
+    }
+    return nullptr;
+  }
 };
 
 #endif /* HepMCProcessor_hpp */

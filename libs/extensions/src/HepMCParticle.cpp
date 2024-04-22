@@ -19,19 +19,45 @@ void HepMCParticle::SetupDaughters() {
   }
 }
 
+shared_ptr<HepMCParticle> HepMCParticle::GetMother(const shared_ptr<PhysicsObjects> &allParticles) {
+  // Loop over all particles until you find the mother (i.e. such particle that one of its daughters is this one)
+  // If the mother has the same PID (so it's a copy of this particle), we go to its mother (and repeat recursively).
+  // We return the first copy of this particle
+
+
+  for (int particleIndex = 0; particleIndex < allParticles->size(); particleIndex++) {
+    auto physicsObject = allParticles->at(particleIndex);
+    auto particle = asHepMCParticle(physicsObject, particleIndex, 100);
+    if (!particle) {
+      error() << "Couldn't access particle..." << endl;
+      continue;
+    }
+
+    if (particle->GetIndex() == index) {  // skip the particle itself
+      continue;
+    }
+
+    for (int daughter : particle->GetDaughters()) {
+      if (daughter != index) continue;
+      return (particle->GetPid() == GetPid()) ? particle->GetMother(allParticles) : particle;
+    }
+  }
+  return nullptr;
+}
+
 bool HepMCParticle::FirstNonCopyMotherWithPid(int pid, const shared_ptr<PhysicsObjects> &allParticles) {
   // Loops over all particles, finding the mother of this one (i.e. such particle that one of its daughters is this one)
-  // If the mother has the same PID (so it's a copy of this particle), we go to its mother (and repeat recursively). 
+  // If the mother has the same PID (so it's a copy of this particle), we go to its mother (and repeat recursively).
   // Onec we find the first mother with different PID, we check if it has the desired PID
 
-  for(auto physicsObject : *allParticles){
+  for (auto physicsObject : *allParticles) {
     auto particle = asHepMCParticle(physicsObject);
     if (!particle) {
       error() << "Couldn't access particle..." << endl;
       continue;
     }
 
-    if (particle->GetIndex() == index) { // skip the particle itself
+    if (particle->GetIndex() == index) {  // skip the particle itself
       continue;
     }
 
@@ -52,13 +78,13 @@ bool HepMCParticle::HasMother(int motherPid, const shared_ptr<PhysicsObjects> &a
   info() << "mother: " << mother << " index: " << index << " pid: " << GetPid() << " motherPid: " << motherPid << endl;
 
   info() << "mothers: ";
-  for(auto m : mothers) {
+  for (auto m : mothers) {
     info() << m << "\t";
   }
   info() << endl;
 
   if (abs(GetPid()) == motherPid) return true;
-  
+
   if (mother == index) return false;
   if (mother == -1) return false;
 
