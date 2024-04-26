@@ -200,7 +200,7 @@ class HistogramPlotter:
 
             key = sample.type if sample.custom_legend is None else sample.name
 
-            if sample.legend_description != "":
+            if sample.legend_description != "" and hasattr(self.config, "legends"):
                 self.legends[hist.getName()][key].AddEntry(
                     hist.hist, sample.legend_description, self.config.legends[sample.type].options)
 
