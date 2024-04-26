@@ -96,12 +96,25 @@ class HistogramsManager:
             
         for identifier, hists_per_sample in hists.items():
             
-            obs_hist = hists_per_sample["data_obs"]
-            
             mc_hists = hists_per_sample
-            mc_hists.pop("data_obs")
+            
+            if "data_obs" in hists_per_sample:
+                obs_hist = hists_per_sample["data_obs"]
+                mc_hists.pop("data_obs")
+            else:
+                obs_hist = self.__get_backgrounds_sum_hist(hists_per_sample)
+            
             self.datacardsProcessor.create_new_datacard(identifier, obs_hist, mc_hists, self.config.nuisances, self.config.add_uncertainties_on_zero)
             
+    def __get_backgrounds_sum_hist(self, hists):
+        backgrounds_sum_hist = None
+        for name, hist in hists.items():
+            if "signal" not in name:
+                if backgrounds_sum_hist is None:
+                    backgrounds_sum_hist = hist.Clone()
+                else:
+                    backgrounds_sum_hist.Add(hist)
+        return backgrounds_sum_hist
     
     def __getStackDict(self, sample_type):
         hists_dict = {}

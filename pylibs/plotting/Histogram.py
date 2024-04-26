@@ -1,4 +1,4 @@
-from Logger import *
+from Logger import info, warn, error, fatal
 
 from dataclasses import dataclass
 from ROOT import TObject
@@ -34,7 +34,20 @@ class Histogram:
   
   def load(self, input_file):
     self.hist = input_file.Get(self.name)
-  
+    
+    if self.x_max > 0:
+      original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
+      new_n_bins = len([x for x in original_bins if x <= self.x_max])
+      x_min = original_bins[0]
+      new_histogram = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), new_n_bins, x_min, self.x_max)
+      
+      # fill the histogram:
+      for i in range(1, new_n_bins + 1):
+        new_histogram.SetBinContent(i, self.hist.GetBinContent(i))
+        new_histogram.SetBinError(i, self.hist.GetBinError(i))
+        
+      self.hist = new_histogram
+    
   def isGood(self):
     if self.hist is None or type(self.hist) is TObject:
       warn(f"Could not find histogram: {self.name}")
