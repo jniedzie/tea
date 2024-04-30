@@ -2,8 +2,9 @@ import os
 import ROOT
 
 class DatacardsProcessor:
-    def __init__(self, output_path):
+    def __init__(self, output_path, include_shapes = True):
         self.output_path = output_path
+        self.include_shapes = include_shapes
         self.datacards = {}
         self.hists = {}
         
@@ -45,7 +46,8 @@ class DatacardsProcessor:
         self.datacards[identifier] += "kmax * number of nuisance parameters\n"
         
         # point to the root file for shapes
-        self.datacards[identifier] += f"shapes * * {identifier}.root $PROCESS $PROCESS_$SYSTEMATIC\n"
+        if self.include_shapes:
+            self.datacards[identifier] += f"shapes * * {identifier}.root $PROCESS $PROCESS_$SYSTEMATIC\n"
         
         # set observed
         obs_rate = self.hists[identifier]["data_obs"].Integral()

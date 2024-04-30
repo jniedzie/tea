@@ -13,7 +13,7 @@ class HistogramsManager:
         self.config = config
 
         self.normalizer = HistogramNormalizer(config)
-        self.datacardsProcessor = DatacardsProcessor(config.output_path)
+        self.datacardsProcessor = DatacardsProcessor(config.output_path, config.include_shapes)
 
         self.stacks = {sample_type: self.__getStackDict(
             sample_type) for sample_type in SampleType}
