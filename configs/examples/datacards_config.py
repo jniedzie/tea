@@ -5,7 +5,7 @@ from HistogramNormalizer import NormalizationType
 base_path = "../samples/"
 skim = ""
 
-output_path = f"../datacards/"
+output_path = f"../datacards/limits_datacard"
 
 # If True, poisson error on empty bins (1.84) will be added to data histograms
 add_uncertainties_on_zero = False
