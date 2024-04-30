@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from Legend import Legend
-from Logger import *
+from Logger import error
 
 # enum class with signal, background, data
 class SampleType(Enum):
@@ -35,4 +35,10 @@ class Sample:
   
   def __post_init__(self):
     if self.cross_sections is not None and self.cross_section < 0:
-      self.cross_section = self.cross_sections[self.name]
+      if self.name in self.cross_sections:
+        self.cross_section = self.cross_sections[self.name]
+      elif "signal_" in self.name:
+        self.cross_section = self.cross_sections[self.name.replace("signal_", "")]
+      else:
+        error(f"Sample {self.name} not found in cross sections dict")
+        exit(0)
