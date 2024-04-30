@@ -3,12 +3,13 @@ import ROOT
 
 class DatacardsProcessor:
     def __init__(self, output_path, include_shapes = True):
-        self.output_path = output_path
+        self.output_path = output_path + ".txt"
         self.include_shapes = include_shapes
         self.datacards = {}
         self.hists = {}
         
-        os.system(f"mkdir -p {output_path}")
+        # get directory from the full path:
+        os.system(f"mkdir -p {os.path.dirname(output_path)}")
         
 
     def create_new_datacard(self, identifier, obs_hist, mc_hists, nuisances, add_uncertainties_on_zero=False, n_channels=1):
@@ -31,12 +32,12 @@ class DatacardsProcessor:
         self.__add_rates(identifier)
         self.__add_nuisances(identifier, nuisances)
         
-        datacard_path = f"{self.output_path}/{identifier}.txt"
-        print(f"Storing datacard in {datacard_path}")
-        outfile = open(datacard_path, "w")
+        
+        print(f"Storing datacard in {self.output_path}")
+        outfile = open(self.output_path, "w")
         outfile.write(self.datacards[identifier])
         
-        print(f"Storing histograms in {datacard_path.replace('.txt', '.root')}")
+        print(f"Storing histograms in {self.output_path.replace('.txt', '.root')}")
         self.__save_histograms(identifier, add_uncertainties_on_zero)
     
     def __add_header(self, identifier, n_channels, n_backgrounds):
@@ -47,7 +48,9 @@ class DatacardsProcessor:
         
         # point to the root file for shapes
         if self.include_shapes:
-            self.datacards[identifier] += f"shapes * * {identifier}.root $PROCESS $PROCESS_$SYSTEMATIC\n"
+            # get file name from the full path:
+            file_name = self.output_path.split("/")[-1].replace(".txt", ".root")
+            self.datacards[identifier] += f"shapes * * {file_name} $PROCESS $PROCESS_$SYSTEMATIC\n"
         
         # set observed
         obs_rate = self.hists[identifier]["data_obs"].Integral()
@@ -108,7 +111,7 @@ class DatacardsProcessor:
 
     def __save_histograms(self, identifier, add_uncertainties_on_zero=False):
 
-        output_file = ROOT.TFile(f"{self.output_path}/{identifier}.root", "recreate")
+        output_file = ROOT.TFile(self.output_path.replace(".txt", ".root"), "recreate")
         
         for name, hist in self.hists[identifier].items():
             if add_uncertainties_on_zero and name == "data_obs":
