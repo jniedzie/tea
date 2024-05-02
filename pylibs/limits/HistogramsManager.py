@@ -30,8 +30,8 @@ class HistogramsManager:
         self.data_integral = {}
         self.background_integral = {}
 
-        if not os.path.exists(self.config.output_path):
-            os.makedirs(self.config.output_path)
+        if not os.path.exists(os.path.dirname(self.config.output_path)):
+            os.makedirs(os.path.dirname(self.config.output_path))
     
     def addHistosample(self, hist, sample, input_file):
         hist.load(input_file)
