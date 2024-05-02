@@ -35,6 +35,9 @@ class Histogram:
   def load(self, input_file):
     self.hist = input_file.Get(self.name)
     
+    if not self.isGood():
+      return
+    
     if self.x_max > 0:
       original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
       new_n_bins = len([x for x in original_bins if x <= self.x_max])
