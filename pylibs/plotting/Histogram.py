@@ -48,6 +48,9 @@ class Histogram:
       for i in range(1, new_n_bins + 1):
         new_histogram.SetBinContent(i, self.hist.GetBinContent(i))
         new_histogram.SetBinError(i, self.hist.GetBinError(i))
+        # check if original histogram had custom labels on the x-axis:
+        if self.hist.GetXaxis().GetBinLabel(i) != "":
+          new_histogram.GetXaxis().SetBinLabel(i, self.hist.GetXaxis().GetBinLabel(i))
         
       self.hist = new_histogram
     
