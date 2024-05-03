@@ -58,9 +58,8 @@ class HistogramNormalizer:
     
     if sample.type == SampleType.background:
       scale /= self.background_initial_sum_weights[sample.name]
-    elif sample.type == SampleType.signal:
-      if self.signal_final_sum_weights[sample.name] != 0:
-        scale /= self.signal_final_sum_weights[sample.name]
+    elif sample.type == SampleType.signal:  
+      scale /= self.signal_initial_sum_weights[sample.name]
     elif sample.type == SampleType.data:
       scale = 1
     
@@ -85,6 +84,7 @@ class HistogramNormalizer:
   
   def __setBackgroundEntries(self):
     
+    self.signal_initial_sum_weights = {}
     self.signal_final_sum_weights = {}
     self.data_final_entries = {}
     self.background_final_sum_weights = {}
@@ -122,6 +122,7 @@ class HistogramNormalizer:
         
       elif sample.type == SampleType.signal:
         self.signal_final_sum_weights[sample.name] = final_weight_sum
+        self.signal_initial_sum_weights[sample.name] = initial_weight_sum
         
       elif sample.type == SampleType.data:
         self.data_final_entries[sample.name] = final_weight_sum
