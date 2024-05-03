@@ -34,6 +34,9 @@
 #include "TSystem.h"
 #include "TVector2.h"
 #include "TRandom.h"
+#include "TMatrixD.h"
+#include "TVectorD.h"
+#include "TRotation.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 
