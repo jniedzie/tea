@@ -59,7 +59,8 @@ class HistogramNormalizer:
     if sample.type == SampleType.background:
       scale /= self.background_initial_sum_weights[sample.name]
     elif sample.type == SampleType.signal:  
-      scale /= self.signal_initial_sum_weights[sample.name]
+      if self.signal_initial_sum_weights[sample.name] != 0:
+        scale /= self.signal_initial_sum_weights[sample.name]
     elif sample.type == SampleType.data:
       scale = 1
     
