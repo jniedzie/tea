@@ -40,7 +40,8 @@ class HistogramNormalizer:
     if sample.type == SampleType.background:
       hist.hist.Scale(1./self.total_background)
     else:
-      hist.hist.Scale(1./hist.hist.Integral())
+      if hist.hist.Integral() != 0:
+        hist.hist.Scale(1./hist.hist.Integral())
   
   def __normalizeToBackground(self, hist, sample, background_integral):
     if background_integral is None:

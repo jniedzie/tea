@@ -1,6 +1,8 @@
 import os
 import ROOT
 
+from Logger import error
+
 class DatacardsProcessor:
     def __init__(self, output_path, include_shapes = True):
         self.output_path = output_path + ".txt"
@@ -14,6 +16,10 @@ class DatacardsProcessor:
 
     def create_new_datacard(self, identifier, obs_hist, mc_hists, nuisances, add_uncertainties_on_zero=False, n_channels=1):
         self.datacards[identifier] = ""
+        
+        if type(obs_hist) == ROOT.TObject or obs_hist is None:
+            error("DatacardsProcessor::create_new_datacard: obs_hist is not a histogram.")
+        
         self.hists[identifier] = {"data_obs": obs_hist}
         
         n_backgrounds = 0

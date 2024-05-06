@@ -114,6 +114,11 @@ class HistogramsManager:
                     backgrounds_sum_hist = hist.Clone()
                 else:
                     backgrounds_sum_hist.Add(hist)
+                    
+        if backgrounds_sum_hist is None:
+            backgrounds_sum_hist = ROOT.TH1D()
+            backgrounds_sum_hist.Fill(0.0, 1e-99)
+        
         return backgrounds_sum_hist
     
     def __getStackDict(self, sample_type):

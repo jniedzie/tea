@@ -35,12 +35,19 @@ class Histogram:
   def load(self, input_file):
     self.hist = input_file.Get(self.name)
     
+    if self.hist is None or type(self.hist) is TObject:
+      warn(f"Could not find histogram: {self.name}")
+      return
+    
+    if self.hist.GetEntries() == 0:
+      self.hist.Fill(0.0, 1e-99)
+    
     if not self.isGood():
       return
     
     if self.x_max > 0:
       original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
-      new_n_bins = len([x for x in original_bins if x <= self.x_max])
+      new_n_bins = len([x for x in original_bins if x < self.x_max])
       x_min = original_bins[0]
       new_histogram = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), new_n_bins, x_min, self.x_max)
       

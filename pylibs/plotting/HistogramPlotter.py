@@ -199,10 +199,10 @@ class HistogramPlotter:
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
             key = sample.type if sample.custom_legend is None else sample.name
+            options = self.config.plotting_options[sample.type] if sample.custom_legend is None else sample.custom_legend.options
 
-            if sample.legend_description != "" and hasattr(self.config, "legends"):
-                self.legends[hist.getName()][key].AddEntry(
-                    hist.hist, sample.legend_description, self.config.legends[sample.type].options)
+            if sample.legend_description != "":
+                self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
 
     def addHists2D(self, input_file, sample):
         if not hasattr(self.config, "histograms2D"):
