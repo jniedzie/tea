@@ -33,8 +33,6 @@ class DatacardsProcessor:
             
             self.hists[identifier][name] = hist
         
-        # sort self.hists such that entries starting with "signal_" go first:
-        self.hists[identifier] = dict(sorted(self.hists[identifier].items(), key=lambda x: not x[0].startswith("signal_")))
         
         # remove processes with integral < 1e-90, and if they were backgrounds, decrease n_backgrounds
         to_remove = []
@@ -51,12 +49,15 @@ class DatacardsProcessor:
         
         # if there are no backgrounds, add a dummy background with integral 0
         if n_backgrounds == 0:
-            self.hists[identifier]["dummy_background"] = ROOT.TH1D("dummy_background", "dummy_background", 1, 0, 1)
+            self.hists[identifier]["background_dummy"] = ROOT.TH1D("background_dummy", "background_dummy", 1, 0, 1)
             n_backgrounds = 1
             
         if n_signals == 0:
-            self.hists[identifier]["dummy_signal"] = ROOT.TH1D("dummy_signal", "dummy_signal", 1, 0, 1)
+            self.hists[identifier]["signal_dummy"] = ROOT.TH1D("signal_dummy", "signal_dummy", 1, 0, 1)
             n_signals = 1
+        
+        # sort self.hists such that entries starting with "signal_" go first:
+        self.hists[identifier] = dict(sorted(self.hists[identifier].items(), key=lambda x: not x[0].startswith("signal_")))
         
         self.__add_header(identifier, n_signals, n_backgrounds)
         self.__add_rates(identifier)
