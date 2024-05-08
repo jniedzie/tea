@@ -95,7 +95,11 @@ class HistogramNormalizer:
     self.total_background_cross_section = 0
     
     for sample in self.config.samples:
-      file = TFile.Open(sample.file_path, "READ")
+      try:
+        file = TFile.Open(sample.file_path, "READ")
+      except OSError:
+        error(f"Couldn't open file {sample.file_path}")
+        continue
 
       cut_flow = file.Get("cutFlow")
       

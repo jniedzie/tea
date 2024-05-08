@@ -23,18 +23,42 @@ class DatacardsProcessor:
         self.hists[identifier] = {"data_obs": obs_hist}
         
         n_backgrounds = 0
+        n_signals = 0
+        
         for name, hist in mc_hists.items():
             if "signal" not in name:
                 n_backgrounds += 1
+            else:
+                n_signals += 1
             
             self.hists[identifier][name] = hist
         
         # sort self.hists such that entries starting with "signal_" go first:
         self.hists[identifier] = dict(sorted(self.hists[identifier].items(), key=lambda x: not x[0].startswith("signal_")))
         
-        print(f"{self.hists[identifier]=}")
+        # remove processes with integral < 1e-90, and if they were backgrounds, decrease n_backgrounds
+        to_remove = []
+        for name, hist in self.hists[identifier].items():
+            if hist.Integral() < 1e-90:
+                to_remove.append(name)
+                if "signal" not in name:
+                    n_backgrounds -= 1
+                else:
+                    n_signals -= 1
+
+        for name in to_remove:
+            del self.hists[identifier][name]
         
-        self.__add_header(identifier, n_channels, n_backgrounds)
+        # if there are no backgrounds, add a dummy background with integral 0
+        if n_backgrounds == 0:
+            self.hists[identifier]["dummy_background"] = ROOT.TH1D("dummy_background", "dummy_background", 1, 0, 1)
+            n_backgrounds = 1
+            
+        if n_signals == 0:
+            self.hists[identifier]["dummy_signal"] = ROOT.TH1D("dummy_signal", "dummy_signal", 1, 0, 1)
+            n_signals = 1
+        
+        self.__add_header(identifier, n_signals, n_backgrounds)
         self.__add_rates(identifier)
         self.__add_nuisances(identifier, nuisances)
         
@@ -59,7 +83,10 @@ class DatacardsProcessor:
             self.datacards[identifier] += f"shapes * * {file_name} $PROCESS $PROCESS_$SYSTEMATIC\n"
         
         # set observed
-        obs_rate = self.hists[identifier]["data_obs"].Integral()
+        if "data_obs" not in self.hists[identifier]:
+            obs_rate = 0
+        else:
+            obs_rate = self.hists[identifier]["data_obs"].Integral()
         self.datacards[identifier] += "bin bin1\n"
         self.datacards[identifier] += f"observation {obs_rate}\n"
         
