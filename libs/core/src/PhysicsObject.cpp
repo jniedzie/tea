@@ -6,7 +6,7 @@
 
 using namespace std;
 
-PhysicsObject::PhysicsObject(std::string originalCollection_) : originalCollection(originalCollection_) {}
+PhysicsObject::PhysicsObject(std::string originalCollection_, int index_) : originalCollection(originalCollection_), index(index_) {}
 
 void PhysicsObject::Reset() {
   for (auto& [key, value] : valuesUint) value = 0;

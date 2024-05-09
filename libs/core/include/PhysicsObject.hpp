@@ -14,13 +14,16 @@ typedef Collection<std::shared_ptr<PhysicsObject>> PhysicsObjects;
 
 class PhysicsObject {
  public:
-  PhysicsObject(std::string originalCollection_);
+  PhysicsObject(std::string originalCollection_, int index_=-1);
   PhysicsObject() = default;
   virtual ~PhysicsObject() = default;
 
   void Reset();
 
   inline std::string GetOriginalCollection() { return originalCollection; }
+  
+  inline void SetIndex(int index_) { index = index_; }
+  inline int GetIndex() { return index; }
 
   inline auto Get(std::string branchName) {
     if (valuesTypes.count(branchName) == 0) {
@@ -56,6 +59,7 @@ class PhysicsObject {
   std::map<std::string, Short_t *> valuesShort;
 
   std::string originalCollection;
+  int index;
   std::map<std::string, std::string> defaultCollectionsTypes;
 
   friend class EventReader;

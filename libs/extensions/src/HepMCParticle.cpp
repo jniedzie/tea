@@ -24,7 +24,7 @@ shared_ptr<HepMCParticle> HepMCParticle::GetMother(const shared_ptr<PhysicsObjec
 
   for (int particleIndex = 0; particleIndex < allParticles->size(); particleIndex++) {
     auto physicsObject = allParticles->at(particleIndex);
-    auto particle = asHepMCParticle(physicsObject, particleIndex, 100);
+    auto particle = asHepMCParticle(physicsObject);
     if (!particle) {
       error() << "Couldn't access particle..." << endl;
       continue;
