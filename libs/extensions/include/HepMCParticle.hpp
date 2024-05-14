@@ -9,7 +9,7 @@ typedef Collection<std::shared_ptr<HepMCParticle>> HepMCParticles;
 
 class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
  public:
-  HepMCParticle(std::shared_ptr<PhysicsObject> physicsObject_, int index_, int maxNdaughters_);
+  HepMCParticle(std::shared_ptr<PhysicsObject> physicsObject_, int index_);
 
   auto Get(std::string branchName) { return physicsObject->Get(branchName); }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
@@ -48,7 +48,6 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   std::vector<int>& GetDaughters() { return daughters; }
 
  private:
-  int maxNdaughters;
   int index;
   
   std::vector<int> daughters;

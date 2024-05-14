@@ -1,15 +1,13 @@
 #include "HepMCParticle.hpp"
 
 #include "HepMCProcessor.hpp"
-#include "Profiler.hpp"
 
 using namespace std;
 
-HepMCParticle::HepMCParticle(shared_ptr<PhysicsObject> physicsObject_, int index_, int maxNdaughters_)
-    : physicsObject(physicsObject_), index(index_), maxNdaughters(maxNdaughters_) {
-  if (maxNdaughters > 100) maxNdaughters = 100;
-
-  for (int i = 0; i < maxNdaughters; i++) daughters.push_back(-1);
+HepMCParticle::HepMCParticle(shared_ptr<PhysicsObject> physicsObject_, int index_)
+    : physicsObject(physicsObject_), index(index_) {
+  
+  for (int i = 0; i < maxNdaughters; i++) daughters.emplace_back(-1);
   SetupDaughters();
 }
 

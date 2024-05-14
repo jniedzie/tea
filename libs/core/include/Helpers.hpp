@@ -54,6 +54,8 @@
 #include "Logger.hpp"
 
 const int maxCollectionElements = 9999;
+const int maxNdaughters = 5;  // Number of daughters that will be considered for HEP MC particles.
+                              // Heavily affects computing time. Max is 100.
 
 inline std::vector<std::string> getListOfTrees(TFile *file) {
   auto keys = file->GetListOfKeys();

@@ -15,7 +15,14 @@ class HepMCProcessor {
       if (daughterIndex < 0) continue;
       if (daughterIndex == particle->GetIndex()) return false;  // Infinite loop (particle is its own daughter)
 
-      auto daughter = asHepMCParticle(allParticles->at(daughterIndex));
+      auto physicsObject = allParticles->at(daughterIndex);
+
+      if(physicsObject->GetIndex() < 0) {
+        fatal() << "HepMCProcessor -- IsLastCopy: some particles don't have the index set!" << std::endl;
+        exit(0);
+      }
+
+      auto daughter = asHepMCParticle(physicsObject);
       if (daughter->GetPid() == particle->GetPid()) {
         return false;
       }
@@ -31,7 +38,15 @@ class HepMCProcessor {
     // loop over daughters of mother1 and check if one of them is particle2
     for (int daughterIndex : mother1->GetDaughters()) {
       if (daughterIndex < 0) continue;
-      auto daughter = asHepMCParticle(allParticles->at(daughterIndex));
+
+      auto physicsObject = allParticles->at(daughterIndex);
+
+      if(physicsObject->GetIndex() < 0) {
+        fatal() << "HepMCProcessor -- GetCommonMother: some particles don't have the index set!" << std::endl;
+        exit(0);
+      }
+
+      auto daughter = asHepMCParticle(physicsObject);
       if (daughter->GetIndex() == particle2->GetIndex()) {
         return mother1;
       }

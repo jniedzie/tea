@@ -32,10 +32,10 @@ class SubmissionManager:
       self.__run_local_with_output_dir()
     elif hasattr(self.files_config, "input_output_file_list"): # option 2
       self.__run_local_input_output_list()
-    elif hasattr(self.files_config, "output_histograms_dir") and hasattr(self.files_config, "output_trees_dir"):
+    elif hasattr(self.files_config, "output_hists_dir") and hasattr(self.files_config, "output_trees_dir"):
       self.__run_local_with_output_dirs()
     else:
-      error("Unrecognized option")
+      error("SubmissionManager -- Unrecognized input/output option")
   
   def run_condor(self, job_flavour, resubmit_job, dry):
     info("Running on condor")
@@ -150,10 +150,10 @@ class SubmissionManager:
       
       input_file_name = input_file_path.strip().split("/")[-1]
       os.system(f"mkdir -p {self.files_config.output_trees_dir}")
-      os.system(f"mkdir -p {self.files_config.output_histograms_dir}")
+      os.system(f"mkdir -p {self.files_config.output_hists_dir}")
       
       output_tree_file_path = f"{self.files_config.output_trees_dir}/{input_file_name}"
-      output_hist_file_path = f"{self.files_config.output_histograms_dir}/{input_file_name}"
+      output_hist_file_path = f"{self.files_config.output_hists_dir}/{input_file_name}"
       command_for_file = f"{self.command} {input_file_path} {output_tree_file_path} {output_hist_file_path}"
       self.__run_command(command_for_file)
   
