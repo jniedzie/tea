@@ -182,7 +182,6 @@ class HistogramPlotter:
             if sample.type == SampleType.background:
                 continue
 
-            print(f"Normalizing {hist.getName()} for sample {sample.name}")
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
                 hist), self.__getBackgroundIntegral(hist))
 
