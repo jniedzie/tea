@@ -38,6 +38,7 @@ class ConfigManager {
 
   void SetInputPath(std::string path) { inputPath = path; }
   void SetOutputPath(std::string path) { outputPath = path; }
+  void SetRedirector(std::string path) { redirector = path; }
   
  private:
   std::string configPath;
@@ -63,6 +64,7 @@ class ConfigManager {
 
   std::string inputPath = "";
   std::string outputPath = "";
+  std::string redirector = "";
 };
 
 #endif /* ConfigManager_hpp */

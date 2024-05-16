@@ -21,14 +21,30 @@ EventReader::EventReader() {
   string inputFilePath;
   config.GetValue("inputFilePath", inputFilePath);
 
+  string custom_redirector = "";
+  try {
+    config.GetValue("redirector", custom_redirector);
+  } catch (const Exception &e) {
+    warn() << "Couldn't read redirector from config file" << endl;
+  }
+
   currentEvent = make_shared<Event>();
 
+  if (custom_redirector != "") {
+    info() << "Trying to read ROOT file with user specified redirector:" << custom_redirector << endl;
+    inputFilePath = "root://" + custom_redirector + "/" + inputFilePath;
+    inputFile = TFile::Open(inputFilePath.c_str());
+    if (!inputFile || inputFile->IsZombie()) {
+      fatal() << "Failed to read ROOT file with user specified redirector: " << custom_redirector << endl;
+      exit(1);
+    }
+  }
   // if inputFilePath is a DAS dataset name, insert a redirector into it
-  if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
+  else if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
     vector<string> redirectors = {
-        "cms-xrd-global.cern.ch",
-        "cmsxrootd.fnal.gov",
-        "xrootd-cms.infn.it",
+      "xrootd-cms.infn.it",
+      "cms-xrd-global.cern.ch",
+      "cmsxrootd.fnal.gov",
     };
 
     string tmpInputFilePath;
@@ -50,6 +66,10 @@ EventReader::EventReader() {
     inputFilePath = tmpInputFilePath;
   } else {
     inputFile = TFile::Open(inputFilePath.c_str());
+    if (!inputFile || inputFile->IsZombie()) {
+      fatal() << "Local file corrupted: " << inputFilePath << endl;
+      exit(1);
+    }
   }
 
   SetupTrees();
