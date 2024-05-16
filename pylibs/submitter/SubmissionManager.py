@@ -84,7 +84,10 @@ class SubmissionManager:
     os.system(command)
   
   def __get_das_files_list(self, dataset_name):
-    das_command = f"dasgoclient -query='file dataset={dataset_name}'"
+    dbs_command = ""
+    if hasattr(self.files_config, "dbs_instance"):
+      dbs_command = f"instance={self.files_config.dbs_instance}"
+    das_command = f"dasgoclient -query='file dataset={dataset_name} {dbs_command}'"
     info(f"\n\nExecuting {das_command=}")
     return os.popen(das_command).read().splitlines()
   
@@ -133,7 +136,7 @@ class SubmissionManager:
   def __run_local_input_output_list(self):
     info("Running locally with input_output_file_list")
     for input_file_path, output_file_path in self.files_config.input_output_file_list:
-      command_for_file = f"{self.command} {input_file_path} {output_file_path}"  
+      command_for_file = f"{self.command} {input_file_path} {output_file_path}" 
       self.__run_command(command_for_file)
         
   def __setup_temp_file_paths(self):
