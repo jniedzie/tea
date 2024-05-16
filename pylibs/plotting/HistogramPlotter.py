@@ -79,11 +79,11 @@ class HistogramPlotter:
         
         if not input_hist_pass.isGood():
             warn(
-                f"No good histogram {hist.getName()} for sample {sample.name}")
+                f"No good histogram {input_hist_pass.getName()} for sample {sample.name}")
             return
         if not input_hist_tot.isGood():
             warn(
-                f"No good histogram {hist.getName()} for sample {sample.name}")
+                f"No good histogram {input_hist_tot.getName()} for sample {sample.name}")
             return
 
         hist_pass = copy.deepcopy(input_hist_pass)
@@ -182,6 +182,7 @@ class HistogramPlotter:
             if sample.type == SampleType.background:
                 continue
 
+            print(f"Normalizing {hist.getName()} for sample {sample.name}")
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
                 hist), self.__getBackgroundIntegral(hist))
 
