@@ -44,6 +44,10 @@ class HistogramPlotter:
         self.histosamples2D = []
         self.data_integral = {}
         self.background_integral = {}
+        
+        self.output_formats = ["pdf"]
+        if hasattr(self.config, "output_formats"):
+            self.output_formats = self.config.output_formats
 
         if not os.path.exists(self.config.output_path):
             os.makedirs(self.config.output_path)
@@ -394,10 +398,12 @@ class HistogramPlotter:
 
             originalErrorLevel = ROOT.gErrorIgnoreLevel
             ROOT.gErrorIgnoreLevel = ROOT.kError
-            path = self.config.output_path+"/"+hist.getName()+".pdf"
-            info(f"Saving file: {path}")
-            canvas.SaveAs(path)
-            canvas.SaveAs(path.replace(".pdf", ".C"))
+            
+            for output_format in self.output_formats:
+                path = self.config.output_path+"/"+hist.getName()+"."+output_format
+                info(f"Saving file: {path}")
+                canvas.SaveAs(path)
+            
             ROOT.gErrorIgnoreLevel = originalErrorLevel
 
     def drawHists2D(self):
