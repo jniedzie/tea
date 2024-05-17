@@ -1,6 +1,7 @@
 from Logger import info, warn, error, fatal
 
 from dataclasses import dataclass
+from array import array
 from ROOT import TObject
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
@@ -45,19 +46,19 @@ class Histogram:
     if not self.isGood():
       return
     
-    if self.x_max > 0:
+    if self.x_max > 0 or self.x_min > 0:
       original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
-      new_n_bins = len([x for x in original_bins if x < self.x_max])
-      x_min = original_bins[0]
-      new_histogram = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), new_n_bins, x_min, self.x_max)
+
+      new_bin_edges = [x for x in original_bins if self.x_min <= x <= self.x_max]
+      new_n_bins = len(new_bin_edges) - 1
+      new_histogram = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), new_n_bins, array('d', new_bin_edges))
       
-      # fill the histogram:
       for i in range(1, new_n_bins + 1):
-        new_histogram.SetBinContent(i, self.hist.GetBinContent(i))
-        new_histogram.SetBinError(i, self.hist.GetBinError(i))
-        # check if original histogram had custom labels on the x-axis:
-        if self.hist.GetXaxis().GetBinLabel(i) != "":
-          new_histogram.GetXaxis().SetBinLabel(i, self.hist.GetXaxis().GetBinLabel(i))
+          original_bin = self.hist.FindBin(new_bin_edges[i-1])
+          new_histogram.SetBinContent(i, self.hist.GetBinContent(original_bin))
+          new_histogram.SetBinError(i, self.hist.GetBinError(original_bin))
+          if self.hist.GetXaxis().GetBinLabel(original_bin) != "":
+              new_histogram.GetXaxis().SetBinLabel(i, self.hist.GetXaxis().GetBinLabel(original_bin))
         
       self.hist = new_histogram
     
