@@ -9,7 +9,7 @@ typedef Collection<std::shared_ptr<HepMCParticle>> HepMCParticles;
 
 class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
  public:
-  HepMCParticle(std::shared_ptr<PhysicsObject> physicsObject_, int index_, int maxNdaughters_);
+  HepMCParticle(std::shared_ptr<PhysicsObject> physicsObject_, int index_);
 
   auto Get(std::string branchName) { return physicsObject->Get(branchName); }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
@@ -19,7 +19,13 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   float GetPx() { return physicsObject->Get("px"); }
   float GetPy() { return physicsObject->Get("py"); }
   float GetPz() { return physicsObject->Get("pz"); }
+
+  float GetX() { return physicsObject->Get("x"); } // in mm
+  float GetY() { return physicsObject->Get("y"); } // in mm
+  float GetZ() { return physicsObject->Get("z"); } // in mm
+
   float GetEnergy() { return physicsObject->Get("energy"); }
+  float GetMass() { return physicsObject->Get("mass"); }
 
   int GetStatus() { return physicsObject->Get("status"); }
   int GetPid() { return physicsObject->Get("pid"); }
@@ -37,23 +43,14 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   int GetIndex() { return index; }
   void SetIndex(int index_) { index = index_; }
 
-  void SetMother(int mother_) { mother = mother_; }
-  void AddMother(int mother_) { mothers.push_back(mother_); }
-  int GetMother() { return mother; }
-  std::vector<int>& GetMothers() { return mothers; }
-
-  bool HasMother(int motherPid, const HepMCParticles& allParticles);
-  bool IsMother(int motherPid, const HepMCParticles& allParticles);
-
+  std::shared_ptr<HepMCParticle> GetMother(const std::shared_ptr<PhysicsObjects> &allParticles);
+  
   std::vector<int>& GetDaughters() { return daughters; }
 
  private:
-  int maxNdaughters;
   int index;
-  int mother;
+  
   std::vector<int> daughters;
-  std::vector<int> mothers;
-
   std::shared_ptr<PhysicsObject> physicsObject;
 
   void SetupDaughters();

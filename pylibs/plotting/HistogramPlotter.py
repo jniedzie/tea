@@ -199,10 +199,10 @@ class HistogramPlotter:
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
             key = sample.type if sample.custom_legend is None else sample.name
+            options = self.config.plotting_options[sample.type] if sample.custom_legend is None else sample.custom_legend.options
 
             if sample.legend_description != "":
-                self.legends[hist.getName()][key].AddEntry(
-                    hist.hist, sample.legend_description, self.config.legends[sample.type].options)
+                self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
 
     def addHists2D(self, input_file, sample):
         if not hasattr(self.config, "histograms2D"):
@@ -338,15 +338,7 @@ class HistogramPlotter:
             options = f"{options} same" if firstPlotted else options
             stack = self.stacks[sample_type][hist.getName()]
             if stack.GetNhists() > 0:
-                # if these only one histogram in the stack, plot this histogram
-                if stack.GetNhists() == 1:
-                    graph = self._hist_to_graph(stack.GetHists()[0])
-                    graph.SetMarkerStyle(20)
-                    graph.SetMarkerSize(1)
-                    graph.SetMarkerColor(ROOT.kBlack)
-                    graph.DrawClone("PEsame")
-                else:
-                    stack.Draw(options)
+                stack.Draw(options)
                 self.styler.setupFigure(stack, hist)
                 firstPlotted = True
 

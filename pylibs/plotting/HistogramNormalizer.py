@@ -40,7 +40,8 @@ class HistogramNormalizer:
     if sample.type == SampleType.background:
       hist.hist.Scale(1./self.total_background)
     else:
-      hist.hist.Scale(1./hist.hist.Integral())
+      if hist.hist.Integral() != 0:
+        hist.hist.Scale(1./hist.hist.Integral())
   
   def __normalizeToBackground(self, hist, sample, background_integral):
     if background_integral is None:
@@ -58,8 +59,9 @@ class HistogramNormalizer:
     
     if sample.type == SampleType.background:
       scale /= self.background_initial_sum_weights[sample.name]
-    elif sample.type == SampleType.signal:
-      scale /= self.signal_final_sum_weights[sample.name]
+    elif sample.type == SampleType.signal:  
+      if self.signal_initial_sum_weights[sample.name] != 0:
+        scale /= self.signal_initial_sum_weights[sample.name]
     elif sample.type == SampleType.data:
       scale = 1
     
@@ -84,6 +86,7 @@ class HistogramNormalizer:
   
   def __setBackgroundEntries(self):
     
+    self.signal_initial_sum_weights = {}
     self.signal_final_sum_weights = {}
     self.data_final_entries = {}
     self.background_final_sum_weights = {}
@@ -92,7 +95,11 @@ class HistogramNormalizer:
     self.total_background_cross_section = 0
     
     for sample in self.config.samples:
-      file = TFile.Open(sample.file_path, "READ")
+      try:
+        file = TFile.Open(sample.file_path, "READ")
+      except OSError:
+        error(f"Couldn't open file {sample.file_path}")
+        continue
 
       cut_flow = file.Get("cutFlow")
       
@@ -121,6 +128,7 @@ class HistogramNormalizer:
         
       elif sample.type == SampleType.signal:
         self.signal_final_sum_weights[sample.name] = final_weight_sum
+        self.signal_initial_sum_weights[sample.name] = initial_weight_sum
         
       elif sample.type == SampleType.data:
         self.data_final_entries[sample.name] = final_weight_sum

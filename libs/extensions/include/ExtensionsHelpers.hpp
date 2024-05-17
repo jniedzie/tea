@@ -1,14 +1,14 @@
 #ifndef ExtensionsHelpers_hpp
 #define ExtensionsHelpers_hpp
 
-#include "NanoElectron.hpp"
-#include "NanoGenParticle.hpp"
 #include "Helpers.hpp"
 #include "HepMCParticle.hpp"
+#include "NanoDimuonVertex.hpp"
+#include "NanoElectron.hpp"
+#include "NanoEvent.hpp"
+#include "NanoGenParticle.hpp"
 #include "NanoJet.hpp"
 #include "NanoMuon.hpp"
-#include "NanoDimuonVertex.hpp"
-#include "NanoEvent.hpp"
 #include "PhysicsObject.hpp"
 
 inline std::shared_ptr<NanoGenParticle> asNanoGenParticle(const std::shared_ptr<PhysicsObject> physicsObject) {
@@ -31,9 +31,13 @@ inline std::shared_ptr<NanoJet> asNanoJet(const std::shared_ptr<PhysicsObject> p
   return std::make_shared<NanoJet>(physicsObject);
 }
 
-inline std::shared_ptr<HepMCParticle> asHepMCParticle(const std::shared_ptr<PhysicsObject> physicsObject, int index = -1,
-                                                      int maxNdaughters = 10) {
-  return std::make_shared<HepMCParticle>(physicsObject, index, maxNdaughters);
+inline std::shared_ptr<HepMCParticle> asHepMCParticle(const std::shared_ptr<PhysicsObject> physicsObject) {
+  int index = physicsObject->GetIndex();
+  if (index < 0) {
+    fatal() << "Error in asHepMCParticle(...). Make sure to set index of the physics object using SetIndex()." << std::endl;
+    exit(0);
+  }
+  return std::make_shared<HepMCParticle>(physicsObject, physicsObject->GetIndex());
 }
 
 inline std::shared_ptr<NanoEvent> asNanoEvent(const std::shared_ptr<Event> physicsObject) {

@@ -9,7 +9,8 @@ def get_args():
   parser.add_argument("--app", type=str, help="name of the app to run", required=True)
   parser.add_argument("--config", type=str, default="", help="config to be executred by the app")
   parser.add_argument("--input_files_file_name", type=str, default="", help="path to a file with input files")
-  parser.add_argument("--output_dir", type=str, default="", help="output path")
+  parser.add_argument("--output_trees_dir", type=str, default="", help="output trees path")
+  parser.add_argument("--output_hists_dir", type=str, default="", help="output hists path")
   parser.add_argument("--file_index", type=int, help="index of the file from the DAS dataset to run on", required=True)
   parser.add_argument("--file_name", type=str, default="", help="name of a file from the DAS dataset to run on")
  
@@ -40,11 +41,14 @@ def main():
 
 
   # create output dir if doesn't exist
-  if not os.path.exists(args.output_dir):
-    os.makedirs(args.output_dir)
+  if not os.path.exists(args.output_trees_dir):
+    os.makedirs(args.output_trees_dir)
+  if not os.path.exists(args.output_hists_dir):
+    os.makedirs(args.output_hists_dir)
 
-  output_file_path = f"{args.output_dir}/{input_file_name}"
-  command_for_file = f"{command} {input_file_path} {output_file_path}"
+  output_trees_file_path = f"{args.output_trees_dir}/{input_file_name}"
+  output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}"
+  command_for_file = f"{command} {input_file_path} {output_trees_file_path} {output_hists_file_path}"
 
   info(f"\n\nExecuting {command_for_file=}")
   os.system(command_for_file)

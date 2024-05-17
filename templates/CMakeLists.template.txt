@@ -72,7 +72,7 @@ foreach(APP_SRC ${USER_APPS_SRC})
 endforeach()
 
 # make links to python configs
-file(GLOB_RECURSE PYTHON_CONFIGS "configs/*.py" "utils/*.py")
+file(GLOB_RECURSE PYTHON_CONFIGS "configs/*" "utils/*")
 set(PYTHON_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}")
 
 foreach(PYTHON_FILE ${PYTHON_CONFIGS})

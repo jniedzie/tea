@@ -37,7 +37,8 @@ class ConfigManager {
   void GetSelections(std::vector<std::pair<std::string, std::pair<float, float>>> &selections);
 
   void SetInputPath(std::string path) { inputPath = path; }
-  void SetOutputPath(std::string path) { outputPath = path; }
+  void SetTreesOutputPath(std::string path) { treesOutputPath = path; }
+  void SetHistogramsOutputPath(std::string path) { histogramsOutputPath = path; }
   void SetRedirector(std::string path) { redirector = path; }
   
  private:
@@ -63,7 +64,8 @@ class ConfigManager {
   PyObject *GetItem(PyObject *collection, int index);
 
   std::string inputPath = "";
-  std::string outputPath = "";
+  std::string treesOutputPath = "";
+  std::string histogramsOutputPath = "";
   std::string redirector = "";
 };
 
