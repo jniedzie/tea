@@ -48,7 +48,28 @@ class HistogramPlotter:
         if not os.path.exists(self.config.output_path):
             os.makedirs(self.config.output_path)
 
+    def histosampleExists(self, hist, sample):
+        for h, s in self.histosamples:
+            if h.getName() == hist.getName() and s.name == sample.name:
+                return True
+        return False
+
+    def histosample2DExists(self, hist, sample):
+        for h, s in self.histosamples2D:
+            if h.getName() == hist.getName() and s.name == sample.name:
+                return True
+        return False
+
+    def histosampleRatioExists(self, hist_pass, hist_tot, sample):
+        for h_pass, h_tot, s in self.ratiosamples:
+            if h_pass.getName() == hist_pass.getName()+'_pass' and h_tot.getName() == hist_tot.getName()+'_tot' and s.name == sample.name:
+                return True
+        return False
+
     def addHistosample(self, hist, sample, input_file):
+        if self.histosampleExists(hist, sample):
+            warn(f"Skipping adding histogram {hist.getName()} for sample {sample.name} because it already exists")
+            return
         hist.load(input_file)
 
         if not hist.isGood():
@@ -62,18 +83,22 @@ class HistogramPlotter:
             self.data_integral[hist.getName()] = hist.hist.Integral()
 
     def addHistosample2D(self, hist, sample, input_file):
+        if self.histosample2DExists(hist, sample):
+            warn(f"Skipping adding 2D histogram {hist.getName()} for sample {sample.name} because it already exists")
+            return
         hist.load(input_file)
 
         if not hist.isGood():
             warn(
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
-        
-        
 
         self.histosamples2D.append((copy.deepcopy(hist), sample))
 
     def addHistosampleRatio(self, input_hist_pass, input_hist_tot, sample, input_file):
+        if self.histosampleRatioExists(input_hist_pass, input_hist_tot, sample):
+            warn(f"Skipping adding ratio histogram for {input_hist_pass.getName()} / {input_hist_tot.getName()} for sample {sample.name} because it already exists")
+            return
         input_hist_pass.load(input_file)
         input_hist_tot.load(input_file)
         
