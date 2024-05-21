@@ -19,8 +19,8 @@ inline std::shared_ptr<NanoMuon> asNanoMuon(const std::shared_ptr<PhysicsObject>
   return std::make_shared<NanoMuon>(physicsObject);
 }
 
-inline std::shared_ptr<NanoDimuonVertex> asNanoDimuonVertex(const std::shared_ptr<PhysicsObject> physicsObject) {
-  return std::make_shared<NanoDimuonVertex>(physicsObject);
+inline std::shared_ptr<NanoDimuonVertex> asNanoDimuonVertex(const std::shared_ptr<PhysicsObject> physicsObject, const std::shared_ptr<Event> event) {
+  return std::make_shared<NanoDimuonVertex>(physicsObject, event);
 }
 
 inline std::shared_ptr<NanoElectron> asNanoElectron(const std::shared_ptr<PhysicsObject> physicsObject) {
