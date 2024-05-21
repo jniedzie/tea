@@ -13,6 +13,7 @@ def get_args():
   parser.add_argument("--output_hists_dir", type=str, default="", help="output hists path")
   parser.add_argument("--file_index", type=int, help="index of the file from the DAS dataset to run on", required=True)
   parser.add_argument("--file_name", type=str, default="", help="name of a file from the DAS dataset to run on")
+  parser.add_argument("--redirector", type=str, default="", help="custom redriector to use for the DAS dataset")
  
   args = parser.parse_args()
   return args
@@ -41,14 +42,19 @@ def main():
 
 
   # create output dir if doesn't exist
-  if not os.path.exists(args.output_trees_dir):
+  if not os.path.exists(args.output_trees_dir) and args.output_trees_dir != "":
     os.makedirs(args.output_trees_dir)
-  if not os.path.exists(args.output_hists_dir):
+  if not os.path.exists(args.output_hists_dir) and args.output_hists_dir != "":
     os.makedirs(args.output_hists_dir)
 
-  output_trees_file_path = f"{args.output_trees_dir}/{input_file_name}"
-  output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}"
-  command_for_file = f"{command} {input_file_path} {output_trees_file_path} {output_hists_file_path}"
+  output_trees_file_path = ""
+  output_hists_file_path = ""
+  if args.output_trees_dir != "":
+    output_trees_file_path = f"{args.output_trees_dir}/{input_file_name}"
+  if args.output_hists_dir != "":
+    output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}"
+  redirector = args.redirector
+  command_for_file = f"{command} {input_file_path} {output_trees_file_path} {output_hists_file_path} {redirector}"
 
   info(f"\n\nExecuting {command_for_file=}")
   os.system(command_for_file)
