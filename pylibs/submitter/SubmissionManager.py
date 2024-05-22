@@ -16,21 +16,21 @@ class SubmissionManager:
     self.config_path = config_path
     self.files_config_path = files_config_path
     self.files_config = None
-    self.redirector = None
+    self.extra_args = None
     
     info(f"Submission system: {submission_system.name}")
     
     self.__setup_files_config()
 
-    if hasattr(self.files_config, "redirector"):
-      self.redirector = self.files_config.redirector
+    if hasattr(self.files_config, "extra_args"):
+      self.extra_args = self.files_config.extra_args
 
     if submission_system == SubmissionSystem.condor:
       self.__create_condor_directories()
   
   def run_locally(self):
     executor = f"python3 " if self.app_name[-3:] == ".py" else f"./"
-    self.command = f"{executor}{self.app_name} {self.config_path}"
+    self.command = f"{executor}{self.app_name} --config {self.config_path}"
     
     if hasattr(self.files_config, "output_dir"): # option 1 & 3, 4, 5
       self.__run_local_with_output_dir()
@@ -135,9 +135,12 @@ class SubmissionManager:
       input_file_name = input_file_path.strip().split("/")[-1]
       os.system(f"mkdir -p {self.files_config.output_dir}")
       output_file_path = f"{self.files_config.output_dir}/{input_file_name}"
-      command_for_file = f"{self.command} {input_file_path} {output_file_path}"
-      if self.redirector is not None:
-        command_for_file += f" {self.redirector}"
+      command_for_file = f"{self.command} --input_path {input_file_path} --output_path {output_file_path}"
+      
+      if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          command_for_file += f" --{key} {value}"
+      
       self.__run_command(command_for_file)
       
   def __run_local_with_output_dirs(self):
@@ -163,18 +166,22 @@ class SubmissionManager:
       
       output_tree_file_path = f"{self.files_config.output_trees_dir}/{input_file_name}"
       output_hist_file_path = f"{self.files_config.output_hists_dir}/{input_file_name}"
-      command_for_file = f"{self.command} {input_file_path} {output_tree_file_path} {output_hist_file_path}"
-      if self.redirector is not None:
-        command_for_file += f" {self.redirector}"
+      command_for_file = f"{self.command} --input_path {input_file_path}" 
+      command_for_file += f" --output_trees_path {output_tree_file_path}" 
+      command_for_file += f" --output_hists_path {output_hist_file_path}"
+      if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          command_for_file += f" --{key} {value}"
       self.__run_command(command_for_file)
   
   # option 2
   def __run_local_input_output_list(self):
     info("Running locally with input_output_file_list")
     for input_file_path, output_file_path in self.files_config.input_output_file_list:
-      command_for_file = f"{self.command} {input_file_path} {output_file_path}" 
-      if self.redirector is not None:
-        command_for_file += f" {self.redirector}"
+      command_for_file = f"{self.command} --input_path {input_file_path} --output_path {output_file_path}" 
+      if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          command_for_file += f" --{key} {value}"
       self.__run_command(command_for_file)
         
   def __setup_temp_file_paths(self):
@@ -238,11 +245,17 @@ class SubmissionManager:
       output_hists_dir = "--output_hists_dir " + self.files_config.output_hists_dir.replace("/", "\/")
     os.system(f"sed -i 's/<output_trees_dir>/{output_trees_dir}/g' {self.condor_run_script_name}")
     os.system(f"sed -i 's/<output_hists_dir>/{output_hists_dir}/g' {self.condor_run_script_name}")
-    if self.redirector is not None:
-      redirector = "--redirector " + self.redirector.replace("/", "\/")
-    else:
-      redirector = ""
-    os.system(f"sed -i 's/<redirector>/{redirector}/g' {self.condor_run_script_name}")
+    
+    extra_args = ""
+    if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          if isinstance(value, str):
+            value = value.replace("/", "\/")
+          extra_args += f" --{key} {value}"
+    
+    print(f"{extra_args=}")
+    
+    os.system(f"sed -i 's/<extra_args>/{extra_args}/g' {self.condor_run_script_name}")
     
   def __set_condor_script_variables(self, n_files):
     condor_run_script_name_escaped = self.condor_run_script_name.replace("/", "\/")
