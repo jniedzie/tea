@@ -20,15 +20,31 @@ void CheckArgs(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-  CheckArgs(argc, argv);
-  ConfigManager::Initialize(argv[1]);
-
-  auto &config = ConfigManager::GetInstance();
-
-  if(argc == 4 || argc == 6){
-    config.SetInputPath(argv[2]);
-    config.SetHistogramsOutputPath(argv[3]);
+  auto args = make_unique<ArgsManager>(argc, argv);
+  // check if optional value "config" is present
+  if (!args->GetString("config").has_value()) {
+    fatal() << "No config file provided" << endl;
+    exit(1);
   }
+
+  ConfigManager::Initialize(args->GetString("config").value());
+  auto &config = ConfigManager::GetInstance();
+  
+  if (args->GetString("input_path").has_value()) {
+    config.SetInputPath(args->GetString("input_path").value());
+  }
+  if (args->GetString("output_path").has_value()) {
+    config.SetHistogramsOutputPath(args->GetString("output_path").value());
+  }
+  if (args->GetString("output_hists_path").has_value()) {
+    config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
+  }
+  if (args->GetString("output_trees_path").has_value()) {
+    config.SetTreesOutputPath(args->GetString("output_trees_path").value());
+  }
+  if (args->GetString("redirector").has_value()){
+    config.SetRedirector(args->GetString("redirector").value());
+  } 
   
   auto eventReader = make_shared<EventReader>();
   auto histogramsHandler = make_shared<HistogramsHandler>();
