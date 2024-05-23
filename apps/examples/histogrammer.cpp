@@ -5,6 +5,7 @@
 #include "HistogramsFiller.hpp"
 #include "HistogramsHandler.hpp"
 #include "Logger.hpp"
+#include "ArgsManager.hpp"
 
 using namespace std;
 

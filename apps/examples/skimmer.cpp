@@ -9,6 +9,7 @@
 #include "EventWriter.hpp"
 #include "CutFlowManager.hpp"
 #include "EventProcessor.hpp"
+#include "ArgsManager.hpp"
 
 using namespace std;
 
