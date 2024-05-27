@@ -37,6 +37,15 @@
 #include "TMatrixD.h"
 #include "TVectorD.h"
 #include "TRotation.h"
+#include "TView3D.h"
+#include "TView.h"
+#include "TPolyLine3D.h"
+#include "TApplication.h"
+#include "TGeoManager.h"
+#include "TGeoMaterial.h"
+#include "TGeoMedium.h"
+#include "TGeoVolume.h"
+#include "TGeoTube.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 

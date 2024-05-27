@@ -48,8 +48,10 @@ class Histogram:
     
     if self.x_max > 0 or self.x_min > 0:
       original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
-
       new_bin_edges = [x for x in original_bins if self.x_min <= x <= self.x_max]
+      if self.x_max not in new_bin_edges:
+        new_bin_edges.append(self.x_max)
+      
       new_n_bins = len(new_bin_edges) - 1
       new_histogram = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), new_n_bins, array('d', new_bin_edges))
       

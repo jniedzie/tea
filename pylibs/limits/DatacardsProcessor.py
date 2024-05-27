@@ -14,7 +14,7 @@ class DatacardsProcessor:
         os.system(f"mkdir -p {os.path.dirname(output_path)}")
         
 
-    def create_new_datacard(self, identifier, obs_hist, mc_hists, nuisances, add_uncertainties_on_zero=False, n_channels=1):
+    def create_new_datacard(self, identifier, obs_hist, mc_hists, nuisances, add_uncertainties_on_zero=False):
         self.datacards[identifier] = ""
         
         if type(obs_hist) == ROOT.TObject or obs_hist is None:
@@ -37,7 +37,7 @@ class DatacardsProcessor:
         # remove processes with integral < 1e-90, and if they were backgrounds, decrease n_backgrounds
         to_remove = []
         for name, hist in self.hists[identifier].items():
-            if hist.Integral() < 1e-90:
+            if hist.Integral() < 1e-90 and "data_obs" not in name:
                 to_remove.append(name)
                 if "signal" not in name:
                     n_backgrounds -= 1
@@ -49,11 +49,11 @@ class DatacardsProcessor:
         
         # if there are no backgrounds, add a dummy background with integral 0
         if n_backgrounds == 0:
-            self.hists[identifier]["background_dummy"] = ROOT.TH1D("background_dummy", "background_dummy", 1, 0, 1)
+            self.hists[identifier]["background_dummy"] = self.__get_dummy_histogram(identifier)
             n_backgrounds = 1
             
         if n_signals == 0:
-            self.hists[identifier]["signal_dummy"] = ROOT.TH1D("signal_dummy", "signal_dummy", 1, 0, 1)
+            self.hists[identifier]["signal_dummy"] = self.__get_dummy_histogram(identifier)
             n_signals = 1
         
         # sort self.hists such that entries starting with "signal_" go first:
@@ -70,6 +70,15 @@ class DatacardsProcessor:
         
         print(f"Storing histograms in {self.output_path.replace('.txt', '.root')}")
         self.__save_histograms(identifier, add_uncertainties_on_zero)
+    
+    def __get_dummy_histogram(self, identifier):
+        hist = list(self.hists[identifier].values())[0].Clone()
+        hist.Reset()
+        
+        for i in range(1, hist.GetNbinsX()):
+            hist.SetBinContent(i, 1e-99)
+            
+        return hist
     
     def __add_header(self, identifier, n_channels, n_backgrounds):
         # define number of parameters
@@ -93,7 +102,9 @@ class DatacardsProcessor:
         
         # prepare lines for MC processes
         self.datacards[identifier] += f"bin"
-        for _ in range(len(self.hists[identifier])-1):
+        for name in self.hists[identifier]:
+            if name == "data_obs":
+                continue
             self.datacards[identifier] += " bin1"
         self.datacards[identifier] += "\n"
 
@@ -105,7 +116,9 @@ class DatacardsProcessor:
         self.datacards[identifier] += "\n"
 
         self.datacards[identifier] += "process"
-        for i in range(len(self.hists[identifier])-1):
+        for i, name in enumerate(self.hists[identifier]):
+            if name == "data_obs":
+                continue
             self.datacards[identifier] += f" {i}"
         self.datacards[identifier] += "\n"
         
