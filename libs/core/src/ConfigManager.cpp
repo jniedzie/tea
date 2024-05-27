@@ -10,9 +10,26 @@
 
 using namespace std;
 
-ConfigManager::ConfigManager(std::string *const _configPath) : configPath(move(*_configPath)) {
-  if (nullptr == _configPath) throw std::runtime_error{"ConfigManager not initialized"};
+static ConfigManager *instance = nullptr;
 
+ConfigManager& ConfigManager::getInstanceImpl(std::string *const _configPath) {
+  if (!instance) {
+    instance = new ConfigManager(_configPath);
+  }
+  return *instance;
+}
+
+ConfigManager::ConfigManager(std::string *const _configPath) {
+  if (nullptr == _configPath) {
+    fatal() << "ConfigManager not initialized" << endl;
+    exit(0);
+  }
+  if (_configPath->empty()) {
+    fatal() << "Config path cannot be empty" << endl;
+    exit(0);
+  }
+  
+  configPath = move(*_configPath);
   Py_Initialize();
 
   pythonFile = fopen(configPath.c_str(), "r");

@@ -45,11 +45,7 @@ class ConfigManager {
   ConfigManager(std::string* const _configPath);
   ~ConfigManager();
 
-  static ConfigManager& getInstanceImpl(std::string* const _configPath = nullptr)
-  {
-    static ConfigManager instance{ _configPath };
-    return instance;
-  }
+  static ConfigManager& getInstanceImpl(std::string* const _configPath = nullptr);
 
   FILE *pythonFile;
   PyObject *pythonModule;
