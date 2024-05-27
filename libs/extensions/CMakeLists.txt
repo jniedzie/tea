@@ -5,6 +5,13 @@ project (extensions)
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 13.2)
 
+cmake_policy(SET CMP0068 NEW)
+
+# setting for macOS
+set(CMAKE_MACOSX_RPATH 1)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(CMAKE_INSTALL_RPATH "@loader_path/../bin")
+
 # setup ROOT-specific variables
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT REQUIRED COMPONENTS Minuit Eve Geom)
