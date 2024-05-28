@@ -46,6 +46,10 @@
 #include "TGeoMedium.h"
 #include "TGeoVolume.h"
 #include "TGeoTube.h"
+#include "TGeoSphere.h"
+#include "TEveManager.h"
+#include "TEveGeoNode.h"
+#include "TEveLine.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 

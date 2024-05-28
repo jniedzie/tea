@@ -47,6 +47,20 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   
   std::vector<int>& GetDaughters() { return daughters; }
 
+  TVector3 GetOrigin() { return TVector3(GetZ() / 1e3, GetX() / 1e3, GetY() / 1e3); }
+  TVector3 GetMomentum() {
+    auto fourVector = GetLorentzVector();
+    float eta = fourVector.Eta();
+    float phi = fourVector.Phi();
+    TVector3 direction(std::sinh(eta), std::cos(phi), std::sin(phi));
+
+    // rescale direction to the momentum magnitude
+    direction *= 1/direction.Mag();
+    direction *= fourVector.P();
+
+    return direction;
+  }
+
  private:
   int index;
   
