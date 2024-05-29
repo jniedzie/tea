@@ -50,6 +50,11 @@
 #include "TEveManager.h"
 #include "TEveGeoNode.h"
 #include "TEveLine.h"
+#include "TEveViewer.h"
+#include "TEveProjectionManager.h"
+#include "TEveProjectionAxes.h"
+#include "TGLViewer.h"
+#include "TGeoTorus.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 
