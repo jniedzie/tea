@@ -22,7 +22,6 @@ void CheckArgs(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   auto args = make_unique<ArgsManager>(argc, argv);
-  // check if optional value "config" is present
   if (!args->GetString("config").has_value()) {
     fatal() << "No config file provided" << endl;
     exit(1);
