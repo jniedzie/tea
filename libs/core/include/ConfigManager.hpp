@@ -39,7 +39,6 @@ class ConfigManager {
   void SetInputPath(std::string path) { inputPath = path; }
   void SetTreesOutputPath(std::string path) { treesOutputPath = path; }
   void SetHistogramsOutputPath(std::string path) { histogramsOutputPath = path; }
-  void SetRedirector(std::string path) { redirector = path; }
   
  private:
   std::string configPath;

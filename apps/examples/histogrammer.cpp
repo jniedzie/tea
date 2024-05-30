@@ -42,9 +42,6 @@ int main(int argc, char **argv) {
   if (args->GetString("output_trees_path").has_value()) {
     config.SetTreesOutputPath(args->GetString("output_trees_path").value());
   }
-  if (args->GetString("redirector").has_value()){
-    config.SetRedirector(args->GetString("redirector").value());
-  } 
   
   auto eventReader = make_shared<EventReader>();
   auto histogramsHandler = make_shared<HistogramsHandler>();

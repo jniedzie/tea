@@ -15,7 +15,6 @@ using namespace std;
 
 int main(int argc, char **argv) {
   auto args = make_unique<ArgsManager>(argc, argv);
-  // check if optional value "config" is present
   if (!args->GetString("config").has_value()) {
     fatal() << "No config file provided" << endl;
     exit(1);
@@ -29,10 +28,6 @@ int main(int argc, char **argv) {
   }
   if (args->GetString("output_trees_path").has_value()) {
     config.SetTreesOutputPath(args->GetString("output_trees_path").value());
-  }
-  
-  if (args->GetString("redirector").has_value()){
-    config.SetRedirector(args->GetString("redirector").value());
   }
 
   auto eventReader = make_shared<EventReader>();

@@ -105,10 +105,6 @@ void ConfigManager::GetValue<string>(std::string name, string &outputValue) {
     outputValue = histogramsOutputPath;
     return;
   }
-  if (name == "redirector" && redirector != "") {
-    outputValue = redirector;
-    return;
-  }
 
   PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || !PyUnicode_Check(pythonValue)) {
