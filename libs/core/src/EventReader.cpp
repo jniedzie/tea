@@ -21,33 +21,24 @@ EventReader::EventReader() {
   string inputFilePath;
   config.GetValue("inputFilePath", inputFilePath);
 
-  string customRedirector = "";
-  try {
-    config.GetValue("redirector", customRedirector);
-  } catch (const Exception &e) {
-    info() << "No custom redirector found from config file" << endl;
-  }
-
   currentEvent = make_shared<Event>();
 
-  bool usingCustomRedirector = customRedirector != "";
-  if (usingCustomRedirector) {
-    info() << "Trying to read ROOT file with user specified redirector:" << customRedirector << endl;
-    inputFilePath = "root://" + customRedirector + "/" + inputFilePath;
-    inputFile = TFile::Open(inputFilePath.c_str());
-    if (!inputFile || inputFile->IsZombie()) {
-      fatal() << "Failed to read ROOT file with user specified redirector: " << customRedirector << endl;
-      usingCustomRedirector = false;
-    }
-  }
   // if inputFilePath is a DAS dataset name, insert a redirector into it
-  if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos && !usingCustomRedirector) {
+  if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
 
     vector<string> redirectors = {
       "xrootd-cms.infn.it",
       "cms-xrd-global.cern.ch",
       "cmsxrootd.fnal.gov",
     };
+
+    string customRedirector = "";
+    try {
+      config.GetValue("redirector", customRedirector);
+    } catch (const Exception &e) {
+      info() << "No custom redirector found from config file" << endl;
+    }
+    if (customRedirector != "") redirectors.insert(redirectors.begin(), customRedirector);
 
     string tmpInputFilePath;
     for (string redirector : redirectors) {
