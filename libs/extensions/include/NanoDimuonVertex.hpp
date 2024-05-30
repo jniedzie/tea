@@ -38,7 +38,7 @@ class NanoDimuonVertex {
 
   TLorentzVector GetFourVector();
   float GetInvariantMass() { return GetFourVector().M(); }
-  float GetPt() { return GetFourVector().Pt(); }
+  float GetDimuonPt() { return GetFourVector().Pt(); }
   float GetEta() { return GetFourVector().Eta(); }
   float GetPhi() { return GetFourVector().Phi(); }
 
@@ -46,20 +46,11 @@ class NanoDimuonVertex {
   float GetLxyFromPV() { return Lxyz.Perp(); }
 
   float GetCollinearityAngle();
+  float GetPATpTLxyDPhi();
   float GetDeltaPixelHits();
 
   float GetDimuonChargeProduct();
-
-  bool PassesDCACut();
-  bool PassesChi2Cut();
-  bool PassesCollinearityAngleCut();
-  bool PassesDeltaPixelHitsCut();
-  bool PassesMaxDeltaRCut();
-  bool PassesMinDeltaRCut();
-  bool PassesLxyCut();
-  bool PassesDimuonChargeCut();
-  bool PassesVxySigmaCut();
-  bool PassesHitsBeforeVertexCut();
+  float GetOuterDeltaR();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
@@ -67,8 +58,6 @@ class NanoDimuonVertex {
   std::shared_ptr<PhysicsObject> muon2;
 
   TVector3 Lxyz;
-
-  std::map<std::string, float> muonVertexCuts;
 
   bool hasDSAMuon;
   bool hasPatMuon;

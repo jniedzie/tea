@@ -5,9 +5,6 @@
 using namespace std;
 
 NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, const shared_ptr<Event> event) : physicsObject(physicsObject_) {
-  auto& config = ConfigManager::GetInstance();
-  config.GetMap("muonVertexCuts", muonVertexCuts);
-
   if(isDSAMuon1() || isDSAMuon2()) hasDSAMuon = true;
   if(!isDSAMuon1() || !isDSAMuon2()) hasPatMuon = true;
   pair<shared_ptr<PhysicsObject>,shared_ptr<PhysicsObject>> muons = GetMuons(event);
@@ -66,9 +63,19 @@ TLorentzVector NanoDimuonVertex::GetFourVector() {
 }
 
 float NanoDimuonVertex::GetCollinearityAngle() {
-  TVector2 ptVector(GetFourVector().Px(), GetFourVector().Py());
-  TVector2 lxyVector(Lxyz.X(), Lxyz.Y());
-  return ptVector.DeltaPhi(lxyVector);
+  auto fourVector = GetFourVector();
+  TVector3 ptVector(fourVector.Px(), fourVector.Py(), fourVector.Py());
+  return ptVector.DeltaPhi(Lxyz);
+}
+
+float NanoDimuonVertex::GetPATpTLxyDPhi() {
+  std::string category = GetVertexCategory();
+  if(category == "PatDSA" && !isDSAMuon1() && isDSAMuon2()) {
+    auto muonFourVector = asNanoMuon(muon1)->GetFourVector();
+    TVector3 ptVector(muonFourVector.Px(), muonFourVector.Py(), muonFourVector.Pz());
+    return ptVector.DeltaPhi(Lxyz);
+  }
+  return -5;
 }
 
 float NanoDimuonVertex::GetDeltaPixelHits() {
@@ -81,30 +88,12 @@ float NanoDimuonVertex::GetDimuonChargeProduct() {
   return float(muon1->GetAsFloat("charge")) * float(muon2->GetAsFloat("charge"));
 }
 
-bool NanoDimuonVertex::PassesDCACut() { 
-  return (float)Get("dca") < muonVertexCuts["maxDCA"]; 
-}
-bool NanoDimuonVertex::PassesChi2Cut() { return (float)Get("normChi2") < muonVertexCuts["maxChi2"]; }
-bool NanoDimuonVertex::PassesCollinearityAngleCut() { return abs(GetCollinearityAngle()) < muonVertexCuts["maxCollinearityAngle"]; }
-bool NanoDimuonVertex::PassesDeltaPixelHitsCut() { return GetDeltaPixelHits() < muonVertexCuts["maxDeltaPixelHits"]; }
-bool NanoDimuonVertex::PassesVxySigmaCut() { return (float)Get("vxySigma") < muonVertexCuts["maxVxySigma"];}
-bool NanoDimuonVertex::PassesMaxDeltaRCut() { return (float)Get("dR") < muonVertexCuts["maxDeltaR"]; }
-bool NanoDimuonVertex::PassesMinDeltaRCut() { return (float)Get("dR") > muonVertexCuts["minDeltaR"]; }
-bool NanoDimuonVertex::PassesLxyCut() { return GetLxyFromPV() > muonVertexCuts["minLxy"]; }
+float NanoDimuonVertex::GetOuterDeltaR() {
+  float outerEta1 = muon1->GetAsFloat("outerEta");
+  float outerPhi1 = muon1->GetAsFloat("outerPhi");
+  float outerEta2 = muon2->GetAsFloat("outerEta");
+  float outerPhi2 = muon2->GetAsFloat("outerPhi");
 
-bool NanoDimuonVertex::PassesDimuonChargeCut() { 
-  float charge1 = muon1->GetAsFloat("charge");
-  float charge2 = muon2->GetAsFloat("charge");
-  return charge1 * charge2 == muonVertexCuts["muonChargeProduct"]; 
-}
-
-bool NanoDimuonVertex::PassesHitsBeforeVertexCut() { 
-  std::string category = GetVertexCategory();
-  int hitsInFrontOfVertex = 0;
-  if((float)Get("hitsInFrontOfVert1") > 0) hitsInFrontOfVertex += (float)Get("hitsInFrontOfVert1");
-  if((float)Get("hitsInFrontOfVert2") > 0) hitsInFrontOfVertex += (float)Get("hitsInFrontOfVert2");
-  if(category == "PatDSA") return hitsInFrontOfVertex < muonVertexCuts["maxHitsInFrontOfVertexPatDSA"];
-  if(category == "Pat") return hitsInFrontOfVertex < muonVertexCuts["maxHitsInFrontOfVertexPat"];
-  if(category == "DSA") return hitsInFrontOfVertex < muonVertexCuts["maxHitsInFrontOfVertexDSA"];
-  return false;
+  if (outerEta1 <= -5 || outerEta2 <= -5) return -1;
+  return asNanoMuon(muon1)->OuterDeltaRtoMuon(asNanoMuon(muon2));
 }
