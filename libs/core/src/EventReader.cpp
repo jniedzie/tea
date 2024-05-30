@@ -25,7 +25,7 @@ EventReader::EventReader() {
   try {
     config.GetValue("redirector", customRedirector);
   } catch (const Exception &e) {
-    warn() << "Couldn't read redirector from config file" << endl;
+    info() << "No custom redirector found from config file" << endl;
   }
 
   currentEvent = make_shared<Event>();
