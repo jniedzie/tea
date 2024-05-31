@@ -46,13 +46,15 @@ class HistogramNormalizer:
   def __normalizeToBackground(self, hist, sample, background_integral):
     if sample.type == SampleType.background:
       hist.hist.Scale(self.config.luminosity*sample.cross_section/self.background_initial_sum_weights[sample.name])
+      return
     if background_integral is None:
       error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
       return
-    elif sample.type == SampleType.signal:
+    if sample.type == SampleType.signal:
       if hist.hist.Integral() != 0:
         hist.hist.Scale(background_integral/hist.hist.Integral())
-    elif sample.type == SampleType.data:
+      return
+    if sample.type == SampleType.data:
       hist.hist.Scale(background_integral/self.data_final_entries[sample.name])
   
   def __normalizeToLumi(self, hist, sample):
