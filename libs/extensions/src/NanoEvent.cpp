@@ -173,17 +173,17 @@ shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForMuons(shared_ptr<PhysicsObje
     bool foundMuon2 = false;
     for(auto muon : *muonCollection) {
       // look for muon 1:
-      if( float(vertex->Get("isDSAMuon1"))==0 && !asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("idx1")) ) {
+      if( float(vertex->Get("isDSAMuon1"))==0 && !asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("originalMuonIdx1")) ) {
         foundMuon1 = true;
       }
-      if( float(vertex->Get("isDSAMuon1"))==1 && asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("idx1")) ) {
+      if( float(vertex->Get("isDSAMuon1"))==1 && asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("originalMuonIdx1")) ) {
         foundMuon1 = true;
       }
       // look for muon 2
-      if( float(vertex->Get("isDSAMuon2"))==0 && !asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("idx2")) ) {
+      if( float(vertex->Get("isDSAMuon2"))==0 && !asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("originalMuonIdx2")) ) {
         foundMuon2 = true;
       }
-      if( float(vertex->Get("isDSAMuon2"))==1 && asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("idx2")) ) {
+      if( float(vertex->Get("isDSAMuon2"))==1 && asNanoMuon(muon)->isDSAMuon() && float(muon->Get("idx")) ==  float(vertex->Get("originalMuonIdx2")) ) {
         foundMuon2 = true;
       }
     }

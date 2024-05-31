@@ -61,6 +61,7 @@ class ConfigManager {
   std::string inputPath = "";
   std::string treesOutputPath = "";
   std::string histogramsOutputPath = "";
+  std::string redirector = "";
 };
 
 #endif /* ConfigManager_hpp */

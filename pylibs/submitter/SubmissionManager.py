@@ -16,23 +16,27 @@ class SubmissionManager:
     self.config_path = config_path
     self.files_config_path = files_config_path
     self.files_config = None
+    self.extra_args = None
     
     info(f"Submission system: {submission_system.name}")
     
     self.__setup_files_config()
+
+    if hasattr(self.files_config, "extra_args"):
+      self.extra_args = self.files_config.extra_args
 
     if submission_system == SubmissionSystem.condor:
       self.__create_condor_directories()
   
   def run_locally(self):
     executor = f"python3 " if self.app_name[-3:] == ".py" else f"./"
-    self.command = f"{executor}{self.app_name} {self.config_path}"
+    self.command = f"{executor}{self.app_name} --config {self.config_path}"
     
     if hasattr(self.files_config, "output_dir"): # option 1 & 3, 4, 5
       self.__run_local_with_output_dir()
     elif hasattr(self.files_config, "input_output_file_list"): # option 2
       self.__run_local_input_output_list()
-    elif hasattr(self.files_config, "output_hists_dir") and hasattr(self.files_config, "output_trees_dir"):
+    elif hasattr(self.files_config, "output_hists_dir") or hasattr(self.files_config, "output_trees_dir"):
       self.__run_local_with_output_dirs()
     else:
       error("SubmissionManager -- Unrecognized input/output option")
@@ -86,7 +90,10 @@ class SubmissionManager:
     os.system(command)
   
   def __get_das_files_list(self, dataset_name):
-    das_command = f"dasgoclient -query='file dataset={dataset_name}'"
+    dbs_command = ""
+    if hasattr(self.files_config, "dbs_instance"):
+      dbs_command = f"instance={self.files_config.dbs_instance}"
+    das_command = f"dasgoclient -query='file dataset={dataset_name} {dbs_command}'"
     info(f"\n\nExecuting {das_command=}")
     return os.popen(das_command).read().splitlines()
   
@@ -128,7 +135,12 @@ class SubmissionManager:
       input_file_name = input_file_path.strip().split("/")[-1]
       os.system(f"mkdir -p {self.files_config.output_dir}")
       output_file_path = f"{self.files_config.output_dir}/{input_file_name}"
-      command_for_file = f"{self.command} {input_file_path} {output_file_path}"
+      command_for_file = f"{self.command} --input_path {input_file_path} --output_path {output_file_path}"
+      
+      if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          command_for_file += f" --{key} {value}"
+      
       self.__run_command(command_for_file)
       
   def __run_local_with_output_dirs(self):
@@ -143,25 +155,41 @@ class SubmissionManager:
     max_files = -1
     if hasattr(self.files_config, "max_files"):
       max_files = self.files_config.max_files
+
+    output_trees = hasattr(self.files_config, "output_trees_dir")
+    output_hists = hasattr(self.files_config, "output_hists_dir")
     
     for i, input_file_path in enumerate(input_file_list):
       if max_files > 0 and i >= max_files:
         return
       
       input_file_name = input_file_path.strip().split("/")[-1]
-      os.system(f"mkdir -p {self.files_config.output_trees_dir}")
-      os.system(f"mkdir -p {self.files_config.output_hists_dir}")
+      if output_trees:
+        os.system(f"mkdir -p {self.files_config.output_trees_dir}")
+      if output_hists:
+        os.system(f"mkdir -p {self.files_config.output_hists_dir}")
       
-      output_tree_file_path = f"{self.files_config.output_trees_dir}/{input_file_name}"
-      output_hist_file_path = f"{self.files_config.output_hists_dir}/{input_file_name}"
-      command_for_file = f"{self.command} {input_file_path} {output_tree_file_path} {output_hist_file_path}"
+      output_tree_file_path = f"{self.files_config.output_trees_dir}/{input_file_name}" if output_trees else ""
+      output_hist_file_path = f"{self.files_config.output_hists_dir}/{input_file_name}" if output_hists else ""
+      command_for_file = f"{self.command} --input_path {input_file_path}" 
+      command_for_file += f" --output_trees_path {output_tree_file_path}" if output_trees else ""
+      command_for_file += f" --output_hists_path {output_hist_file_path}" if output_hists else ""
+      if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          command_for_file += f" --{key} {value}"
       self.__run_command(command_for_file)
   
   # option 2
   def __run_local_input_output_list(self):
     info("Running locally with input_output_file_list")
     for input_file_path, output_file_path in self.files_config.input_output_file_list:
-      command_for_file = f"{self.command} {input_file_path} {output_file_path}"  
+      # command_for_file = f"{self.command} --input_path {input_file_path} --output_path {output_file_path}" 
+      command_for_file = f"{self.command} --input_path {input_file_path}" 
+      command_for_file += f" --output_trees_path {output_tree_file_path}"
+      command_for_file += f" --output_hists_path {output_hist_file_path}"
+      if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          command_for_file += f" --{key} {value}"
       self.__run_command(command_for_file)
         
   def __setup_temp_file_paths(self):
@@ -217,10 +245,29 @@ class SubmissionManager:
     os.system(f"sed -i 's/<input_files_list_file_name>/{input_files_list_file_name_escaped}/g' {self.condor_run_script_name}")
     
     # set output directory
-    output_trees_dir = self.files_config.output_trees_dir.replace("/", "\/")
-    output_hists_dir = self.files_config.output_hists_dir.replace("/", "\/")
+    output_trees_dir = ""
+    output_hists_dir = ""
+    output_trees = hasattr(self.files_config, "output_trees_dir")
+    output_hists = hasattr(self.files_config, "output_hists_dir")
+    if hasattr(self.files_config, "output_trees_dir"):
+      if self.files_config.output_trees_dir != "" :
+        output_trees_dir = "--output_trees_dir " + self.files_config.output_trees_dir.replace("/", "\/")
+    if hasattr(self.files_config, "output_hists_dir"):
+      if self.files_config.output_hists_dir != "" :
+        output_hists_dir = "--output_hists_dir " + self.files_config.output_hists_dir.replace("/", "\/")
     os.system(f"sed -i 's/<output_trees_dir>/{output_trees_dir}/g' {self.condor_run_script_name}")
     os.system(f"sed -i 's/<output_hists_dir>/{output_hists_dir}/g' {self.condor_run_script_name}")
+    
+    extra_args = ""
+    if self.extra_args is not None:
+        for key, value in self.extra_args.items():
+          if isinstance(value, str):
+            value = value.replace("/", "\/")
+          extra_args += f" --{key} {value}"
+    
+    print(f"{extra_args=}")
+    
+    os.system(f"sed -i 's/<extra_args>/{extra_args}/g' {self.condor_run_script_name}")
     
   def __set_condor_script_variables(self, n_files):
     condor_run_script_name_escaped = self.condor_run_script_name.replace("/", "\/")

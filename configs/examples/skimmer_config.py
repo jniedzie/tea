@@ -41,3 +41,5 @@ branchesToRemove = (
     "Flag*",
     "SubJet",
 )
+
+# redirector = "xrootd-cms.infn.it"
