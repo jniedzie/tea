@@ -39,8 +39,8 @@ class NanoDimuonVertex {
   TLorentzVector GetFourVector();
   float GetInvariantMass() { return GetFourVector().M(); }
   float GetDimuonPt() { return GetFourVector().Pt(); }
-  float GetEta() { return GetFourVector().Eta(); }
-  float GetPhi() { return GetFourVector().Phi(); }
+  float GetDimuonEta() { return GetFourVector().Eta(); }
+  float GetDimuonPhi() { return GetFourVector().Phi(); }
 
   TVector3 GetLxyzFromPV() { return Lxyz; };
   float GetLxyFromPV() { return Lxyz.Perp(); }
