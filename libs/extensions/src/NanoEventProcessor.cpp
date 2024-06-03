@@ -45,7 +45,10 @@ float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   auto leadingMuon = asNanoMuon(eventProcessor->GetMaxPtObject(event->GetEvent(), "Muon"));
-
+  if(!leadingMuon) {
+    warn() << "No leading muon found in event -- will assume SF=1.0" << endl;
+    return 1.0;
+  }
   float scaleFactor = scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
   event->SetMuonTriggerSF(scaleFactor);
 
