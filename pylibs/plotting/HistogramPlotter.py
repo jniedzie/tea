@@ -27,8 +27,13 @@ class HistogramPlotter:
 
         self.stacks = {sample_type: self.__getStackDict(
             sample_type) for sample_type in SampleType}
-        self.ratiohists = {sample_type: self.__getRatioDict(
-            sample_type) for sample_type in SampleType}
+        
+        if hasattr(self.config, "histogramsRatio"):
+            self.ratiohists = {sample_type: self.__getRatioDict(
+                sample_type) for sample_type in SampleType}
+        else:
+            self.ratiohists = None
+            
         self.histsAndSamples = {}
         self.hists2d = {sample_type: {} for sample_type in SampleType}
 
@@ -452,6 +457,8 @@ class HistogramPlotter:
             canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
 
     def drawRatioStacks(self):
+        if not hasattr(self.config, "histogramsRatio"):
+            return
       
         for hist_nom, hist_denom in self.config.histogramsRatio:
             hist_nom.name = hist_nom.getName()+'_ratio'
