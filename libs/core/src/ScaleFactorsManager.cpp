@@ -98,7 +98,7 @@ float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &corr
     return correction->evaluate(args);
   } catch (std::runtime_error &e) {
     string errorMessage = e.what();
-    error() << "Error while evaluating SF: " << errorMessage << endl;
+    error() << "Error while evaluating SF" << endl;
 
     if (errorMessage.find("inputs") != string::npos) {
       fatal() << "Expected inputs: " << endl;
