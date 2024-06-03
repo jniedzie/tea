@@ -81,6 +81,21 @@ long long EventReader::GetNevents() const {
 }
 
 tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
+  
+
+  // if collection name is specified in special collections, use that exact name as the collection name
+  for(auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+    auto pos = branchName.find(specialCollectionName);
+    
+    if (pos != string::npos) {
+      auto posEnd = pos + specialCollectionName.size();
+      string collectionName = branchName.substr(0, specialCollectionName.size());
+      string variableName = branchName.substr(posEnd);
+      return make_tuple(collectionName, variableName);
+    }
+  }
+
+  // otherwise, look for underscores
   string::size_type pos = branchName.find('_');
   string::size_type posEnd = pos + 1;
 
