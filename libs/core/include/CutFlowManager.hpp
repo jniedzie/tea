@@ -16,6 +16,7 @@ class CutFlowManager {
 
   void RegisterCut(std::string cutName);
   void UpdateCutFlow(std::string cutName);
+  bool HasCut(std::string cutName);
   void SaveCutFlow();
   std::map<std::string, float> GetCutFlow();
   void Print();

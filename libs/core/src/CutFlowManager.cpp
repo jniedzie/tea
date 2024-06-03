@@ -40,7 +40,6 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
     }
   }
   if (!eventWriter_) info() << "No eventWriter given for CutFlowManager" << endl;
-  
 }
 
 CutFlowManager::~CutFlowManager() {}
@@ -113,6 +112,8 @@ void CutFlowManager::SaveCutFlow() {
   }
   eventWriter->outFile->cd();
 }
+
+bool CutFlowManager::HasCut(string cutName) { return std::find(existingCuts.begin(), existingCuts.end(), cutName) != existingCuts.end(); }
 
 std::map<std::string, float> CutFlowManager::GetCutFlow() { return weightsAfterCuts; }
 
