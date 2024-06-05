@@ -16,14 +16,17 @@ class NanoMuon {
  public:
   NanoMuon(std::shared_ptr<PhysicsObject> physicsObject_);
 
-  auto Get(std::string branchName) { return physicsObject->Get(branchName); }
+  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+           int line = __builtin_LINE()) {
+    return physicsObject->Get(branchName, file, function, line);
+  }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
-  bool isDSAMuon() {return GetOriginalCollection() == "DSAMuon"; };
+  bool isDSAMuon() { return GetOriginalCollection() == "DSAMuon"; };
 
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }
@@ -43,8 +46,8 @@ class NanoMuon {
 
   float OuterDeltaRtoMuon(std::shared_ptr<NanoMuon> muon);
 
-  void Print(){
-    info()<<"NanoMuon: pt="<<GetPt()<<" eta="<<GetEta()<<" phi="<<GetPhi()<<std::endl;
+  void Print() {
+    info() << "NanoMuon: pt=" << GetPt() << " eta=" << GetEta() << " phi=" << GetPhi() << std::endl;
     GetID().Print();
     GetIso().Print();
   }

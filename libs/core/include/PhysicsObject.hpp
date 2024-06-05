@@ -14,22 +14,25 @@ typedef Collection<std::shared_ptr<PhysicsObject>> PhysicsObjects;
 
 class PhysicsObject {
  public:
-  PhysicsObject(std::string originalCollection_, int index_=-1);
+  PhysicsObject(std::string originalCollection_, int index_ = -1);
   PhysicsObject() = default;
   virtual ~PhysicsObject() = default;
 
   void Reset();
 
   inline std::string GetOriginalCollection() { return originalCollection; }
-  
+
   inline void SetIndex(int index_) { index = index_; }
   inline int GetIndex() { return index; }
 
-  inline auto Get(std::string branchName) {
+  inline auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
+                  int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
-      throw Exception(message.c_str());
+
+      fatal(file, function, line) << message << std::endl;
+      exit(0);
     }
     return Multitype(this, branchName);
   }

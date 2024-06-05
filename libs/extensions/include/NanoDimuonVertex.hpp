@@ -17,13 +17,16 @@ class NanoDimuonVertex {
  public:
   NanoDimuonVertex(std::shared_ptr<PhysicsObject> physicsObject_, const std::shared_ptr<Event> event);
 
-  auto Get(std::string branchName) { return physicsObject->Get(branchName); }
+  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+           int line = __builtin_LINE()) {
+    return physicsObject->Get(branchName, file, function, line);
+  }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
-  std::shared_ptr<PhysicsObject> Muon1() {return muon1;}
-  std::shared_ptr<PhysicsObject> Muon2() {return muon2;}
+  std::shared_ptr<PhysicsObject> Muon1() { return muon1; }
+  std::shared_ptr<PhysicsObject> Muon2() { return muon2; }
 
   bool isDSAMuon1() { return float(physicsObject->Get("isDSAMuon1")) == 1.; }
   bool isDSAMuon2() { return float(physicsObject->Get("isDSAMuon2")) == 1.; }
@@ -34,7 +37,7 @@ class NanoDimuonVertex {
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
   std::string GetVertexCategory();
-  std::pair<std::shared_ptr<PhysicsObject>,std::shared_ptr<PhysicsObject>> GetMuons(const std::shared_ptr<Event> event);
+  std::pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>> GetMuons(const std::shared_ptr<Event> event);
 
   TLorentzVector GetFourVector();
   float GetInvariantMass() { return GetFourVector().M(); }
@@ -61,7 +64,6 @@ class NanoDimuonVertex {
 
   bool hasDSAMuon;
   bool hasPatMuon;
-
 };
 
 #endif /* NanoDimuonVertex_hpp */

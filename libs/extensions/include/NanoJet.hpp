@@ -15,7 +15,10 @@ class NanoJet {
  public:
   NanoJet(std::shared_ptr<PhysicsObject> physicsObject_);
 
-  auto Get(std::string branchName) { return physicsObject->Get(branchName); }
+  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+           int line = __builtin_LINE()) {
+    return physicsObject->Get(branchName, file, function, line);
+  }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
