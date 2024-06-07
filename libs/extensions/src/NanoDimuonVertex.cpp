@@ -68,7 +68,7 @@ float NanoDimuonVertex::GetCollinearityAngle() {
   return ptVector.DeltaPhi(Lxyz);
 }
 
-float NanoDimuonVertex::GetMuonpTLxyDPhi(int muonIndex) {
+float NanoDimuonVertex::GetDPhiBetweenMuonpTAndLxy(int muonIndex) {
   std::shared_ptr<PhysicsObject> muon;
   if (muonIndex == 1) muon = muon1;
   else if (muonIndex == 2) muon = muon2;
