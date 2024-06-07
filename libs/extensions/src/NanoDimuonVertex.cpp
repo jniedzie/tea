@@ -68,14 +68,17 @@ float NanoDimuonVertex::GetCollinearityAngle() {
   return ptVector.DeltaPhi(Lxyz);
 }
 
-float NanoDimuonVertex::GetPATpTLxyDPhi() {
-  std::string category = GetVertexCategory();
-  if(category == "PatDSA" && !isDSAMuon1() && isDSAMuon2()) {
-    auto muonFourVector = asNanoMuon(muon1)->GetFourVector();
-    TVector3 ptVector(muonFourVector.Px(), muonFourVector.Py(), muonFourVector.Pz());
-    return ptVector.DeltaPhi(Lxyz);
+float NanoDimuonVertex::GetMuonpTLxyDPhi(int muonIndex) {
+  std::shared_ptr<PhysicsObject> muon;
+  if (muonIndex == 1) muon = muon1;
+  else if (muonIndex == 2) muon = muon2;
+  else {
+    warn() << "Invalid muon index " << muonIndex << " in NanoDimuonVertex::GetMuonpTLxyDPhi" << endl;
+    return -5;
   }
-  return -5;
+  auto muonFourVector = asNanoMuon(muon)->GetFourVector();
+  TVector3 ptVector(muonFourVector.Px(), muonFourVector.Py(), muonFourVector.Pz());
+  return ptVector.DeltaPhi(Lxyz);
 }
 
 float NanoDimuonVertex::GetDeltaPixelHits() {

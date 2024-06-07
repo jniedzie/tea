@@ -49,7 +49,7 @@ class NanoDimuonVertex {
   float GetLxyFromPV() { return Lxyz.Perp(); }
 
   float GetCollinearityAngle();
-  float GetPATpTLxyDPhi();
+  float GetMuonpTLxyDPhi(int muonIndex);
   float GetDeltaPixelHits();
 
   float GetDimuonChargeProduct();
