@@ -58,3 +58,20 @@ bool NanoGenParticle::IsJet() {
 bool NanoGenParticle::IsTop() { return abs(GetPdgId()) == 6; }
 
 bool NanoGenParticle::IsMuon() { return abs(GetPdgId()) == 13; }
+
+shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObjects> genParticles) {
+  int motherIndex = GetMotherIndex();
+  if (motherIndex < 0) return nullptr;
+  auto mother = make_shared<NanoGenParticle>(genParticles->at(motherIndex));
+  int pdgId = abs(GetPdgId());
+  
+  shared_ptr<NanoGenParticle> firstCopy = make_shared<NanoGenParticle>(*this);
+
+  while(abs(mother->GetPdgId()) == pdgId) {
+    firstCopy = mother;
+    motherIndex = mother->GetMotherIndex();
+    if (motherIndex < 0) return nullptr;
+    mother = make_shared<NanoGenParticle>(genParticles->at(motherIndex));
+  }
+  return firstCopy;
+}

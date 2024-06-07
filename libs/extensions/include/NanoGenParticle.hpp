@@ -43,6 +43,8 @@ class NanoGenParticle {
   bool IsTop();
   bool IsMuon();
 
+  std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
+
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
 
