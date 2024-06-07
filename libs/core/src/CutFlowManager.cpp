@@ -81,6 +81,8 @@ string CutFlowManager::GetFullCutName(string cutName) {
 
 float CutFlowManager::GetCurrentEventWeight() {
   float weight = 1.0;
+  if (weightsBranchName == "") return weight;
+
   try {
     weight = eventReader->currentEvent->Get(weightsBranchName);
   } catch (const Exception &e) {
