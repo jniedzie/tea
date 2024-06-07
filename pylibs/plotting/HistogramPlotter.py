@@ -27,8 +27,13 @@ class HistogramPlotter:
 
         self.stacks = {sample_type: self.__getStackDict(
             sample_type) for sample_type in SampleType}
-        self.ratiohists = {sample_type: self.__getRatioDict(
-            sample_type) for sample_type in SampleType}
+        
+        if hasattr(self.config, "histogramsRatio"):
+            self.ratiohists = {sample_type: self.__getRatioDict(
+                sample_type) for sample_type in SampleType}
+        else:
+            self.ratiohists = None
+            
         self.histsAndSamples = {}
         self.hists2d = {sample_type: {} for sample_type in SampleType}
 
@@ -52,7 +57,28 @@ class HistogramPlotter:
         if not os.path.exists(self.config.output_path):
             os.makedirs(self.config.output_path)
 
+    def __histosampleExists(self, hist, sample):
+        for h, s in self.histosamples:
+            if h.getName() == hist.getName() and s.name == sample.name:
+                return True
+        return False
+
+    def __histosample2DExists(self, hist, sample):
+        for h, s in self.histosamples2D:
+            if h.getName() == hist.getName() and s.name == sample.name:
+                return True
+        return False
+
+    def __histosampleRatioExists(self, hist_pass, hist_tot, sample):
+        for h_pass, h_tot, s in self.ratiosamples:
+            if h_pass.getName() == hist_pass.getName()+'_pass' and h_tot.getName() == hist_tot.getName()+'_tot' and s.name == sample.name:
+                return True
+        return False
+
     def addHistosample(self, hist, sample, input_file):
+        if self.__histosampleExists(hist, sample):
+            warn(f"Skipping adding histogram {hist.getName()} for sample {sample.name} because it already exists")
+            return
         hist.load(input_file)
 
         if not hist.isGood():
@@ -66,28 +92,32 @@ class HistogramPlotter:
             self.data_integral[hist.getName()] = hist.hist.Integral()
 
     def addHistosample2D(self, hist, sample, input_file):
+        if self.__histosample2DExists(hist, sample):
+            warn(f"Skipping adding 2D histogram {hist.getName()} for sample {sample.name} because it already exists")
+            return
         hist.load(input_file)
 
         if not hist.isGood():
             warn(
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
-        
-        
 
         self.histosamples2D.append((copy.deepcopy(hist), sample))
 
     def addHistosampleRatio(self, input_hist_pass, input_hist_tot, sample, input_file):
+        if self.__histosampleRatioExists(input_hist_pass, input_hist_tot, sample):
+            warn(f"Skipping adding ratio histogram for {input_hist_pass.getName()} / {input_hist_tot.getName()} for sample {sample.name} because it already exists")
+            return
         input_hist_pass.load(input_file)
         input_hist_tot.load(input_file)
         
         if not input_hist_pass.isGood():
             warn(
-                f"No good histogram {hist.getName()} for sample {sample.name}")
+                f"No good histogram {input_hist_pass.getName()} for sample {sample.name}")
             return
         if not input_hist_tot.isGood():
             warn(
-                f"No good histogram {hist.getName()} for sample {sample.name}")
+                f"No good histogram {input_hist_tot.getName()} for sample {sample.name}")
             return
 
         hist_pass = copy.deepcopy(input_hist_pass)
@@ -203,7 +233,7 @@ class HistogramPlotter:
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
             key = sample.type if sample.custom_legend is None else sample.name
-            options = self.config.plotting_options[sample.type] if sample.custom_legend is None else sample.custom_legend.options
+            options = self.config.legends[sample.type].options if sample.custom_legend is None else sample.custom_legend.options
 
             if sample.legend_description != "":
                 self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
@@ -427,6 +457,8 @@ class HistogramPlotter:
             canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
 
     def drawRatioStacks(self):
+        if not hasattr(self.config, "histogramsRatio"):
+            return
       
         for hist_nom, hist_denom in self.config.histogramsRatio:
             hist_nom.name = hist_nom.getName()+'_ratio'

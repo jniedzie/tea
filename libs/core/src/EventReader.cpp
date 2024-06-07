@@ -25,11 +25,20 @@ EventReader::EventReader() {
 
   // if inputFilePath is a DAS dataset name, insert a redirector into it
   if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
+
     vector<string> redirectors = {
-        "cms-xrd-global.cern.ch",
-        "cmsxrootd.fnal.gov",
-        "xrootd-cms.infn.it",
+      "xrootd-cms.infn.it",
+      "cms-xrd-global.cern.ch",
+      "cmsxrootd.fnal.gov",
     };
+
+    string customRedirector = "";
+    try {
+      config.GetValue("redirector", customRedirector);
+    } catch (const Exception &e) {
+      info() << "No custom redirector found from config file" << endl;
+    }
+    if (customRedirector != "") redirectors.insert(redirectors.begin(), customRedirector);
 
     string tmpInputFilePath;
     for (string redirector : redirectors) {
@@ -50,6 +59,10 @@ EventReader::EventReader() {
     inputFilePath = tmpInputFilePath;
   } else {
     inputFile = TFile::Open(inputFilePath.c_str());
+    if (!inputFile || inputFile->IsZombie()) {
+      fatal() << "Local file corrupted: " << inputFilePath << endl;
+      exit(1);
+    }
   }
 
   SetupTrees();
@@ -68,6 +81,21 @@ long long EventReader::GetNevents() const {
 }
 
 tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
+  
+
+  // if collection name is specified in special collections, use that exact name as the collection name
+  for(auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+    auto pos = branchName.find(specialCollectionName);
+    
+    if (pos != string::npos) {
+      auto posEnd = pos + specialCollectionName.size();
+      string collectionName = branchName.substr(0, specialCollectionName.size());
+      string variableName = branchName.substr(posEnd);
+      return make_tuple(collectionName, variableName);
+    }
+  }
+
+  // otherwise, look for underscores
   string::size_type pos = branchName.find('_');
   string::size_type posEnd = pos + 1;
 

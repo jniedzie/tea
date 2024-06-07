@@ -4,12 +4,14 @@
 
 using namespace std;
 
-NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {
-  auto& config = ConfigManager::GetInstance();
-  config.GetMap("muonVertexCuts", muonVertexCuts);
-
+NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, const shared_ptr<Event> event) : physicsObject(physicsObject_) {
   if(isDSAMuon1() || isDSAMuon2()) hasDSAMuon = true;
   if(!isDSAMuon1() || !isDSAMuon2()) hasPatMuon = true;
+  pair<shared_ptr<PhysicsObject>,shared_ptr<PhysicsObject>> muons = GetMuons(event);
+  muon1 = muons.first;
+  muon2 = muons.second;
+
+  Lxyz.SetXYZ(GetAsFloat("vx") - event->GetAsFloat("PV_x"), GetAsFloat("vy") - event->GetAsFloat("PV_y"), GetAsFloat("vz") - event->GetAsFloat("PV_z"));
 }
 
 string NanoDimuonVertex::GetVertexCategory() {
@@ -22,49 +24,79 @@ string NanoDimuonVertex::GetVertexCategory() {
 }
 
 pair<shared_ptr<PhysicsObject>,shared_ptr<PhysicsObject>> NanoDimuonVertex::GetMuons(const shared_ptr<Event> event) {
-  shared_ptr<PhysicsObject> muon1,muon2;
+  shared_ptr<PhysicsObject> muon1_,muon2_;
 
   if(hasPatMuon) {
     auto muons = event->GetCollection("Muon");
     for(auto muon : * muons) {
+      // look for muon 1
       if( !isDSAMuon1() && muonIndex1() == float(muon->Get("idx")) ) {
-        muon1 = muon;
+        muon1_ = muon;
       }
       // look for muon 2
       if( !isDSAMuon2() && muonIndex2() == float(muon->Get("idx")) ) {
-        muon2 = muon;
+        muon2_ = muon;
       }
     }
   }
   if(hasDSAMuon) {
     auto muons = event->GetCollection("DSAMuon");
     for(auto muon : * muons) {
+      // look for muon 1
       if( isDSAMuon1() && muonIndex1() == float(muon->Get("idx")) ) {
-        muon1 = muon;
+        muon1_ = muon;
       }
       // look for muon 2
       if( isDSAMuon2() && muonIndex2() == float(muon->Get("idx")) ) {
-        muon2 = muon;
+        muon2_ = muon;
       }
     }
   }
-
-  return make_pair(muon1,muon2);
+  return make_pair(muon1_,muon2_);
 }
 
-float NanoDimuonVertex::GetDimuonChargeProduct(const shared_ptr<Event> event) {
-  auto muons = GetMuons(event);
-  return float(muons.first->GetAsFloat("charge")) * float(muons.second->GetAsFloat("charge"));
+TLorentzVector NanoDimuonVertex::GetFourVector() {
+  TLorentzVector v;
+  auto muonVector1 = asNanoMuon(muon1)->GetFourVector();
+  auto muonVector2 = asNanoMuon(muon2)->GetFourVector();
+  return muonVector1 + muonVector2;
 }
 
-bool NanoDimuonVertex::PassesChi2Cut() { return (float)Get("chi2") < muonVertexCuts["maxChi2"]; }
+float NanoDimuonVertex::GetCollinearityAngle() {
+  auto fourVector = GetFourVector();
+  TVector3 ptVector(fourVector.Px(), fourVector.Py(), fourVector.Py());
+  return ptVector.DeltaPhi(Lxyz);
+}
 
-bool NanoDimuonVertex::PassesMaxDeltaRCut() { return (float)Get("dR") < muonVertexCuts["maxDeltaR"]; }
-bool NanoDimuonVertex::PassesMinDeltaRCut() { return (float)Get("dR") > muonVertexCuts["minDeltaR"]; }
+float NanoDimuonVertex::GetDPhiBetweenMuonpTAndLxy(int muonIndex) {
+  std::shared_ptr<PhysicsObject> muon;
+  if (muonIndex == 1) muon = muon1;
+  else if (muonIndex == 2) muon = muon2;
+  else {
+    warn() << "Invalid muon index " << muonIndex << " in NanoDimuonVertex::GetMuonpTLxyDPhi" << endl;
+    return -5;
+  }
+  auto muonFourVector = asNanoMuon(muon)->GetFourVector();
+  TVector3 ptVector(muonFourVector.Px(), muonFourVector.Py(), muonFourVector.Pz());
+  return ptVector.DeltaPhi(Lxyz);
+}
 
-bool NanoDimuonVertex::PassesDimuonChargeCut(const shared_ptr<Event> event) { 
-  auto muons = GetMuons(event);
-  float charge1 = muons.first->GetAsFloat("charge");
-  float charge2 = muons.second->GetAsFloat("charge");
-  return charge1 * charge2 == muonVertexCuts["muonChargeProduct"]; 
+float NanoDimuonVertex::GetDeltaPixelHits() {
+  std::string category = GetVertexCategory();
+  if(category == "Pat") return abs(float(muon1->GetAsFloat("trkNumPixelHits")) - float(muon2->GetAsFloat("trkNumPixelHits")));
+  return 0;
+}
+
+float NanoDimuonVertex::GetDimuonChargeProduct() {
+  return float(muon1->GetAsFloat("charge")) * float(muon2->GetAsFloat("charge"));
+}
+
+float NanoDimuonVertex::GetOuterDeltaR() {
+  float outerEta1 = muon1->GetAsFloat("outerEta");
+  float outerPhi1 = muon1->GetAsFloat("outerPhi");
+  float outerEta2 = muon2->GetAsFloat("outerEta");
+  float outerPhi2 = muon2->GetAsFloat("outerPhi");
+
+  if (outerEta1 <= -5 || outerEta2 <= -5) return -1;
+  return asNanoMuon(muon1)->OuterDeltaRtoMuon(asNanoMuon(muon2));
 }

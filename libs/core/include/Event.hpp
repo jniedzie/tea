@@ -18,9 +18,12 @@ class Event {
 
   void Reset();
 
-  inline auto Get(std::string branchName) {
+  inline auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+                  int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
-      throw Exception(("Trying to access incorrect event-level branch: " + branchName).c_str());
+      std::string message = "Trying to access incorrect event-level branch: " + branchName;
+      fatal(file, function, line) << message << std::endl;
+      exit(0);
     }
 
     return Multitype(this, branchName);
@@ -36,7 +39,7 @@ class Event {
   }
 
   void AddExtraCollections();
-  void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection});}
+  void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
 
  private:
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }

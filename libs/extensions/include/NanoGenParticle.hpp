@@ -15,8 +15,15 @@ class NanoGenParticle {
  public:
   NanoGenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-  TLorentzVector GetFourVector(float mass);
+  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+           int line = __builtin_LINE()) {
+    return physicsObject->Get(branchName, file, function, line);
+  }
+  float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
+  std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
+  void Reset() { physicsObject->Reset(); }
 
+  TLorentzVector GetFourVector(float mass);
   float GetMass() { return physicsObject->Get("mass"); }
   float GetPt() { return physicsObject->Get("pt"); }
   int GetPdgId() { return physicsObject->Get("pdgId"); }
@@ -35,6 +42,8 @@ class NanoGenParticle {
   bool IsJet();
   bool IsTop();
   bool IsMuon();
+
+  std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

@@ -91,10 +91,12 @@ void HistogramsHandler::CheckHistogram(string name){
 
 void HistogramsHandler::SaveHistograms() {
   string path = outputPath.substr(0, outputPath.find_last_of("/"));
+  string filename = outputPath.substr(outputPath.find_last_of("/"));
+  if(path == "") path = "./";
   string command = "mkdir -p " + path;
   system(command.c_str());
   
-  auto outputFile = new TFile((outputPath).c_str(), "recreate");
+  auto outputFile = new TFile((path+"/"+filename).c_str(), "recreate");
   outputFile->cd();
 
   for (auto &[name, hist] : histograms1D) {
@@ -111,5 +113,5 @@ void HistogramsHandler::SaveHistograms() {
   }
   outputFile->Close();
 
-  info() << "Histograms saved to: " << outputPath << endl;
+  info() << "Histograms saved to: " << path << "/" << filename << endl;
 }
