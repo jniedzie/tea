@@ -81,6 +81,12 @@ float NanoDimuonVertex::GetDPhiBetweenMuonpTAndLxy(int muonIndex) {
   return ptVector.DeltaPhi(Lxyz);
 }
 
+float NanoDimuonVertex::GetDPhiBetweenDimuonpTAndPtMiss(TLorentzVector ptMissFourVector) {
+  TVector3 ptVector(GetFourVector().Px(), GetFourVector().Py(), GetFourVector().Pz());
+  TVector3 ptMissVector(ptMissFourVector.Px(), ptMissFourVector.Py(), ptMissFourVector.Pz());
+  return ptVector.DeltaPhi(ptMissVector);
+}
+
 float NanoDimuonVertex::GetDeltaPixelHits() {
   std::string category = GetVertexCategory();
   if(category == "Pat") return abs(float(muon1->GetAsFloat("trkNumPixelHits")) - float(muon2->GetAsFloat("trkNumPixelHits")));
@@ -99,4 +105,20 @@ float NanoDimuonVertex::GetOuterDeltaR() {
 
   if (outerEta1 <= -5 || outerEta2 <= -5) return -1;
   return asNanoMuon(muon1)->OuterDeltaRtoMuon(asNanoMuon(muon2));
+}
+
+float NanoDimuonVertex::GetDeltaEta() {
+  return muon1->GetAsFloat("eta") - muon2->GetAsFloat("eta");
+}
+
+float NanoDimuonVertex::GetDeltaPhi() {
+  return muon1->GetAsFloat("phi") - muon2->GetAsFloat("phi");
+}
+
+float NanoDimuonVertex::GetOuterDeltaEta() {
+  return muon1->GetAsFloat("outerEta") - muon2->GetAsFloat("outerEta");
+}
+
+float NanoDimuonVertex::GetOuterDeltaPhi() {
+  return muon1->GetAsFloat("outerPhi") - muon2->GetAsFloat("outerPhi");
 }

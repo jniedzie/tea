@@ -34,14 +34,14 @@ HistogramsHandler::HistogramsHandler() {
   }
 
   try{
-  config.GetHistogramsParams(histParams2D, "histParams2D");
+    config.GetHistogramsParams(histParams2D, "histParams2D");
   }
   catch(const Exception& e){
     info() << "No histParams2D found in config file" << endl;
   }
 
   try{
-  config.GetValue("histogramsOutputFilePath", outputPath);
+    config.GetValue("histogramsOutputFilePath", outputPath);
   }
   catch(const Exception& e){
     info() << "No histogramsOutputFilePath found in config file" << endl;
