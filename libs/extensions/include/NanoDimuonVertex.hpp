@@ -50,10 +50,16 @@ class NanoDimuonVertex {
 
   float GetCollinearityAngle();
   float GetDPhiBetweenMuonpTAndLxy(int muonIndex);
+  float GetDPhiBetweenDimuonpTAndPtMiss(TLorentzVector ptMissFourVector);
   float GetDeltaPixelHits();
 
   float GetDimuonChargeProduct();
   float GetOuterDeltaR();
+
+  float GetDeltaEta();
+  float GetDeltaPhi();
+  float GetOuterDeltaEta();
+  float GetOuterDeltaPhi();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
