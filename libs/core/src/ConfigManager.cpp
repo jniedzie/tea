@@ -29,7 +29,7 @@ ConfigManager::ConfigManager(std::string *const _configPath) {
     exit(0);
   }
   
-  configPath = move(*_configPath);
+  configPath = std::move(*_configPath);
   Py_Initialize();
 
   pythonFile = fopen(configPath.c_str(), "r");
