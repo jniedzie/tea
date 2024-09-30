@@ -24,6 +24,17 @@ SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 SET(CMAKE_INSTALL_RPATH "/cvmfs/sft.cern.ch/lcg/releases/vdt/0.4.3-992df/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/tbb/2019_U7-ba3eb/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/Davix/0.7.3-d94fa/x86_64-centos7-gcc8-opt/lib64/:/cvmfs/sft.cern.ch/lcg/releases/png/1.6.37-9c2fe/x86_64-centos7-gcc8-opt/lib/:/cvmfs/sft.cern.ch/lcg/releases/GSL/2.5-32fc5/x86_64-centos7-gcc8-opt/lib/")
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+# Detect the platform
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(PYTHON_LIBRARY_EXTENSION "dylib")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set(PYTHON_LIBRARY_EXTENSION "so")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(PYTHON_LIBRARY_EXTENSION "dll")
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 # find Python
 if(DEFINED ENV{CONDA_PREFIX})
     set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
@@ -44,7 +55,7 @@ if(DEFINED ENV{CONDA_PREFIX})
         endif()
 
         set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dylib")
+        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")
         include_directories(${Python3_INCLUDE_DIR})
     else()
         message(FATAL_ERROR "Python3 not found in Conda environment")

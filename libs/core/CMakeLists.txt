@@ -37,6 +37,17 @@ get_target_property(CORRECTIONLIB_INCLUDE_DIRS correctionlib INTERFACE_INCLUDE_D
 message(STATUS "correctionlib includes: ${CORRECTIONLIB_INCLUDE_DIRS}")
 set(CORRECTIONLIB_INCLUDE_DIRS ${CORRECTIONLIB_INCLUDE_DIRS} CACHE INTERNAL "Correctionlib include dirs")
 
+# Detect the platform
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(PYTHON_LIBRARY_EXTENSION "dylib")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set(PYTHON_LIBRARY_EXTENSION "so")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(PYTHON_LIBRARY_EXTENSION "dll")
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 # find Python
 # Check if CONDA_PREFIX is set
 if(DEFINED ENV{CONDA_PREFIX})
@@ -58,7 +69,7 @@ if(DEFINED ENV{CONDA_PREFIX})
         endif()
 
         set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dylib")        
+        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")    
         include_directories(${Python3_INCLUDE_DIR})
     else()
         message(FATAL_ERROR "Python3 not found in Conda environment")
