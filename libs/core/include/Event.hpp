@@ -21,9 +21,9 @@ class Event {
   inline auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
                   int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
-      std::string message = "Trying to access incorrect event-level branch: " + branchName;
+      std::string message = "\nTrying to access incorrect event-level branch: " + branchName;
       fatal(file, function, line) << message << std::endl;
-      exit(0);
+      throw Exception(message.c_str());
     }
 
     return Multitype(this, branchName);

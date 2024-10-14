@@ -146,7 +146,11 @@ struct fatal {
     auto &logger = Logger::GetInstance();
     logger.currentFatalStream << os << "\n" << errorDetails;
 
-    std::cout << "[first occurrence] \033[1;35m" << logger.currentFatalStream.str() << "\033[0m" << std::endl;
+    if(!logger.addFatal()) {
+      std::cout << "[first occurrence] \033[1;35m" << logger.currentFatalStream.str() << "\033[0m" << std::endl;
+    }
+    logger.currentFatalStream.str("");
+
     return *this;
   }
 };
