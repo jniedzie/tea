@@ -12,6 +12,7 @@ from CmsLabelsManager import CmsLabelsManager
 from Logger import *
 from Histogram import Histogram
 
+import cmsstyle as CMS
 
 class HistogramPlotter:
     def __init__(self, config):
@@ -26,6 +27,12 @@ class HistogramPlotter:
         self.legends = {}
 
         self.stacks = {sample_type: self.__getStackDict(
+            sample_type) for sample_type in SampleType}
+
+        self.histDicts = {sample_type: self.__getHistDict(
+            sample_type) for sample_type in SampleType}
+
+        self.sampleDicts = {sample_type: self.__getHistDict(
             sample_type) for sample_type in SampleType}
         
         if hasattr(self.config, "histogramsRatio"):
@@ -49,7 +56,13 @@ class HistogramPlotter:
         self.histosamples2D = []
         self.data_integral = {}
         self.background_integral = {}
-        
+        self.background_cross_sections = {}
+
+        if hasattr(self.config, "bkgRawEventsThreshold"):
+            self.bkgRawEventsThreshold = self.config.bkgRawEventsThreshold
+        else:
+            self.bkgRawEventsThreshold = 0
+
         self.output_formats = ["pdf"]
         if hasattr(self.config, "output_formats"):
             self.output_formats = self.config.output_formats
@@ -86,7 +99,7 @@ class HistogramPlotter:
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
 
-        self.histosamples.append((copy.deepcopy(hist), sample))
+        self.histosamples.append((copy.deepcopy(hist), copy.deepcopy(sample)))
 
         if sample.type is SampleType.data:
             self.data_integral[hist.getName()] = hist.hist.Integral()
@@ -166,6 +179,13 @@ class HistogramPlotter:
             return self.background_integral[input_hist.getName()]
         return None
 
+    def __getBackgroundCrossSections(self, input_hist):
+        if input_hist.getName() in self.background_cross_sections.keys():
+            return self.background_cross_sections[input_hist.getName()]
+        if input_hist.getName() == "Event_normCheck":
+            return 1
+        return None
+
     def __sortHistosamples(self):
         if hasattr(self.config, "custom_stacks_order"):
             try:
@@ -189,6 +209,21 @@ class HistogramPlotter:
     def buildStacks(self):
         self.__sortHistosamples()
 
+        # calculate valid histogram specific background cross sections
+        for n, (hist, sample) in enumerate(self.histosamples):
+            if sample.type != SampleType.background:
+                continue
+
+            if hist.entries >= self.bkgRawEventsThreshold:
+                if hist.getName() in self.background_cross_sections:
+                    self.background_cross_sections[hist.getName()] += sample.cross_section
+                else:
+                    self.background_cross_sections[hist.getName()] = sample.cross_section
+            else:
+                hist.passesRawThreshold = False
+                self.histosamples[n] = (hist, sample)
+
+        # normalize background for total background integral
         for hist, sample in self.histosamples:
             if not hist.isGood():
                 warn(
@@ -199,7 +234,7 @@ class HistogramPlotter:
                 continue
 
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
-                hist), self.__getBackgroundIntegral(hist))
+                hist), None, self.__getBackgroundCrossSections(hist))
 
             if hist.getName() in self.background_integral:
                 self.background_integral[hist.getName()
@@ -207,6 +242,7 @@ class HistogramPlotter:
             else:
                 self.background_integral[hist.getName()] = hist.hist.Integral()
 
+        # normalize signal and data
         for hist, sample in self.histosamples:
             if not hist.isGood():
                 warn(
@@ -231,6 +267,14 @@ class HistogramPlotter:
             hist.setup(sample)
 
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
+            if sample.legend_description not in self.histDicts[sample.type][hist.getName()]:
+                self.histDicts[sample.type][hist.getName()][sample.legend_description] = hist.hist
+            else:
+                merged_hist = self.histDicts[sample.type][hist.getName()][sample.legend_description].Clone()
+                merged_hist.Add(hist.hist) 
+                self.histDicts[sample.type][hist.getName()][sample.legend_description] = hist.hist
+            
+            self.sampleDicts[sample.type][hist.getName()][sample.legend_description] = (copy.deepcopy(sample), hist.hist)
 
             key = sample.type if sample.custom_legend is None else sample.name
             options = self.config.legends[sample.type].options if sample.custom_legend is None else sample.custom_legend.options
@@ -403,7 +447,50 @@ class HistogramPlotter:
         canvas.GetPad(1).SetLogy(hist.log_y)
 
     def drawStacks(self):
+        # CMS.SetExtraText("Preliminary")
+        # iPos = 0 
+        # CMS.SetLumi(59.8)
+        # CMS.SetEnergy("13")
+        # CMS.ResetAdditionalInfo()
+        #     canv = CMS.cmsCanvas(hist.getName(),hist.x_min,hist.x_max,hist.y_min,hist.y_max,hist.x_label,hist.y_label,square=CMS.kSquare,extraSpace=0.01,iPos=iPos,)
+        #     if(hist.log_x):
+        #         canv.SetLogx()
+        #     if(hist.log_y):
+        #         canv.SetLogy()
+        #     leg = CMS.cmsLeg(0.61, 0.89 - 0.05 * 12, 0.99, 0.89, textSize=0.04)
+        #     canv.cd(1)
 
+        #     bkgStack = self.stacks[SampleType.background][hist.getName()]
+        #     # bkgStack = ROOT.THStack("stack", "Stacked")
+        #     sigStack = self.stacks[SampleType.signal][hist.getName()]
+        #     dataStack = self.stacks[SampleType.data][hist.getName()]
+
+        #     firstPlotted = False
+
+        #     if bkgStack.GetNhists() > 0:
+        #         firstPlotted = True
+        #         bkgDict = self.histDicts[SampleType.background][hist.getName()]
+        #         CMS.cmsDrawStack(bkgStack,leg,dict(bkgDict))
+        #     if sigStack.GetNhists() > 0:
+        #         sigleg = CMS.cmsLeg(0.21, 0.89 - 0.05 * 4, 0.99, 0.89, textSize=0.04)
+        #         options = self.config.plotting_options[SampleType.signal]
+        #         for samplename, sampletuple in self.sampleDicts[SampleType.signal][hist.getName()].items():
+        #             options = f"{options} same" if firstPlotted else options
+        #             sample = sampletuple[0]
+        #             h = sampletuple[1]
+        #             CMS.cmsDraw(h, options, sample.marker_style, sample.marker_size, sample.marker_color, sample.line_style, sample.line_width, sample.line_color, sample.fill_style, sample.fill_color, sample.fill_alpha)
+        #             sigleg.AddEntry(h, sample.legend_description, "l")
+        #             firstPlotted = True
+        #     if dataStack.GetNhists() > 0:
+        #         # options = self.config.plotting_options[SampleType.data]
+        #         # options = f"{options} same" if firstPlotted else options
+        #         options = "E1X0" if firstPlotted else "E1X0 same"
+        #         for sample, h in self.sampleDicts[SampleType.data][hist.getName()]:
+        #             CMS.cmsDraw(h, "E1X0", mcolor=ROOT.kBlack)
+        #             leg.AddEntry(h, sample.legend_description, "pe")
+        #             firstPlotted = True
+        
+        
         for hist in self.config.histograms:
             canvas = TCanvas(hist.getName(), hist.getName(
             ), self.config.canvas_size[0], self.config.canvas_size[1])
@@ -433,6 +520,7 @@ class HistogramPlotter:
                 path = self.config.output_path+"/"+hist.getName()+"."+output_format
                 info(f"Saving file: {path}")
                 canvas.SaveAs(path)
+                # canv.SaveAs(path)
             
             ROOT.gErrorIgnoreLevel = originalErrorLevel
 
@@ -531,6 +619,15 @@ class HistogramPlotter:
         for hist in self.config.histograms:
             title = hist.getName() + sample_type.name
             hists_dict[hist.getName()] = ROOT.THStack(title, title)
+
+        return hists_dict
+
+    def __getHistDict(self, sample_type):
+        hists_dict = {}
+
+        for hist in self.config.histograms:
+            title = hist.getName() + sample_type.name
+            hists_dict[hist.getName()] = {}
 
         return hists_dict
 
