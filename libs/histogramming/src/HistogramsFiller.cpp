@@ -57,9 +57,8 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
 }
 
 void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlowManager) {
-  int bin = 1;
   int cutFlowLength = cutFlowManager->GetCutFlow().size();
-  TH1D* cutFlowHist = new TH1D("cutFlow", "cutFlow", cutFlowLength, 0, cutFlowLength + 1);
+  auto cutFlowHist = new TH1D("cutFlow", "cutFlow", cutFlowLength, 0, cutFlowLength);
 
   map<int, pair<string, float>> sortedWeightsAfterCuts;
   for (auto& [cutName, sumOfWeights] : cutFlowManager->GetCutFlow()) {
@@ -68,6 +67,7 @@ void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlow
     sortedWeightsAfterCuts[index] = {cutName, sumOfWeights};
   }
 
+  int bin = 1;
   for (auto& [index, values] : sortedWeightsAfterCuts) {
     cutFlowHist->SetBinContent(bin, get<1>(values));
     cutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(values).c_str());
