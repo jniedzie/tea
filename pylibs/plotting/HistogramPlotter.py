@@ -476,7 +476,6 @@ class HistogramPlotter:
                 path = self.config.output_path+"/"+hist.getName()+"."+output_format
                 info(f"Saving file: {path}")
                 canvas.SaveAs(path)
-                # canv.SaveAs(path)
             
             ROOT.gErrorIgnoreLevel = originalErrorLevel
 
