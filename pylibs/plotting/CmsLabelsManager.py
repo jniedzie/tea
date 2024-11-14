@@ -10,6 +10,9 @@ class CmsLabelsManager:
             self.show_labels = self.config.show_cms_labels
 
         self.cmsText = "CMS"
+        if hasattr(self.config, "label_text"):
+            self.cmsText = self.config.label_text
+        
         self.cmsTextFont = 61
 
         self.extraText = None
@@ -36,6 +39,9 @@ class CmsLabelsManager:
             self.relPosY = 0.070
             self.relExtraDY = 1.2
 
+        if hasattr(self.config, "label_y"):
+            self.relPosY = self.config.label_y
+
         self.extraOverCmsTextSize = 0.76
 
         if hasattr(self.config, "lumi_unit"):
@@ -44,8 +50,8 @@ class CmsLabelsManager:
             lumi_unit = "fb"
 
         # get lumi and convert from pb to fb
-        if hasattr(self.config, "luminosity"):
-            self.lumi = f"{self.config.luminosity / 1000.0:.1f} {lumi_unit}^{{-1}}"
+        if hasattr(self.config, "lumi_label_value"):
+            self.lumi = f"{self.config.lumi_label_value / 1000.0:.1f} {lumi_unit}^{{-1}}"
         else:
             self.lumi = ""
 

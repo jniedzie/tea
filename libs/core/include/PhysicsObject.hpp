@@ -32,7 +32,7 @@ class PhysicsObject {
       message += branchName + " from " + originalCollection + " collection";
 
       fatal(file, function, line) << message << std::endl;
-      exit(0);
+      throw Exception(message.c_str());
     }
     return Multitype(this, branchName);
   }
