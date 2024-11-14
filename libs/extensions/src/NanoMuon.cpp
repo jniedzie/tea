@@ -5,6 +5,11 @@ using namespace std;
 
 NanoMuon::NanoMuon(shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
+bool NanoMuon::isTightMuon() { 
+  if(isDSAMuon()) return false;
+  return physicsObject->Get("tightId"); 
+}
+
 TLorentzVector NanoMuon::GetFourVector() {
   TLorentzVector v;
   v.SetPtEtaPhiM(GetPt(), GetEta(), GetPhi(), 0.105);
