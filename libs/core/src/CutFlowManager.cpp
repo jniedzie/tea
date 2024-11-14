@@ -64,7 +64,7 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
         if (cutName == "0_initial") inputCollectionContainsInitial[collectionName] = true;
         existingCollectionCuts[collectionName].push_back(cutName);
         delete obj;
-        currentIndex++;
+        currentCollectionIndex[collectionName]++;
       }
     }
   }
@@ -145,6 +145,13 @@ void CutFlowManager::SaveCutFlow() {
   eventWriter->outFile->cd();
 }
 
+void CutFlowManager::SaveAllCutFlows() {
+  SaveCutFlow();
+  for(auto &[collectionName, vertexCuts] : weightsAfterCollectionCuts){
+    SaveCutFlowForCollection(collectionName);
+  }
+}
+
 bool CutFlowManager::HasCut(string cutName) { return std::find(existingCuts.begin(), existingCuts.end(), cutName) != existingCuts.end(); }
 
 std::map<std::string, float> CutFlowManager::GetCutFlow() { return weightsAfterCuts; }
@@ -176,7 +183,7 @@ void CutFlowManager::UpdateCutFlowForCollection(string collectionName, string cu
   weightsAfterCollectionCuts[collectionName][fullCutName] += GetCurrentEventWeight();
 }
 
-void CutFlowManager::SaveCutFlowForCollections(string collectionName) {
+void CutFlowManager::SaveCutFlowForCollection(string collectionName) {
   if (!eventWriter) {
     error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl;
   }

@@ -23,10 +23,12 @@ class CutFlowManager {
 
   bool isEmpty() { return weightsAfterCuts.empty(); }
 
+  void SaveAllCutFlows();
+
   void RegisterCutForCollection(std::string collectionName, std::string cutName);
   void UpdateCutFlowForCollection(std::string collectionName, std::string cutName);
   bool HasCutInCollection(std::string collectionName, std::string cutName);
-  void SaveCutFlowForCollections(std::string collectionName);
+  void SaveCutFlowForCollection(std::string collectionName);
   std::map<std::string, float> GetCutFlowForCollection(std::string collectionName);
   void PrintCutFlowForCollection(std::string collectionName);
 
