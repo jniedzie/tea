@@ -18,6 +18,8 @@ public:
   void AddCurrentEvent(std::string treeName);
   void Save();
 
+  TFile* GetOutputFile() const { return outFile; }
+
 private:
   TFile *outFile;
   std::map<std::string, TTree *> outputTrees;
