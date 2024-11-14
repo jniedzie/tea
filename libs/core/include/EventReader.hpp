@@ -17,9 +17,6 @@ class EventReader {
   long long GetNevents() const;
   std::shared_ptr<Event> GetEvent(int iEvent);
 
-  TFile* GetInputFile() const { return inputFile; }
-  std::shared_ptr<Event> GetCurrentEvent() const { return currentEvent; }
-
  private:
   int maxEvents;
   int printEveryNevents;
