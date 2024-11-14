@@ -28,12 +28,6 @@ class HistogramPlotter:
 
         self.stacks = {sample_type: self.__getStackDict(
             sample_type) for sample_type in SampleType}
-
-        self.histDicts = {sample_type: self.__getHistDict(
-            sample_type) for sample_type in SampleType}
-
-        self.sampleDicts = {sample_type: self.__getHistDict(
-            sample_type) for sample_type in SampleType}
         
         if hasattr(self.config, "histogramsRatio"):
             self.ratiohists = {sample_type: self.__getRatioDict(
@@ -267,14 +261,6 @@ class HistogramPlotter:
             hist.setup(sample)
 
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
-            if sample.legend_description not in self.histDicts[sample.type][hist.getName()]:
-                self.histDicts[sample.type][hist.getName()][sample.legend_description] = hist.hist
-            else:
-                merged_hist = self.histDicts[sample.type][hist.getName()][sample.legend_description].Clone()
-                merged_hist.Add(hist.hist) 
-                self.histDicts[sample.type][hist.getName()][sample.legend_description] = hist.hist
-            
-            self.sampleDicts[sample.type][hist.getName()][sample.legend_description] = (copy.deepcopy(sample), hist.hist)
 
             key = sample.type if sample.custom_legend is None else sample.name
             options = self.config.legends[sample.type].options if sample.custom_legend is None else sample.custom_legend.options
@@ -574,15 +560,6 @@ class HistogramPlotter:
         for hist in self.config.histograms:
             title = hist.getName() + sample_type.name
             hists_dict[hist.getName()] = ROOT.THStack(title, title)
-
-        return hists_dict
-
-    def __getHistDict(self, sample_type):
-        hists_dict = {}
-
-        for hist in self.config.histograms:
-            title = hist.getName() + sample_type.name
-            hists_dict[hist.getName()] = {}
 
         return hists_dict
 
