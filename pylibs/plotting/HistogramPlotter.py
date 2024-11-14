@@ -447,50 +447,6 @@ class HistogramPlotter:
         canvas.GetPad(1).SetLogy(hist.log_y)
 
     def drawStacks(self):
-        # CMS.SetExtraText("Preliminary")
-        # iPos = 0 
-        # CMS.SetLumi(59.8)
-        # CMS.SetEnergy("13")
-        # CMS.ResetAdditionalInfo()
-        #     canv = CMS.cmsCanvas(hist.getName(),hist.x_min,hist.x_max,hist.y_min,hist.y_max,hist.x_label,hist.y_label,square=CMS.kSquare,extraSpace=0.01,iPos=iPos,)
-        #     if(hist.log_x):
-        #         canv.SetLogx()
-        #     if(hist.log_y):
-        #         canv.SetLogy()
-        #     leg = CMS.cmsLeg(0.61, 0.89 - 0.05 * 12, 0.99, 0.89, textSize=0.04)
-        #     canv.cd(1)
-
-        #     bkgStack = self.stacks[SampleType.background][hist.getName()]
-        #     # bkgStack = ROOT.THStack("stack", "Stacked")
-        #     sigStack = self.stacks[SampleType.signal][hist.getName()]
-        #     dataStack = self.stacks[SampleType.data][hist.getName()]
-
-        #     firstPlotted = False
-
-        #     if bkgStack.GetNhists() > 0:
-        #         firstPlotted = True
-        #         bkgDict = self.histDicts[SampleType.background][hist.getName()]
-        #         CMS.cmsDrawStack(bkgStack,leg,dict(bkgDict))
-        #     if sigStack.GetNhists() > 0:
-        #         sigleg = CMS.cmsLeg(0.21, 0.89 - 0.05 * 4, 0.99, 0.89, textSize=0.04)
-        #         options = self.config.plotting_options[SampleType.signal]
-        #         for samplename, sampletuple in self.sampleDicts[SampleType.signal][hist.getName()].items():
-        #             options = f"{options} same" if firstPlotted else options
-        #             sample = sampletuple[0]
-        #             h = sampletuple[1]
-        #             CMS.cmsDraw(h, options, sample.marker_style, sample.marker_size, sample.marker_color, sample.line_style, sample.line_width, sample.line_color, sample.fill_style, sample.fill_color, sample.fill_alpha)
-        #             sigleg.AddEntry(h, sample.legend_description, "l")
-        #             firstPlotted = True
-        #     if dataStack.GetNhists() > 0:
-        #         # options = self.config.plotting_options[SampleType.data]
-        #         # options = f"{options} same" if firstPlotted else options
-        #         options = "E1X0" if firstPlotted else "E1X0 same"
-        #         for sample, h in self.sampleDicts[SampleType.data][hist.getName()]:
-        #             CMS.cmsDraw(h, "E1X0", mcolor=ROOT.kBlack)
-        #             leg.AddEntry(h, sample.legend_description, "pe")
-        #             firstPlotted = True
-        
-        
         for hist in self.config.histograms:
             canvas = TCanvas(hist.getName(), hist.getName(
             ), self.config.canvas_size[0], self.config.canvas_size[1])
