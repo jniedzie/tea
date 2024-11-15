@@ -93,6 +93,9 @@ class HistogramPlotter:
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
 
+        if hist.entries < self.bkgRawEventsThreshold:
+            return
+
         self.histosamples.append((copy.deepcopy(hist), copy.deepcopy(sample)))
 
         if sample.type is SampleType.data:
@@ -208,14 +211,10 @@ class HistogramPlotter:
             if sample.type != SampleType.background:
                 continue
 
-            if hist.entries >= self.bkgRawEventsThreshold:
-                if hist.getName() in self.background_cross_sections:
-                    self.background_cross_sections[hist.getName()] += sample.cross_section
-                else:
-                    self.background_cross_sections[hist.getName()] = sample.cross_section
+            if hist.getName() in self.background_cross_sections:
+                self.background_cross_sections[hist.getName()] += sample.cross_section
             else:
-                hist.passesRawThreshold = False
-                self.histosamples[n] = (hist, sample)
+                self.background_cross_sections[hist.getName()] = sample.cross_section
 
         # normalize background for total background integral
         for hist, sample in self.histosamples:

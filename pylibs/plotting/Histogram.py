@@ -23,7 +23,6 @@ class Histogram:
   y_label: str = ""
   suffix: str = ""
   error: float = -1.0
-  passesRawThreshold: bool = True
   entries: int = 0
   
   def __post_init__(self):
@@ -72,8 +71,6 @@ class Histogram:
       warn(f"Could not find histogram: {self.name}")
       return False
     if self.hist.GetEntries() == 0:
-      return False
-    if not self.passesRawThreshold:
       return False
     
     return True
