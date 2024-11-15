@@ -14,23 +14,19 @@ class CutFlowManager {
   CutFlowManager(std::shared_ptr<EventReader> eventReader_, std::shared_ptr<EventWriter> eventWriter_ = nullptr, std::vector<std::string> additionalCutFlowCollections = {});
   ~CutFlowManager();
 
-  void RegisterCut(std::string cutName);
-  void UpdateCutFlow(std::string cutName);
-  bool HasCut(std::string cutName);
-  void SaveCutFlow();
-  std::map<std::string, float> GetCutFlow();
-  void Print();
+  void RegisterPreExistingCuts(std::string collectionName = "");
+  void RegisterCollection(std::string collectionName);
 
-  bool isEmpty() { return weightsAfterCuts.empty(); }
+  void RegisterCut(std::string cutName, std::string collectionName = "");
+  void UpdateCutFlow(std::string cutName, std::string collectionName = "");
+  bool HasCut(std::string cutName, std::string collectionName = "");
+  void SaveCutFlow(std::string collectionName = "");
+  std::map<std::string, float> GetCutFlow(std::string collectionName = "");
+  void Print(std::string collectionName = "");
+
+  bool isEmpty(std::string collectionName = "") { return weightsAfterCuts.empty(); }
 
   void SaveAllCutFlows();
-
-  void RegisterCutForCollection(std::string collectionName, std::string cutName);
-  void UpdateCutFlowForCollection(std::string collectionName, std::string cutName);
-  bool HasCutInCollection(std::string collectionName, std::string cutName);
-  void SaveCutFlowForCollection(std::string collectionName);
-  std::map<std::string, float> GetCutFlowForCollection(std::string collectionName);
-  void PrintCutFlowForCollection(std::string collectionName);
 
  private:
   std::string weightsBranchName;
