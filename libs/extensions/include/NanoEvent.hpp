@@ -33,7 +33,7 @@ class NanoEvent {
 
   std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<PhysicsObjects> muonCollection);
-  std::shared_ptr<PhysicsObjects> GetVertexForDimuon(std::shared_ptr<PhysicsObject> muon1, std::shared_ptr<PhysicsObject> muon2);
+  std::shared_ptr<PhysicsObject> GetVertexForDimuon(std::shared_ptr<PhysicsObject> muon1, std::shared_ptr<PhysicsObject> muon2);
   std::shared_ptr<PhysicsObjects> GetVerticesForDimuons(std::shared_ptr<std::vector<std::pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>>>> dimuons);
 
   bool DSAMuonIndexExist(std::shared_ptr<PhysicsObjects> objectCollection, float index);

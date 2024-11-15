@@ -79,7 +79,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(float matchingD
     bool matchFound = false;
     for (auto muon : *looseMuons) {
       auto vertex = GetVertexForDimuon(dsaMuon, muon);
-      if (float(vertex->at(0)->Get("dRprox")) < matchingDeltaR) matchFound = true;
+      if (float(vertex->Get("dRprox")) < matchingDeltaR) matchFound = true;
     }
     if (matchFound == false) allMuons->push_back(dsaMuon);
   }
@@ -128,8 +128,8 @@ bool NanoEvent::PATMuonIndexExist(shared_ptr<PhysicsObjects> objectCollection, f
 bool NanoEvent::MuonIndexExist(shared_ptr<PhysicsObjects> objectCollection, float index, bool isDSAMuon) {
   for (auto object : *objectCollection) {
     if (float(object->Get("idx")) == index) {
-      if (isDSAMuon && asNanoMuon(object)->isDSAMuon()) return true;
-      if (!isDSAMuon && !asNanoMuon(object)->isDSAMuon()) return true;
+      if (isDSAMuon && asNanoMuon(object)->isDSA()) return true;
+      if (!isDSAMuon && !asNanoMuon(object)->isDSA()) return true;
     }
   }
   return false;
@@ -168,7 +168,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForMuons(shared_ptr<PhysicsObje
     bool foundMuon1 = false;
     bool foundMuon2 = false;
     for (auto muon : *muonCollection) {
-      bool isDSAMuon = asNanoMuon(muon)->isDSAMuon();
+      bool isDSAMuon = asNanoMuon(muon)->isDSA();
       bool isDSAMuon1 = float(vertex->Get("isDSAMuon1")) == 1;
       bool isDSAMuon2 = float(vertex->Get("isDSAMuon2")) == 1;
       float muonIndex = muon->Get("idx");
@@ -184,20 +184,20 @@ shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForMuons(shared_ptr<PhysicsObje
   return muonVertices;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetVertexForDimuon(shared_ptr<PhysicsObject> muon1, shared_ptr<PhysicsObject> muon2) {
+shared_ptr<PhysicsObject> NanoEvent::GetVertexForDimuon(shared_ptr<PhysicsObject> muon1, shared_ptr<PhysicsObject> muon2) {
   auto muons = make_shared<PhysicsObjects>();
   muons->push_back(muon1);
   muons->push_back(muon2);
   auto dimuonVertex = GetVerticesForMuons(muons);
-
-  return dimuonVertex;
+  if(dimuonVertex->size()<1) return nullptr;
+  return dimuonVertex->at(0);
 }
 
 std::shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForDimuons(std::shared_ptr<vector<pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>>>> dimuons) {
   auto muonVertices = make_shared<PhysicsObjects>();
   for (auto dimuon : *dimuons) {
     auto vertex = GetVertexForDimuon(dimuon.first, dimuon.second);
-    if(vertex->size()>0) muonVertices->push_back(vertex->at(0));
+    if(vertex) muonVertices->push_back(vertex);
   }  
   return muonVertices;
 }
@@ -207,7 +207,7 @@ float NanoEvent::GetNDSAMuon(string collectionName) {
 
   float nDSAMuon = 0;
   for (auto object : *collection) {
-    if (asNanoMuon(object)->isDSAMuon()) nDSAMuon++;
+    if (asNanoMuon(object)->isDSA()) nDSAMuon++;
   }
   return nDSAMuon;
 }
@@ -217,7 +217,7 @@ float NanoEvent::GetNMuon(string collectionName) {
 
   float nMuon = 0;
   for (auto object : *collection) {
-    if (!asNanoMuon(object)->isDSAMuon()) nMuon++;
+    if (!asNanoMuon(object)->isDSA()) nMuon++;
   }
   return nMuon;
 }
@@ -235,7 +235,7 @@ shared_ptr<PhysicsObject> NanoEvent::GetPATorDSAMuonWithIndex(int muon_idx, stri
 
   for (auto object : *collection) {
     float idx = object->Get("idx");
-    bool isDSAmuon = asNanoMuon(object)->isDSAMuon();
+    bool isDSAmuon = asNanoMuon(object)->isDSA();
     if (idx != muon_idx) continue;
     if (isDSAmuon && doDSAMuons) return object;
     if (!isDSAmuon && !doDSAMuons) return object;
@@ -271,7 +271,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetDSAMuonsFromCollection(string muonColle
 shared_ptr<PhysicsObjects> NanoEvent::GetDSAMuonsFromCollection(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
   auto dsaMuons = make_shared<PhysicsObjects>();
   for (auto muon : *muonCollection) {
-    if (asNanoMuon(muon)->isDSAMuon()) dsaMuons->push_back(muon);
+    if (asNanoMuon(muon)->isDSA()) dsaMuons->push_back(muon);
   }
   return dsaMuons;
 }
@@ -284,7 +284,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetPATMuonsFromCollection(string muonColle
 shared_ptr<PhysicsObjects> NanoEvent::GetPATMuonsFromCollection(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
   auto patMuons = make_shared<PhysicsObjects>();
   for (auto muon : *muonCollection) {
-    if (!asNanoMuon(muon)->isDSAMuon()) patMuons->push_back(muon);
+    if (!asNanoMuon(muon)->isDSA()) patMuons->push_back(muon);
   }
   return patMuons;
 }
@@ -293,7 +293,7 @@ shared_ptr<Collection<shared_ptr<PhysicsObject>>> NanoEvent::GetAllCommonMuonsIn
     shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection1, shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection2) {
   shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection;
   for (auto muon : *muonCollection1) {
-    if (MuonIndexExist(muonCollection2, muon->Get("idx"), asNanoMuon(muon)->isDSAMuon())) {
+    if (MuonIndexExist(muonCollection2, muon->Get("idx"), asNanoMuon(muon)->isDSA())) {
       muonCollection->push_back(muon);
     }
   }
