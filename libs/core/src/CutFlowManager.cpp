@@ -40,15 +40,20 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
     if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
     info() << "Input file contains " << cutFlowName << " directory - will store existing cutflow in the output." << endl;
 
+
+    bool rawEvents = cutFlowName.find("RawEvents")!=string::npos;
     string collectionName = "";
-    if(cutFlowName=="CutFlow") collectionName = "";
-    else if(cutFlowName.find("CollectionCutFlow_")!=string::npos) collectionName = cutFlowName.substr(cutFlowName.find("CollectionCutFlow_")+17);
+    if(cutFlowName=="CutFlow" || cutFlowName=="RawEventsCutFlow") collectionName = "";
+    else if(cutFlowName.find("CollectionCutFlow_")!=string::npos) {
+      collectionName = cutFlowName.substr(cutFlowName.find("CollectionCutFlow_")+17);
+      if(rawEvents) collectionName = collectionName.substr(collectionName.find("RawEventsCollectionCutFlow_")+26);
+    }
     else {
       warn() << "Found cutflow in unknown format: " << cutFlowName << ". Expected cutflow name CutFlow or names starting with CollectionCutFlow_" << endl;
       collectionName = cutFlowName;
     }
 
-    RegisterCollection(collectionName);
+    if(!rawEvents) RegisterCollection(collectionName);
     auto sourceDir = (TDirectory *)eventReader->inputFile->Get(cutFlowName.c_str());
 
     TIter nextKey(sourceDir->GetListOfKeys());
@@ -62,18 +67,24 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
       bool containsInitial = cutName == "0_initial";
       delete obj;
 
-      if(collectionName=="") {
-        weightsAfterCuts[cutName] = sumOfWeights;
-        if (containsInitial) inputContainsInitial = true;
-        existingCuts.push_back(cutName);
-        currentIndex++;
+      if(rawEvents) {
+        if(collectionName=="") rawEventsAfterCuts[cutName] = sumOfWeights;
+        else rawEventsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
       }
       else {
-        weightsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
-        if (containsInitial) inputCollectionContainsInitial[collectionName] = true;
-        existingCollectionCuts[collectionName].push_back(cutName);
-        currentCollectionIndex[collectionName]++;  
-      }    
+        if(collectionName=="") {
+          weightsAfterCuts[cutName] = sumOfWeights;
+          if (containsInitial) inputContainsInitial = true;
+          existingCuts.push_back(cutName);
+          currentIndex++;
+        }
+        else {
+          weightsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
+          if (containsInitial) inputCollectionContainsInitial[collectionName] = true;
+          existingCollectionCuts[collectionName].push_back(cutName);
+          currentCollectionIndex[collectionName]++;  
+        }
+      }
     }
   }
 }
@@ -170,7 +181,7 @@ void CutFlowManager::SaveSingleCutFlow(string collectionName) {
   if(collectionName!="") {
     cutFlowName = "CollectionCutFlow_"+collectionName;
     weights = weightsAfterCollectionCuts[collectionName];
-    rawEvents = weightsAfterCollectionCuts[collectionName];
+    rawEvents = rawEventsAfterCollectionCuts[collectionName];
   }
   WriteCutFlow(weights, cutFlowName);
   WriteCutFlow(rawEvents, "RawEvents"+cutFlowName);
