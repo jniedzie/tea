@@ -19,6 +19,7 @@ NanoEventProcessor::NanoEventProcessor() {
 
 float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
   float weight = 1.0;
+  if (weightsBranchName.empty()) return weight;
   try {
     weight = event->Get(weightsBranchName);
   } catch (const Exception &e) {

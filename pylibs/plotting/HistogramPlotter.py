@@ -12,6 +12,7 @@ from CmsLabelsManager import CmsLabelsManager
 from Logger import *
 from Histogram import Histogram
 
+import cmsstyle as CMS
 
 class HistogramPlotter:
     def __init__(self, config):
@@ -49,7 +50,13 @@ class HistogramPlotter:
         self.histosamples2D = []
         self.data_integral = {}
         self.background_integral = {}
-        
+        self.background_cross_sections = {}
+
+        if hasattr(self.config, "bkgRawEventsThreshold"):
+            self.bkgRawEventsThreshold = self.config.bkgRawEventsThreshold
+        else:
+            self.bkgRawEventsThreshold = 0
+
         self.output_formats = ["pdf"]
         if hasattr(self.config, "output_formats"):
             self.output_formats = self.config.output_formats
@@ -86,7 +93,10 @@ class HistogramPlotter:
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
 
-        self.histosamples.append((copy.deepcopy(hist), sample))
+        if hist.entries < self.bkgRawEventsThreshold:
+            return
+
+        self.histosamples.append((copy.deepcopy(hist), copy.deepcopy(sample)))
 
         if sample.type is SampleType.data:
             self.data_integral[hist.getName()] = hist.hist.Integral()
@@ -166,6 +176,13 @@ class HistogramPlotter:
             return self.background_integral[input_hist.getName()]
         return None
 
+    def __getBackgroundCrossSections(self, input_hist):
+        if input_hist.getName() in self.background_cross_sections.keys():
+            return self.background_cross_sections[input_hist.getName()]
+        if input_hist.getName() == "Event_normCheck":
+            return 1
+        return None
+
     def __sortHistosamples(self):
         if hasattr(self.config, "custom_stacks_order"):
             try:
@@ -189,6 +206,17 @@ class HistogramPlotter:
     def buildStacks(self):
         self.__sortHistosamples()
 
+        # calculate valid histogram specific background cross sections
+        for n, (hist, sample) in enumerate(self.histosamples):
+            if sample.type != SampleType.background:
+                continue
+
+            if hist.getName() in self.background_cross_sections:
+                self.background_cross_sections[hist.getName()] += sample.cross_section
+            else:
+                self.background_cross_sections[hist.getName()] = sample.cross_section
+
+        # normalize background for total background integral
         for hist, sample in self.histosamples:
             if not hist.isGood():
                 warn(
@@ -199,7 +227,7 @@ class HistogramPlotter:
                 continue
 
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
-                hist), self.__getBackgroundIntegral(hist))
+                hist), None, self.__getBackgroundCrossSections(hist))
 
             if hist.getName() in self.background_integral:
                 self.background_integral[hist.getName()
@@ -207,6 +235,7 @@ class HistogramPlotter:
             else:
                 self.background_integral[hist.getName()] = hist.hist.Integral()
 
+        # normalize signal and data
         for hist, sample in self.histosamples:
             if not hist.isGood():
                 warn(
@@ -403,7 +432,6 @@ class HistogramPlotter:
         canvas.GetPad(1).SetLogy(hist.log_y)
 
     def drawStacks(self):
-
         for hist in self.config.histograms:
             canvas = TCanvas(hist.getName(), hist.getName(
             ), self.config.canvas_size[0], self.config.canvas_size[1])

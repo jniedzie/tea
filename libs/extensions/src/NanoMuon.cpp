@@ -5,6 +5,11 @@ using namespace std;
 
 NanoMuon::NanoMuon(shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
+bool NanoMuon::isTight() { 
+  if(isDSA()) return false;
+  return physicsObject->Get("tightId"); 
+}
+
 TLorentzVector NanoMuon::GetFourVector() {
   TLorentzVector v;
   v.SetPtEtaPhiM(GetPt(), GetEta(), GetPhi(), 0.105);
@@ -16,7 +21,7 @@ float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco) {
   
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   
-  if(isDSAMuon()) nameID = "dsamuonID";
+  if(isDSA()) nameID = "dsamuonID";
   float idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
   float recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
@@ -39,15 +44,15 @@ MuonIso NanoMuon::GetIso() {
 
 float NanoMuon::GetMatchIdxForNthBestMatch(int N) {
  string idxString;
- if (isDSAMuon()) idxString = "muonMatch" + to_string(N) + "idx";
- if (!isDSAMuon()) idxString = "dsaMatch" + to_string(N) + "idx";
+ if (isDSA()) idxString = "muonMatch" + to_string(N) + "idx";
+ if (!isDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
  return GetAsFloat(idxString);
 }
 
 float NanoMuon::GetMatchesForNthBestMatch(int N) {
  string matchString;
- if (isDSAMuon()) matchString = "muonMatch" + to_string(N);
- if (!isDSAMuon()) matchString = "dsaMatch" + to_string(N);
+ if (isDSA()) matchString = "muonMatch" + to_string(N);
+ if (!isDSA()) matchString = "dsaMatch" + to_string(N);
  return GetAsFloat(matchString);
 }
 

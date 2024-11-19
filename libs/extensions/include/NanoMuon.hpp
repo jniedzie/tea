@@ -26,7 +26,8 @@ class NanoMuon {
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
-  bool isDSAMuon() { return GetOriginalCollection() == "DSAMuon"; };
+  bool isDSA() { return GetOriginalCollection() == "DSAMuon"; };
+  bool isTight();
 
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }

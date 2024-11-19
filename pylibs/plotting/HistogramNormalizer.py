@@ -25,7 +25,7 @@ class HistogramNormalizer:
     if normalize_hists:
       self.__setBackgroundEntries()
   
-  def normalize(self, hist, sample, data_integral=None, background_integral=None):
+  def normalize(self, hist, sample, data_integral=None, background_integral=None, background_cross_sections=None):
     if hist.norm_type == NormalizationType.to_one:
       warn("Trying to normalize to one, this is not yet implemented properly")
       self.__normalizeToOne(hist, sample)
@@ -34,7 +34,7 @@ class HistogramNormalizer:
     elif hist.norm_type == NormalizationType.to_lumi:
       self.__normalizeToLumi(hist, sample)
     elif hist.norm_type == NormalizationType.to_data:
-      self.__normalizeToData(hist, sample, data_integral)
+      self.__normalizeToData(hist, sample, data_integral, background_cross_sections)
   
   def __normalizeToOne(self, hist, sample):
     if sample.type == SampleType.background:
@@ -70,18 +70,18 @@ class HistogramNormalizer:
     
     hist.hist.Scale(scale)
   
-  def __normalizeToData(self, hist, sample, data_integral):
+  def __normalizeToData(self, hist, sample, data_integral, background_cross_sections):
     if hist.hist.Integral() == 0:
-      error(f"Couldn't normalize to data: {hist.name}, {sample.name}")
+      error(f"Couldn't normalize to data: {hist.name}, {sample.name}, background integral is 0")
       return  
     if data_integral is None:
-      error(f"Couldn't normalize to data: {hist.name}, {sample.name}")
+      error(f"Couldn't normalize to data: {hist.name}, {sample.name}, no data integral is given")
       return
     
     scale = data_integral/hist.hist.Integral()
     
     if sample.type == SampleType.background:
-      scale *= sample.cross_section/self.total_background_cross_section
+      scale *= sample.cross_section/background_cross_sections
     elif sample.type == SampleType.data:  
       scale = 1
     
