@@ -26,7 +26,7 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
 
 CutFlowManager::~CutFlowManager() {}
 
-void CutFlowManager::RegisterPreExistingCutFlows(string collectionName) {
+void CutFlowManager::RegisterPreExistingCutFlows() {
 
   vector<string> existingCutFlows;
   TList *keys = eventReader->inputFile->GetListOfKeys();
@@ -40,7 +40,15 @@ void CutFlowManager::RegisterPreExistingCutFlows(string collectionName) {
     if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
     info() << "Input file contains " << cutFlowName << " directory - will store existing cutflow in the output." << endl;
 
-    RegisterCollection(cutFlowName);
+    string collectionName = "";
+    if(cutFlowName=="CutFlow") collectionName = "";
+    else if(cutFlowName.find("CollectionCutFlow_")!=string::npos) collectionName = cutFlowName.substr(cutFlowName.find("CollectionCutFlow_")+17);
+    else {
+      warn() << "Found cutflow in unknown format: " << cutFlowName << ". Expected cutflow name CutFlow or names starting with CollectionCutFlow_" << endl;
+      collectionName = cutFlowName;
+    }
+
+    RegisterCollection(collectionName);
     auto sourceDir = (TDirectory *)eventReader->inputFile->Get(cutFlowName.c_str());
 
     TIter nextKey(sourceDir->GetListOfKeys());

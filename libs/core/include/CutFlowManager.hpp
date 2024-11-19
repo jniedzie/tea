@@ -14,7 +14,7 @@ class CutFlowManager {
   CutFlowManager(std::shared_ptr<EventReader> eventReader_, std::shared_ptr<EventWriter> eventWriter_ = nullptr);
   ~CutFlowManager();
 
-  void RegisterPreExistingCutFlows(std::string collectionName = "");
+  void RegisterPreExistingCutFlows();
   void RegisterCollection(std::string collectionName);
 
   void RegisterCut(std::string cutName, std::string collectionName = "");
