@@ -52,7 +52,6 @@ void CutFlowManager::RegisterPreExistingCutFlows(string collectionName) {
       string cutName = key->GetName();
       float sumOfWeights = hist->GetBinContent(1);
       bool containsInitial = cutName == "0_initial";
-      existingCuts.push_back(cutName);
       delete obj;
 
       if(collectionName=="") {
