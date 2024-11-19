@@ -180,7 +180,6 @@ shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForMuons(shared_ptr<PhysicsObje
     }
     if (foundMuon1 && foundMuon2) muonVertices->push_back(vertex);
   }
-
   return muonVertices;
 }
 
@@ -193,7 +192,7 @@ shared_ptr<PhysicsObject> NanoEvent::GetVertexForDimuon(shared_ptr<PhysicsObject
   return dimuonVertex->at(0);
 }
 
-std::shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForDimuons(std::shared_ptr<vector<pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>>>> dimuons) {
+std::shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForDimuons(std::shared_ptr<Collection<DimuonPair>> dimuons) {
   auto muonVertices = make_shared<PhysicsObjects>();
   for (auto dimuon : *dimuons) {
     auto vertex = GetVertexForDimuon(dimuon.first, dimuon.second);
