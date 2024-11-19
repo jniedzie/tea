@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 
     eventWriter->AddCurrentEvent("Events");
   }
-  cutFlowManager->SaveCutFlow();
+  cutFlowManager->SaveAllCutFlows();
   cutFlowManager->Print();
   eventWriter->Save();
 

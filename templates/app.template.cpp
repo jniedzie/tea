@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
   histogramsHandler->SaveHistograms();
 
   // Tell CutFlowManager to save the cut flow
-  cutFlowManager->SaveCutFlow();
+  cutFlowManager->SaveAllCutFlows();
   cutFlowManager->Print();
 
   // Tell EventWriter to save the output tree

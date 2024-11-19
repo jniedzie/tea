@@ -9,7 +9,7 @@
 
 using namespace std;
 
-CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<EventWriter> eventWriter_, vector<string> additionalCutFlowCollections)
+CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<EventWriter> eventWriter_)
     : eventReader(eventReader_), eventWriter(eventWriter_), currentIndex(0), inputContainsInitial(false) {
   auto &config = ConfigManager::GetInstance();
 
@@ -19,23 +19,29 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
     info() << "Weights branch not specified -- will assume weight is 1 for all events" << endl;
   }
 
-  RegisterPreExistingCuts();
-  for(auto collectionName : additionalCutFlowCollections){
-    RegisterCollection(collectionName);
-    RegisterPreExistingCuts(collectionName);
-  }
+  RegisterPreExistingCutFlows();
+
   if (!eventWriter_) info() << "No eventWriter given for CutFlowManager" << endl;
 }
 
 CutFlowManager::~CutFlowManager() {}
 
-void CutFlowManager::RegisterPreExistingCuts(string collectionName) {
-  
-  string collectionCutFlowName = collectionName=="" ? "CutFlow" : "CollectionCutFlow_"+collectionName;
-  if (eventReader->inputFile->Get(collectionCutFlowName.c_str())) {
-    info() << "Input file contains " << collectionCutFlowName << " directory - will store existing cutflow in the output." << endl;
+void CutFlowManager::RegisterPreExistingCutFlows(string collectionName) {
 
-    auto sourceDir = (TDirectory *)eventReader->inputFile->Get(collectionCutFlowName.c_str());
+  vector<string> existingCutFlows;
+  TList *keys = eventReader->inputFile->GetListOfKeys();
+  for (int i = 0; i < keys->GetSize(); i++) {
+    TKey *key = (TKey*)keys->At(i);
+    TString keyName = key->GetName();
+    if (keyName.Contains("CutFlow")) existingCutFlows.push_back(keyName.Data());
+  }
+
+  for(auto cutFlowName : existingCutFlows) {
+    if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
+    info() << "Input file contains " << cutFlowName << " directory - will store existing cutflow in the output." << endl;
+
+    RegisterCollection(cutFlowName);
+    auto sourceDir = (TDirectory *)eventReader->inputFile->Get(cutFlowName.c_str());
 
     TIter nextKey(sourceDir->GetListOfKeys());
     TKey *key;
@@ -90,7 +96,7 @@ void CutFlowManager::RegisterCut(string cutName, string collectionName) {
 string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
   // Find full names in the cut flow matching the given cut name
   vector<string> matchingFullCutNames;
-  std::map<std::string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
   for (auto &[existingCutName, sumOfWeights] : weights) {
     if (existingCutName.find(cutName) != string::npos) {
       matchingFullCutNames.push_back(existingCutName);
@@ -144,7 +150,7 @@ void CutFlowManager::SaveCutFlow(string collectionName) {
   if (!eventWriter) {
     error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl;
   }
-  std::map<std::string, float> weights = weightsAfterCuts;
+  map<string, float> weights = weightsAfterCuts;
   string cutFlowName = "CutFlow";
   if(collectionName!="") {
     cutFlowName = "CollectionCutFlow_"+collectionName;
@@ -169,17 +175,17 @@ void CutFlowManager::SaveAllCutFlows() {
 }
 
 bool CutFlowManager::HasCut(string cutName, string collectionName) { 
-  std::vector<std::string> cuts = collectionName=="" ? existingCuts : existingCollectionCuts[collectionName];
-  return std::find(cuts.begin(), cuts.end(), cutName) != cuts.end(); 
+  vector<string> cuts = collectionName=="" ? existingCuts : existingCollectionCuts[collectionName];
+  return find(cuts.begin(), cuts.end(), cutName) != cuts.end(); 
 }
 
-std::map<std::string, float> CutFlowManager::GetCutFlow(string collectionName) { 
+map<string, float> CutFlowManager::GetCutFlow(string collectionName) { 
   if(collectionName!="") return weightsAfterCollectionCuts[collectionName];
   return weightsAfterCuts; 
 }
 
 void CutFlowManager::Print(string collectionName) {
-  std::map<std::string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
   map<int, pair<string, float>> sortedWeightsAfterCuts;
   for (auto &[cutName, sumOfWeights] : weights) {
     string number = cutName.substr(0, cutName.find("_"));

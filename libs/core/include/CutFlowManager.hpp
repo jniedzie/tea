@@ -11,10 +11,10 @@
 
 class CutFlowManager {
  public:
-  CutFlowManager(std::shared_ptr<EventReader> eventReader_, std::shared_ptr<EventWriter> eventWriter_ = nullptr, std::vector<std::string> additionalCutFlowCollections = {});
+  CutFlowManager(std::shared_ptr<EventReader> eventReader_, std::shared_ptr<EventWriter> eventWriter_ = nullptr);
   ~CutFlowManager();
 
-  void RegisterPreExistingCuts(std::string collectionName = "");
+  void RegisterPreExistingCutFlows(std::string collectionName = "");
   void RegisterCollection(std::string collectionName);
 
   void RegisterCut(std::string cutName, std::string collectionName = "");
