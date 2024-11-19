@@ -141,7 +141,6 @@ void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
   bool containsInitial = collectionName=="" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
   if (cutName == "initial" && containsInitial) return;
   string fullCutName = GetFullCutName(cutName, collectionName);
-  weightsAfterCuts[fullCutName] += GetCurrentEventWeight();
   if(collectionName=="") weightsAfterCuts[fullCutName] += GetCurrentEventWeight();
   else weightsAfterCollectionCuts[collectionName][fullCutName] += GetCurrentEventWeight();
 }
