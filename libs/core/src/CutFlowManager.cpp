@@ -93,10 +93,12 @@ void CutFlowManager::RegisterCut(string cutName, string collectionName) {
   if(collectionName=="") {
     currentIndex++;
     weightsAfterCuts[fullCutName] = 0;
+    rawEventsAfterCuts[fullCutName] = 0;
   }
   else {
     currentCollectionIndex[collectionName]++;
     weightsAfterCollectionCuts[collectionName][fullCutName] = 0;
+    rawEventsAfterCollectionCuts[collectionName][fullCutName] = 0;
   }
 }
 
@@ -148,8 +150,14 @@ void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
   bool containsInitial = collectionName=="" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
   if (cutName == "initial" && containsInitial) return;
   string fullCutName = GetFullCutName(cutName, collectionName);
-  if(collectionName=="") weightsAfterCuts[fullCutName] += GetCurrentEventWeight();
-  else weightsAfterCollectionCuts[collectionName][fullCutName] += GetCurrentEventWeight();
+  if(collectionName=="") {
+    weightsAfterCuts[fullCutName] += GetCurrentEventWeight();
+    rawEventsAfterCuts[fullCutName] += 1;
+  }
+  else {
+    weightsAfterCollectionCuts[collectionName][fullCutName] += GetCurrentEventWeight();
+    rawEventsAfterCollectionCuts[collectionName][fullCutName] += 1;
+  }
 }
 
 void CutFlowManager::SaveSingleCutFlow(string collectionName) {
@@ -157,20 +165,15 @@ void CutFlowManager::SaveSingleCutFlow(string collectionName) {
     error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl;
   }
   map<string, float> weights = weightsAfterCuts;
+  map<string, float> rawEvents = rawEventsAfterCuts;
   string cutFlowName = "CutFlow";
   if(collectionName!="") {
     cutFlowName = "CollectionCutFlow_"+collectionName;
     weights = weightsAfterCollectionCuts[collectionName];
+    rawEvents = weightsAfterCollectionCuts[collectionName];
   }
-  eventWriter->outFile->mkdir(cutFlowName.c_str());
-  eventWriter->outFile->cd(cutFlowName.c_str());
-
-  for (auto &[cutName, sumOfWeights] : weights) {
-    auto hist = new TH1D(cutName.c_str(), cutName.c_str(), 1, 0, 1);
-    hist->SetBinContent(1, sumOfWeights);
-    hist->Write();
-  }
-  eventWriter->outFile->cd();
+  WriteCutFlow(weights, cutFlowName);
+  WriteCutFlow(rawEvents, "RawEvents"+cutFlowName);
 }
 
 void CutFlowManager::SaveCutFlow() {
@@ -190,22 +193,47 @@ map<string, float> CutFlowManager::GetCutFlow(string collectionName) {
   return weightsAfterCuts; 
 }
 
+map<string, float> CutFlowManager::GetRawEventsCutFlow(string collectionName) { 
+  if(collectionName!="") return rawEventsAfterCollectionCuts[collectionName];
+  return rawEventsAfterCuts; 
+}
+
 void CutFlowManager::Print(string collectionName) {
   map<string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, float> rawEvents = collectionName=="" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
   map<int, pair<string, float>> sortedWeightsAfterCuts;
+  map<int, pair<string, float>> sortedRawEventsAfterCuts;
   for (auto &[cutName, sumOfWeights] : weights) {
     string number = cutName.substr(0, cutName.find("_"));
     int index = stoi(number);
     sortedWeightsAfterCuts[index] = {cutName, sumOfWeights};
+    sortedRawEventsAfterCuts[index] = {cutName, rawEvents[cutName]};
   }
 
-  info() << "CutFlow (sum of gen weights):" << endl;
+  info() << "CutFlow (sum of gen weights) (sum of raw events):" << endl;
   for (auto &[index, values] : sortedWeightsAfterCuts) {
-    info() << get<0>(values) << " " << get<1>(values) << endl;
+    info() << get<0>(values) << " " << get<1>(values) << " " << get<1>(sortedRawEventsAfterCuts[index]) << endl;
   }
 }
 
 bool CutFlowManager::isEmpty(string collectionName) { 
   if(collectionName!="") return weightsAfterCollectionCuts[collectionName].empty();
   return weightsAfterCuts.empty(); 
+}
+
+bool CutFlowManager::isRawEventsEmpty(string collectionName) { 
+  if(collectionName!="") return rawEventsAfterCollectionCuts[collectionName].empty();
+  return rawEventsAfterCuts.empty(); 
+}
+
+void CutFlowManager::WriteCutFlow(map<string, float> weights, string cutFlowName) {
+  eventWriter->outFile->mkdir(cutFlowName.c_str());
+  eventWriter->outFile->cd(cutFlowName.c_str());
+
+  for (auto &[cutName, sumOfWeights] : weights) {
+    auto hist = new TH1D(cutName.c_str(), cutName.c_str(), 1, 0, 1);
+    hist->SetBinContent(1, sumOfWeights);
+    hist->Write();
+  }
+  eventWriter->outFile->cd();
 }

@@ -59,19 +59,27 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
 void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlowManager) {
   int cutFlowLength = cutFlowManager->GetCutFlow().size();
   auto cutFlowHist = new TH1D("cutFlow", "cutFlow", cutFlowLength, 0, cutFlowLength);
+  auto rawEventsCutFlowHist = new TH1D("rawEventsCutFlow", "rawEventsCutFlow", cutFlowLength, 0, cutFlowLength);
 
   map<int, pair<string, float>> sortedWeightsAfterCuts;
-  for (auto& [cutName, sumOfWeights] : cutFlowManager->GetCutFlow()) {
+  map<int, pair<string, float>> sortedRawEventsAfterCuts;
+  auto cutFlow = cutFlowManager->GetCutFlow();
+  auto rawEventsCutFlow = cutFlowManager->GetRawEventsCutFlow();
+  for (auto& [cutName, sumOfWeights] : cutFlow) {
     string number = cutName.substr(0, cutName.find("_"));
     int index = stoi(number);
     sortedWeightsAfterCuts[index] = {cutName, sumOfWeights};
+    sortedRawEventsAfterCuts[index] = {cutName, rawEventsCutFlow[cutName]};
   }
 
   int bin = 1;
   for (auto& [index, values] : sortedWeightsAfterCuts) {
     cutFlowHist->SetBinContent(bin, get<1>(values));
+    rawEventsCutFlowHist->SetBinContent(bin, get<1>(sortedRawEventsAfterCuts[index]));
     cutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(values).c_str());
+    rawEventsCutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(sortedRawEventsAfterCuts[index]).c_str());
     bin++;
   }
   histogramsHandler->SetHistogram1D("cutFlow", cutFlowHist);
+  histogramsHandler->SetHistogram1D("rawEventsCutFlow", rawEventsCutFlowHist);
 }

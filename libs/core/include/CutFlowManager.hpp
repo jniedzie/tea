@@ -20,9 +20,11 @@ class CutFlowManager {
   void UpdateCutFlow(std::string cutName, std::string collectionName = "");
   bool HasCut(std::string cutName, std::string collectionName = "");
   std::map<std::string, float> GetCutFlow(std::string collectionName = "");
+  std::map<std::string, float> GetRawEventsCutFlow(std::string collectionName = "");
   void Print(std::string collectionName = "");
 
   bool isEmpty(std::string collectionName = "");
+  bool isRawEventsEmpty(std::string collectionName = "");
 
   void SaveCutFlow();
 
@@ -33,7 +35,9 @@ class CutFlowManager {
   std::shared_ptr<EventWriter> eventWriter;
 
   std::map<std::string, float> weightsAfterCuts;
+  std::map<std::string, float> rawEventsAfterCuts;
   std::map<std::string,std::map<std::string, float>> weightsAfterCollectionCuts;
+  std::map<std::string,std::map<std::string, float>> rawEventsAfterCollectionCuts;
 
   int currentIndex;
   std::map<std::string,int> currentCollectionIndex;
@@ -48,6 +52,7 @@ class CutFlowManager {
   std::string GetFullCutName(std::string cutName, std::string collectionName = "");
   void RegisterPreExistingCutFlows();
   void SaveSingleCutFlow(std::string collectionName = "");
+  void WriteCutFlow(std::map<std::string, float> weights, std::string cutFlowName);
 
 };
 
