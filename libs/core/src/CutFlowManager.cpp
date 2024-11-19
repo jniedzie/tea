@@ -152,7 +152,7 @@ void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
   else weightsAfterCollectionCuts[collectionName][fullCutName] += GetCurrentEventWeight();
 }
 
-void CutFlowManager::SaveCutFlow(string collectionName) {
+void CutFlowManager::SaveSingleCutFlow(string collectionName) {
   if (!eventWriter) {
     error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl;
   }
@@ -173,10 +173,10 @@ void CutFlowManager::SaveCutFlow(string collectionName) {
   eventWriter->outFile->cd();
 }
 
-void CutFlowManager::SaveAllCutFlows() {
-  SaveCutFlow();
+void CutFlowManager::SaveCutFlow() {
+  SaveSingleCutFlow();
   for(auto &[collectionName, vertexCuts] : weightsAfterCollectionCuts){
-    SaveCutFlow(collectionName);
+    SaveSingleCutFlow(collectionName);
   }
 }
 
@@ -203,4 +203,9 @@ void CutFlowManager::Print(string collectionName) {
   for (auto &[index, values] : sortedWeightsAfterCuts) {
     info() << get<0>(values) << " " << get<1>(values) << endl;
   }
+}
+
+bool CutFlowManager::isEmpty(string collectionName) { 
+  if(collectionName!="") return weightsAfterCollectionCuts[collectionName].empty();
+  return weightsAfterCuts.empty(); 
 }
