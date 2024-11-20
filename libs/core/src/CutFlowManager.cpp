@@ -40,7 +40,6 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
     if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
     info() << "Input file contains " << cutFlowName << " directory - will store existing cutflow in the output." << endl;
 
-
     bool rawEvents = cutFlowName.find("RawEvents")!=string::npos;
     string collectionName = "";
     if(cutFlowName=="CutFlow" || cutFlowName=="RawEventsCutFlow") collectionName = "";
@@ -53,7 +52,7 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
       collectionName = cutFlowName;
     }
 
-    if(!rawEvents) RegisterCollection(collectionName);
+    if(!rawEvents && collectionName!="") RegisterCollection(collectionName);
     auto sourceDir = (TDirectory *)eventReader->inputFile->Get(cutFlowName.c_str());
 
     TIter nextKey(sourceDir->GetListOfKeys());
