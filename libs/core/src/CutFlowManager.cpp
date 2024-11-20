@@ -91,6 +91,7 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
 void CutFlowManager::RegisterCollection(string collectionName) {
   currentCollectionIndex[collectionName] = 0;
   weightsAfterCollectionCuts[collectionName] = {};
+  rawEventsAfterCollectionCuts[collectionName] = {};
   existingCollectionCuts[collectionName] = {};
   inputCollectionContainsInitial[collectionName] = false;
 }
@@ -144,7 +145,6 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
 float CutFlowManager::GetCurrentEventWeight() {
   float weight = 1.0;
   if (weightsBranchName == "") return weight;
-
   try {
     weight = eventReader->currentEvent->Get(weightsBranchName);
   } catch (const Exception &e) {
