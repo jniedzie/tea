@@ -59,9 +59,9 @@ class Histogram:
           original_bin = self.hist.FindBin(new_bin_edges[i-1])
           new_histogram.SetBinContent(i, self.hist.GetBinContent(original_bin))
           new_histogram.SetBinError(i, self.hist.GetBinError(original_bin))
-          if self.hist.GetXaxis().GetBinLabel(original_bin) != "":
-              new_histogram.GetXaxis().SetBinLabel(i, self.hist.GetXaxis().GetBinLabel(original_bin))
-        
+          original_label = self.hist.GetXaxis().GetBinLabel(original_bin)
+          if original_label != "":
+              new_histogram.GetXaxis().SetBinLabel(i, original_label)
       self.hist = new_histogram
     
   def isGood(self):

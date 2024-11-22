@@ -90,6 +90,8 @@ void HistogramsHandler::CheckHistogram(string name){
 }
 
 void HistogramsHandler::SaveHistograms() {
+  info() << "Output path: " << outputPath << endl;
+
   string path = outputPath.substr(0, outputPath.find_last_of("/"));
   string filename = outputPath.substr(outputPath.find_last_of("/"));
   if(path == "") path = "./";
