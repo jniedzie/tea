@@ -24,14 +24,14 @@ class NanoEvent {
 
   std::shared_ptr<Event> GetEvent() { return event; }
 
-  std::shared_ptr<PhysicsObjects> GetDRMatchedMuons(float matchingDeltaR = 0.1,
-                                                    std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+  std::shared_ptr<PhysicsObjects> GetDRMatchedMuons(std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection,
+                                                    float matchingDeltaR = 0.1);
   std::shared_ptr<PhysicsObjects> GetOuterDRMatchedMuons(
-      float matchingDeltaR = 0.1, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+      std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection, float matchingDeltaR = 0.1);
   std::shared_ptr<PhysicsObjects> GetProximityDRMatchedMuons(
-      float matchingDeltaR = 0.1, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+      std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection, float matchingDeltaR = 0.1);
   std::shared_ptr<PhysicsObjects> GetSegmentMatchedMuons(
-      float minMatchRatio = 2.0f / 3.0f, std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection = nullptr);
+      std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> muonCollection, float minMatchRatio = 2.0f / 3.0f);
 
   std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<PhysicsObjects> muonCollection);

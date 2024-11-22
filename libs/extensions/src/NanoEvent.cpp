@@ -12,14 +12,10 @@ TLorentzVector NanoEvent::GetMetFourVector() {
 
 float NanoEvent::GetMetPt() { return Get("MET_pt"); }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(float matchingDeltaR,
-                                                        shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
-  auto looseMuons = GetCollection("LooseMuons");
-  auto looseDSAMuons = GetCollection("LooseDSAMuons");
-  if (muonCollection != nullptr) {
-    looseMuons = GetPATMuonsFromCollection(muonCollection);
-    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
-  }
+shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
+                                                        float matchingDeltaR) {
+  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
   for (auto muon : *looseMuons) {
@@ -38,14 +34,10 @@ shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(float matchingDeltaR,
   return allMuons;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDeltaR,
-                                                             shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
-  auto looseMuons = GetCollection("LooseMuons");
-  auto looseDSAMuons = GetCollection("LooseDSAMuons");
-  if (muonCollection != nullptr) {
-    looseMuons = GetPATMuonsFromCollection(muonCollection);
-    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
-  }
+shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
+                                                             float matchingDeltaR) {
+  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
   for (auto muon : *looseMuons) {
@@ -62,14 +54,10 @@ shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(float matchingDelta
   return allMuons;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(float matchingDeltaR,
-                                                                 shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
-  auto looseMuons = GetCollection("LooseMuons");
-  auto looseDSAMuons = GetCollection("LooseDSAMuons");
-  if (muonCollection != nullptr) {
-    looseMuons = GetPATMuonsFromCollection(muonCollection);
-    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
-  }
+shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
+                                                                 float matchingDeltaR) {
+  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
   for (auto muon : *looseMuons) {
@@ -87,14 +75,10 @@ shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(float matchingD
   return allMuons;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(float minMatchRatio,
-                                                             shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection) {
-  auto looseMuons = GetCollection("LooseMuons");
-  auto looseDSAMuons = GetCollection("LooseDSAMuons");
-  if (muonCollection != nullptr) {
-    looseMuons = GetPATMuonsFromCollection(muonCollection);
-    looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
-  }
+shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
+                                                             float minMatchRatio) {
+  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
   for (auto muon : *looseMuons) {
