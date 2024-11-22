@@ -1,5 +1,13 @@
 
 scaleFactors = {
+  # jets
+  "jetIDtight": {
+    "path": "../tea/jsonPOG/POG/JME/2018_UL/jmar.json.gz",
+    "type": "PUJetID_eff",
+    "systematic": "nom",
+    "workingPoint": "T",
+  },
+  
   # b-tagging
   "bTaggingMedium": {
     "path": "../tea/jsonPOG/POG/BTV/2018_UL/btagging.json.gz",

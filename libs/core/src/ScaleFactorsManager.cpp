@@ -65,6 +65,13 @@ void ScaleFactorsManager::ReadPileupSFs() {
   pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
 }
 
+float ScaleFactorsManager::GetJetIDScaleFactor(string name, float eta, float pt) {
+  if (!applyScaleFactors["jetID"]) return 1.0;
+
+  auto extraArgs = correctionsExtraArgs[name];
+  return TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+}
+
 float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt) {
   if (!applyScaleFactors["muon"]) return 1.0;
 
