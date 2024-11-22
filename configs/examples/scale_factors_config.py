@@ -11,9 +11,8 @@ scaleFactors = {
   "bTaggingTight": {
     "path": "../tea/jsonPOG/POG/BTV/2018_UL/btagging.json.gz",
     "type": "deepJet_mujets",
-    "workingPoint": "T",
     "systematic": "central",
-    "workingPoint": "M",
+    "workingPoint": "T",
     "jetID": "5",
   },
   
