@@ -22,7 +22,12 @@ class Event {
                   int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
       std::string message = "\nTrying to access incorrect event-level branch: " + branchName;
-      fatal(file, function, line) << message << std::endl;
+      if (branchName.find("Weight") != std::string::npos || branchName.find("Wgt") != std::string::npos
+          || branchName.find("weight") != std::string::npos || branchName.find("wgt") != std::string::npos) {
+        message += ", it's probably fine for data if this is a gen weight branch.";
+        warn() << message << std::endl;
+      }
+      else fatal(file, function, line) << message << std::endl;
       throw Exception(message.c_str());
     }
 
