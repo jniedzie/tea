@@ -97,6 +97,7 @@ void CutFlowManager::RegisterCollection(string collectionName) {
 }
 
 void CutFlowManager::RegisterCut(string cutName, string collectionName) {
+  if(cutName == "initial" && HasCut("initial", collectionName)) return;
   bool containsInitial = collectionName=="" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
   if (cutName == "initial" && containsInitial) return;
   int index = collectionName=="" ? currentIndex : currentCollectionIndex[collectionName];
