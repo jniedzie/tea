@@ -23,7 +23,7 @@ float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
   try {
     weight = event->Get(weightsBranchName);
   } catch (const Exception &e) {
-    warn() << "Coudn't get weight from branch: " << weightsBranchName << endl;
+    warn() << "NanoEventProcessor failed to get gen weight from branch: " << weightsBranchName << endl;
   }
   return weight;
 }
