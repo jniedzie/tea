@@ -34,7 +34,7 @@ class ConfigManager {
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsMap> &scaleFactors);
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsTuple> &scaleFactors);
 
-  void GetSelections(std::vector<std::pair<std::string, std::pair<float, float>>> &selections);
+  void GetCuts(std::vector<std::pair<std::string, std::pair<float, float>>> &cuts);
 
   void SetInputPath(std::string path) { inputPath = path; }
   void SetTreesOutputPath(std::string path) { treesOutputPath = path; }

@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   auto eventReader = make_shared<EventReader>();
   auto eventWriter = make_shared<EventWriter>(eventReader);
   
-  // Create a CutFlowManager to keep track of how many events passed selections
+  // Create a CutFlowManager to keep track of how many events passed cuts
   auto cutFlowManager = make_shared<CutFlowManager>(eventReader, eventWriter);
 
   // If you want to fill some histograms, use HistogramsHandler to automatically create histograms

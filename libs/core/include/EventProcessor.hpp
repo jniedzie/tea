@@ -24,14 +24,14 @@ class EventProcessor {
 
   bool PassesGoldenJson(const std::shared_ptr<Event> event);
 
-  bool PassesTriggerSelections(const std::shared_ptr<Event> event);
+  bool PassesTriggerCuts(const std::shared_ptr<Event> event);
   bool PassesMetFilters(const std::shared_ptr<Event> event);
 
-  bool PassesEventSelections(const std::shared_ptr<Event> event, std::shared_ptr<CutFlowManager> cutFlowManager);
+  bool PassesEventCuts(const std::shared_ptr<Event> event, std::shared_ptr<CutFlowManager> cutFlowManager);
 
  private:
   std::vector<std::string> triggerNames;
-  std::vector<std::pair<std::string, std::pair<float, float>>> eventSelections;
+  std::vector<std::pair<std::string, std::pair<float, float>>> eventCuts;
   std::vector<std::string> requiredFlags;
 
   std::map<int, std::vector<std::vector<int>>> goldenJson;

@@ -377,7 +377,7 @@ void ConfigManager::GetExtraEventCollections(map<string, ExtraCollection> &extra
       } else if (PyTuple_Check(pyValue)) {
         PyObject *min = GetItem(pyValue, 0);
         PyObject *max = GetItem(pyValue, 1);
-        extraCollection.selections[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
+        extraCollection.allCuts[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
       } else {
         extraCollection.flags[keyStr] = PyLong_AsLong(pyValue);
       }
@@ -535,8 +535,8 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogra
   }
 }
 
-void ConfigManager::GetSelections(vector<pair<string, pair<float, float>>> &selections) {
-  PyObject *pythonDict = GetPythonDict("eventSelections");
+void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
+  PyObject *pythonDict = GetPythonDict("eventCuts");
 
   PyObject *cutName, *cutValues;
   Py_ssize_t pos = 0;
@@ -548,6 +548,6 @@ void ConfigManager::GetSelections(vector<pair<string, pair<float, float>>> &sele
     }
     PyObject *min = GetItem(cutValues, 0);
     PyObject *max = GetItem(cutValues, 1);
-    selections.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
+    cuts.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
   }
 }
