@@ -77,7 +77,7 @@ void Event::AddExtraCollections() {
         }
         if (!passes) continue;
 
-        for (auto &[branchName, cuts] : extraCollection.selections) {
+        for (auto &[branchName, cuts] : extraCollection.allCuts) {
           passes = checkCuts(physicsObject, branchName, cuts);
           if (!passes) break;
         }

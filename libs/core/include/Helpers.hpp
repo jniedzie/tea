@@ -124,15 +124,15 @@ inline bool FileExists(const std::string& name) {
 
 struct ExtraCollection {
   std::vector<std::string> inputCollections;
-  std::map<std::string, std::pair<float, float>> selections;
+  std::map<std::string, std::pair<float, float>> allCuts;
   std::map<std::string, int> flags;
   
   void Print() {
     info() << "Input collections: " << std::endl;
     for (std::string name : inputCollections) info() << name << std::endl;
 
-    info() << "Selections: " << std::endl;
-    for (auto &[name, cuts] : selections) {
+    info() << "All cuts: " << std::endl;
+    for (auto &[name, cuts] : allCuts) {
       info() << "\t" << name << ": " << cuts.first << ", " << cuts.second << std::endl;
     }
     info() << "Flags: " << std::endl;

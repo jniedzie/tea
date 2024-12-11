@@ -52,8 +52,8 @@ extraEventCollections = {
     },
 }
 
-# define simple event-level selections
-eventSelections = {
+# define simple event-level cuts
+eventCuts = {
     "MET_pt": (30, 9999999),
     "nGoodLeptons": (1, 9999999),
     "nGoodJets": (4, 9999999),

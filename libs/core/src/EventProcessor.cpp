@@ -17,9 +17,9 @@ EventProcessor::EventProcessor() {
   }
 
   try {
-    config.GetSelections(eventSelections);
+    config.GetCuts(eventCuts);
   } catch (const Exception &e) {
-    warn() << "Couldn't read eventSelections from config file " << endl;
+    warn() << "Couldn't read eventCuts from config file " << endl;
   }
 
     try {
@@ -54,7 +54,7 @@ bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
   return false;
 }
 
-bool EventProcessor::PassesTriggerSelections(const shared_ptr<Event> event) {
+bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
   bool passes = true;
   for (auto &triggerName : triggerNames) {
     passes = false;
@@ -80,13 +80,13 @@ bool EventProcessor::PassesMetFilters(const shared_ptr<Event> event){
 }
 
 void EventProcessor::RegisterCuts(shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto &[cutName, cutValues] : eventSelections) {
+  for (auto &[cutName, cutValues] : eventCuts) {
     cutFlowManager->RegisterCut(cutName);
   }
 }
 
-bool EventProcessor::PassesEventSelections(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto &[cutName, cutValues] : eventSelections) {
+bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
+  for (auto &[cutName, cutValues] : eventCuts) {
 
     // TODO: this should be more generic, not only for MET_pt
     if (cutName == "MET_pt") {

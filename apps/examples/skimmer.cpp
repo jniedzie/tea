@@ -43,10 +43,10 @@ int main(int argc, char **argv) {
     auto event = eventReader->GetEvent(iEvent);
 
     cutFlowManager->UpdateCutFlow("initial");
-    if(!eventProcessor->PassesTriggerSelections(event)) continue;
+    if(!eventProcessor->PassesTriggerCuts(event)) continue;
     cutFlowManager->UpdateCutFlow("trigger");
 
-    if(!eventProcessor->PassesEventSelections(event, cutFlowManager)) continue;
+    if(!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
 
     eventWriter->AddCurrentEvent("Events");
   }
