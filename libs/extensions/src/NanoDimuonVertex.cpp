@@ -12,6 +12,8 @@ NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, con
   muon2 = muons.second;
 
   Lxyz.SetXYZ(GetAsFloat("vx") - event->GetAsFloat("PV_x"), GetAsFloat("vy") - event->GetAsFloat("PV_y"), GetAsFloat("vz") - event->GetAsFloat("PV_z"));
+  float PV_err = sqrt(event->GetAsFloat("PV_chi2"));
+  LxySigma = (1/GetLxyFromPV())*sqrt(pow(Lxyz.X(),2)*(pow(GetAsFloat("vxErr"),2)+pow(PV_err,2))+pow(Lxyz.Y(),2)*(pow(GetAsFloat("vyErr"),2)+pow(PV_err,2)));
 }
 
 string NanoDimuonVertex::GetVertexCategory() {
@@ -93,6 +95,19 @@ float NanoDimuonVertex::GetDeltaPixelHits() {
   return 0;
 }
 
+float NanoDimuonVertex::Get3DOpeningAngle() {
+  auto muon1fourVector = asNanoMuon(muon1)->GetFourVector();
+  auto muon2fourVector = asNanoMuon(muon2)->GetFourVector();
+  auto muon1Vector = muon1fourVector.Vect();
+  auto muon2Vector = muon2fourVector.Vect();
+  return muon1Vector.Angle(muon2Vector);
+}
+
+float NanoDimuonVertex::GetCosine3DOpeningAngle() {
+  auto angle = Get3DOpeningAngle();
+  return cos(angle);
+}
+
 float NanoDimuonVertex::GetDimuonChargeProduct() {
   return float(muon1->GetAsFloat("charge")) * float(muon2->GetAsFloat("charge"));
 }
@@ -121,4 +136,25 @@ float NanoDimuonVertex::GetOuterDeltaEta() {
 
 float NanoDimuonVertex::GetOuterDeltaPhi() {
   return muon1->GetAsFloat("outerPhi") - muon2->GetAsFloat("outerPhi");
+}
+
+float NanoDimuonVertex::GetTotalNumberOfSegments() {
+  std::string category = GetVertexCategory();
+  if(category=="Pat") return 0;
+  if(category=="PatDSA") return muon2->GetAsFloat("nSegments");
+  return muon1->GetAsFloat("nSegments") + muon2->GetAsFloat("nSegments");
+}
+
+float NanoDimuonVertex::GetTotalNumberOfDTHits() {
+  std::string category = GetVertexCategory();
+  if(category=="Pat") return 0;
+  if(category=="PatDSA") return muon2->GetAsFloat("trkNumDTHits");
+  return muon1->GetAsFloat("trkNumDTHits") + muon2->GetAsFloat("trkNumDTHits");
+}
+
+float NanoDimuonVertex::GetTotalNumberOfStations() {
+  std::string category = GetVertexCategory();
+  if(category=="DSA") return 0;
+  if(category=="PatDSA") return muon1->GetAsFloat("nStations");
+  return muon1->GetAsFloat("nStations") + muon2->GetAsFloat("nStations");
 }

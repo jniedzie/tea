@@ -47,11 +47,14 @@ class NanoDimuonVertex {
 
   TVector3 GetLxyzFromPV() { return Lxyz; };
   float GetLxyFromPV() { return Lxyz.Perp(); }
+  float GetLxySigmaFromPV() { return LxySigma; }
 
   float GetCollinearityAngle();
   float GetDPhiBetweenMuonpTAndLxy(int muonIndex);
   float GetDPhiBetweenDimuonpTAndPtMiss(TLorentzVector ptMissFourVector);
   float GetDeltaPixelHits();
+  float Get3DOpeningAngle();
+  float GetCosine3DOpeningAngle();
 
   float GetDimuonChargeProduct();
   float GetOuterDeltaR();
@@ -61,12 +64,17 @@ class NanoDimuonVertex {
   float GetOuterDeltaEta();
   float GetOuterDeltaPhi();
 
+  float GetTotalNumberOfSegments();
+  float GetTotalNumberOfDTHits();
+  float GetTotalNumberOfStations();
+
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
   std::shared_ptr<PhysicsObject> muon1;
   std::shared_ptr<PhysicsObject> muon2;
 
   TVector3 Lxyz;
+  float LxySigma;
 
   bool hasDSAMuon;
   bool hasPatMuon;
