@@ -6,6 +6,7 @@
 #include "HistogramsHandler.hpp"
 #include "Profiler.hpp"
 #include "HistogramsFiller.hpp"
+#include "ArgsManager.hpp"
 
 // If you also created a histogram filler, you can include it here
 // #include "MyHistogramsFiller.hpp"
@@ -25,9 +26,6 @@ int main(int argc, char **argv) {
   
   if (args->GetString("input_path").has_value()) {
     config.SetInputPath(args->GetString("input_path").value());
-  }
-  if (args->GetString("output_path").has_value()) {
-    config.SetHistogramsOutputPath(args->GetString("output_path").value());
   }
   if (args->GetString("output_hists_path").has_value()) {
     config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
