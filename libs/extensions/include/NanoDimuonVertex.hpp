@@ -66,7 +66,7 @@ class NanoDimuonVertex {
 
   float GetTotalNumberOfSegments();
   float GetTotalNumberOfDTHits();
-  float GetTotalNumberOfStations();
+  float GetTotalNumberOfCSCHits();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

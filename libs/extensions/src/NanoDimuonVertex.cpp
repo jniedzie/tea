@@ -152,9 +152,9 @@ float NanoDimuonVertex::GetTotalNumberOfDTHits() {
   return muon1->GetAsFloat("trkNumDTHits") + muon2->GetAsFloat("trkNumDTHits");
 }
 
-float NanoDimuonVertex::GetTotalNumberOfStations() {
+float NanoDimuonVertex::GetTotalNumberOfCSCHits() {
   std::string category = GetVertexCategory();
-  if(category=="DSA") return 0;
-  if(category=="PatDSA") return muon1->GetAsFloat("nStations");
-  return muon1->GetAsFloat("nStations") + muon2->GetAsFloat("nStations");
+  if(category=="Pat") return 0;
+  if(category=="PatDSA") return muon2->GetAsFloat("trkNumCSCHits");
+  return muon1->GetAsFloat("trkNumCSCHits") + muon2->GetAsFloat("trkNumCSCHits");
 }
