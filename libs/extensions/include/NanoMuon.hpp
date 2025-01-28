@@ -32,6 +32,7 @@ class NanoMuon {
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }
   inline float GetPhi() { return physicsObject->Get("phi"); }
+  inline int GetCharge() { return physicsObject->Get("charge"); }
   inline float GetOuterEta() { return physicsObject->Get("outerEta"); }
   inline float GetOuterPhi() { return physicsObject->Get("outerPhi"); }
 

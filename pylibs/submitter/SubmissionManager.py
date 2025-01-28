@@ -41,10 +41,11 @@ class SubmissionManager:
     else:
       error("SubmissionManager -- Unrecognized input/output option")
   
-  def run_condor(self, job_flavour, resubmit_job, dry):
+  def run_condor(self, job_flavour, memory_request, resubmit_job, dry):
     info("Running on condor")
     
     self.job_flavour = job_flavour
+    self.memory_request = memory_request
     self.resubmit_job = resubmit_job
     
 
@@ -272,6 +273,7 @@ class SubmissionManager:
   def __set_condor_script_variables(self, n_files):
     condor_run_script_name_escaped = self.condor_run_script_name.replace("/", "\/")
     os.system(f"sed -i 's/<executable>/{condor_run_script_name_escaped}/g' {self.condor_config_name}")
+    os.system(f"sed -i 's/<memory_request>/{self.memory_request}/g' {self.condor_config_name}")
     os.system(f"sed -i 's/<job_flavour>/{self.job_flavour}/g' {self.condor_config_name}")
   
     if self.resubmit_job is not None:

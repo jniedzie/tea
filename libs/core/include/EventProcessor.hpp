@@ -27,7 +27,7 @@ class EventProcessor {
   bool PassesTriggerCuts(const std::shared_ptr<Event> event);
   bool PassesMetFilters(const std::shared_ptr<Event> event);
 
-  bool PassesEventCuts(const std::shared_ptr<Event> event, std::shared_ptr<CutFlowManager> cutFlowManager);
+  bool PassesEventCuts(const std::shared_ptr<Event> event, std::shared_ptr<CutFlowManager> cutFlowManager=nullptr);
 
  private:
   std::vector<std::string> triggerNames;

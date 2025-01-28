@@ -95,7 +95,7 @@ bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<C
     } else {
       if (!inRange(event->GetCollection(cutName.substr(1))->size(), cutValues)) return false;
     }
-    cutFlowManager->UpdateCutFlow(cutName);
+    if(cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
   }
 
   return true;

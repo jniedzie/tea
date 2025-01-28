@@ -6,33 +6,32 @@
 #include "HistogramsHandler.hpp"
 #include "Profiler.hpp"
 #include "HistogramsFiller.hpp"
+#include "ArgsManager.hpp"
 
 // If you also created a histogram filler, you can include it here
 // #include "MyHistogramsFiller.hpp"
 
 using namespace std;
 
-void CheckArgs(int argc, char **argv) {
-  if (argc != 2 && argc != 4) {
-    fatal() << "Usage: " << argv[0] << " config_path"<<endl;
-    fatal() << "or"<<endl;
-    fatal() << argv[0] << " config_path input_path output_path"<<endl;
+int main(int argc, char **argv) {
+  
+  auto args = make_unique<ArgsManager>(argc, argv);
+  if (!args->GetString("config").has_value()) {
+    fatal() << "No config file provided" << endl;
     exit(1);
   }
-}
 
-int main(int argc, char **argv) {
-  CheckArgs(argc, argv);
-  
-  // Initialize ConfigManager with the path passed as an argument to the app
-  ConfigManager::Initialize(argv[1]);
-
+  ConfigManager::Initialize(args->GetString("config").value());
   auto &config = ConfigManager::GetInstance();
-
-  // If you want to override input/output paths, you can do it here  
-  if(argc == 4){    
-    config.SetInputPath(argv[2]);
-    config.SetOutputPath(argv[3]);
+  
+  if (args->GetString("input_path").has_value()) {
+    config.SetInputPath(args->GetString("input_path").value());
+  }
+  if (args->GetString("output_hists_path").has_value()) {
+    config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
+  }
+  if (args->GetString("output_trees_path").has_value()) {
+    config.SetTreesOutputPath(args->GetString("output_trees_path").value());
   }
 
   // Create event reader and writer, which will handle input/output trees for you

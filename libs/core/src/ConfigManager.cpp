@@ -35,7 +35,7 @@ ConfigManager::ConfigManager(std::string *const _configPath) {
   pythonFile = fopen(configPath.c_str(), "r");
 
   if (!pythonFile) {
-    fatal() << "Could not parse python config" << endl;
+    fatal() << "Could not parse python config: " << configPath << endl;
     Py_Finalize();
     exit(1);
   }

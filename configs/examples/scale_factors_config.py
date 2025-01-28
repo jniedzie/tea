@@ -77,7 +77,7 @@ scaleFactors = {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   
   # Pileup
