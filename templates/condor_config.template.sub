@@ -9,6 +9,6 @@ log                   = log/$(ClusterId).log
 requirements 	        = (OpSysAndVer == "CentOS7" || OpSysAndVer == "RedHat9")
 request_memory        = <memory_request> GB
 +JobFlavour           = "<job_flavour>"
-max_materialize       = 5000
+max_materialize       = <materialize_max>
 
 queue <n_jobs>
