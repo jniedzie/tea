@@ -37,8 +37,12 @@ class Histogram:
   def load(self, input_file):
     self.hist = input_file.Get(self.name)
     
-    if self.hist is None or type(self.hist) is TObject:
+    if self.hist is None:
       warn(f"Could not find histogram: {self.name}")
+      return
+    
+    if not self.hist or type(self.hist) is TObject:
+      warn(f"Histogram: {self.name} is invalid or uninitialized")
       return
     
     self.entries = self.hist.GetEntries()
@@ -67,9 +71,12 @@ class Histogram:
       self.hist = new_histogram
     
   def isGood(self):
-    if self.hist is None or type(self.hist) is TObject:
+    if self.hist is None:
       warn(f"Could not find histogram: {self.name}")
-      return False
+      return
+    if not self.hist or type(self.hist) is TObject:
+      warn(f"Histogram: {self.name} is invalid or uninitialized")
+      return
     if self.hist.GetEntries() == 0:
       return False
     
