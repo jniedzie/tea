@@ -21,8 +21,12 @@ float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco) {
   
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   
-  if(isDSA()) nameID = "dsamuonID";
-  float idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
+  float idSF = 1.0;
+  if(isDSA()) {
+    nameID = "dsamuonID";
+    idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
+  }
+  else idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
   float recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
   

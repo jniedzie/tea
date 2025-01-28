@@ -23,6 +23,7 @@ class ScaleFactorsManager {
 
   float GetJetIDScaleFactor(std::string name, float eta, float pt);
   float GetMuonScaleFactor(std::string name, float eta, float pt);
+  float GetDSAMuonScaleFactor(std::string name, float eta, float pt);
   float GetMuonTriggerScaleFactor(std::string name, float eta, float pt);
   float GetBTagScaleFactor(std::string name, float eta, float pt);
 
