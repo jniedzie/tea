@@ -30,6 +30,13 @@ def get_args():
     help="use this option to resubmitt a specific job"
   )
   
+  parser.add_argument(
+    "--memory",
+    type=float,
+    default=1.0,
+    help="requested memory in GB"
+  )
+  
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")
   
   args = parser.parse_args()
@@ -135,7 +142,7 @@ def main():
     if submission_system == SubmissionSystem.local:  
       submission_manager.run_locally()
     if submission_system == SubmissionSystem.condor:
-      submission_manager.run_condor(args.job_flavour, args.resubmit_job, args.dry)
+      submission_manager.run_condor(args.job_flavour, args.memory, args.resubmit_job, args.dry)
   
   logger_print()
 
