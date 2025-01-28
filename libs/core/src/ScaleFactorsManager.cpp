@@ -76,14 +76,14 @@ float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt) 
   if (!applyScaleFactors["muon"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
 }
 
 float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, float pt) {
   if (!applyScaleFactors["muonTrigger"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
 }
 
 float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt) {
