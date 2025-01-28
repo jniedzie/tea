@@ -30,6 +30,13 @@ def get_args():
     help="use this option to resubmitt a specific job"
   )
   
+  parser.add_argument(
+    "--memory",
+    type=float,
+    default=1.0,
+    help="requested memory in GB"
+  )
+  
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")
   
   args = parser.parse_args()
@@ -107,8 +114,14 @@ def main():
       update_config(tmp_files_config_path, "sample_path = ", f"\"{sample}\"\n")
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
-  elif hasattr(files_config, "datasets_and_output_dirs"):
-    datasets_and_output_dirs = files_config.datasets_and_output_dirs
+  elif hasattr(files_config, "datasets_and_output_trees_dirs") or hasattr(files_config, "datasets_and_output_hists_dirs"):
+    datasets_and_output_dirs = {}
+    if hasattr(files_config, "datasets_and_output_trees_dirs"):
+      datasets_and_output_dirs = files_config.datasets_and_output_trees_dirs
+      output_dir_name = "output_trees_dir"
+    elif hasattr(files_config, "datasets_and_output_hists_dirs"):
+      datasets_and_output_dirs = files_config.datasets_and_output_hists_dirs
+      output_dir_name = "output_hists_dir"
     
     for dataset, output_dir in datasets_and_output_dirs:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
@@ -117,7 +130,7 @@ def main():
           update_config(tmp_config_path, f"  \"{name}\":", False if "collision" in sample else f"{apply},\n")
       
       update_config(tmp_files_config_path, "dataset = ", f"\"{dataset}\"\n")
-      update_config(tmp_files_config_path, "output_dir = ", f"\"{output_dir}\"\n")
+      update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
       
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   else:
@@ -129,7 +142,7 @@ def main():
     if submission_system == SubmissionSystem.local:  
       submission_manager.run_locally()
     if submission_system == SubmissionSystem.condor:
-      submission_manager.run_condor(args.job_flavour, args.resubmit_job, args.dry)
+      submission_manager.run_condor(args.job_flavour, args.memory, args.resubmit_job, args.dry)
   
   logger_print()
 

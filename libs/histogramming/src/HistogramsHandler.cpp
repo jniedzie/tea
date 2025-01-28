@@ -27,14 +27,21 @@ HistogramsHandler::HistogramsHandler() {
   }
 
   try{
-  config.GetHistogramsParams(histParams2D, "histParams2D");
+    config.GetHistogramsParams(irregularHistParams, "irregularHistParams");
+  }
+  catch(const Exception& e){
+    info() << "No irregularHistParams found in config file" << endl;
+  }
+
+  try{
+    config.GetHistogramsParams(histParams2D, "histParams2D");
   }
   catch(const Exception& e){
     info() << "No histParams2D found in config file" << endl;
   }
 
   try{
-  config.GetValue("histogramsOutputFilePath", outputPath);
+    config.GetValue("histogramsOutputFilePath", outputPath);
   }
   catch(const Exception& e){
     info() << "No histogramsOutputFilePath found in config file" << endl;
@@ -48,6 +55,10 @@ HistogramsHandler::~HistogramsHandler() {}
 void HistogramsHandler::SetupHistograms() {
   for (auto &[title, params] : histParams) {
     histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+  }
+
+  for (auto &[title, params] : irregularHistParams) {
+    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
   for (auto &[name, params] : histParams2D) {
@@ -79,11 +90,15 @@ void HistogramsHandler::CheckHistogram(string name){
 }
 
 void HistogramsHandler::SaveHistograms() {
+  info() << "Output path: " << outputPath << endl;
+
   string path = outputPath.substr(0, outputPath.find_last_of("/"));
+  string filename = outputPath.substr(outputPath.find_last_of("/"));
+  if(path == "") path = "./";
   string command = "mkdir -p " + path;
   system(command.c_str());
   
-  auto outputFile = new TFile((outputPath).c_str(), "recreate");
+  auto outputFile = new TFile((path+"/"+filename).c_str(), "recreate");
   outputFile->cd();
 
   for (auto &[name, hist] : histograms1D) {
@@ -100,5 +115,5 @@ void HistogramsHandler::SaveHistograms() {
   }
   outputFile->Close();
 
-  info() << "Histograms saved to: " << outputPath << endl;
+  info() << "Histograms saved to: " << path << "/" << filename << endl;
 }

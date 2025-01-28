@@ -11,7 +11,7 @@ using namespace std;
 EventReader::EventReader() {
   auto &config = ConfigManager::GetInstance();
 
-  config.GetValue("eventsTreeName", eventsTreeName);
+  config.GetVector("eventsTreeNames", eventsTreeNames);
   config.GetMap("specialBranchSizes", specialBranchSizes);
 
   config.GetValue("nEvents", maxEvents);
@@ -25,12 +25,21 @@ EventReader::EventReader() {
 
   // if inputFilePath is a DAS dataset name, insert a redirector into it
   if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
+
     vector<string> redirectors = {
+      "xrootd-cms.infn.it",
       "cms-xrd-global.cern.ch",
       "cmsxrootd.fnal.gov",
-      "xrootd-cms.infn.it",
     };
-    
+
+    string customRedirector = "";
+    try {
+      config.GetValue("redirector", customRedirector);
+    } catch (const Exception &e) {
+      info() << "No custom redirector found from config file" << endl;
+    }
+    if (customRedirector != "") redirectors.insert(redirectors.begin(), customRedirector);
+
     string tmpInputFilePath;
     for (string redirector : redirectors) {
       info() << "Trying to read ROOT file with redirector:" << redirector << endl;
@@ -50,15 +59,20 @@ EventReader::EventReader() {
     inputFilePath = tmpInputFilePath;
   } else {
     inputFile = TFile::Open(inputFilePath.c_str());
+    if (!inputFile || inputFile->IsZombie()) {
+      fatal() << "Local file corrupted: " << inputFilePath << endl;
+      exit(1);
+    }
   }
 
-  SetupBranches(inputFilePath);
+  SetupTrees();
+  SetupBranches();
 }
 
 EventReader::~EventReader() {}
 
 long long EventReader::GetNevents() const {
-  long long nEntries = inputTrees.at(eventsTreeName)->GetEntries();
+  long long nEntries = inputTrees.at(eventsTreeNames[0])->GetEntries();
 
   long long nEvents = nEntries;
   if (maxEvents >= 0 && nEvents >= maxEvents) nEvents = maxEvents;
@@ -66,54 +80,107 @@ long long EventReader::GetNevents() const {
   return nEvents;
 }
 
-void EventReader::SetupBranches(string inputPath) {
+tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
+  
+
+  // if collection name is specified in special collections, use that exact name as the collection name
+  for(auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+    auto pos = branchName.find(specialCollectionName);
+    
+    if (pos != string::npos) {
+      auto posEnd = pos + specialCollectionName.size();
+      string collectionName = branchName.substr(0, specialCollectionName.size());
+      string variableName = branchName.substr(posEnd);
+      return make_tuple(collectionName, variableName);
+    }
+  }
+
+  // otherwise, look for underscores
+  string::size_type pos = branchName.find('_');
+  string::size_type posEnd = pos + 1;
+
+  // If there's no underscore, the collection and the variable will be called the same
+  if (pos == string::npos) return make_tuple(branchName, branchName);
+  // TODO: to improve this, we could add a map in the config for custom collection/variable names.
+  // E.g. if someone has branches like "MuonPt", MuonEta",... they could define a map like:
+  // "MuonPt": ("Muon", "Pt"), "MuonEta": ("Muon", "Eta"),...
+  // and if there's some logic to how collection and variable names are formed, 
+  // they could generate it automatically in the config.
+
+  // otherwise, cut at the underscore
+  string collectionName = branchName.substr(0, pos);
+  string variableName = branchName.substr(posEnd);
+
+  return make_tuple(collectionName, variableName);
+}
+
+void EventReader::SetupTrees() {
   vector<string> treeNames = getListOfTrees(inputFile);
   for (string treeName : treeNames) {
+    if (inputTrees.find(treeName) != inputTrees.end()) continue;
+
     cout << "Loading tree: " << treeName << endl;
     inputTrees[treeName] = (TTree *)inputFile->Get(treeName.c_str());
   }
-  if (!inputTrees.count(eventsTreeName)) {
-    inputTrees[eventsTreeName] = (TTree *)inputFile->Get(eventsTreeName.c_str());
 
+  for (string eventsTreeName : eventsTreeNames) {
+    if (!inputTrees.count(eventsTreeName)) {
+      inputTrees[eventsTreeName] = (TTree *)inputFile->Get(eventsTreeName.c_str());
+    }
+  }
+
+  for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
       fatal() << "Input file does not contain Events tree" << endl;
       exit(1);
     }
-  }
-  auto keysInEventTree = inputTrees[eventsTreeName]->GetListOfBranches();
-  for (auto i : *keysInEventTree) {
-    auto branch = (TBranch *)i;
-    string branchName = branch->GetName();
-    string branchType = branch->FindLeaf(branchName.c_str())->GetTypeName();
-    if (branchType == "") error() << "Couldn't find branch type for branch: " << branchName << endl;
-
-    string::size_type pos = branchName.find('_');
-    string collectionName = branchName.substr(0, pos);
-    isCollectionAnStdVector[collectionName] = branchType.find("vector") != string::npos;
-
-    branchNamesAndTypes[branchName] = branchType;
-
-    bool branchIsVector = false;
-
-    TLeaf *leaf = branch->GetLeaf(branch->GetName());
-    if (leaf) {
-      TString typeName = leaf->GetTypeName();
-      bool isVector = typeName.Contains("vector");
-      branchIsVector = isVector || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
-    } else {
-      fatal() << "Couldn't get leaf for branch: " << branchName << endl;
+    if (!inputTrees[eventsTreeName]) {
+      fatal() << "Couldn't load tree from file: " << eventsTreeName << endl;
       exit(1);
-    }
-
-    if (branchIsVector) {
-      SetupVectorBranch(branchName, branchType);
-    } else {
-      SetupScalarBranch(branchName, branchType);
     }
   }
 }
 
-void EventReader::SetupScalarBranch(string branchName, string branchType) {
+TLeaf *EventReader::GetLeaf(TBranch *branch) {
+  TLeaf *leaf = nullptr;
+  string branchName = branch->GetName();
+
+  if (branch->GetListOfLeaves()->GetEntries() == 1) {
+    leaf = (TLeaf *)branch->GetListOfLeaves()->First();
+  } else {
+    error() << "Branch " << branchName << " has multiple or no leaves." << endl;
+  }
+
+  if (!leaf) {
+    fatal() << "Couldn't find leaf for branch: " << branchName << endl;
+    exit(1);
+  }
+  return leaf;
+}
+
+void EventReader::SetupBranches() {
+  for (string eventsTreeName : eventsTreeNames) {
+    for (auto branchIter : *inputTrees[eventsTreeName]->GetListOfBranches()) {
+      auto branch = (TBranch *)branchIter;
+      auto leaf = GetLeaf(branch);
+
+      string branchName = branch->GetName();
+      string branchType = leaf->GetTypeName();
+
+      if (branchType == "") error() << "Couldn't find branch type for branch: " << branchName << endl;
+      branchNamesAndTypes[branchName] = branchType;
+
+      bool branchIsVector = branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
+      if (branchIsVector) {
+        SetupVectorBranch(branchName, branchType, eventsTreeName);
+      } else {
+        SetupScalarBranch(branchName, branchType, eventsTreeName);
+      }
+    }
+  }
+}
+
+void EventReader::SetupScalarBranch(string branchName, string branchType, string eventsTreeName) {
   currentEvent->valuesTypes[branchName] = branchType;
 
   if (branchType == "UInt_t") {
@@ -139,11 +206,9 @@ void EventReader::SetupScalarBranch(string branchName, string branchType) {
   }
 }
 
-void EventReader::SetupVectorBranch(string branchName, string branchType) {
-  string::size_type pos = branchName.find('_');
-  string collectionName = branchName.substr(0, pos);
-  string variableName = branchName.substr(pos + 1);
-
+void EventReader::SetupVectorBranch(string branchName, string branchType, string eventsTreeName) {
+  auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
+  isCollectionAnStdVector[collectionName] = branchType.find("vector") != string::npos;
   InitializeCollection(collectionName);
 
   for (int i = 0; i < maxCollectionElements; i++) {
@@ -214,7 +279,6 @@ void EventReader::SetupVectorBranch(string branchName, string branchType) {
 
 void EventReader::InitializeCollection(string collectionName) {
   if (currentEvent->collections.count(collectionName)) return;
-
   currentEvent->collections[collectionName] = make_shared<PhysicsObjects>();
   for (int i = 0; i < maxCollectionElements; i++) {
     currentEvent->collections[collectionName]->push_back(make_shared<PhysicsObject>(collectionName));
@@ -251,7 +315,7 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
 
     if (isCollectionAnStdVector[name]) {
       for (auto &[branchName, branchType] : branchNamesAndTypes) {
-        string collectionName = branchName.substr(0, branchName.find('_'));
+        auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
         if (collectionName != name) continue;
 
         if (branchType.find("float") != string::npos) {
@@ -264,6 +328,9 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
       }
     } else if (specialBranchSizes.count(name)) {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, specialBranchSizes[name]);
+    } else if (name == "") {
+      error() << "Empty collection name. This should never happen, so please report an issue." << endl;
+      continue;
     } else {
       collectionSize = tryGet<Int_t, UInt_t>(currentEvent, "n" + name);
     }

@@ -21,7 +21,7 @@ extraEventCollections = {
     },
 }
 
-eventSelections = {
+eventCuts = {
     "MET_pt": (30, 9999999),
     "nMuon": (1, 9999999),
     "nGoodLeptons": (1, 9999999),
@@ -41,3 +41,5 @@ branchesToRemove = (
     "Flag*",
     "SubJet",
 )
+
+# redirector = "xrootd-cms.infn.it"

@@ -30,6 +30,7 @@ def insert_cast(class_name, type):
   
   old_string = "#endif /* UserExtensionsHelpers_hpp */"
   new_string = f"inline std::shared_ptr<{class_name}> as{class_name}(const std::shared_ptr<{type}> physicsObject) {{\n"
+  new_string += f"  if(!physicsObject) return nullptr;\n"
   new_string += f"  return std::make_shared<{class_name}>(physicsObject);\n"
   new_string += "}\n\n"
   new_string += "#endif /* UserExtensionsHelpers_hpp */"

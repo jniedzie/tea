@@ -26,6 +26,35 @@
 #include "TLorentzVector.h"
 #include "TStyle.h"
 #include "TTree.h"
+#include "TEllipse.h"
+#include "TBox.h"
+#include "TMath.h"
+#include "TPolyLine.h"
+#include "TROOT.h"
+#include "TSystem.h"
+#include "TVector2.h"
+#include "TRandom.h"
+#include "TMatrixD.h"
+#include "TVectorD.h"
+#include "TRotation.h"
+#include "TView3D.h"
+#include "TView.h"
+#include "TPolyLine3D.h"
+#include "TApplication.h"
+#include "TGeoManager.h"
+#include "TGeoMaterial.h"
+#include "TGeoMedium.h"
+#include "TGeoVolume.h"
+#include "TGeoTube.h"
+#include "TGeoSphere.h"
+#include "TEveManager.h"
+#include "TEveGeoNode.h"
+#include "TEveLine.h"
+#include "TEveViewer.h"
+#include "TEveProjectionManager.h"
+#include "TEveProjectionAxes.h"
+#include "TGLViewer.h"
+#include "TGeoTorus.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 
@@ -43,6 +72,8 @@
 #include "Logger.hpp"
 
 const int maxCollectionElements = 9999;
+const int maxNdaughters = 5;  // Number of daughters that will be considered for HEP MC particles.
+                              // Heavily affects computing time. Max is 100.
 
 inline std::vector<std::string> getListOfTrees(TFile *file) {
   auto keys = file->GetListOfKeys();
@@ -93,15 +124,15 @@ inline bool FileExists(const std::string& name) {
 
 struct ExtraCollection {
   std::vector<std::string> inputCollections;
-  std::map<std::string, std::pair<float, float>> selections;
+  std::map<std::string, std::pair<float, float>> allCuts;
   std::map<std::string, int> flags;
   
   void Print() {
     info() << "Input collections: " << std::endl;
     for (std::string name : inputCollections) info() << name << std::endl;
 
-    info() << "Selections: " << std::endl;
-    for (auto &[name, cuts] : selections) {
+    info() << "All cuts: " << std::endl;
+    for (auto &[name, cuts] : allCuts) {
       info() << "\t" << name << ": " << cuts.first << ", " << cuts.second << std::endl;
     }
     info() << "Flags: " << std::endl;
@@ -122,6 +153,11 @@ struct HistogramParams {
     info() << "Histogram: " << directory << "/" << collection << "/" << variable;
     info() << "(" << nBins << ", " << min << ", " << max << ")" << std::endl; 
   }
+};
+
+struct IrregularHistogramParams {
+  std::string collection, variable, directory;
+  std::vector<float> binEdges;
 };
 
 struct HistogramParams2D {

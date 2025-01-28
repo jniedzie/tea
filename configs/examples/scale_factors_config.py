@@ -1,5 +1,13 @@
 
 scaleFactors = {
+  # jets
+  "jetIDtight": {
+    "path": "../tea/jsonPOG/POG/JME/2018_UL/jmar.json.gz",
+    "type": "PUJetID_eff",
+    "systematic": "nom",
+    "workingPoint": "T",
+  },
+  
   # b-tagging
   "bTaggingMedium": {
     "path": "../tea/jsonPOG/POG/BTV/2018_UL/btagging.json.gz",
@@ -11,9 +19,8 @@ scaleFactors = {
   "bTaggingTight": {
     "path": "../tea/jsonPOG/POG/BTV/2018_UL/btagging.json.gz",
     "type": "deepJet_mujets",
-    "workingPoint": "T",
     "systematic": "central",
-    "workingPoint": "M",
+    "workingPoint": "T",
     "jetID": "5",
   },
   
@@ -44,6 +51,12 @@ scaleFactors = {
     "year": "2018_UL",
     "ValType": "sf",
   },
+  "dsamuonID": {
+    "path": "../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
+    "type": "NUM_DisplacedID_DEN_dSAMuons", 
+    "year": "2018_preUL",
+    "ValType": "sf",
+  },
   
   # Muon Iso
   "muonIsoLoose": {
@@ -64,7 +77,7 @@ scaleFactors = {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   
   # Pileup

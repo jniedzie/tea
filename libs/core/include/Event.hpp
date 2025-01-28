@@ -18,9 +18,17 @@ class Event {
 
   void Reset();
 
-  inline auto Get(std::string branchName) {
+  inline auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+                  int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
-      throw Exception(("Trying to access incorrect event-level branch: " + branchName).c_str());
+      std::string message = "\nTrying to access incorrect event-level branch: " + branchName;
+      if (branchName.find("Weight") != std::string::npos || branchName.find("Wgt") != std::string::npos
+          || branchName.find("weight") != std::string::npos || branchName.find("wgt") != std::string::npos) {
+        message += ", it's probably fine for data if this is a gen weight branch.";
+        warn() << message << std::endl;
+      }
+      else fatal(file, function, line) << message << std::endl;
+      throw Exception(message.c_str());
     }
 
     return Multitype(this, branchName);
@@ -31,31 +39,12 @@ class Event {
   inline std::shared_ptr<PhysicsObjects> GetCollection(std::string name) const {
     if (collections.count(name)) return collections.at(name);
     if (extraCollections.count(name)) return extraCollections.at(name);
-    fatal() << "Tried to get a collection that doesn't exist: " << name << std::endl;
-    exit(1);
-  }
-
-  inline UInt_t GetCollectionSize(std::string name) {
-    if (collections.count(name)) {
-      try {
-        UInt_t size = Get("n" + name);
-        return size;
-      } catch (BadTypeException &e) {
-        try {
-          Int_t size = Get("n" + name);
-          return size;
-        } catch (BadTypeException &e) {
-          error() << "Couldn't get size of collection: " << name << " (tried with UIint_t and Int_t)" << std::endl;
-          return 0;
-        }
-      }
-    }
-    if (extraCollections.count(name)) return extraCollections.at(name)->size();
-    fatal() << "Tried to get size of a collection that doesn't exist: " << name << std::endl;
-    exit(1);
+    std::string message = "Tried to get a collection that doesn't exist: " + name;
+    throw Exception(message.c_str());
   }
 
   void AddExtraCollections();
+  void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
 
  private:
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }

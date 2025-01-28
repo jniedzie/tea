@@ -1,7 +1,7 @@
 from HistogramPlotter import HistogramPlotter
 from Logger import *
 
-from ROOT import TFile, gROOT
+import ROOT
 import importlib
 import sys
 
@@ -15,7 +15,7 @@ def getConfig():
 
 
 def main():
-  gROOT.SetBatch(True)
+  ROOT.gROOT.SetBatch(True)
 
   config = getConfig()
   plotter = HistogramPlotter(config)
@@ -23,21 +23,25 @@ def main():
   input_files = {}
   
   for sample in config.samples:
-    input_files[sample.name] = TFile.Open(sample.file_path, "READ")
+    input_files[sample.name] = ROOT.TFile.Open(sample.file_path, "READ")
     
     for hist in config.histograms:
       plotter.addHistosample(hist, sample, input_files[sample.name])
     
-    if not hasattr(config, "histograms2D"):
-      continue
-    
-    for hist in config.histograms2D:
-      plotter.addHistosample2D(hist, sample, input_files[sample.name])
-  
+    if hasattr(config, "histograms2D"):    
+      for hist in config.histograms2D:
+        plotter.addHistosample2D(hist, sample, input_files[sample.name])
+
+    if hasattr(config, "histogramsRatio"):    
+      for histpair in config.histogramsRatio:
+        plotter.addHistosampleRatio(histpair[0], histpair[1], sample, input_files[sample.name])
+
   plotter.setupLegends()
   plotter.buildStacks()
+  plotter.buildStacksRatio()
   plotter.addHists2D(input_files[sample.name], sample)
   plotter.drawStacks()
+  plotter.drawRatioStacks()
   plotter.drawHists2D()
   
   logger_print()

@@ -9,26 +9,25 @@
 #include "EventWriter.hpp"
 #include "CutFlowManager.hpp"
 #include "EventProcessor.hpp"
+#include "ArgsManager.hpp"
 
 using namespace std;
 
-void CheckArgs(int argc, char **argv) {
-  if (argc != 2 && argc != 4) {
-    fatal() << "Usage: " << argv[0] << " config_path"<<endl;
-    fatal() << "or"<<endl;
-    fatal() << argv[0] << " config_path input_path output_path"<<endl;
+int main(int argc, char **argv) {
+  auto args = make_unique<ArgsManager>(argc, argv);
+  if (!args->GetString("config").has_value()) {
+    fatal() << "No config file provided" << endl;
     exit(1);
   }
-}
 
-int main(int argc, char **argv) {
-  CheckArgs(argc, argv);
-  ConfigManager::Initialize(argv[1]);
+  ConfigManager::Initialize(args->GetString("config").value());
+  auto &config = ConfigManager::GetInstance();
   
-  if(argc == 4){
-    auto &config = ConfigManager::GetInstance();
-    config.SetInputPath(argv[2]);
-    config.SetOutputPath(argv[3]);
+  if (args->GetString("input_path").has_value()) {
+    config.SetInputPath(args->GetString("input_path").value());
+  }
+  if (args->GetString("output_trees_path").has_value()) {
+    config.SetTreesOutputPath(args->GetString("output_trees_path").value());
   }
 
   auto eventReader = make_shared<EventReader>();
@@ -44,10 +43,10 @@ int main(int argc, char **argv) {
     auto event = eventReader->GetEvent(iEvent);
 
     cutFlowManager->UpdateCutFlow("initial");
-    if(!eventProcessor->PassesTriggerSelections(event)) continue;
+    if(!eventProcessor->PassesTriggerCuts(event)) continue;
     cutFlowManager->UpdateCutFlow("trigger");
 
-    if(!eventProcessor->PassesEventSelections(event, cutFlowManager)) continue;
+    if(!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
 
     eventWriter->AddCurrentEvent("Events");
   }

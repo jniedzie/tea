@@ -14,7 +14,7 @@ typedef Collection<std::shared_ptr<PhysicsObject>> PhysicsObjects;
 
 class PhysicsObject {
  public:
-  PhysicsObject(std::string originalCollection_);
+  PhysicsObject(std::string originalCollection_, int index_ = -1);
   PhysicsObject() = default;
   virtual ~PhysicsObject() = default;
 
@@ -22,10 +22,16 @@ class PhysicsObject {
 
   inline std::string GetOriginalCollection() { return originalCollection; }
 
-  inline auto Get(std::string branchName) {
+  inline void SetIndex(int index_) { index = index_; }
+  inline int GetIndex() { return index; }
+
+  inline auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
+                  int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
+
+      fatal(file, function, line) << message << std::endl;
       throw Exception(message.c_str());
     }
     return Multitype(this, branchName);
@@ -56,6 +62,7 @@ class PhysicsObject {
   std::map<std::string, Short_t *> valuesShort;
 
   std::string originalCollection;
+  int index;
   std::map<std::string, std::string> defaultCollectionsTypes;
 
   friend class EventReader;

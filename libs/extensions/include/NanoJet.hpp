@@ -8,14 +8,17 @@
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 
-class Jet;
-typedef Collection<std::shared_ptr<Jet>> Jets;
+class NanoJet;
+typedef Collection<std::shared_ptr<NanoJet>> NanoJets;
 
-class Jet {
+class NanoJet {
  public:
-  Jet(std::shared_ptr<PhysicsObject> physicsObject_);
+  NanoJet(std::shared_ptr<PhysicsObject> physicsObject_);
 
-  auto Get(std::string branchName) { return physicsObject->Get(branchName); }
+  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+           int line = __builtin_LINE()) {
+    return physicsObject->Get(branchName, file, function, line);
+  }
   float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
@@ -30,6 +33,7 @@ class Jet {
   TLorentzVector GetFourVector();
 
   float GetBtaggingScaleFactor(std::string workingPoint);
+  float GetJetIDScaleFactor(std::string name);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

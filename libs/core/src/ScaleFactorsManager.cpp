@@ -65,18 +65,25 @@ void ScaleFactorsManager::ReadPileupSFs() {
   pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
 }
 
+float ScaleFactorsManager::GetJetIDScaleFactor(string name, float eta, float pt) {
+  if (!applyScaleFactors["jetID"]) return 1.0;
+
+  auto extraArgs = correctionsExtraArgs[name];
+  return TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+}
+
 float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt) {
   if (!applyScaleFactors["muon"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
 }
 
 float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, float pt) {
   if (!applyScaleFactors["muonTrigger"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
 }
 
 float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt) {
@@ -98,7 +105,7 @@ float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &corr
     return correction->evaluate(args);
   } catch (std::runtime_error &e) {
     string errorMessage = e.what();
-    error() << "Error while evaluating SF: " << errorMessage << endl;
+    error() << "Error while evaluating SF" << endl;
 
     if (errorMessage.find("inputs") != string::npos) {
       fatal() << "Expected inputs: " << endl;

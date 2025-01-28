@@ -29,25 +29,23 @@ class ConfigManager {
   void GetExtraEventCollections(std::map<std::string, ExtraCollection> &extraEventCollections);
   void GetHistogramsParams(std::map<std::string, HistogramParams> &histogramsParams, std::string collectionName);
   void GetHistogramsParams(std::map<std::string, HistogramParams2D> &histogramsParams, std::string collectionName);
+  void GetHistogramsParams(std::map<std::string, IrregularHistogramParams> &histogramsParams, std::string collectionName);
 
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsMap> &scaleFactors);
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsTuple> &scaleFactors);
 
-  void GetSelections(std::vector<std::pair<std::string, std::pair<float, float>>> &selections);
+  void GetCuts(std::vector<std::pair<std::string, std::pair<float, float>>> &cuts);
 
   void SetInputPath(std::string path) { inputPath = path; }
-  void SetOutputPath(std::string path) { outputPath = path; }
+  void SetTreesOutputPath(std::string path) { treesOutputPath = path; }
+  void SetHistogramsOutputPath(std::string path) { histogramsOutputPath = path; }
   
  private:
   std::string configPath;
   ConfigManager(std::string* const _configPath);
   ~ConfigManager();
 
-  static ConfigManager& getInstanceImpl(std::string* const _configPath = nullptr)
-  {
-    static ConfigManager instance{ _configPath };
-    return instance;
-  }
+  static ConfigManager& getInstanceImpl(std::string* const _configPath = nullptr);
 
   FILE *pythonFile;
   PyObject *pythonModule;
@@ -61,7 +59,9 @@ class ConfigManager {
   PyObject *GetItem(PyObject *collection, int index);
 
   std::string inputPath = "";
-  std::string outputPath = "";
+  std::string treesOutputPath = "";
+  std::string histogramsOutputPath = "";
+  std::string redirector = "";
 };
 
 #endif /* ConfigManager_hpp */

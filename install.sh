@@ -8,7 +8,7 @@ fi
 
 # create necessary directories
 echo "Creating necessary directories"
-mkdir -p apps bin build configs libs/user_extensions/include
+mkdir -p apps bin build configs utils libs/user_extensions/include
 
 # initialize git repository
 echo "Initializing git repository"
@@ -17,6 +17,7 @@ git init
 # add tea as a submodule
 echo "Adding tea as a submodule"
 git submodule add git@github.com:jniedzie/tea.git tea
+git submodule update --init --recursive
 git commit -m "Add tea as a submodule"
 
 # copy and removing files

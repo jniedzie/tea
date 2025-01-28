@@ -10,15 +10,32 @@
 
 using namespace std;
 
-ConfigManager::ConfigManager(std::string *const _configPath) : configPath(move(*_configPath)) {
-  if (nullptr == _configPath) throw std::runtime_error{"ConfigManager not initialized"};
+static ConfigManager *instance = nullptr;
 
+ConfigManager& ConfigManager::getInstanceImpl(std::string *const _configPath) {
+  if (!instance) {
+    instance = new ConfigManager(_configPath);
+  }
+  return *instance;
+}
+
+ConfigManager::ConfigManager(std::string *const _configPath) {
+  if (nullptr == _configPath) {
+    fatal() << "ConfigManager not initialized" << endl;
+    exit(0);
+  }
+  if (_configPath->empty()) {
+    fatal() << "Config path cannot be empty" << endl;
+    exit(0);
+  }
+  
+  configPath = std::move(*_configPath);
   Py_Initialize();
 
   pythonFile = fopen(configPath.c_str(), "r");
 
   if (!pythonFile) {
-    fatal() << "Could not parse python config" << endl;
+    fatal() << "Could not parse python config: " << configPath << endl;
     Py_Finalize();
     exit(1);
   }
@@ -97,8 +114,12 @@ void ConfigManager::GetValue<string>(std::string name, string &outputValue) {
     outputValue = inputPath;
     return;
   }
-  if ((name == "treeOutputFilePath" || name == "histogramsOutputFilePath") && outputPath != "") {
-    outputValue = outputPath;
+  if (name == "treeOutputFilePath" && treesOutputPath != "") {
+    outputValue = treesOutputPath;
+    return;
+  }
+  if (name == "histogramsOutputFilePath" && histogramsOutputPath != "") {
+    outputValue = histogramsOutputPath;
     return;
   }
 
@@ -250,6 +271,27 @@ void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vect
 }
 
 template <>
+void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<int>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
+
+  PyObject *pKey, *pValue;
+  Py_ssize_t pos = 0;
+
+  while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
+    if (!PyUnicode_Check(pKey) || (!PyList_Check(pValue) && !PyTuple_Check(pValue))) {
+      error() << "Failed retriving python key-value pair (string-vector<string>)" << endl;
+      continue;
+    }
+    vector<int> outputVector;
+    for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
+      PyObject *item = GetItem(pValue, i);
+      outputVector.push_back(PyLong_AsLong(item));
+    }
+    outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
+  }
+}
+
+template <>
 void ConfigManager::GetMap<string, map<string, string>>(string name, map<string, map<string, string>> &outputMap) {
   PyObject *pythonDict = GetPythonDict(name);
 
@@ -266,7 +308,7 @@ void ConfigManager::GetMap<string, map<string, string>>(string name, map<string,
     Py_ssize_t posInner = 0;
 
     while (PyDict_Next(pValue, &posInner, &pKeyInner, &pValueInner)) {
-      if(PyUnicode_Check(pValueInner)){
+      if (PyUnicode_Check(pValueInner)) {
         tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner);
       }
     }
@@ -286,7 +328,7 @@ void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vecto
       error() << "Failed retriving python key-value pair (int-vector<vector<int>>)" << endl;
       continue;
     }
-    
+
     vector<vector<int>> outerVector;
 
     for (Py_ssize_t i = 0; i < GetCollectionSize(pOuterList); ++i) {
@@ -335,7 +377,7 @@ void ConfigManager::GetExtraEventCollections(map<string, ExtraCollection> &extra
       } else if (PyTuple_Check(pyValue)) {
         PyObject *min = GetItem(pyValue, 0);
         PyObject *max = GetItem(pyValue, 1);
-        extraCollection.selections[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
+        extraCollection.allCuts[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
       } else {
         extraCollection.flags[keyStr] = PyLong_AsLong(pyValue);
       }
@@ -404,19 +446,19 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple> 
 
     PyObject *tupleFormula = GetItem(SFvalues, 0);
     string formulaString = PyUnicode_AsUTF8(tupleFormula);
-    
+
     PyObject *tupleParams = GetItem(SFvalues, 1);
-    
+
     vector<float> params;
     for (Py_ssize_t i = 0; i < GetCollectionSize(tupleParams); ++i) {
       PyObject *item = GetItem(tupleParams, i);
       params.push_back(PyFloat_AsDouble(item));
     }
-    scaleFactors[SFnameStr] = {formulaString, params};    
+    scaleFactors[SFnameStr] = {formulaString, params};
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histogramsParams, string collectionName) {
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histogramsParams, string collectionName) {
   PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
@@ -425,7 +467,9 @@ void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histo
     HistogramParams histParams;
     string title;
 
-    if (GetCollectionSize(params) == 6) {
+    auto nParams = GetCollectionSize(params);
+
+    if (nParams == 6) {
       histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
       histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
       histParams.nBins = PyLong_AsLong(GetItem(params, 2));
@@ -433,7 +477,7 @@ void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histo
       histParams.max = PyFloat_AsDouble(GetItem(params, 4));
       histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5));
       title = histParams.collection + "_" + histParams.variable;
-    } else {
+    } else if (nParams == 5) {
       histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
       histParams.nBins = PyLong_AsLong(GetItem(params, 1));
       histParams.min = PyFloat_AsDouble(GetItem(params, 2));
@@ -445,7 +489,32 @@ void ConfigManager::GetHistogramsParams(map<std::string, HistogramParams> &histo
   }
 }
 
-void ConfigManager::GetHistogramsParams(std::map<std::string, HistogramParams2D> &histogramsParams, string collectionName) {
+void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams> &histogramsParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject *params = GetItem(pythonList, i);
+
+    IrregularHistogramParams histParams;
+    string title;
+
+    histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
+    histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
+
+    PyObject *binEdges = GetItem(params, 2);
+    for (Py_ssize_t i = 0; i < GetCollectionSize(binEdges); ++i) {
+      PyObject *item = GetItem(binEdges, i);
+      histParams.binEdges.push_back(PyFloat_AsDouble(item));
+    }
+
+    histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3));
+    title = histParams.collection + "_" + histParams.variable;
+
+    histogramsParams[title] = histParams;
+  }
+}
+
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogramsParams, string collectionName) {
   PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
@@ -466,8 +535,8 @@ void ConfigManager::GetHistogramsParams(std::map<std::string, HistogramParams2D>
   }
 }
 
-void ConfigManager::GetSelections(vector<pair<string, pair<float, float>>> &selections) {
-  PyObject *pythonDict = GetPythonDict("eventSelections");
+void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
+  PyObject *pythonDict = GetPythonDict("eventCuts");
 
   PyObject *cutName, *cutValues;
   Py_ssize_t pos = 0;
@@ -479,6 +548,6 @@ void ConfigManager::GetSelections(vector<pair<string, pair<float, float>>> &sele
     }
     PyObject *min = GetItem(cutValues, 0);
     PyObject *max = GetItem(cutValues, 1);
-    selections.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
+    cuts.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
   }
 }

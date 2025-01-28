@@ -25,28 +25,36 @@ class HistogramNormalizer:
     if normalize_hists:
       self.__setBackgroundEntries()
   
-  def normalize(self, hist, sample, data_integral=None, background_integral=None):
+  def normalize(self, hist, sample, data_integral=None, background_integral=None, background_cross_sections=None):
     if hist.norm_type == NormalizationType.to_one:
-      self.__normalizeToOne(hist, sample, background_integral)
+      warn("Trying to normalize to one, this is not yet implemented properly")
+      self.__normalizeToOne(hist, sample)
     elif hist.norm_type == NormalizationType.to_background:
       self.__normalizeToBackground(hist, sample, background_integral)
     elif hist.norm_type == NormalizationType.to_lumi:
       self.__normalizeToLumi(hist, sample)
     elif hist.norm_type == NormalizationType.to_data:
-      self.__normalizeToData(hist, sample, data_integral)
+      self.__normalizeToData(hist, sample, data_integral, background_cross_sections)
   
   def __normalizeToOne(self, hist, sample):
     if sample.type == SampleType.background:
       hist.hist.Scale(1./self.total_background)
     else:
-      hist.hist.Scale(1./hist.hist.Integral())
+      if hist.hist.Integral() != 0:
+        hist.hist.Scale(1./hist.hist.Integral())
   
   def __normalizeToBackground(self, hist, sample, background_integral):
     if sample.type == SampleType.background:
       hist.hist.Scale(self.config.luminosity*sample.cross_section/self.background_initial_sum_weights[sample.name])
-    elif sample.type == SampleType.signal:
-      hist.hist.Scale(background_integral/hist.hist.Integral())
-    elif sample.type == SampleType.data:
+      return
+    if background_integral is None:
+      error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
+      return
+    if sample.type == SampleType.signal:
+      if hist.hist.Integral() != 0:
+        hist.hist.Scale(background_integral/hist.hist.Integral())
+      return
+    if sample.type == SampleType.data:
       hist.hist.Scale(background_integral/self.data_final_entries[sample.name])
   
   def __normalizeToLumi(self, hist, sample):
@@ -54,25 +62,26 @@ class HistogramNormalizer:
     
     if sample.type == SampleType.background:
       scale /= self.background_initial_sum_weights[sample.name]
-    elif sample.type == SampleType.signal:
-      scale /= self.signal_final_sum_weights[sample.name]
+    elif sample.type == SampleType.signal:  
+      if self.signal_initial_sum_weights[sample.name] != 0:
+        scale /= self.signal_initial_sum_weights[sample.name]
     elif sample.type == SampleType.data:
       scale = 1
     
     hist.hist.Scale(scale)
   
-  def __normalizeToData(self, hist, sample, data_integral):
+  def __normalizeToData(self, hist, sample, data_integral, background_cross_sections):
     if hist.hist.Integral() == 0:
-      error(f"Couldn't normalize to data: {hist.name}, {sample.name}")
+      error(f"Couldn't normalize to data: {hist.name}, {sample.name}, background integral is 0")
       return  
     if data_integral is None:
-      error(f"Couldn't normalize to data: {hist.name}, {sample.name}")
+      error(f"Couldn't normalize to data: {hist.name}, {sample.name}, no data integral is given")
       return
     
     scale = data_integral/hist.hist.Integral()
     
     if sample.type == SampleType.background:
-      scale *= sample.cross_section/self.total_background_cross_section
+      scale *= sample.cross_section/background_cross_sections
     elif sample.type == SampleType.data:  
       scale = 1
     
@@ -80,6 +89,7 @@ class HistogramNormalizer:
   
   def __setBackgroundEntries(self):
     
+    self.signal_initial_sum_weights = {}
     self.signal_final_sum_weights = {}
     self.data_final_entries = {}
     self.background_final_sum_weights = {}
@@ -88,7 +98,11 @@ class HistogramNormalizer:
     self.total_background_cross_section = 0
     
     for sample in self.config.samples:
-      file = TFile.Open(sample.file_path, "READ")
+      try:
+        file = TFile.Open(sample.file_path, "READ")
+      except OSError:
+        error(f"Couldn't open file {sample.file_path}")
+        continue
 
       cut_flow = file.Get("cutFlow")
       
@@ -96,7 +110,7 @@ class HistogramNormalizer:
         error(f"Couldn't find cut flow histogram for sample {sample.name}")
         continue
       
-      initial_weight_sum = cut_flow.GetBinContent(1)
+      initial_weight_sum = sample.initial_weight_sum if sample.initial_weight_sum > 0 else cut_flow.GetBinContent(1)
       final_weight_sum = cut_flow.GetBinContent(cut_flow.GetNbinsX())
       
       if initial_weight_sum == 0:
@@ -117,6 +131,7 @@ class HistogramNormalizer:
         
       elif sample.type == SampleType.signal:
         self.signal_final_sum_weights[sample.name] = final_weight_sum
+        self.signal_initial_sum_weights[sample.name] = initial_weight_sum
         
       elif sample.type == SampleType.data:
         self.data_final_entries[sample.name] = final_weight_sum

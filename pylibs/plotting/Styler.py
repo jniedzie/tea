@@ -130,7 +130,7 @@ class Styler:
       plot.SetMinimum(self.config.ratio_limits[0])
       plot.SetMaximum(self.config.ratio_limits[1])
     else:
-      if (hist.y_min > 0):
+      if (hist.y_min > 0) or (not hist.log_y and hist.y_min == 0):
         plot.SetMinimum(hist.y_min)
       if (hist.y_max > 0):
         plot.SetMaximum(hist.y_max)
@@ -181,23 +181,23 @@ class Styler:
       plot.SetTitle(hist.title)
       plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
       plot.GetXaxis().SetTitle(hist.x_label)
-      plot.GetXaxis().SetTitleSize(0.06)
+      plot.GetXaxis().SetTitleSize(0.04)
       plot.GetXaxis().SetTitleOffset(1.0)
-      plot.GetXaxis().SetLabelSize(0.06)
+      plot.GetXaxis().SetLabelSize(0.04)
       
       plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
       plot.GetYaxis().SetTitle(hist.y_label)
-      plot.GetYaxis().SetTitleSize(0.06)
+      plot.GetYaxis().SetTitleSize(0.04)
       plot.GetYaxis().SetTitleOffset(1.2)
       plot.GetYaxis().CenterTitle()
-      plot.GetYaxis().SetLabelSize(0.06)
+      plot.GetYaxis().SetLabelSize(0.04)
       plot.GetYaxis().SetNdivisions(505)
       
       plot.GetZaxis().SetTitle(hist.z_label)
-      plot.GetZaxis().SetTitleSize(0.06)
-      plot.GetZaxis().SetTitleOffset(0.8)
+      plot.GetZaxis().SetTitleSize(0.04)
+      plot.GetZaxis().SetTitleOffset(1.3)
       plot.GetZaxis().CenterTitle()
-      plot.GetZaxis().SetLabelSize(0.06)
+      plot.GetZaxis().SetLabelSize(0.04)
       plot.GetZaxis().SetNdivisions(505)
 
     except Exception:
