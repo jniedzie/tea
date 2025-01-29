@@ -36,6 +36,13 @@ def get_args():
     default=1.0,
     help="requested memory in GB"
   )
+
+  parser.add_argument(
+    "--max_materialize",
+    type=int,
+    default=5000,
+    help="specifies an overall limit on the number of jobs that can be materialized in the condor_schedd at any one time"
+  )
   
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")
   
@@ -142,7 +149,7 @@ def main():
     if submission_system == SubmissionSystem.local:  
       submission_manager.run_locally()
     if submission_system == SubmissionSystem.condor:
-      submission_manager.run_condor(args.job_flavour, args.memory, args.resubmit_job, args.dry)
+      submission_manager.run_condor(args.job_flavour, args.memory, args.max_materialize, args.resubmit_job, args.dry)
   
   logger_print()
 

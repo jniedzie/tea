@@ -119,8 +119,12 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
   vector<string> matchingFullCutNames;
   map<string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
   for (auto &[existingCutName, sumOfWeights] : weights) {
-    if (existingCutName.find(cutName) != string::npos) {
-      matchingFullCutNames.push_back(existingCutName);
+    size_t underscorePos = existingCutName.find("_");
+    if (underscorePos != string::npos) {
+      string nameAfterUnderscore = existingCutName.substr(underscorePos + 1);
+      if (nameAfterUnderscore == cutName) {
+        matchingFullCutNames.push_back(existingCutName);
+      }
     }
   }
 

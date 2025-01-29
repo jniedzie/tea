@@ -29,7 +29,7 @@ scaleFactors = {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_TrackerMuons_DEN_genTracks",
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   
   # Muon ID
@@ -37,19 +37,19 @@ scaleFactors = {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_LooseID_DEN_TrackerMuons", 
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   "muonIDMedium": {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_MediumID_DEN_TrackerMuons", 
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   "muonIDTight": {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_TightID_DEN_TrackerMuons", 
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   "dsamuonID": {
     "path": "../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
@@ -63,13 +63,13 @@ scaleFactors = {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_LooseRelIso_DEN_LooseID",
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   "muonIsoTight": {
     "path": "../tea/jsonPOG/POG/MUO/2018_UL/muon_Z.json.gz",
     "type": "NUM_TightRelIso_DEN_TightIDandIPCut",
     "year": "2018_UL",
-    "ValType": "sf",
+    "ValType": "nominal",
   },
   
   # Muon trigger
