@@ -39,7 +39,7 @@ def get_args():
 
   parser.add_argument(
     "--max_materialize",
-    type=float,
+    type=int,
     default=5000,
     help="specifies an overall limit on the number of jobs that can be materialized in the condor_schedd at any one time"
   )
