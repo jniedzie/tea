@@ -6,6 +6,7 @@ from ROOT import TObject
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
 import ROOT
+import numpy as np
 
 @dataclass
 class Histogram:
@@ -69,6 +70,19 @@ class Histogram:
           if original_label != "":
               new_histogram.GetXaxis().SetBinLabel(i, original_label)
       self.hist = new_histogram
+
+    if self.log_x:
+      nbins = self.hist.GetNbinsX()
+      log_bin_vector = np.unique(np.logspace(np.log10(self.x_min), np.log10(self.x_max), nbins + 1))
+      log_bin_array = array('d', log_bin_vector)
+      assert np.all(np.diff(log_bin_array) > 0), "Bins are not strictly increasing!"
+      new_hist = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), nbins, log_bin_array)
+      for i in range(1, nbins + 1):
+        bin_content = self.hist.GetBinContent(i)
+        bin_error = self.hist.GetBinError(i)
+        bin_center = self.hist.GetBinCenter(i)
+        new_hist.Fill(bin_center, bin_content)
+      self.hist = new_hist
     
   def isGood(self):
     if self.hist is None:
