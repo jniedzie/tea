@@ -79,7 +79,6 @@ class Histogram:
       new_hist = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), nbins, log_bin_array)
       for i in range(1, nbins + 1):
         bin_content = self.hist.GetBinContent(i)
-        bin_error = self.hist.GetBinError(i)
         bin_center = self.hist.GetBinCenter(i)
         new_hist.Fill(bin_center, bin_content)
       self.hist = new_hist
