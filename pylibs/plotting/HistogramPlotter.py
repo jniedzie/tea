@@ -226,6 +226,8 @@ class HistogramPlotter:
             if sample.type != SampleType.background:
                 continue
 
+            hist.setup(sample)
+
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
                 hist), None, self.__getBackgroundCrossSections(hist))
 
@@ -245,6 +247,8 @@ class HistogramPlotter:
             if sample.type == SampleType.background:
                 continue
 
+            hist.setup(sample)
+
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
                 hist), self.__getBackgroundIntegral(hist))
 
@@ -256,8 +260,6 @@ class HistogramPlotter:
 
             if hist.getName().endswith('_ratio') or hist.getName().endswith('_denom'):
                 continue
-
-            hist.setup(sample)
 
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
