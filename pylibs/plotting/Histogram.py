@@ -6,6 +6,7 @@ from ROOT import TObject
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
 import ROOT
+import numpy as np
 
 @dataclass
 class Histogram:
