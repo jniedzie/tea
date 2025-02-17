@@ -4,17 +4,6 @@ class ABCDHelper:
     def __init__(self, config):
         self.config = config
 
-        self.nice_names = {
-            "Lxy": "L_{xy} (cm)",
-            "LxySignificance": "L_{xy} significance",
-            "absCollinearityAngle": "|#theta_{coll}|",
-            "3Dangle": "#alpha_{3D}",
-            "LogLxy": "log_{10}[L_{xy} (cm)]",
-            "LogLxySignificance": "log_{10}[L_{xy} significance]",
-            "LogAbsCollinearityAngle": "log_{10}[|#theta_{coll}|]",
-            "Log3Dangle": "log_{10}[#alpha_{3D}]",
-        }
-
     def get_abcd(self, hist, point, values_instead_of_bins=False):
         # The method returns the number of events in the four regions
         # of the ABCD plane, given a 2D histogram and a point in the
@@ -117,14 +106,14 @@ class ABCDHelper:
         return best_point
 
     def get_nice_name(self, name):
-        return self.nice_names[name]
+        return self.config.nice_names[name]
 
     def get_projection_true(self, hist):
         hist_clone = hist.Clone()
         hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], self.config.variable_2_max)
 
         hist_true = hist_clone.ProjectionY(
-            hist.GetName() + "_projection_true", 
+            hist.GetName() + "_projection_true",
             1,
             hist_clone.GetXaxis().FindBin(self.config.abcd_point[0])
         )
