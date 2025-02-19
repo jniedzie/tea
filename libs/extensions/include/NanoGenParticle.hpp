@@ -19,7 +19,9 @@ class NanoGenParticle {
            int line = __builtin_LINE()) {
     return physicsObject->Get(branchName, file, function, line);
   }
-  float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
+
+  template <typename T>
+  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 

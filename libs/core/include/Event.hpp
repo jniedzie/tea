@@ -18,23 +18,101 @@ class Event {
 
   void Reset();
 
-  inline auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+  inline auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
                   int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
       std::string message = "\nTrying to access incorrect event-level branch: " + branchName;
-      if (branchName.find("Weight") != std::string::npos || branchName.find("Wgt") != std::string::npos
-          || branchName.find("weight") != std::string::npos || branchName.find("wgt") != std::string::npos) {
+      if (branchName.find("Weight") != std::string::npos || branchName.find("Wgt") != std::string::npos ||
+          branchName.find("weight") != std::string::npos || branchName.find("wgt") != std::string::npos) {
         message += ", it's probably fine for data if this is a gen weight branch.";
         warn() << message << std::endl;
-      }
-      else fatal(file, function, line) << message << std::endl;
+      } else
+        fatal(file, function, line) << message << std::endl;
       throw Exception(message.c_str());
     }
 
     return Multitype(this, branchName);
   }
 
-  float GetAsFloat(std::string branchName);
+  template <typename T>
+  T GetAs(std::string branchName) {
+    if (defaultCollectionsTypes.count(branchName)) {
+      std::string branchType = defaultCollectionsTypes[branchName];
+      if (branchType == "Int_t") {
+        Int_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Bool_t") {
+        Bool_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Float_t") {
+        Float_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "UChar_t") {
+        UChar_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "UShort_t") {
+        UShort_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Short_t") {
+        Short_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "UInt_t") {
+        UInt_t value = Get(branchName);
+        return value;
+      }
+    }
+
+    try {
+      Float_t value = Get(branchName);
+      defaultCollectionsTypes[branchName] = "Float_t";
+      return value;
+    } catch (BadTypeException &e) {
+      try {
+        Int_t value = Get(branchName);
+        defaultCollectionsTypes[branchName] = "Int_t";
+        return value;
+      } catch (BadTypeException &e) {
+        try {
+          UChar_t value = Get(branchName);
+          defaultCollectionsTypes[branchName] = "UChar_t";
+          return value;
+        } catch (BadTypeException &e) {
+          try {
+            UShort_t value = Get(branchName);
+            defaultCollectionsTypes[branchName] = "UShort_t";
+            return value;
+          } catch (BadTypeException &e) {
+            try {
+              Short_t value = Get(branchName);
+              defaultCollectionsTypes[branchName] = "Short_t";
+              return value;
+            } catch (BadTypeException &e) {
+              try {
+                UInt_t value = Get(branchName);
+                defaultCollectionsTypes[branchName] = "UInt_t";
+                return value;
+              } catch (BadTypeException &e) {
+                try {
+                  Bool_t value = Get(branchName);
+                  defaultCollectionsTypes[branchName] = "Bool_t";
+                  return value;
+                } catch (BadTypeException &e) {
+                  error() << "Couldn't get value for branch " << branchName << std::endl;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return 0;
+  }
 
   inline std::shared_ptr<PhysicsObjects> GetCollection(std::string name) const {
     if (collections.count(name)) return collections.at(name);
@@ -75,9 +153,9 @@ class Event {
   std::map<std::string, UShort_t[maxCollectionElements]> valuesUshortVector;
   std::map<std::string, Short_t[maxCollectionElements]> valuesShortVector;
 
-  std::map<std::string, std::vector<float>*> valuesStdFloatVector;
-  std::map<std::string, std::vector<int>*> valuesStdIntVector;
-  std::map<std::string, std::vector<unsigned int>*> valuesStdUintVector;
+  std::map<std::string, std::vector<float> *> valuesStdFloatVector;
+  std::map<std::string, std::vector<int> *> valuesStdIntVector;
+  std::map<std::string, std::vector<unsigned int> *> valuesStdUintVector;
 
   std::map<std::string, std::shared_ptr<PhysicsObjects>> collections;
   std::map<std::string, std::shared_ptr<PhysicsObjects>> extraCollections;
