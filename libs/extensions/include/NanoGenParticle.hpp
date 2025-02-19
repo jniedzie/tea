@@ -30,11 +30,7 @@ class NanoGenParticle {
   float GetPt() { return physicsObject->Get("pt"); }
   int GetPdgId() { return physicsObject->Get("pdgId"); }
   int GetMotherIndex() { return physicsObject->Get("genPartIdxMother"); }
-  int GetStatusFlags() { 
-    UShort_t statusFlags = physicsObject->Get("statusFlags");
-    return static_cast<int>(statusFlags);
-    // return physicsObject->Get("statusFlags"); 
-  }
+  int GetStatusFlags() { return physicsObject->GetAs<int>("statusFlags"); }
   float GetDxy(float pv_x, float pv_y);
 
   bool IsLastCopy() { return (GetStatusFlags() & isLastCopy); }
