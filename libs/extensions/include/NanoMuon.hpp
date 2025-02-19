@@ -20,7 +20,9 @@ class NanoMuon {
            int line = __builtin_LINE()) {
     return physicsObject->Get(branchName, file, function, line);
   }
-  float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
+
+  template <typename T>
+  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
@@ -36,8 +38,8 @@ class NanoMuon {
   inline float GetOuterEta() { return physicsObject->Get("outerEta"); }
   inline float GetOuterPhi() { return physicsObject->Get("outerPhi"); }
 
-  float GetMatchIdxForNthBestMatch(int N);
-  float GetMatchesForNthBestMatch(int N);
+  int GetMatchIdxForNthBestMatch(int N);
+  int GetMatchesForNthBestMatch(int N);
 
   TLorentzVector GetFourVector();
 

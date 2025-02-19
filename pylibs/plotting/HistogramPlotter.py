@@ -12,8 +12,6 @@ from CmsLabelsManager import CmsLabelsManager
 from Logger import *
 from Histogram import Histogram
 
-import cmsstyle as CMS
-
 class HistogramPlotter:
     def __init__(self, config):
         gStyle.SetOptStat(0)

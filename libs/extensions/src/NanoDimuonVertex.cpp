@@ -11,9 +11,9 @@ NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, con
   muon1 = muons.first;
   muon2 = muons.second;
 
-  Lxyz.SetXYZ(GetAsFloat("vx") - event->GetAsFloat("PV_x"), GetAsFloat("vy") - event->GetAsFloat("PV_y"), GetAsFloat("vz") - event->GetAsFloat("PV_z"));
-  float PV_err = sqrt(event->GetAsFloat("PV_chi2"));
-  LxySigma = (1/GetLxyFromPV())*sqrt(pow(Lxyz.X(),2)*(pow(GetAsFloat("vxErr"),2)+pow(PV_err,2))+pow(Lxyz.Y(),2)*(pow(GetAsFloat("vyErr"),2)+pow(PV_err,2)));
+  Lxyz.SetXYZ(GetAs<float>("vx") - event->GetAs<float>("PV_x"), GetAs<float>("vy") - event->GetAs<float>("PV_y"), GetAs<float>("vz") - event->GetAs<float>("PV_z"));
+  float PV_err = sqrt(event->GetAs<float>("PV_chi2"));
+  LxySigma = (1/GetLxyFromPV())*sqrt(pow(Lxyz.X(),2)*(pow(GetAs<float>("vxErr"),2)+pow(PV_err,2))+pow(Lxyz.Y(),2)*(pow(GetAs<float>("vyErr"),2)+pow(PV_err,2)));
 }
 
 string NanoDimuonVertex::GetVertexCategory() {
@@ -91,7 +91,7 @@ float NanoDimuonVertex::GetDPhiBetweenDimuonpTAndPtMiss(TLorentzVector ptMissFou
 
 float NanoDimuonVertex::GetDeltaPixelHits() {
   std::string category = GetVertexCategory();
-  if(category == "Pat") return abs(float(muon1->GetAsFloat("trkNumPixelHits")) - float(muon2->GetAsFloat("trkNumPixelHits")));
+  if(category == "Pat") return abs(float(muon1->GetAs<float>("trkNumPixelHits")) - float(muon2->GetAs<float>("trkNumPixelHits")));
   return 0;
 }
 
@@ -109,52 +109,52 @@ float NanoDimuonVertex::GetCosine3DOpeningAngle() {
 }
 
 float NanoDimuonVertex::GetDimuonChargeProduct() {
-  return float(muon1->GetAsFloat("charge")) * float(muon2->GetAsFloat("charge"));
+  return float(muon1->GetAs<float>("charge")) * float(muon2->GetAs<float>("charge"));
 }
 
 float NanoDimuonVertex::GetOuterDeltaR() {
-  float outerEta1 = muon1->GetAsFloat("outerEta");
-  float outerPhi1 = muon1->GetAsFloat("outerPhi");
-  float outerEta2 = muon2->GetAsFloat("outerEta");
-  float outerPhi2 = muon2->GetAsFloat("outerPhi");
+  float outerEta1 = muon1->GetAs<float>("outerEta");
+  float outerPhi1 = muon1->GetAs<float>("outerPhi");
+  float outerEta2 = muon2->GetAs<float>("outerEta");
+  float outerPhi2 = muon2->GetAs<float>("outerPhi");
 
   if (outerEta1 <= -5 || outerEta2 <= -5) return -1;
   return asNanoMuon(muon1)->OuterDeltaRtoMuon(asNanoMuon(muon2));
 }
 
 float NanoDimuonVertex::GetDeltaEta() {
-  return muon1->GetAsFloat("eta") - muon2->GetAsFloat("eta");
+  return muon1->GetAs<float>("eta") - muon2->GetAs<float>("eta");
 }
 
 float NanoDimuonVertex::GetDeltaPhi() {
-  return muon1->GetAsFloat("phi") - muon2->GetAsFloat("phi");
+  return muon1->GetAs<float>("phi") - muon2->GetAs<float>("phi");
 }
 
 float NanoDimuonVertex::GetOuterDeltaEta() {
-  return muon1->GetAsFloat("outerEta") - muon2->GetAsFloat("outerEta");
+  return muon1->GetAs<float>("outerEta") - muon2->GetAs<float>("outerEta");
 }
 
 float NanoDimuonVertex::GetOuterDeltaPhi() {
-  return muon1->GetAsFloat("outerPhi") - muon2->GetAsFloat("outerPhi");
+  return muon1->GetAs<float>("outerPhi") - muon2->GetAs<float>("outerPhi");
 }
 
 float NanoDimuonVertex::GetTotalNumberOfSegments() {
   std::string category = GetVertexCategory();
   if(category=="Pat") return 0;
-  if(category=="PatDSA") return muon2->GetAsFloat("nSegments");
-  return muon1->GetAsFloat("nSegments") + muon2->GetAsFloat("nSegments");
+  if(category=="PatDSA") return muon2->GetAs<float>("nSegments");
+  return muon1->GetAs<float>("nSegments") + muon2->GetAs<float>("nSegments");
 }
 
 float NanoDimuonVertex::GetTotalNumberOfDTHits() {
   std::string category = GetVertexCategory();
   if(category=="Pat") return 0;
-  if(category=="PatDSA") return muon2->GetAsFloat("trkNumDTHits");
-  return muon1->GetAsFloat("trkNumDTHits") + muon2->GetAsFloat("trkNumDTHits");
+  if(category=="PatDSA") return muon2->GetAs<float>("trkNumDTHits");
+  return muon1->GetAs<float>("trkNumDTHits") + muon2->GetAs<float>("trkNumDTHits");
 }
 
 float NanoDimuonVertex::GetTotalNumberOfCSCHits() {
   std::string category = GetVertexCategory();
   if(category=="Pat") return 0;
-  if(category=="PatDSA") return muon2->GetAsFloat("trkNumCSCHits");
-  return muon1->GetAsFloat("trkNumCSCHits") + muon2->GetAsFloat("trkNumCSCHits");
+  if(category=="PatDSA") return muon2->GetAs<float>("trkNumCSCHits");
+  return muon1->GetAs<float>("trkNumCSCHits") + muon2->GetAs<float>("trkNumCSCHits");
 }

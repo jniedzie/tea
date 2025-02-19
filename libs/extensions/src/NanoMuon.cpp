@@ -46,18 +46,18 @@ MuonIso NanoMuon::GetIso() {
   return MuonIso(tkIso == 1, tkIso == 2, pfIso == 1, pfIso == 2, pfIso == 3, pfIso == 4, pfIso == 5, pfIso == 6);
 }
 
-float NanoMuon::GetMatchIdxForNthBestMatch(int N) {
+int NanoMuon::GetMatchIdxForNthBestMatch(int N) {
  string idxString;
  if (isDSA()) idxString = "muonMatch" + to_string(N) + "idx";
  if (!isDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
- return GetAsFloat(idxString);
+ return GetAs<int>(idxString);
 }
 
-float NanoMuon::GetMatchesForNthBestMatch(int N) {
+int NanoMuon::GetMatchesForNthBestMatch(int N) {
  string matchString;
  if (isDSA()) matchString = "muonMatch" + to_string(N);
  if (!isDSA()) matchString = "dsaMatch" + to_string(N);
- return GetAsFloat(matchString);
+ return GetAs<int>(matchString);
 }
 
 float NanoMuon::OuterDeltaRtoMuon(shared_ptr<NanoMuon> muon) {

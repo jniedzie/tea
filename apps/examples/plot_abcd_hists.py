@@ -19,7 +19,7 @@ def main():
 
     config = getConfig()
     abcdPlotter = ABCDPlotter(config)
-    
+
     abcdPlotter.plot_optimization_hists()
     abcdPlotter.plot_per_signal_hists()
     abcdPlotter.plot_and_save_best_abcd_points()
@@ -29,6 +29,7 @@ def main():
     abcdPlotter.plot_projections_ratio()
 
     abcdPlotter.save_canvases()
+    abcdPlotter.print_params_for_selected_point()
 
 
 if __name__ == "__main__":

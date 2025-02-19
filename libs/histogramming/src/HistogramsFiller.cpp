@@ -44,13 +44,13 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       if (branchName[0] == 'n') {
         eventVariable = event->GetCollection(branchName.substr(1))->size();
       } else {
-        eventVariable = event->GetAsFloat(branchName);
+        eventVariable = event->GetAs<float>(branchName);
       }
       histogramsHandler->Fill(title, eventVariable, weight);
     } else {
       auto collection = event->GetCollection(collectionName);
       for (auto object : *collection) {
-        histogramsHandler->Fill(title, object->GetAsFloat(branchName), weight);
+        histogramsHandler->Fill(title, object->GetAs<float>(branchName), weight);
       }
     }
   }
