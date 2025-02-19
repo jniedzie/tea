@@ -25,7 +25,7 @@ class HistogramNormalizer:
     if normalize_hists:
       self.__setBackgroundEntries()
   
-  def normalize(self, hist, sample, data_integral=None, background_integral=None, background_cross_sections=None):
+  def normalize(self, hist, sample, data_integral=None, background_integral=None):
     if hist.norm_type == NormalizationType.to_one:
       warn("Trying to normalize to one, this is not yet implemented properly")
       self.__normalizeToOne(hist, sample)
