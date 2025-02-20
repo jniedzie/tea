@@ -25,22 +25,24 @@ class HistogramNormalizer:
     if normalize_hists:
       self.__setBackgroundEntries()
   
-  def normalize(self, hist, sample, data_integral=None, background_integral=None):
+  def normalize(self, hist, sample, data_integral=None, total_backgrounds_integral=None):
     if hist.norm_type == NormalizationType.to_one:
       warn("Trying to normalize to one, this is not yet implemented properly")
       self.__normalizeToOne(hist, sample)
     elif hist.norm_type == NormalizationType.to_background:
-      self.__normalizeToBackground(hist, sample, background_integral)
+      self.__normalizeToBackground(hist, sample, total_backgrounds_integral)
     elif hist.norm_type == NormalizationType.to_lumi:
       self.__normalizeToLumi(hist, sample)
     elif hist.norm_type == NormalizationType.to_data:
-      self.__normalizeToData(hist, sample, data_integral, background_integral)
+      self.__normalizeToData(hist, sample, data_integral, total_backgrounds_integral)
 
   def getBackgroundNormalizedToLumi(self, hist, sample):
     hist_normalized = hist.hist.Clone()
+    if sample.type != SampleType.background:
+      warn(f"Trying to normalize background to lumi, but sample is not background: {sample.name}")
+      return hist_normalized
     scale = self.config.luminosity*sample.cross_section
-    if sample.type == SampleType.background:
-      scale /= self.background_initial_sum_weights[sample.name]
+    scale /= self.background_initial_sum_weights[sample.name]
     hist_normalized.Scale(scale)
     return hist_normalized
 
@@ -51,19 +53,19 @@ class HistogramNormalizer:
       if hist.hist.Integral() != 0:
         hist.hist.Scale(1./hist.hist.Integral())
   
-  def __normalizeToBackground(self, hist, sample, background_integral):
+  def __normalizeToBackground(self, hist, sample, total_backgrounds_integral):
     if sample.type == SampleType.background:
       hist.hist.Scale(self.config.luminosity*sample.cross_section/self.background_initial_sum_weights[sample.name])
       return
-    if background_integral is None:
+    if total_backgrounds_integral is None:
       error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
       return
     if sample.type == SampleType.signal:
       if hist.hist.Integral() != 0:
-        hist.hist.Scale(background_integral/hist.hist.Integral())
+        hist.hist.Scale(total_backgrounds_integral/hist.hist.Integral())
       return
     if sample.type == SampleType.data:
-      hist.hist.Scale(background_integral/self.data_final_entries[sample.name])
+      hist.hist.Scale(total_backgrounds_integral/self.data_final_entries[sample.name])
   
   def __normalizeToLumi(self, hist, sample):
     scale = self.config.luminosity*sample.cross_section
@@ -78,17 +80,19 @@ class HistogramNormalizer:
     
     hist.hist.Scale(scale)
   
-  def __normalizeToData(self, hist, sample, data_integral, background_integral):
+  def __normalizeToData(self, hist, sample, data_integral, total_backgrounds_integral):
     if hist.hist.Integral() == 0:
       error(f"Couldn't normalize to data: {hist.name}, {sample.name}, background integral is 0")
       return  
     if data_integral is None:
       error(f"Couldn't normalize to data: {hist.name}, {sample.name}, no data integral is given")
       return
-        
+
     if sample.type == SampleType.background:
       self.__normalizeToLumi(hist, sample)
-      scale = data_integral/background_integral
+      scale = data_integral/total_backgrounds_integral
+    elif sample.type == SampleType.signal:
+      scale = data_integral/hist.hist.Integral()
     elif sample.type == SampleType.data:
       scale = 1
     

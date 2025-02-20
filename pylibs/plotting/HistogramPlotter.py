@@ -47,7 +47,7 @@ class HistogramPlotter:
         self.ratiosamples = []
         self.histosamples2D = []
         self.data_integral = {}
-        self.background_integral = {}
+        self.total_backgrounds_integral = {}
 
         if hasattr(self.config, "bkgRawEventsThreshold"):
             self.bkgRawEventsThreshold = self.config.bkgRawEventsThreshold
@@ -167,8 +167,8 @@ class HistogramPlotter:
         return None
 
     def __getBackgroundIntegral(self, input_hist):
-        if input_hist.getName() in self.background_integral.keys():
-            return self.background_integral[input_hist.getName()]
+        if input_hist.getName() in self.total_backgrounds_integral.keys():
+            return self.total_backgrounds_integral[input_hist.getName()]
         return None
 
     def __sortHistosamples(self):
@@ -201,31 +201,33 @@ class HistogramPlotter:
 
             hist.setup(sample)
             hist_normalized = self.normalizer.getBackgroundNormalizedToLumi(hist, sample)
-            if hist.getName() in self.background_integral:
-                self.background_integral[hist.getName()
+            if hist.getName() in self.total_backgrounds_integral:
+                self.total_backgrounds_integral[hist.getName()
                                          ] += hist_normalized.Integral()
             else:
-                self.background_integral[hist.getName()] = hist_normalized.Integral()
+                self.total_backgrounds_integral[hist.getName()] = hist_normalized.Integral()
 
         # normalize and setup data for data integral
         for hist, sample in self.histosamples:
+            if sample.type != SampleType.data:
+                continue
+            
             if not hist.isGood():
                 warn(
                     f"No good histogram {hist.getName()} for sample {sample.name}")
                 continue
 
-            if sample.type == SampleType.data:
-                hist.setup(sample)
-                self.data_integral[hist.getName()] = hist.hist.Integral()
+            hist.setup(sample)
+            self.data_integral[hist.getName()] = hist.hist.Integral()
 
         # normalize background
         for hist, sample in self.histosamples:
+            if sample.type != SampleType.background:
+                continue
+
             if not hist.isGood():
                 warn(
                     f"No good histogram {hist.getName()} for sample {sample.name}")
-                continue
-
-            if sample.type != SampleType.background:
                 continue
 
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
@@ -233,12 +235,12 @@ class HistogramPlotter:
 
         # normalize signal
         for hist, sample in self.histosamples:
+            if sample.type != SampleType.signal:
+                continue
+
             if not hist.isGood():
                 warn(
                     f"No good histogram {hist.getName()} for sample {sample.name}")
-                continue
-
-            if sample.type != SampleType.signal:
                 continue
 
             hist.setup(sample)
