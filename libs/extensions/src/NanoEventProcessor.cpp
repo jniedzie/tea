@@ -32,7 +32,7 @@ float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   if (name == "custom") {
-    int nVertices = event->Get("PV_npvsGood");
+    int nVertices = event->GetAs<int>("PV_npvsGood");
     return scaleFactorsManager.GetPileupScaleFactorCustom(nVertices);
   } else {
     float nVertices = event->Get("Pileup_nTrueInt");

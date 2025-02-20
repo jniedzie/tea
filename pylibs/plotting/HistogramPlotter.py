@@ -47,8 +47,7 @@ class HistogramPlotter:
         self.ratiosamples = []
         self.histosamples2D = []
         self.data_integral = {}
-        self.background_integral = {}
-        self.background_cross_sections = {}
+        self.total_backgrounds_integral = {}
 
         if hasattr(self.config, "bkgRawEventsThreshold"):
             self.bkgRawEventsThreshold = self.config.bkgRawEventsThreshold
@@ -91,13 +90,11 @@ class HistogramPlotter:
                 f"No good histogram {hist.getName()} for sample {sample.name}")
             return
 
-        if hist.entries < self.bkgRawEventsThreshold:
+        if sample.type == SampleType.background and hist.entries < self.bkgRawEventsThreshold:
             return
 
         self.histosamples.append((copy.deepcopy(hist), copy.deepcopy(sample)))
 
-        if sample.type is SampleType.data:
-            self.data_integral[hist.getName()] = hist.hist.Integral()
 
     def addHistosample2D(self, hist, sample, input_file):
         if self.__histosample2DExists(hist, sample):
@@ -170,15 +167,8 @@ class HistogramPlotter:
         return None
 
     def __getBackgroundIntegral(self, input_hist):
-        if input_hist.getName() in self.background_integral.keys():
-            return self.background_integral[input_hist.getName()]
-        return None
-
-    def __getBackgroundCrossSections(self, input_hist):
-        if input_hist.getName() in self.background_cross_sections.keys():
-            return self.background_cross_sections[input_hist.getName()]
-        if input_hist.getName() == "Event_normCheck":
-            return 1
+        if input_hist.getName() in self.total_backgrounds_integral.keys():
+            return self.total_backgrounds_integral[input_hist.getName()]
         return None
 
     def __sortHistosamples(self):
@@ -209,40 +199,48 @@ class HistogramPlotter:
             if sample.type != SampleType.background:
                 continue
 
-            if hist.getName() in self.background_cross_sections:
-                self.background_cross_sections[hist.getName()] += sample.cross_section
+            hist.setup(sample)
+            hist_normalized = self.normalizer.getBackgroundNormalizedToLumi(hist, sample)
+            if hist.getName() in self.total_backgrounds_integral:
+                self.total_backgrounds_integral[hist.getName()
+                                         ] += hist_normalized.Integral()
             else:
-                self.background_cross_sections[hist.getName()] = sample.cross_section
+                self.total_backgrounds_integral[hist.getName()] = hist_normalized.Integral()
 
-        # normalize background for total background integral
+        # normalize and setup data for data integral
         for hist, sample in self.histosamples:
+            if sample.type != SampleType.data:
+                continue
+            
             if not hist.isGood():
                 warn(
                     f"No good histogram {hist.getName()} for sample {sample.name}")
-                continue
-
-            if sample.type != SampleType.background:
                 continue
 
             hist.setup(sample)
+            self.data_integral[hist.getName()] = hist.hist.Integral()
 
-            self.normalizer.normalize(hist, sample, self.__getDataIntegral(
-                hist), None, self.__getBackgroundCrossSections(hist))
-
-            if hist.getName() in self.background_integral:
-                self.background_integral[hist.getName()
-                                         ] += hist.hist.Integral()
-            else:
-                self.background_integral[hist.getName()] = hist.hist.Integral()
-
-        # normalize signal and data
+        # normalize background
         for hist, sample in self.histosamples:
+            if sample.type != SampleType.background:
+                continue
+
             if not hist.isGood():
                 warn(
                     f"No good histogram {hist.getName()} for sample {sample.name}")
                 continue
 
-            if sample.type == SampleType.background:
+            self.normalizer.normalize(hist, sample, self.__getDataIntegral(
+                hist), self.__getBackgroundIntegral(hist))
+
+        # normalize signal
+        for hist, sample in self.histosamples:
+            if sample.type != SampleType.signal:
+                continue
+
+            if not hist.isGood():
+                warn(
+                    f"No good histogram {hist.getName()} for sample {sample.name}")
                 continue
 
             hist.setup(sample)
