@@ -15,7 +15,7 @@ class HistogramNormalizer:
   def __init__(self, config):
     self.config = config
     
-    # Check if any of histograms in the config chas NormalizationType different than none or to_one:
+    # Check if any of histograms in the config has NormalizationType different than none or to_one:
     normalize_hists = False
     for hist in self.config.histograms:
       if hist.norm_type != NormalizationType.none and hist.norm_type != NormalizationType.to_one:
@@ -26,6 +26,9 @@ class HistogramNormalizer:
       self.__setBackgroundEntries()
   
   def normalize(self, hist, sample, data_integral=None, total_backgrounds_integral=None):
+    if hist.norm_type == NormalizationType.none:
+      return
+    
     if hist.norm_type == NormalizationType.to_one:
       warn("Trying to normalize to one, this is not yet implemented properly")
       self.__normalizeToOne(hist, sample)
@@ -37,6 +40,9 @@ class HistogramNormalizer:
       self.__normalizeToData(hist, sample, data_integral, total_backgrounds_integral)
 
   def getBackgroundNormalizedToLumi(self, hist, sample):
+    if hist.norm_type == NormalizationType.none:
+      return hist.hist.Clone()
+    
     hist_normalized = hist.hist.Clone()
     if sample.type != SampleType.background:
       warn(f"Trying to normalize background to lumi, but sample is not background: {sample.name}")
