@@ -23,7 +23,11 @@ def main():
   input_files = {}
   
   for sample in config.samples:
-    input_files[sample.name] = ROOT.TFile.Open(sample.file_path, "READ")
+    try:
+      input_files[sample.name] = ROOT.TFile.Open(sample.file_path, "READ")
+    except OSError:
+      error(f"File {sample.file_path} not found!")
+      continue
     
     for hist in config.histograms:
       plotter.addHistosample(hist, sample, input_files[sample.name])
