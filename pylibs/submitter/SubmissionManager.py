@@ -84,7 +84,7 @@ class SubmissionManager:
     os.system(command)
   
   def __get_das_files_list(self, dataset_name):
-    das_command = f"dasgoclient -query='file dataset={dataset_name}'"
+    das_command = f"dasgoclient -query='file dataset={dataset_name} instance={self.files_config.dbs_instance}'"
     info(f"\n\nExecuting {das_command=}")
     return os.popen(das_command).read().splitlines()
   
@@ -110,6 +110,8 @@ class SubmissionManager:
     
     input_file_list = self.__get_intput_file_list()
     
+    
+    
     if hasattr(self.files_config, "file_name"):
       file_name = self.files_config.file_name
       path = "/".join(input_file_list[0].strip().split("/")[:-1])
@@ -118,6 +120,8 @@ class SubmissionManager:
     max_files = -1
     if hasattr(self.files_config, "max_files"):
       max_files = self.files_config.max_files
+    
+    print(f"{max_files=}")
     
     for i, input_file_path in enumerate(input_file_list):
       if max_files > 0 and i >= max_files:

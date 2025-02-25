@@ -6,8 +6,9 @@ GetEnv                = True
 output                = output/$(ClusterId).$(ProcId).out
 error                 = error/$(ClusterId).$(ProcId).err
 log                   = log/$(ClusterId).log
-requirements 	        = (OpSysAndVer =?= "CentOS7")
+# requirements 	      = (OpSysAndVer =?= "CentOS7")
 request_memory        = 4 GB
 +JobFlavour           = "<job_flavour>"
+max_materialize       = 5000
 
 queue <n_jobs>
