@@ -201,6 +201,9 @@ void EventReader::SetupScalarBranch(string branchName, string branchType, string
   } else if (branchType == "UChar_t") {
     currentEvent->valuesUchar[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUchar[branchName]);
+  } else if (branchType == "Char_t") {
+    currentEvent->valuesChar[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesChar[branchName]);
   } else {
     error() << "unsupported scalar branch type: " << branchType << "\t (branch name: " << branchName << ")" << endl;
   }
@@ -228,6 +231,11 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUcharVector[branchName]);
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesUchar[variableName] = &currentEvent->valuesUcharVector[branchName][i];
+    }
+  } else if (branchType == "Char_t") {
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesCharVector[branchName]);
+    for (int i = 0; i < maxCollectionElements; i++) {
+      currentEvent->collections[collectionName]->at(i)->valuesChar[variableName] = &currentEvent->valuesCharVector[branchName][i];
     }
   } else if (branchType == "Int_t") {
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesIntVector[branchName]);
