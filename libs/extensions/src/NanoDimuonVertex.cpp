@@ -138,23 +138,23 @@ float NanoDimuonVertex::GetOuterDeltaPhi() {
   return muon1->GetAs<float>("outerPhi") - muon2->GetAs<float>("outerPhi");
 }
 
-float NanoDimuonVertex::GetTotalNumberOfSegments() {
+int NanoDimuonVertex::GetTotalNumberOfSegments() {
   std::string category = GetVertexCategory();
   if(category=="Pat") return 0;
-  if(category=="PatDSA") return muon2->GetAs<float>("nSegments");
-  return muon1->GetAs<float>("nSegments") + muon2->GetAs<float>("nSegments");
+  if(category=="PatDSA") return muon2->GetAs<int>("nSegments");
+  return muon1->GetAs<int>("nSegments") + muon2->GetAs<int>("nSegments");
 }
 
-float NanoDimuonVertex::GetTotalNumberOfDTHits() {
+int NanoDimuonVertex::GetTotalNumberOfDTHits() {
   std::string category = GetVertexCategory();
   if(category=="Pat") return 0;
-  if(category=="PatDSA") return muon2->GetAs<float>("trkNumDTHits");
-  return muon1->GetAs<float>("trkNumDTHits") + muon2->GetAs<float>("trkNumDTHits");
+  if(category=="PatDSA") return muon2->GetAs<int>("trkNumDTHits");
+  return muon1->GetAs<int>("trkNumDTHits") + muon2->GetAs<int>("trkNumDTHits");
 }
 
-float NanoDimuonVertex::GetTotalNumberOfCSCHits() {
+int NanoDimuonVertex::GetTotalNumberOfCSCHits() {
   std::string category = GetVertexCategory();
   if(category=="Pat") return 0;
-  if(category=="PatDSA") return muon2->GetAs<float>("trkNumCSCHits");
-  return muon1->GetAs<float>("trkNumCSCHits") + muon2->GetAs<float>("trkNumCSCHits");
+  if(category=="PatDSA") return muon2->GetAs<int>("trkNumCSCHits");
+  return muon1->GetAs<int>("trkNumCSCHits") + muon2->GetAs<int>("trkNumCSCHits");
 }
