@@ -131,6 +131,7 @@ class Event {
   inline Float_t GetFloat(std::string branchName) { return valuesFloat[branchName]; }
   inline ULong64_t GetULong(std::string branchName) { return valuesUlong[branchName]; }
   inline UChar_t GetUChar(std::string branchName) { return valuesUchar[branchName]; }
+  inline Char_t GetChar(std::string branchName) { return valuesChar[branchName]; }
   inline UShort_t GetUShort(std::string branchName) { return valuesUshort[branchName]; }
   inline Short_t GetShort(std::string branchName) { return valuesShort[branchName]; }
 
@@ -142,6 +143,7 @@ class Event {
   std::map<std::string, Float_t> valuesFloat;
   std::map<std::string, ULong64_t> valuesUlong;
   std::map<std::string, UChar_t> valuesUchar;
+  std::map<std::string, Char_t> valuesChar;
   std::map<std::string, UShort_t> valuesUshort;
   std::map<std::string, Short_t> valuesShort;
 
@@ -149,6 +151,7 @@ class Event {
   std::map<std::string, Bool_t[maxCollectionElements]> valuesBoolVector;
   std::map<std::string, Float_t[maxCollectionElements]> valuesFloatVector;
   std::map<std::string, UChar_t[maxCollectionElements]> valuesUcharVector;
+  std::map<std::string, Char_t[maxCollectionElements]> valuesCharVector;
   std::map<std::string, UInt_t[maxCollectionElements]> valuesUintVector;
   std::map<std::string, UShort_t[maxCollectionElements]> valuesUshortVector;
   std::map<std::string, Short_t[maxCollectionElements]> valuesShortVector;

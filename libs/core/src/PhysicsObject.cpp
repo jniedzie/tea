@@ -15,4 +15,5 @@ void PhysicsObject::Reset() {
   for (auto& [key, value] : valuesFloat) value = 0;
   for (auto& [key, value] : valuesUlong) value = 0;
   for (auto& [key, value] : valuesUchar) value = 0;
+  for (auto& [key, value] : valuesChar) value = 0;
 }
