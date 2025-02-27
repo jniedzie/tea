@@ -14,17 +14,17 @@ float NanoEvent::GetMetPt() { return Get("MET_pt"); }
 
 shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
                                                         float matchingDeltaR) {
-  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
-  for (auto muon : *looseMuons) {
+  for (auto muon : *loosePATMuons) {
     allMuons->push_back(muon);
   }
   for (auto dsaMuon : *looseDSAMuons) {
     auto dsaMuonP4 = asNanoMuon(dsaMuon)->GetFourVector();
     bool matchFound = false;
-    for (auto muon : *looseMuons) {
+    for (auto muon : *loosePATMuons) {
       auto muonP4 = asNanoMuon(muon)->GetFourVector();
       if (muonP4.DeltaR(dsaMuonP4) < matchingDeltaR) matchFound = true;
     }
@@ -36,16 +36,16 @@ shared_ptr<PhysicsObjects> NanoEvent::GetDRMatchedMuons(shared_ptr<Collection<sh
 
 shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
                                                              float matchingDeltaR) {
-  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
-  for (auto muon : *looseMuons) {
+  for (auto muon : *loosePATMuons) {
     allMuons->push_back(muon);
   }
   for (auto dsaMuon : *looseDSAMuons) {
     bool matchFound = false;
-    for (auto muon : *looseMuons) {
+    for (auto muon : *loosePATMuons) {
       if (asNanoMuon(dsaMuon)->OuterDeltaRtoMuon(asNanoMuon(muon)) < matchingDeltaR) matchFound = true;
     }
     if (matchFound == false) allMuons->push_back(dsaMuon);
@@ -56,16 +56,16 @@ shared_ptr<PhysicsObjects> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<Collecti
 
 shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
                                                                  float matchingDeltaR) {
-  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
-  for (auto muon : *looseMuons) {
+  for (auto muon : *loosePATMuons) {
     allMuons->push_back(muon);
   }
   for (auto dsaMuon : *looseDSAMuons) {
     bool matchFound = false;
-    for (auto muon : *looseMuons) {
+    for (auto muon : *loosePATMuons) {
       auto vertex = GetVertexForDimuon(dsaMuon, muon);
       if (float(vertex->Get("dRprox")) < matchingDeltaR) matchFound = true;
     }
@@ -77,11 +77,11 @@ shared_ptr<PhysicsObjects> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<Coll
 
 shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(shared_ptr<Collection<shared_ptr<PhysicsObject>>> muonCollection,
                                                              float minMatchRatio) {
-  auto looseMuons = GetPATMuonsFromCollection(muonCollection);
+  auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<PhysicsObjects>();
-  for (auto muon : *looseMuons) {
+  for (auto muon : *loosePATMuons) {
     allMuons->push_back(muon);
   }
   for (auto dsaMuon : *looseDSAMuons) {
@@ -91,7 +91,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuons(shared_ptr<Collecti
     for (int i = 1; i <= 5; i++) {
       float ratio_tmp = asNanoMuon(dsaMuon)->GetMatchesForNthBestMatch(i) / nSegments;
       if (!matchFound && ratio_tmp >= minMatchRatio) {
-        matchFound = PATMuonIndexExist(looseMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNthBestMatch(i));
+        matchFound = PATMuonIndexExist(loosePATMuons, asNanoMuon(dsaMuon)->GetMatchIdxForNthBestMatch(i));
         break;
       }
     }
