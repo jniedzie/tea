@@ -7,10 +7,9 @@ from array import array
 
 from Sample import SampleType
 from Styler import Styler
-from HistogramNormalizer import HistogramNormalizer,NormalizationType
+from HistogramNormalizer import HistogramNormalizer
 from CmsLabelsManager import CmsLabelsManager
 from Logger import *
-from Histogram import Histogram
 
 class HistogramPlotter:
     def __init__(self, config):
@@ -140,11 +139,10 @@ class HistogramPlotter:
                 self.legends[hist.getName()] = {}
 
             if sample.custom_legend is not None:
-                self.legends[hist.getName(
-                )][sample.name] = sample.custom_legend.getRootLegend()
+                self.legends[hist.getName()][sample.name] = sample.custom_legend.getRootLegend()
             elif (hist.getName(), sample.type) not in already_added:
-                self.legends[hist.getName(
-                )][sample.type] = self.config.legends[sample.type].getRootLegend()
+                legend = self.config.legends[sample.type] if hasattr(self.config, "legends") else None
+                self.legends[hist.getName()][sample.type] = legend.getRootLegend() if legend is not None else None
                 already_added.append((hist.getName(), sample.type))
         
         for hist_pass, hist_tot, sample in self.ratiosamples:
@@ -260,9 +258,11 @@ class HistogramPlotter:
             self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
             key = sample.type if sample.custom_legend is None else sample.name
-            options = self.config.legends[sample.type].options if sample.custom_legend is None else sample.custom_legend.options
+            opt = self.config.legends[sample.type].options if hasattr(self.config, "legends") else None
+            
+            options = opt if sample.custom_legend is None else sample.custom_legend.options
 
-            if sample.legend_description != "":
+            if sample.legend_description != "" and self.legends[hist.getName()][key] is not None:
                 self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
 
     def addHists2D(self, input_file, sample):
@@ -367,7 +367,8 @@ class HistogramPlotter:
             return
 
         for legend in self.legends[hist.getName()].values():
-            legend.Draw()
+            if legend is not None:
+                legend.Draw()
 
     def _hist_to_graph(self, hist):
 
