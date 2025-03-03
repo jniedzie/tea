@@ -86,12 +86,12 @@ class HistogramPlotter:
 
         if not hist.isGood():
             warn(
-                f"No good histogram {hist.getName()} for sample {sample.name}")
+                f"Some histograms were missing for some of the samples.")
             return
 
         if sample.type == SampleType.background and hist.entries < self.bkgRawEventsThreshold:
             return
-
+        
         self.histosamples.append((copy.deepcopy(hist), copy.deepcopy(sample)))
 
 
@@ -103,7 +103,7 @@ class HistogramPlotter:
 
         if not hist.isGood():
             warn(
-                f"No good histogram {hist.getName()} for sample {sample.name}")
+                f"Some histograms were missing for some of the samples.")
             return
 
         self.histosamples2D.append((copy.deepcopy(hist), sample))
@@ -212,7 +212,7 @@ class HistogramPlotter:
             
             if not hist.isGood():
                 warn(
-                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                    f"Some histograms were missing for some of the samples.")
                 continue
 
             hist.setup(sample)
@@ -225,7 +225,7 @@ class HistogramPlotter:
 
             if not hist.isGood():
                 warn(
-                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                    f"Some histograms were missing for some of the samples.")
                 continue
 
             self.normalizer.normalize(hist, sample, self.__getDataIntegral(
@@ -238,7 +238,7 @@ class HistogramPlotter:
 
             if not hist.isGood():
                 warn(
-                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                    f"Some histograms were missing for some of the samples.")
                 continue
 
             hist.setup(sample)
@@ -249,7 +249,7 @@ class HistogramPlotter:
         for hist, sample in self.histosamples:
             if not hist.isGood():
                 warn(
-                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                    f"Some histograms were missing for some of the samples.")
                 continue
 
             if hist.getName().endswith('_ratio') or hist.getName().endswith('_denom'):
@@ -274,7 +274,7 @@ class HistogramPlotter:
 
             if not hist.isGood():
                 warn(
-                    f"No good histogram {hist.getName()} for sample {sample.name}")
+                    f"Some histograms were missing for some of the samples.")
                 continue
 
             hist.setup()
@@ -363,7 +363,7 @@ class HistogramPlotter:
         canvas.cd(1)
 
         if hist.getName() not in self.legends:
-            warn(f"Couldn't find legends for histogram: {hist.getName()}")
+            warn(f"Couldn't find legends for some histograms.")
             return
 
         for legend in self.legends[hist.getName()].values():

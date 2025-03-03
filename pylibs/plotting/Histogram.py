@@ -28,6 +28,8 @@ class Histogram:
   
   def __post_init__(self):
     self.hist = None
+    self.rand = ROOT.TRandom3()
+    self.rand.SetSeed(0)
   
   def getName(self):
     return self.name + self.suffix
@@ -43,7 +45,7 @@ class Histogram:
       return
     
     if not self.hist or type(self.hist) is TObject:
-      warn(f"Histogram: {self.name} is invalid or uninitialized")
+      warn(f"Some histograms are invalid.")
       return
     
     self.entries = self.hist.GetEntries()
@@ -60,7 +62,7 @@ class Histogram:
         new_bin_edges.append(self.x_max)
       
       new_n_bins = len(new_bin_edges) - 1
-      new_histogram = ROOT.TH1F(self.hist.GetName(), self.hist.GetTitle(), new_n_bins, array('d', new_bin_edges))
+      new_histogram = ROOT.TH1F(f"{self.hist.GetName()}_{self.rand.Integer(1000000)}", self.hist.GetTitle(), new_n_bins, array('d', new_bin_edges))
       
       for i in range(1, new_n_bins + 1):
           original_bin = self.hist.FindBin(new_bin_edges[i-1])
@@ -76,7 +78,7 @@ class Histogram:
       warn(f"Could not find histogram: {self.name}")
       return
     if not self.hist or type(self.hist) is TObject:
-      warn(f"Histogram: {self.name} is invalid or uninitialized")
+      warn(f"Some histograms are invalid.")
       return
     if self.hist.GetEntries() == 0:
       return False
