@@ -292,6 +292,27 @@ void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<
 }
 
 template <>
+void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vector<float>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
+
+  PyObject *pKey, *pValue;
+  Py_ssize_t pos = 0;
+
+  while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
+    if (!PyUnicode_Check(pKey) || (!PyList_Check(pValue) && !PyTuple_Check(pValue))) {
+      error() << "Failed retriving python key-value pair (string-vector<float>)" << endl;
+      continue;
+    }
+    vector<float> outputVector;
+    for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
+      PyObject *item = GetItem(pValue, i);
+      outputVector.push_back(PyLong_AsLong(item));
+    }
+    outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
+  }
+}
+
+template <>
 void ConfigManager::GetMap<string, map<string, string>>(string name, map<string, map<string, string>> &outputMap) {
   PyObject *pythonDict = GetPythonDict(name);
 
