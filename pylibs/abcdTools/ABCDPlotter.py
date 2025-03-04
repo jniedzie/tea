@@ -12,7 +12,7 @@ class ABCDPlotter:
         self.abcdHelper = ABCDHelper(config)
         self.histogramsHelper = ABCDHistogramsHelper(config)
 
-        self.hist_name = config.variable_1 + "_vs_" + config.variable_2 + config.region
+        self.hist_name = config.variable_1 + "_vs_" + config.variable_2
 
         self.background_files = {}
         self.background_hists = {}
@@ -316,7 +316,7 @@ class ABCDPlotter:
 
     def load_background_histograms(self):
         for path, cross_section in self.config.background_params:
-            intput_path = self.config.background_path_pattern.format(path, self.config.skim, self.config.hist_dir)
+            intput_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_dir)
             file_path = f"{self.config.base_path}/{intput_path}"
 
             self.background_files[path] = ROOT.TFile.Open(file_path)
@@ -359,7 +359,7 @@ class ABCDPlotter:
     def load_signal_hists(self):
         for mass in self.config.masses:
             for ctau in self.config.ctaus:
-                input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim, self.config.hist_dir)
+                input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim[0], self.config.hist_dir)
 
                 try:
                     self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
