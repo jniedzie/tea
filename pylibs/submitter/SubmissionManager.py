@@ -117,8 +117,7 @@ class SubmissionManager:
     
     if hasattr(self.files_config, "input_dasfiles"):
       max_files = getattr(self.files_config, "max_files", -1)
-      dasfilelist = f"{self.files_config.tea_base_path}/{self.files_config.input_dasfiles}"
-      files = self.__get_das_files_from_list(dasfilelist)
+      files = self.__get_das_files_from_list(self.files_config.input_dasfiles)
       if max_files > 0:
         return files[:max_files]
       return files
