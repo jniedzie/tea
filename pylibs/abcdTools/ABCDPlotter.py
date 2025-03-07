@@ -12,7 +12,7 @@ class ABCDPlotter:
         self.abcdHelper = ABCDHelper(config)
         self.histogramsHelper = ABCDHistogramsHelper(config)
 
-        self.hist_name = config.variable_1 + "_vs_" + config.variable_2 + config.region
+        self.hist_name = config.variable_1 + "_vs_" + config.variable_2
 
         self.background_files = {}
         self.background_hists = {}
@@ -90,6 +90,22 @@ class ABCDPlotter:
                 self.significance_hists[(mass, ctau)].Draw("colz")
                 label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
+    def plot_background_hist(self):
+        clone = self.background_hist.Clone()
+        clone.Rebin2D(self.config.rebin_grid, self.config.rebin_grid)
+        clone.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
+        clone.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
+        self.canvases["background"].cd()
+        clone.DrawNormalized("BOX")
+        
+        # print correlation between variables in the plot
+        correlation = clone.GetCorrelationFactor()
+        label = ROOT.TLatex()
+        label.SetTextSize(0.03)
+        label.DrawLatexNDC(0.15, 0.85, f"Correlation: {correlation:.2f}")
+        
+        
+    
     def plot_and_save_best_abcd_points(self):
         best_point = None
         best_x = None
@@ -216,8 +232,9 @@ class ABCDPlotter:
 
         self.ratio_hist = self.prediction_projection_hist.Clone()
         self.ratio_hist.SetTitle("")
-        self.ratio_hist.Divide(self.true_projection_hist,
-                               self.prediction_projection_hist, 1.0, 1.0, "B")
+        self.ratio_hist.Divide(self.prediction_projection_hist,
+                               self.true_projection_hist,
+                               1.0, 1.0, "B")
 
         self.ratio_hist_err = self.true_projection_hist.Clone()
         for i in range(1, self.ratio_hist_err.GetNbinsX() + 1):
@@ -264,7 +281,7 @@ class ABCDPlotter:
 
         for key, canvas in self.canvases.items():
             
-            if key in ["closure", "error", "min_n_events"]:
+            if key in ["closure", "error", "min_n_events", "background"]:
                 canvas.cd()
                 line_x.Draw()
                 line_y.Draw()
@@ -316,7 +333,7 @@ class ABCDPlotter:
 
     def load_background_histograms(self):
         for path, cross_section in self.config.background_params:
-            intput_path = self.config.background_path_pattern.format(path, self.config.skim, self.config.hist_dir)
+            intput_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_dir)
             file_path = f"{self.config.base_path}/{intput_path}"
 
             self.background_files[path] = ROOT.TFile.Open(file_path)
@@ -359,7 +376,7 @@ class ABCDPlotter:
     def load_signal_hists(self):
         for mass in self.config.masses:
             for ctau in self.config.ctaus:
-                input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim, self.config.hist_dir)
+                input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim[0], self.config.hist_dir)
 
                 try:
                     self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
@@ -373,6 +390,7 @@ class ABCDPlotter:
     def setup_canvases(self):
         self.canvases = {
             "grid": ROOT.TCanvas("grid", "grid", 1000, 1000),
+            "background": ROOT.TCanvas("background", "background", 200, 200),
             "significance": ROOT.TCanvas("significance", "significance", 1000, 1000),
             "closure": ROOT.TCanvas("closure", "closure", 200, 200),
             "error": ROOT.TCanvas("error", "error", 200, 200),
@@ -384,7 +402,7 @@ class ABCDPlotter:
             self.canvases[key].Divide(
                 len(self.config.ctaus), len(self.config.masses))
 
-        for key in ["closure", "error", "min_n_events"]:
+        for key in ["closure", "error", "min_n_events", "background"]:
             self.canvases[key].cd()
             ROOT.gPad.SetLeftMargin(0.15)
             ROOT.gPad.SetRightMargin(0.25)
