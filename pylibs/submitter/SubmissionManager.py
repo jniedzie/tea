@@ -99,10 +99,26 @@ class SubmissionManager:
     info(f"\n\nExecuting {das_command=}")
     return os.popen(das_command).read().splitlines()
   
+  def __get_das_files_from_list(self, dasfilelist):
+    if not os.path.exists(dasfilelist):
+      fatal(f"File not found: {dasfilelist}")
+      exit()
+    with open(dasfilelist, 'r') as file:
+      files = [line.strip() for line in file if line.strip()]
+    return files
+  
   def __get_intput_file_list(self):
     if hasattr(self.files_config, "dataset"):
       max_files = getattr(self.files_config, "max_files", -1)
       files = self.__get_das_files_list(self.files_config.dataset)
+      if max_files > 0:
+        return files[:max_files]
+      return files
+    
+    if hasattr(self.files_config, "input_dasfiles"):
+      max_files = getattr(self.files_config, "max_files", -1)
+      dasfilelist = f"{self.files_config.tea_base_path}/{self.files_config.input_dasfiles}"
+      files = self.__get_das_files_from_list(dasfilelist)
       if max_files > 0:
         return files[:max_files]
       return files
