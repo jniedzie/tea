@@ -110,13 +110,15 @@ class SubmissionManager:
   def __get_intput_file_list(self):
     if hasattr(self.files_config, "dataset"):
       max_files = getattr(self.files_config, "max_files", -1)
-      files = []
-      if self.files_config.dataset.endswith('.txt'):
-        # treating dataset a local data .txt-file with das files
-        dasfilelist = f"{self.files_config.tea_base_path}/{self.files_config.dataset}"
-        files = self.__get_das_files_from_list(dasfilelist)
-      else:
-        files = self.__get_das_files_list(self.files_config.dataset)
+      files = self.__get_das_files_list(self.files_config.dataset)
+      if max_files > 0:
+        return files[:max_files]
+      return files
+    
+    if hasattr(self.files_config, "input_dasfiles"):
+      max_files = getattr(self.files_config, "max_files", -1)
+      dasfilelist = f"{self.files_config.tea_base_path}/{self.files_config.input_dasfiles}"
+      files = self.__get_das_files_from_list(dasfilelist)
       if max_files > 0:
         return files[:max_files]
       return files
