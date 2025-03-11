@@ -12,7 +12,7 @@ class ABCDPlotter:
         self.abcdHelper = ABCDHelper(config)
         self.histogramsHelper = ABCDHistogramsHelper(config)
 
-        self.hist_name = config.variable_1 + "_vs_" + config.variable_2
+        self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}"
 
         self.background_files = {}
         self.background_hists = {}
@@ -368,7 +368,9 @@ class ABCDPlotter:
         else:
             self.background_hist = self.background_hists[self.config.background_params[0][0]].Clone()
             for path, _ in self.config.background_params[1:]:
-                self.background_hist.Add(self.background_hists[path])
+              if not self.background_hists[path]:
+                continue
+              self.background_hist.Add(self.background_hists[path])
 
         self.background_hist.SetFillColorAlpha(self.config.background_color, 0.5)
         self.background_hist.SetTitle("")
