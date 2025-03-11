@@ -12,38 +12,33 @@ using namespace std;
 HistogramsHandler::HistogramsHandler() {
   auto &config = ConfigManager::GetInstance();
 
-  try{
+  try {
     config.GetHistogramsParams(histParams, "defaultHistParams");
-  }
-  catch(const Exception& e){
+  } catch (const Exception &e) {
     info() << "No defaultHistParams found in config file" << endl;
   }
 
-  try{
+  try {
     config.GetHistogramsParams(histParams, "histParams");
-  }
-  catch(const Exception& e){
+  } catch (const Exception &e) {
     info() << "No histParams found in config file" << endl;
   }
 
-  try{
+  try {
     config.GetHistogramsParams(irregularHistParams, "irregularHistParams");
-  }
-  catch(const Exception& e){
+  } catch (const Exception &e) {
     info() << "No irregularHistParams found in config file" << endl;
   }
 
-  try{
+  try {
     config.GetHistogramsParams(histParams2D, "histParams2D");
-  }
-  catch(const Exception& e){
+  } catch (const Exception &e) {
     info() << "No histParams2D found in config file" << endl;
   }
 
-  try{
+  try {
     config.GetValue("histogramsOutputFilePath", outputPath);
-  }
-  catch(const Exception& e){
+  } catch (const Exception &e) {
     info() << "No histogramsOutputFilePath found in config file" << endl;
   }
 
@@ -67,24 +62,22 @@ void HistogramsHandler::SetupHistograms() {
   }
 }
 
-void HistogramsHandler::Fill(std::string name, double value, double weight)
-{
+void HistogramsHandler::Fill(std::string name, double value, double weight) {
   CheckHistogram(name);
   histograms1D[name]->Fill(value, weight);
 }
 
-void HistogramsHandler::Fill(std::string name, double valueX, double valueY, double weight)
-{
+void HistogramsHandler::Fill(std::string name, double valueX, double valueY, double weight) {
   CheckHistogram(name);
   histograms2D[name]->Fill(valueX, valueY, weight);
 }
 
-void HistogramsHandler::CheckHistogram(string name){
+void HistogramsHandler::CheckHistogram(string name) {
   if (!histograms1D.count(name) && !histograms2D.count(name)) {
-    error() << "Couldn't find key: " << name << " in histograms map"<<endl;
-    info() << "Available histograms: " << endl;
-    for(auto [histName, hist] : histograms1D) info() << "\t" << histName << endl;
-    for(auto [histName, hist] : histograms2D) info() << "\t" << histName << endl;
+    fatal() << "Couldn't find key: " << name << " in histograms map" << endl;
+    // info() << "Available histograms: " << endl;
+    // for(auto [histName, hist] : histograms1D) info() << "\t" << histName << endl;
+    // for(auto [histName, hist] : histograms2D) info() << "\t" << histName << endl;
     exit(1);
   }
 }
@@ -94,26 +87,45 @@ void HistogramsHandler::SaveHistograms() {
 
   string path = outputPath.substr(0, outputPath.find_last_of("/"));
   string filename = outputPath.substr(outputPath.find_last_of("/"));
-  if(path == "") path = "./";
+  if (path == "") path = "./";
   string command = "mkdir -p " + path;
   system(command.c_str());
-  
-  auto outputFile = new TFile((path+"/"+filename).c_str(), "recreate");
+
+  auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
   outputFile->cd();
+
+  bool emptyHists = false;
 
   for (auto &[name, hist] : histograms1D) {
     string outputDir = histParams[name].directory;
     if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+    if (hist->GetEntries() == 0) {
+      emptyHists = true;
+      continue;
+    }
+
     outputFile->cd(outputDir.c_str());
     hist->Write();
   }
   for (auto &[name, hist] : histograms2D) {
     string outputDir = histParams2D[name].directory;
     if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+    if (hist->GetEntries() == 0) {
+      emptyHists = true;
+      continue;
+    }
+
     outputFile->cd(outputDir.c_str());
     hist->Write();
   }
   outputFile->Close();
 
   info() << "Histograms saved to: " << path << "/" << filename << endl;
+
+  if (emptyHists) {
+    warn() << "Some histograms were defined but never filled -- they will not be stored." << endl;
+  }
+
 }
