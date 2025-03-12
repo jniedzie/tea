@@ -31,6 +31,7 @@ def main():
 
     abcdPlotter.save_canvases()
     abcdPlotter.print_params_for_selected_point()
+    abcdPlotter.plot_optimal_points()
 
 
 if __name__ == "__main__":
