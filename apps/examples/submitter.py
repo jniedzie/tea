@@ -146,6 +146,20 @@ def main():
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
+  elif hasattr(files_config, "input_dasfiles_and_output_trees_dirs"):
+    input_dasfiles_and_output_dirs = files_config.input_dasfiles_and_output_trees_dirs
+    output_dir_name = "output_trees_dir"
+
+    for input_dasfiles, output_dir in input_dasfiles_and_output_dirs:
+      tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
+      
+      for name, apply in applyScaleFactors.items():
+          update_config(tmp_config_path, f"  \"{name}\":", False if "collision" in sample else f"{apply},\n")
+      
+      update_config(tmp_files_config_path, "input_dasfiles = ", f"\"{input_dasfiles}\"\n")
+      update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
+      
+      tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   else:
     tmp_configs_paths.append((args.config, args.files_config))
 

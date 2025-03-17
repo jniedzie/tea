@@ -38,35 +38,49 @@ else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-if(DEFINED ENV{CONDA_PREFIX})
-    set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
-    set(Python3_EXECUTABLE "${CONDA_PREFIX_PATH}/bin/python3")
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    
-    if(Python3_FOUND)
-        # Set Python version variables manually if not set automatically
-        if(NOT DEFINED Python3_VERSION_MAJOR)
-            execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.major)"
-                            OUTPUT_VARIABLE Python3_VERSION_MAJOR
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-        if(NOT DEFINED Python3_VERSION_MINOR)
-            execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.minor)"
-                            OUTPUT_VARIABLE Python3_VERSION_MINOR
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
+# Check if CONDA_PREFIX is set
+if(NOT DEFINED ENV{CONDA_PREFIX})
+    message(WARNING "CONDA_PREFIX is not set. Attempting to activate the base Conda environment.")
 
-        # Set the Python include directory and library
-        message(STATUS "Deduced python version: ${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-        set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")
-        
-        include_directories(${Python3_INCLUDE_DIR})
-    else()
-        message(FATAL_ERROR "Python3 not found in Conda environment")
+    # Attempt to activate Conda base environment
+    execute_process(COMMAND bash -l -c "conda activate base && echo \$CONDA_PREFIX"
+                    OUTPUT_VARIABLE CONDA_PREFIX_PATH
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    RESULT_VARIABLE CONDA_ACTIVATE_RESULT)
+
+    if(NOT CONDA_ACTIVATE_RESULT EQUAL 0 OR "${CONDA_PREFIX_PATH}" STREQUAL "")
+        message(FATAL_ERROR "Failed to activate Conda base environment. Please activate Conda manually.")
     endif()
+
+    # Set the environment variable so subsequent commands can use it
+    set(ENV{CONDA_PREFIX} ${CONDA_PREFIX_PATH})
+endif()
+
+set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
+set(Python3_EXECUTABLE "${CONDA_PREFIX_PATH}/bin/python3")
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+
+if(Python3_FOUND)
+    # Set Python version variables manually if not set automatically
+    if(NOT DEFINED Python3_VERSION_MAJOR)
+        execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.major)"
+                        OUTPUT_VARIABLE Python3_VERSION_MAJOR
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    if(NOT DEFINED Python3_VERSION_MINOR)
+        execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.minor)"
+                        OUTPUT_VARIABLE Python3_VERSION_MINOR
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+
+    # Set the Python include directory and library
+    message(STATUS "Deduced python version: ${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
+    set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
+    set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")
+    
+    include_directories(${Python3_INCLUDE_DIR})
 else()
-    message(FATAL_ERROR "CONDA_PREFIX is not set. Please activate your Conda environment.")
+    message(FATAL_ERROR "Python3 not found in Conda environment")
 endif()
 
 # add tea libraries and headers

@@ -108,7 +108,7 @@ class SubmissionManager:
       if max_files > 0:
         return files[:max_files]
       return files
-
+    
     if hasattr(self.files_config, "input_file_list"):
       return self.files_config.input_file_list
 
