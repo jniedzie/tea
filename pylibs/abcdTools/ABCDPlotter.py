@@ -3,6 +3,7 @@ import os
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
+from Logger import fatal
 
 
 class ABCDPlotter:
@@ -81,7 +82,12 @@ class ABCDPlotter:
 
         self.canvases["grid"].cd(i_pad)
         self.set_pad_style()
+        clones["background"].GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
+        clones["background"].GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
+        clones["background"].GetYaxis().SetTitleOffset(1.0)
+        clones["background"].GetXaxis().SetTitleOffset(1.0)
         clones["background"].DrawNormalized("BOX")
+        
         clones[(mass, ctau)].DrawNormalized("BOX SAME")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
@@ -379,7 +385,16 @@ class ABCDPlotter:
         print(f"Could not open histogram {self.hist_name} in file {file_path}")
         return
     else:
-      self.background_hist = self.background_hists[self.config.background_params[0][0]].Clone()
+      for path, _ in self.config.background_params:
+        if path not in self.background_hists or not self.background_hists[path]:
+          continue
+        self.background_hist = self.background_hists[path].Clone()
+        break
+      
+      if not self.background_hist:
+        fatal("No background histograms found")
+        exit()
+      
       for path, _ in self.config.background_params[1:]:
         if not self.background_hists[path]:
           continue
@@ -436,10 +451,10 @@ class ABCDPlotter:
     self.projections_pads["ratio"].Draw()
 
   def set_pad_style(self):
-    ROOT.gPad.SetLeftMargin(0.0)
+    ROOT.gPad.SetLeftMargin(0.08)
     ROOT.gPad.SetRightMargin(0.0)
     ROOT.gPad.SetTopMargin(0.0)
-    ROOT.gPad.SetBottomMargin(0.0)
+    ROOT.gPad.SetBottomMargin(0.08)
 
   def setup_signal_hists(self):
     for mass in self.config.masses:
