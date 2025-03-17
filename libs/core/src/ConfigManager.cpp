@@ -306,7 +306,7 @@ void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vecto
     vector<float> outputVector;
     for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
       PyObject *item = GetItem(pValue, i);
-      outputVector.push_back(PyLong_AsLong(item));
+      outputVector.push_back(PyFloat_AsDouble(item));
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
   }

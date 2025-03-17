@@ -9,12 +9,12 @@
 # output_dir = "../samples/skimmed"
 
 
-# option 2: list input files and output files
+# option 2: list input files and output files (2 paths for trees and hists, respectively - if only one is needed, set the other to "")
 # input_output_file_list = (
-#   ("../samples/background_dy.root", "../samples/background_dy_skimmed.root"),
-#   ("../samples/background_tt.root", "../samples/background_tt_skimmed.root"),
-#   ("../samples/signal_ttz.root", "../samples/signal_ttz_skimmed.root"),
-#   ("../samples/data.root", "../samples/data_skimmed.root"),
+#   ("../samples/background_dy.root", "../samples/background_dy_skimmed.root", ""),
+#   ("../samples/background_tt.root", "../samples/background_tt_skimmed.root", ""),
+#   ("../samples/signal_ttz.root", "../samples/signal_ttz_skimmed.root", ""),
+#   ("../samples/data.root", "../samples/data_skimmed.root", ""),
 # )
 
 
