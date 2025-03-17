@@ -75,9 +75,6 @@ void HistogramsHandler::Fill(std::string name, double valueX, double valueY, dou
 void HistogramsHandler::CheckHistogram(string name) {
   if (!histograms1D.count(name) && !histograms2D.count(name)) {
     fatal() << "Couldn't find key: " << name << " in histograms map" << endl;
-    // info() << "Available histograms: " << endl;
-    // for(auto [histName, hist] : histograms1D) info() << "\t" << histName << endl;
-    // for(auto [histName, hist] : histograms2D) info() << "\t" << histName << endl;
     exit(1);
   }
 }

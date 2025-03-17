@@ -3,9 +3,9 @@ executable            = <executable>
 arguments             = $(ProcId)
 GetEnv                = True
 +Remote_Schedd = "bird-htc-sched11.desy.de"
-output                = output/$(ClusterId).$(ProcId).out
-error                 = error/$(ClusterId).$(ProcId).err
-log                   = log/$(ClusterId).log
+output                = <output_path>
+error                 = <error_path>
+log                   = <log_path>
 # requirements 	        = (OpSysAndVer == "CentOS7" || OpSysAndVer == "RedHat9")
 request_memory        = <memory_request> GB
 +JobFlavour           = "<job_flavour>"
