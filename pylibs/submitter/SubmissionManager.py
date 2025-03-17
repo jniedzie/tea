@@ -109,6 +109,13 @@ class SubmissionManager:
         return files[:max_files]
       return files
     
+    if hasattr(self.files_config, "input_dasfiles"):
+      max_files = getattr(self.files_config, "max_files", -1)
+      files = self.__get_das_files_from_list(self.files_config.input_dasfiles)
+      if max_files > 0:
+        return files[:max_files]
+      return files
+    
     if hasattr(self.files_config, "input_file_list"):
       return self.files_config.input_file_list
 
