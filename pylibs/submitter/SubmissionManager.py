@@ -3,7 +3,7 @@ import importlib.util
 import uuid
 from enum import Enum
 
-from Logger import info, error, fatal
+from Logger import info, warn, error, fatal
 
 
 class SubmissionSystem(Enum):
@@ -47,8 +47,8 @@ class SubmissionManager:
     info("Running on condor")
 
     self.job_flavour = args.job_flavour
-    self.memory_request = args.memory_request
-    self.materialize_max = args.materialize_max
+    self.memory_request = args.memory
+    self.materialize_max = args.max_materialize
     self.resubmit_job = args.resubmit_job
     self.save_logs = args.save_logs
 
@@ -157,6 +157,9 @@ class SubmissionManager:
   def __run_local_with_output_dirs(self):
 
     input_file_list = self.__get_intput_file_list()
+    if len(input_file_list) == 0:
+      warn("No input files found")
+      return
 
     if hasattr(self.files_config, "file_name"):
       file_name = self.files_config.file_name
