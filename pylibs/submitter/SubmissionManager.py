@@ -47,8 +47,8 @@ class SubmissionManager:
     info("Running on condor")
 
     self.job_flavour = args.job_flavour
-    self.memory_request = args.memory_request
-    self.materialize_max = args.materialize_max
+    self.memory_request = args.memory
+    self.materialize_max = args.max_materialize
     self.resubmit_job = args.resubmit_job
     self.save_logs = args.save_logs
 
