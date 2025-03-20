@@ -50,8 +50,6 @@ class ScaleFactorsManager {
   TH1D *pileupSFvalues;
   std::map<std::string, TF1 *> btaggingSFvalues;
 
-  std::string year;
-
   void ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();

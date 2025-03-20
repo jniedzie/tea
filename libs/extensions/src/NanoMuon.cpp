@@ -29,6 +29,7 @@ float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, s
   }
   else idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
+  // No Muon Reco SF for Run 3 
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
     recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
   }
