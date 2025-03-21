@@ -369,6 +369,29 @@ void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vecto
 }
 
 //-------------------------------------------------------------------------------------------------
+// Template specializations to extract a pair from the python file
+//-------------------------------------------------------------------------------------------------
+
+template <>
+void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, vector<string>> &outputPair) {
+  PyObject *pythonTuple = GetPythonList(name);
+
+  PyObject *first = GetItem(pythonTuple, 0);
+  PyObject *second = GetItem(pythonTuple, 1);
+  if (!first  || !PyUnicode_Check(first) || !second || !PyList_Check(second)) {
+    error() << "Failed retriving python pair (string, vector<string>)" << endl;
+    return;
+  }
+  std::string value_first = PyUnicode_AsUTF8(first);
+  vector<string> outputVector;
+  for (Py_ssize_t i = 0; i < GetCollectionSize(second); ++i) {
+    PyObject *item = GetItem(second, i);
+    outputVector.push_back(PyUnicode_AsUTF8(item));
+  }
+  outputPair = {PyUnicode_AsUTF8(first), outputVector};
+}
+
+//-------------------------------------------------------------------------------------------------
 // Other methods
 //-------------------------------------------------------------------------------------------------
 
