@@ -50,8 +50,8 @@ class ABCDPlotter:
 
   def plot_optimization_hists(self):
     for name, hist in self.optimization_hists.items():
-      hist.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
-      hist.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
+      hist.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
+      hist.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
       hist.GetZaxis().SetTitle(self.config.z_params[name][0])
       hist.GetZaxis().SetTitleOffset(1.9)
 
@@ -99,8 +99,8 @@ class ABCDPlotter:
   def plot_background_hist(self):
     clone = self.background_hist.Clone()
     clone.Rebin2D(self.config.rebin_grid, self.config.rebin_grid)
-    clone.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
-    clone.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
+    clone.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
+    clone.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
     self.canvases["background"].cd()
     clone.DrawNormalized("BOX")
 
@@ -261,8 +261,7 @@ class ABCDPlotter:
 
     self.ratio_hist_err.SetFillColorAlpha(ROOT.kRed, 0.5)
 
-    self.ratio_hist.GetXaxis().SetTitle(
-        self.abcdHelper.get_nice_name(self.config.variable_1))
+    self.ratio_hist.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
     self.ratio_hist.GetXaxis().SetTitleOffset(1.1)
     self.ratio_hist.GetXaxis().SetLabelSize(0.1)
     self.ratio_hist.GetXaxis().SetTitleSize(0.1)
