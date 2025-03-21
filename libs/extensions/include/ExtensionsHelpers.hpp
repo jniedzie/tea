@@ -11,6 +11,15 @@
 #include "NanoMuon.hpp"
 #include "PhysicsObject.hpp"
 
+inline std::shared_ptr<PhysicsObjects> asPhysicsObjects(const std::shared_ptr<NanoMuons> muons){
+  if(!muons) return nullptr;
+  auto physicsObjects = std::make_shared<PhysicsObjects>();
+  for(auto muon : *muons) {
+    physicsObjects->push_back(muon->GetPhysicsObject());
+  }
+  return physicsObjects;
+}
+
 inline std::shared_ptr<NanoGenParticle> asNanoGenParticle(const std::shared_ptr<PhysicsObject> physicsObject) {
   if(!physicsObject) return nullptr;
   return std::make_shared<NanoGenParticle>(physicsObject);
@@ -19,6 +28,15 @@ inline std::shared_ptr<NanoGenParticle> asNanoGenParticle(const std::shared_ptr<
 inline std::shared_ptr<NanoMuon> asNanoMuon(const std::shared_ptr<PhysicsObject> physicsObject) {
   if(!physicsObject) return nullptr;
   return std::make_shared<NanoMuon>(physicsObject);
+}
+
+inline std::shared_ptr<NanoMuons> asNanoMuons(const std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> physicsObjects) {
+  if(!physicsObjects) return nullptr;
+  auto nanoMuons = std::make_shared<NanoMuons>();
+  for(auto physicsObject : *physicsObjects) {
+    nanoMuons->push_back(asNanoMuon(physicsObject));
+  }
+  return nanoMuons;
 }
 
 inline std::shared_ptr<NanoDimuonVertex> asNanoDimuonVertex(const std::shared_ptr<PhysicsObject> physicsObject, const std::shared_ptr<Event> event) {
