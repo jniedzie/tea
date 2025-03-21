@@ -8,9 +8,12 @@
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 #include "ScaleFactorsManager.hpp"
+#include "NanoGenParticle.hpp"
 
 class NanoMuon;
 typedef Collection<std::shared_ptr<NanoMuon>> NanoMuons;
+typedef std::pair<std::shared_ptr<NanoMuon>, std::shared_ptr<NanoMuon>> NanoMuonPair;
+typedef Collection<NanoMuonPair> NanoMuonPairs;
 
 class NanoMuon {
  public:
@@ -40,6 +43,8 @@ class NanoMuon {
 
   int GetMatchIdxForNthBestMatch(int N);
   int GetMatchesForNthBestMatch(int N);
+
+  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3);
 
   TLorentzVector GetFourVector();
 

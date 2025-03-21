@@ -9,6 +9,7 @@
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 #include "ScaleFactorsManager.hpp"
+#include "NanoMuon.hpp"
 
 class NanoDimuonVertex;
 typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoMuonVertices;
@@ -27,8 +28,8 @@ class NanoDimuonVertex {
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
-  std::shared_ptr<PhysicsObject> Muon1() { return muon1; }
-  std::shared_ptr<PhysicsObject> Muon2() { return muon2; }
+  std::shared_ptr<NanoMuon> Muon1() { return muon1; }
+  std::shared_ptr<NanoMuon> Muon2() { return muon2; }
 
   bool isDSAMuon1() { return float(physicsObject->Get("isDSAMuon1")) == 1.; }
   bool isDSAMuon2() { return float(physicsObject->Get("isDSAMuon2")) == 1.; }
@@ -39,7 +40,7 @@ class NanoDimuonVertex {
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
   std::string GetVertexCategory();
-  std::pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>> GetMuons(const std::shared_ptr<Event> event);
+  std::pair<std::shared_ptr<NanoMuon>, std::shared_ptr<NanoMuon>> GetMuons(const std::shared_ptr<Event> event);
 
   TLorentzVector GetFourVector();
   float GetInvariantMass() { return GetFourVector().M(); }
@@ -72,8 +73,8 @@ class NanoDimuonVertex {
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
-  std::shared_ptr<PhysicsObject> muon1;
-  std::shared_ptr<PhysicsObject> muon2;
+  std::shared_ptr<NanoMuon> muon1;
+  std::shared_ptr<NanoMuon> muon2;
 
   TVector3 Lxyz;
   float LxySigma;
