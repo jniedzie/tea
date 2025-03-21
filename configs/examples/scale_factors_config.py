@@ -9,18 +9,20 @@ def get_scale_factors(year):
     pu_type = "Collisions18_UltraLegacy_goldenJSON"
   elif year == "2022preEE" or year == "2022postEE":
     run2 = False
-    pu_type = "Collisions2022_355100_357900_eraBCD_GoldenJson"
     if year == "2022preEE":
       year_path = "2022_Summer22"
+      pu_type = "Collisions2022_355100_357900_eraBCD_GoldenJson"
     if year == "2022postEE":
       year_path = "2022_Summer22EE"
+      pu_type = "Collisions2022_359022_362760_eraEFG_GoldenJson"
   elif year == "2023preBPix" or year == "2023postBPix":
     run2 = False
-    pu_type = ""
     if year == "2023preBPix":
       year_path = "2023_Summer23"
+      pu_type = "Collisions2023_366403_369802_eraBC_GoldenJson"
     if year == "2023postBPix":
       year_path = "2023_Summer23BPix"
+      pu_type = "Collisions2023_369803_370790_eraD_GoldenJson"
   else:
     error(f"Year {year} not supported.")
 
