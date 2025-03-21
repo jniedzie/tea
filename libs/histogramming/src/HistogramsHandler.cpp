@@ -115,7 +115,17 @@ void HistogramsHandler::SaveHistograms() {
     }
 
     outputFile->cd(outputDir.c_str());
-    hist->Write();
+    if (!hist) {
+      error() << "Histogram " << name << " is null" << endl;
+      continue;
+    }
+    if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
+      warn() << "You're creating a very large 2D histogram: " << name << " with ";
+      warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
+      warn() << "This may cause memory issues." << endl;
+    }
+
+    hist->Write();    
   }
   outputFile->Close();
 
