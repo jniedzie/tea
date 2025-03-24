@@ -18,8 +18,8 @@ float NanoJet::GetBtaggingScaleFactor(string workingPoint) {
   return sf;
 }
 
-float NanoJet::GetJetIDScaleFactor(string name) {
+float NanoJet::GetPUJetIDScaleFactor(string name) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  float sf = scaleFactorsManager.GetJetIDScaleFactor(name, GetEta(), GetPt());
+  float sf = scaleFactorsManager.GetPUJetIDScaleFactor(name, GetEta(), GetPt());
   return sf;
 }
