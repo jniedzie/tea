@@ -95,8 +95,8 @@ def get_scale_factors(year):
       "weights": "nominal",
     },
   }
-  if run2: # TODO: find if there should be run3 jetID SFs somewhere
-    scaleFactors["jetIDtight"] = {
+  if run2: # No Run3 PUjetID SF yet
+    scaleFactors["PUjetIDtight"] = {
       "path": f"../tea/jsonPOG/POG/JME/{year_path}/jmar.json.gz",
       "type": "PUJetID_eff",
       "systematic": "nom",

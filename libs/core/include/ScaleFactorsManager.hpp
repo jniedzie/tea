@@ -21,7 +21,7 @@ class ScaleFactorsManager {
   ScaleFactorsManager(ScaleFactorsManager const &) = delete;
   void operator=(ScaleFactorsManager const &) = delete;
 
-  float GetJetIDScaleFactor(std::string name, float eta, float pt);
+  float GetPUJetIDScaleFactor(std::string name, float eta, float pt);
   float GetMuonScaleFactor(std::string name, float eta, float pt);
   float GetDSAMuonScaleFactor(std::string name, float eta, float pt);
   float GetMuonTriggerScaleFactor(std::string name, float eta, float pt);

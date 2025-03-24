@@ -123,6 +123,22 @@ shared_ptr<PhysicsObject> EventProcessor::GetMaxPtObject(shared_ptr<Event> event
   return maxPtObject;
 }
 
+shared_ptr<PhysicsObject> EventProcessor::GetSubleadingPtObject(shared_ptr<Event> event, string collectionName) {
+  auto collection = event->GetCollection(collectionName);
+  float maxPt = GetMaxPt(event, collectionName);
+  float subleadingPt = -1;
+  shared_ptr<PhysicsObject> subleadingPtObject = nullptr;
+  for (auto element : *collection) {
+    float pt = element->Get("pt");
+    if (pt == maxPt) continue;
+    if (pt > subleadingPt) {
+      subleadingPt = pt;
+      subleadingPtObject = element;
+    }
+  }
+  return subleadingPtObject;
+}
+
 float EventProcessor::GetHt(shared_ptr<Event> event, string collectionName) {
   auto collection = event->GetCollection(collectionName);
   float ht = 0;
