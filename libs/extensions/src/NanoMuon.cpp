@@ -7,8 +7,8 @@ using namespace std;
 
 NanoMuon::NanoMuon(shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-bool NanoMuon::isTight() {
-  if (isDSA()) return false;
+bool NanoMuon::IsTight() {
+  if (IsDSA()) return false;
   return physicsObject->Get("tightId");
 }
 
@@ -25,7 +25,7 @@ float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, s
 
   float idSF = 1.0;
   float recoSF = 1.0;
-  if (isDSA() && year == "2018") {  // TODO: find DSA SF for other years
+  if (IsDSA() && year == "2018") {  // TODO: find DSA SF for other years
     nameID = "dsamuonID";
     idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   } else
@@ -54,15 +54,15 @@ MuonIso NanoMuon::GetIso() {
 
 int NanoMuon::GetMatchIdxForNthBestMatch(int N) {
   string idxString;
-  if (isDSA()) idxString = "muonMatch" + to_string(N) + "idx";
-  if (!isDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
+  if (IsDSA()) idxString = "muonMatch" + to_string(N) + "idx";
+  if (!IsDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
   return GetAs<int>(idxString);
 }
 
 int NanoMuon::GetMatchesForNthBestMatch(int N) {
   string matchString;
-  if (isDSA()) matchString = "muonMatch" + to_string(N);
-  if (!isDSA()) matchString = "dsaMatch" + to_string(N);
+  if (IsDSA()) matchString = "muonMatch" + to_string(N);
+  if (!IsDSA()) matchString = "dsaMatch" + to_string(N);
   return GetAs<int>(matchString);
 }
 
@@ -118,9 +118,9 @@ void NanoMuon::Print() {
   info() << yellow << left << setw(14) << "pt:" << reset << GetPt() << "\n"
          << yellow << left << setw(14) << "eta:" << reset << GetEta() << "\n"
          << yellow << left << setw(14) << "phi:" << reset << GetPhi() << "\n"
-         << yellow << left << setw(14) << "DSA: " << reset << (isDSA() ? "yes" : "no") << "\n";
+         << yellow << left << setw(14) << "DSA: " << reset << (IsDSA() ? "yes" : "no") << "\n";
 
-  if (!isDSA()) {
+  if (!IsDSA()) {
     info() << yellow << left << setw(14) << "ID and Iso:" << reset << "\n";
     GetID().Print();
     GetIso().Print();

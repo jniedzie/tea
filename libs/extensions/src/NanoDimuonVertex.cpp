@@ -7,8 +7,8 @@ using namespace std;
 
 NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, const shared_ptr<Event> event)
     : physicsObject(physicsObject_) {
-  if (isDSAMuon1() || isDSAMuon2()) hasDSAMuon = true;
-  if (!isDSAMuon1() || !isDSAMuon2()) hasPatMuon = true;
+  if (IsDSAMuon1() || IsDSAMuon2()) hasDSAMuon = true;
+  if (!IsDSAMuon1() || !IsDSAMuon2()) hasPatMuon = true;
   auto muons = GetMuons(event);
   muon1 = muons.first;
   muon2 = muons.second;
@@ -36,11 +36,11 @@ pair<shared_ptr<NanoMuon>, shared_ptr<NanoMuon>> NanoDimuonVertex::GetMuons(cons
     auto muons = asNanoMuons(event->GetCollection("Muon"));
     for (auto muon : *muons) {
       // look for muon 1
-      if (!isDSAMuon1() && muonIndex1() == float(muon->Get("idx"))) {
+      if (!IsDSAMuon1() && MuonIndex1() == float(muon->Get("idx"))) {
         muon1_ = muon;
       }
       // look for muon 2
-      if (!isDSAMuon2() && muonIndex2() == float(muon->Get("idx"))) {
+      if (!IsDSAMuon2() && MuonIndex2() == float(muon->Get("idx"))) {
         muon2_ = muon;
       }
     }
@@ -49,11 +49,11 @@ pair<shared_ptr<NanoMuon>, shared_ptr<NanoMuon>> NanoDimuonVertex::GetMuons(cons
     auto muons = asNanoMuons(event->GetCollection("DSAMuon"));
     for (auto muon : *muons) {
       // look for muon 1
-      if (isDSAMuon1() && muonIndex1() == float(muon->Get("idx"))) {
+      if (IsDSAMuon1() && MuonIndex1() == float(muon->Get("idx"))) {
         muon1_ = muon;
       }
       // look for muon 2
-      if (isDSAMuon2() && muonIndex2() == float(muon->Get("idx"))) {
+      if (IsDSAMuon2() && MuonIndex2() == float(muon->Get("idx"))) {
         muon2_ = muon;
       }
     }
