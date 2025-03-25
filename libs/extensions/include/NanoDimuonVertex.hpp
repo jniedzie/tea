@@ -67,6 +67,7 @@ class NanoDimuonVertex {
   float GetDeltaPhi();
   float GetOuterDeltaEta();
   float GetOuterDeltaPhi();
+  float GetLeadingMuonPt();
 
   int GetTotalNumberOfSegments();
   int GetTotalNumberOfDTHits();

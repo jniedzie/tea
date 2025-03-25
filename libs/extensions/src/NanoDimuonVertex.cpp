@@ -134,6 +134,8 @@ float NanoDimuonVertex::GetOuterDeltaEta() { return muon1->GetAs<float>("outerEt
 
 float NanoDimuonVertex::GetOuterDeltaPhi() { return muon1->GetAs<float>("outerPhi") - muon2->GetAs<float>("outerPhi"); }
 
+float NanoDimuonVertex::GetLeadingMuonPt() { return max((float)muon1->Get("pt"), (float)muon2->Get("pt")); }
+
 int NanoDimuonVertex::GetTotalNumberOfSegments() {
   std::string category = GetVertexCategory();
   if (category == "Pat") return 0;
