@@ -1,4 +1,5 @@
 #include "NanoMuon.hpp"
+
 #include "ConfigManager.hpp"
 #include "ExtensionsHelpers.hpp"
 
@@ -6,9 +7,9 @@ using namespace std;
 
 NanoMuon::NanoMuon(shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-bool NanoMuon::isTight() { 
-  if(isDSA()) return false;
-  return physicsObject->Get("tightId"); 
+bool NanoMuon::isTight() {
+  if (isDSA()) return false;
+  return physicsObject->Get("tightId");
 }
 
 TLorentzVector NanoMuon::GetFourVector() {
@@ -18,23 +19,23 @@ TLorentzVector NanoMuon::GetFourVector() {
 }
 
 float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, string year) {
-  if(scaleFactor > 0) return scaleFactor;
-  
+  if (scaleFactor > 0) return scaleFactor;
+
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  
+
   float idSF = 1.0;
   float recoSF = 1.0;
-  if(isDSA() && year == "2018") { // TODO: find DSA SF for other years
+  if (isDSA() && year == "2018") {  // TODO: find DSA SF for other years
     nameID = "dsamuonID";
     idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
-  }
-  else idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
+  } else
+    idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
-  // No Muon Reco SF for Run 3 
+  // No Muon Reco SF for Run 3
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
     recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
   }
-  
+
   scaleFactor = recoSF * idSF * isoSF;
 
   return scaleFactor;
@@ -52,42 +53,47 @@ MuonIso NanoMuon::GetIso() {
 }
 
 int NanoMuon::GetMatchIdxForNthBestMatch(int N) {
- string idxString;
- if (isDSA()) idxString = "muonMatch" + to_string(N) + "idx";
- if (!isDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
- return GetAs<int>(idxString);
+  string idxString;
+  if (isDSA()) idxString = "muonMatch" + to_string(N) + "idx";
+  if (!isDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
+  return GetAs<int>(idxString);
 }
 
 int NanoMuon::GetMatchesForNthBestMatch(int N) {
- string matchString;
- if (isDSA()) matchString = "muonMatch" + to_string(N);
- if (!isDSA()) matchString = "dsaMatch" + to_string(N);
- return GetAs<int>(matchString);
+  string matchString;
+  if (isDSA()) matchString = "muonMatch" + to_string(N);
+  if (!isDSA()) matchString = "dsaMatch" + to_string(N);
+  return GetAs<int>(matchString);
 }
 
-shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR){
+shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR) {
   shared_ptr<NanoGenParticle> bestGenMuon = nullptr;
   float bestDeltaR = maxDeltaR;
 
   float eta = GetEta();
   float phi = GetPhi();
 
-  for(auto physObj : *genParticles){
+  for (auto physObj : *genParticles) {
     auto genParticle = asNanoGenParticle(physObj);
-    if(!genParticle->IsMuon()) continue;
+    if (!genParticle->IsMuon()) continue;
 
     float genEta = genParticle->Get("eta");
-    float genPhi = genParticle->Get("phi");  
+    float genPhi = genParticle->Get("phi");
     float dEta = eta - genEta;
     float dPhi = TVector2::Phi_mpi_pi(phi - genPhi);
-    float deltaR = TMath::Sqrt(dEta*dEta + dPhi*dPhi);
-    if(deltaR < bestDeltaR && deltaR < maxDeltaR){
+    float deltaR = TMath::Sqrt(dEta * dEta + dPhi * dPhi);
+    if (deltaR < bestDeltaR && deltaR < maxDeltaR) {
       bestDeltaR = deltaR;
       bestGenMuon = genParticle;
     }
   }
-  return bestGenMuon;
 
+  if (!bestGenMuon) return nullptr;
+  
+  auto firstCopy = bestGenMuon->GetFirstCopy(genParticles);
+  if (firstCopy) bestGenMuon = firstCopy;
+
+  return bestGenMuon;
 }
 
 float NanoMuon::OuterDeltaRtoMuon(shared_ptr<NanoMuon> muon) {
@@ -97,5 +103,28 @@ float NanoMuon::OuterDeltaRtoMuon(shared_ptr<NanoMuon> muon) {
   float phi = GetOuterPhi();
   float dEta = eta - muonEta;
   float dPhi = TVector2::Phi_mpi_pi(phi - muonPhi);
-  return TMath::Sqrt(dEta*dEta + dPhi*dPhi);
+  return TMath::Sqrt(dEta * dEta + dPhi * dPhi);
+}
+
+void NanoMuon::Print() {
+  const string cyan = "\033[36m";
+  const string magenta = "\033[35m";
+  const string yellow = "\033[33m";
+  const string reset = "\033[0m";
+
+  info() << fixed << setprecision(3);
+
+  info() << cyan << "=== NanoMuon ===" << reset << "\n";
+  info() << yellow << left << setw(14) << "pt:" << reset << GetPt() << "\n"
+         << yellow << left << setw(14) << "eta:" << reset << GetEta() << "\n"
+         << yellow << left << setw(14) << "phi:" << reset << GetPhi() << "\n"
+         << yellow << left << setw(14) << "DSA: " << reset << (isDSA() ? "yes" : "no") << "\n";
+
+  if (!isDSA()) {
+    info() << yellow << left << setw(14) << "ID and Iso:" << reset << "\n";
+    GetID().Print();
+    GetIso().Print();
+  }
+
+  info() << reset;
 }

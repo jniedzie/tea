@@ -28,6 +28,8 @@ class NanoGenParticle {
   TLorentzVector GetFourVector(float mass);
   float GetMass() { return physicsObject->Get("mass"); }
   float GetPt() { return physicsObject->Get("pt"); }
+  float GetEta() { return physicsObject->Get("eta"); }
+  float GetPhi() { return physicsObject->Get("phi"); }
   int GetPdgId() { return physicsObject->Get("pdgId"); }
   int GetMotherIndex() { return physicsObject->Get("genPartIdxMother"); }
   int GetStatusFlags() { return physicsObject->GetAs<int>("statusFlags"); }
@@ -35,6 +37,11 @@ class NanoGenParticle {
 
   bool IsLastCopy() { return (GetStatusFlags() & isLastCopy); }
   bool IsFirstCopy() { return (GetStatusFlags() & isFirstCopy); }
+  bool IsPrompt() { return (GetStatusFlags() & isPrompt); }
+  bool IsHardProcess() { return (GetStatusFlags() & isHardProcess); }
+  bool IsFromHardProcess() { return (GetStatusFlags() & fromHardProcess); }
+  bool IsFromHardProcessBeforeFSR() { return (GetStatusFlags() & fromHardProcessBeforeFSR); }
+  bool IsLastCopyBeforeFSR() { return (GetStatusFlags() & isLastCopyBeforeFSR); }
 
   bool IsGoodBottomQuark(std::shared_ptr<NanoGenParticle> mother);
   bool IsGoodUdscQuark(std::shared_ptr<NanoGenParticle> mother);
@@ -46,6 +53,8 @@ class NanoGenParticle {
   bool IsMuon();
 
   std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
+
+  void Print();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

@@ -61,6 +61,7 @@ class NanoDimuonVertex {
 
   float GetDimuonChargeProduct();
   float GetOuterDeltaR();
+  float GetDeltaR() { return Get("dR"); }
 
   float GetDeltaEta();
   float GetDeltaPhi();
