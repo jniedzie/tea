@@ -17,7 +17,10 @@ class EventProcessor {
   
   float GetMaxPt(std::shared_ptr<Event> event, std::string collectionName);
   std::shared_ptr<PhysicsObject> GetMaxPtObject(std::shared_ptr<Event> event, std::string collectionName);
+  std::shared_ptr<PhysicsObject> GetMaxPtObject(std::shared_ptr<Event> event, std::shared_ptr<PhysicsObjects> collection);
   std::shared_ptr<PhysicsObject> GetSubleadingPtObject(std::shared_ptr<Event> event, std::string collectionName);
+
+  std::shared_ptr<PhysicsObjects> GetLeadingObjects(std::shared_ptr<Event> event, std::string collectionName, size_t numObjects);
 
   float GetHt(std::shared_ptr<Event> event, std::string collectionName);
 

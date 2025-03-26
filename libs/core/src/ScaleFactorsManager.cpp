@@ -94,7 +94,7 @@ float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, flo
 }
 
 float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt) {
-  if (!applyScaleFactors["b_tagging"]) return 1.0;
+  if (!applyScaleFactors["bTagging"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
   return TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});

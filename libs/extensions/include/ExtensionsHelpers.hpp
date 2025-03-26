@@ -54,6 +54,15 @@ inline std::shared_ptr<NanoJet> asNanoJet(const std::shared_ptr<PhysicsObject> p
   return std::make_shared<NanoJet>(physicsObject);
 }
 
+inline std::shared_ptr<NanoJets> asNanoJets(const std::shared_ptr<PhysicsObjects> physicsObjects) {
+  if(!physicsObjects) return nullptr;
+  auto nanoJets = std::make_shared<NanoJets>();
+  for(auto physicsObject : *physicsObjects) {
+    nanoJets->push_back(asNanoJet(physicsObject));
+  }
+  return nanoJets;
+}
+
 inline std::shared_ptr<HepMCParticle> asHepMCParticle(const std::shared_ptr<PhysicsObject> physicsObject) {
   if(!physicsObject) return nullptr;
   

@@ -37,6 +37,7 @@ def get_scale_factors(year):
   scaleFactors = {
 
     # b-tagging
+    # systematic options: "central", "up/down_correlated" or "up/down_uncorrelated"
     "bTaggingMedium": {
       "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
       "type": "deepJet_mujets",
@@ -44,6 +45,34 @@ def get_scale_factors(year):
       "workingPoint": "M",
       "jetID": "5",
     },
+    # "bTaggingMediumUpCorrelated": {
+    #   "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+    #   "type": "deepJet_mujets",
+    #   "systematic": "up_correlated",
+    #   "workingPoint": "M",
+    #   "jetID": "5",
+    # },
+    # "bTaggingMediumDownCorrelated": {
+    #   "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+    #   "type": "deepJet_mujets",
+    #   "systematic": "down_correlated",
+    #   "workingPoint": "M",
+    #   "jetID": "5",
+    # },
+    # "bTaggingMediumUpUncorrelated": {
+    #   "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+    #   "type": "deepJet_mujets",
+    #   "systematic": "up_uncorrelated",
+    #   "workingPoint": "M",
+    #   "jetID": "5",
+    # },
+    # "bTaggingMediumDownUncorrelated": {
+    #   "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+    #   "type": "deepJet_mujets",
+    #   "systematic": "down_uncorrelated",
+    #   "workingPoint": "M",
+    #   "jetID": "5",
+    # },
     "bTaggingTight": {
       "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
       "type": "deepJet_mujets",

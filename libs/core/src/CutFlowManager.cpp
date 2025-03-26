@@ -149,13 +149,16 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
 
 float CutFlowManager::GetCurrentEventWeight() {
   float weight = 1.0;
-  if (weightsBranchName == "") return weight;
   try {
-    weight = eventReader->currentEvent->Get(weightsBranchName);
+    weight = eventWeights["central"];
   } catch (const Exception &e) {
-    if (!weightsBranchWarningPrinted) {
-      error() << "CutFlowManager failed to get gen weights from branch " << weightsBranchName << endl;
-      weightsBranchWarningPrinted = true;
+    try {
+      weight = eventReader->currentEvent->Get(weightsBranchName);
+    } catch (const Exception &e) {
+      if (!weightsBranchWarningPrinted) {
+        error() << "CutFlowManager failed to get gen weights from branch " << weightsBranchName << endl;
+        weightsBranchWarningPrinted = true;
+      }
     }
   }
   return weight;

@@ -110,8 +110,11 @@ float EventProcessor::GetMaxPt(shared_ptr<Event> event, string collectionName) {
 
 shared_ptr<PhysicsObject> EventProcessor::GetMaxPtObject(shared_ptr<Event> event, string collectionName) {
   auto collection = event->GetCollection(collectionName);
-  float maxPt = -1;
+  return GetMaxPtObject(event, collection);
+}
 
+shared_ptr<PhysicsObject> EventProcessor::GetMaxPtObject(shared_ptr<Event> event, shared_ptr<PhysicsObjects> collection) {
+  float maxPt = -1;
   shared_ptr<PhysicsObject> maxPtObject = nullptr;
   for (auto element : *collection) {
     float pt = element->Get("pt");
@@ -137,6 +140,24 @@ shared_ptr<PhysicsObject> EventProcessor::GetSubleadingPtObject(shared_ptr<Event
     }
   }
   return subleadingPtObject;
+}
+
+shared_ptr<PhysicsObjects> EventProcessor::GetLeadingObjects(shared_ptr<Event> event, string collectionName, size_t numObjects) {
+  auto collection = event->GetCollection(collectionName);
+  auto leadingObjects = make_shared<PhysicsObjects>();
+
+  int maxNumObjects = min(numObjects, collection->size());
+  for (int i = 0; i < maxNumObjects; i++) {
+    auto leadingObject = GetMaxPtObject(event, collection);
+    leadingObjects->push_back(leadingObject);
+    auto collection_tmp = make_shared<PhysicsObjects>();
+    for (auto obj : *collection) {
+      if (obj == leadingObject) continue;
+      collection_tmp->push_back(obj);
+    }
+    collection = make_shared<PhysicsObjects>(*collection_tmp);
+  }
+  return leadingObjects;
 }
 
 float EventProcessor::GetHt(shared_ptr<Event> event, string collectionName) {

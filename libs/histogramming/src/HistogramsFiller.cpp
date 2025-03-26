@@ -17,24 +17,11 @@ HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandl
   } catch (const Exception& e) {
     warn() << "Couldn't read defaultHistParams from config file - no default histograms will be included" << endl;
   }
-
-  try {
-    config.GetValue("weightsBranchName", weightsBranchName);
-  } catch (const Exception& e) {
-    info() << "Weights branch not specified -- will assume weight is 1 for all events" << endl;
-  }
 }
 
 HistogramsFiller::~HistogramsFiller() {}
 
 void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) {
-  float weight = 1.0;
-  try {
-    weight = event->Get(weightsBranchName);
-  } catch (const Exception &e) {
-    warn() << "Coudn't get weight from branch: " << weightsBranchName << endl;
-  }
-
   for (auto& [title, params] : defaultHistVariables) {
     string collectionName = params.collection;
     string branchName = params.variable;
@@ -46,11 +33,11 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       } else {
         eventVariable = event->GetAs<float>(branchName);
       }
-      histogramsHandler->Fill(title, eventVariable, weight);
+      histogramsHandler->Fill(title, eventVariable);
     } else {
       auto collection = event->GetCollection(collectionName);
       for (auto object : *collection) {
-        histogramsHandler->Fill(title, object->GetAs<float>(branchName), weight);
+        histogramsHandler->Fill(title, object->GetAs<float>(branchName));
       }
     }
   }

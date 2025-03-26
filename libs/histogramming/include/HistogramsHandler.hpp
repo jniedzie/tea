@@ -13,8 +13,10 @@ class HistogramsHandler {
   HistogramsHandler();
   ~HistogramsHandler();
 
-  void Fill(std::string name, double value, double weight);
-  void Fill(std::string name, double valueX, double valueY, double weight);
+  void SetEventWeights(std::map<std::string,float> weights) { eventWeights = weights; };
+
+  void Fill(std::string name, double value);
+  void Fill(std::string name, double valueX, double valueY);
 
   void SetHistogram1D(std::string name, TH1D *histogram) { histograms1D[name] = histogram; }
   TH1D* GetHistogram1D(std::string name) { return histograms1D[name]; }
@@ -29,6 +31,8 @@ class HistogramsHandler {
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
   std::string outputPath;
+  std::map<std::string,float> eventWeights;
+  std::vector<std::string> scaleFactorTypes;
 
   void CheckHistogram(std::string name);
   void SetupHistograms();

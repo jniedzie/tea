@@ -15,6 +15,18 @@ NanoEventProcessor::NanoEventProcessor() {
   } catch (const Exception &e) {
     warn() << "Weights branch not specified -- will assume weight is 1 for all events" << endl;
   }
+  try {
+    config.GetValue("year", year);
+  } catch (const Exception &e) {
+    info() << "Couldn't read year from config file - will assume year 2018" << endl;
+    year = "2018";
+  }
+  try {
+    config.GetVector("scaleFactorTypes", scaleFactorTypes);
+  } catch (const Exception &e) {
+    info() << "Couldn't read scaleFactorTypes from config file - will only use ['central'] SF" << endl;
+    scaleFactorTypes = {"central"};
+  }
 }
 
 float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
@@ -54,6 +66,37 @@ float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> 
   event->SetMuonTriggerSF(scaleFactor);
 
   return scaleFactor;
+}
+
+map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared_ptr<NanoJets> b_jets) {
+  auto weight = 1.0;
+  for (auto b_jet : * b_jets) {
+    weight *= b_jet->GetBtaggingScaleFactor("bTaggingMedium");
+  }
+  map<string,float> weights;
+  weights["central"] = weight;
+  return weights;
+}
+
+map<string,float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<NanoJets> jets) {
+  auto weight = 1.0;
+  for (auto jet : * jets) {
+    weight *= jet->GetPUJetIDScaleFactor("PUjetIDtight");
+  }
+  map<string,float> weights;
+  weights["central"] = weight;
+  return weights;
+}
+
+map<string,float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr<NanoMuons> muonCollection) {
+  float weight = 1.0;
+  for (auto muon : *muonCollection) {
+    if (muon->isTight()) weight *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
+    else weight *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
+  }
+  map<string,float> weights;
+  weights["central"] = weight;
+  return weights;
 }
 
 pair<shared_ptr<NanoMuon>, shared_ptr<NanoMuon>> NanoEventProcessor::GetMuonPairClosestToZ(const std::shared_ptr<NanoEvent> event,
