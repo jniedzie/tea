@@ -20,9 +20,10 @@ def main():
     config = getConfig()
     abcdPlotter = ABCDPlotter(config)
 
+    abcdPlotter.plot_background_hist()
     abcdPlotter.plot_optimization_hists()
     abcdPlotter.plot_per_signal_hists()
-    abcdPlotter.plot_background_hist()
+    
     abcdPlotter.plot_and_save_best_abcd_points()
 
     abcdPlotter.plot_background_projections()

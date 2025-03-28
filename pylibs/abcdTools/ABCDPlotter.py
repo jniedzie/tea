@@ -3,7 +3,7 @@ import os
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
-from Logger import fatal
+from Logger import fatal, warn
 
 
 class ABCDPlotter:
@@ -17,6 +17,7 @@ class ABCDPlotter:
 
     self.background_files = {}
     self.background_hists = {}
+    self.background_hist = None
     self.data_file = None
     self.signal_files = {}
     self.signal_hists = {}
@@ -71,6 +72,9 @@ class ABCDPlotter:
         if (mass, ctau) not in self.signal_hists:
           continue
 
+        if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
+          continue
+
         clones["background"] = self.background_hist.Clone()
         clones[(mass, ctau)] = self.signal_hists[(mass, ctau)].Clone()
 
@@ -93,7 +97,8 @@ class ABCDPlotter:
 
         self.canvases["significance"].cd(i_pad)
         self.set_pad_style()
-        self.significance_hists[(mass, ctau)].Draw("colz")
+        if self.significance_hists[(mass, ctau)] is not None:
+          self.significance_hists[(mass, ctau)].Draw("colz")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
   def plot_background_hist(self):
@@ -102,6 +107,8 @@ class ABCDPlotter:
     clone.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
     clone.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
     self.canvases["background"].cd()
+    ROOT.gStyle.SetOptStat(0)
+    
     clone.DrawNormalized("BOX")
 
     # print correlation between variables in the plot
@@ -137,9 +144,13 @@ class ABCDPlotter:
             )
 
           if best_point is None:
+            warn(f"Best point for {mass} GeV, {ctau} mm not found")
             continue
 
           significance_hist = self.significance_hists[(mass, ctau)]
+          if significance_hist is None or not isinstance(significance_hist, ROOT.TH2):
+            warn(f"Significance histogram for {mass} GeV, {ctau} mm not found")
+            continue
 
           best_x = significance_hist.GetXaxis(
           ).GetBinCenter(best_point[0])
@@ -172,10 +183,12 @@ class ABCDPlotter:
           self.lines[i_pad][1].SetLineWidth(self.config.abcd_line_width)
 
           self.canvases["grid"].cd(i_pad)
+          ROOT.gStyle.SetOptStat(0)
           self.lines[i_pad][0].Draw()
           self.lines[i_pad][1].Draw()
 
           self.canvases["significance"].cd(i_pad)
+          ROOT.gStyle.SetOptStat(0)
           self.lines[i_pad][0].Draw()
           self.lines[i_pad][1].Draw()
 
@@ -183,6 +196,10 @@ class ABCDPlotter:
       print(f"\nBest points saved to {file_path}\n")
 
   def plot_background_projections(self):
+    
+    if self.true_projection_hist is None:
+      return
+    
     self.true_projection_hist.SetLineColor(self.config.true_background_color)
     self.true_projection_hist.SetFillColorAlpha(self.config.true_background_color, 0.5)
     self.true_projection_hist.SetMarkerStyle(20)
@@ -219,6 +236,9 @@ class ABCDPlotter:
         self.signal_projections[(mass, ctau)], _ = self.histogramsHelper.rebin(
             self.signal_projections[(mass, ctau)], self.smart_binning)
 
+        if self.signal_projections[(mass, ctau)] is None:
+          continue
+
         color = self.config.signal_colors[(mass, ctau)] if (
             mass, ctau) in self.config.signal_colors else ROOT.kRed
         self.signal_projections[(mass, ctau)].SetLineColor(color)
@@ -238,6 +258,9 @@ class ABCDPlotter:
     self.projections_legend.Draw()
 
   def plot_projections_ratio(self):
+    if self.prediction_projection_hist is None:
+      return
+    
     self.projections_pads["ratio"].cd()
 
     self.ratio_hist = self.prediction_projection_hist.Clone()
@@ -292,11 +315,12 @@ class ABCDPlotter:
 
       if key in ["closure", "error", "min_n_events", "background"]:
         canvas.cd()
+        ROOT.gStyle.SetOptStat(0)
         line_x.Draw()
         line_y.Draw()
 
       canvas.Update()
-      canvas.SaveAs(f"{self.config.output_path}/abcd_hists_{key}.pdf")
+      canvas.SaveAs(f"{self.config.output_path}/abcd_hists_{key}_{self.config.variable_1}_vs_{self.config.variable_2}.pdf")
 
   def print_params_for_selected_point(self):
     x_value, y_value = self.config.abcd_point
@@ -341,6 +365,9 @@ class ABCDPlotter:
           continue
 
         hist = self.significance_hists[(mass, ctau)]
+
+        if hist is None or type(hist) is not ROOT.TH2D:
+          continue
 
         x_index = hist.GetXaxis().FindFixBin(x_value)
         y_index = hist.GetYaxis().FindFixBin(y_value)
@@ -387,6 +414,10 @@ class ABCDPlotter:
       for path, _ in self.config.background_params:
         if path not in self.background_hists or not self.background_hists[path]:
           continue
+        
+        if self.background_hists[path] is None or self.background_hists[path].Integral() == 0:
+          continue
+        
         self.background_hist = self.background_hists[path].Clone()
         break
       
@@ -413,18 +444,22 @@ class ABCDPlotter:
           continue
 
         self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.hist_name)
+        if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
+          print(f"Could not open histogram {self.hist_name} in file {input_path}")
+          continue
+        
         self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
         self.signal_hists[(mass, ctau)].SetFillColorAlpha(self.config.signal_color, 0.5)
 
   def setup_canvases(self):
     self.canvases = {
-        "grid": ROOT.TCanvas("grid", "grid", 1000, 1000),
-        "background": ROOT.TCanvas("background", "background", 200, 200),
-        "significance": ROOT.TCanvas("significance", "significance", 1000, 1000),
-        "closure": ROOT.TCanvas("closure", "closure", 200, 200),
-        "error": ROOT.TCanvas("error", "error", 200, 200),
-        "min_n_events": ROOT.TCanvas("min_n_events", "min_n_events", 200, 200),
-        "projections": ROOT.TCanvas("projections", "projections", 200, 200),
+        "grid": ROOT.TCanvas("grid", "grid", self.config.canvas_size * len(self.config.ctaus), self.config.canvas_size * len(self.config.masses)),
+        "background": ROOT.TCanvas("background", "background", self.config.canvas_size, self.config.canvas_size),
+        "significance": ROOT.TCanvas("significance", "significance", self.config.canvas_size * len(self.config.ctaus), self.config.canvas_size * len(self.config.masses)),
+        "closure": ROOT.TCanvas("closure", "closure", self.config.canvas_size, self.config.canvas_size),
+        "error": ROOT.TCanvas("error", "error", self.config.canvas_size, self.config.canvas_size),
+        "min_n_events": ROOT.TCanvas("min_n_events", "min_n_events", self.config.canvas_size, self.config.canvas_size),
+        "projections": ROOT.TCanvas("projections", "projections", self.config.canvas_size, self.config.canvas_size),
     }
 
     for key in ["grid", "significance"]:

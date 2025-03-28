@@ -1,5 +1,7 @@
-from ctypes import c_double
+from Logger import warn
 
+from ctypes import c_double
+import ROOT
 
 class ABCDHelper:
   def __init__(self, config):
@@ -38,6 +40,10 @@ class ABCDHelper:
     #
     # significance = n_signal / sqrt(n_signal + n_background)
 
+    if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
+      warn("ABCDHelper.get_significance_hist: signal_hist is None")
+      return None
+    
     significance_hist = signal_hist.Clone()
     significance_hist.SetTitle("")
 
@@ -54,6 +60,10 @@ class ABCDHelper:
     return significance_hist
 
   def get_signal_contramination_hist(self, signal_hist):
+    if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
+      warn("ABCDHelper.get_signal_contramination_hist: signal_hist is None")
+      return None
+    
     signal_contamination_hist = signal_hist.Clone()
     signal_contamination_hist.SetTitle("")
 
@@ -107,6 +117,10 @@ class ABCDHelper:
     max_significance = 0
     best_point = None
 
+    if significance_hist is None:
+      warn("ABCDHelper.get_optimal_point_for_significance: significance_hist is None")
+      return best_point
+  
     for i in range(1, significance_hist.GetNbinsX() + 1):
       for j in range(1, significance_hist.GetNbinsY() + 1):
         significance = significance_hist.GetBinContent(i, j)
@@ -177,6 +191,9 @@ class ABCDHelper:
     return self.config.nice_names[name] if name in self.config.nice_names else name
 
   def get_projection_true(self, hist):
+    if hist is None or type(hist) is not ROOT.TH2:
+      return None
+    
     hist_clone = hist.Clone()
     hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], self.config.variable_2_max)
 
