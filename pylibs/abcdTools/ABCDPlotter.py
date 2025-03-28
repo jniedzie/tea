@@ -13,7 +13,7 @@ class ABCDPlotter:
     self.abcdHelper = ABCDHelper(config)
     self.histogramsHelper = ABCDHistogramsHelper(config)
 
-    self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}"
+    self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
     self.background_files = {}
     self.background_hists = {}

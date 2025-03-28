@@ -31,13 +31,13 @@ class NanoMuon {
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
-  bool isDSA() { return GetOriginalCollection() == "DSAMuon"; };
-  bool isTight();
+  bool IsDSA() { return GetOriginalCollection() == "DSAMuon"; };
+  bool IsTight();
 
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }
   inline float GetPhi() { return physicsObject->Get("phi"); }
-  inline int GetCharge() { return physicsObject->Get("charge"); }
+  inline int GetCharge() { return physicsObject->GetAs<int>("charge"); }
   inline float GetOuterEta() { return physicsObject->Get("outerEta"); }
   inline float GetOuterPhi() { return physicsObject->Get("outerPhi"); }
 
@@ -55,11 +55,7 @@ class NanoMuon {
 
   float OuterDeltaRtoMuon(std::shared_ptr<NanoMuon> muon);
 
-  void Print() {
-    info() << "NanoMuon: pt=" << GetPt() << " eta=" << GetEta() << " phi=" << GetPhi() << std::endl;
-    GetID().Print();
-    GetIso().Print();
-  }
+  void Print();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

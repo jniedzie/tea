@@ -75,3 +75,40 @@ shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObje
   }
   return firstCopy;
 }
+
+#include <iostream>
+#include <iomanip>
+
+void NanoGenParticle::Print() {
+    const string cyan = "\033[36m";
+    const string magenta = "\033[35m";
+    const string yellow = "\033[33m";
+    const string reset = "\033[0m";
+
+    info() << fixed << setprecision(3);
+
+    info()  << cyan << "=== NanoGenParticle ===" << reset << "\n";
+    info()  << yellow << left << setw(14) << "pt:"          << reset << GetPt()           << "\n"
+            << yellow << left << setw(14) << "eta:"         << reset << GetEta()          << "\n"
+            << yellow << left << setw(14) << "phi:"         << reset << GetPhi()          << "\n"
+            << yellow << left << setw(14) << "mass:"        << reset << GetMass()         << "\n"
+            << yellow << left << setw(14) << "dxy:"         << reset << GetDxy(0, 0)      << "\n"
+            
+            << yellow << left << setw(14) << "pdgId:"       << reset << GetPdgId()        << "\n"
+            
+            << yellow << left << setw(14) << "isMuon:"      << reset << IsMuon()          << "\n"
+            << yellow << left << setw(14) << "motherIdx:"   << reset << GetMotherIndex()  << "\n"
+            
+            
+            << yellow << left << setw(14) << "isFirstCopy:" << reset << IsFirstCopy()     << "\n"
+            << yellow << left << setw(14) << "isLastCopy:"  << reset << IsLastCopy()      << "\n"
+            << yellow << left << setw(14) << "isLastCopyBeforeFSR:" << reset << IsLastCopyBeforeFSR() << "\n"
+            
+            << yellow << left << setw(14) << "isPrompt:"    << reset << IsPrompt()        << "\n"
+            
+            << yellow << left << setw(14) << "isHardProcess:" << reset << IsHardProcess() << "\n"
+            << yellow << left << setw(14) << "isFromHardProcess:" << reset << IsFromHardProcess() << "\n"
+            << yellow << left << setw(14) << "isFromHardProcessBeforeFSR:" << reset << IsFromHardProcessBeforeFSR() << "\n";
+
+  info() << reset;
+}
