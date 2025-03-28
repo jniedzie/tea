@@ -21,12 +21,6 @@ NanoEventProcessor::NanoEventProcessor() {
     info() << "Couldn't read year from config file - will assume year 2018" << endl;
     year = "2018";
   }
-  try {
-    config.GetVector("scaleFactorTypes", scaleFactorTypes);
-  } catch (const Exception &e) {
-    info() << "Couldn't read scaleFactorTypes from config file - will only use ['central'] SF" << endl;
-    scaleFactorTypes = {"central"};
-  }
 }
 
 float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
@@ -69,22 +63,32 @@ float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> 
 }
 
 map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared_ptr<NanoJets> b_jets) {
-  auto weight = 1.0;
-  for (auto b_jet : * b_jets) {
-    weight *= b_jet->GetBtaggingScaleFactor("bTaggingMedium");
-  }
   map<string,float> weights;
-  weights["central"] = weight;
+  weights["central"] = 1.0;
+  weights["upCorrelated"] = 1.0;
+  weights["downCorrelated"] = 1.0;
+  weights["upUncorrelated"] = 1.0;
+  weights["downUncorrelated"] = 1.0;
+  for (auto b_jet : * b_jets) {
+    weights["central"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium");
+    weights["upCorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicUpCorrelated");
+    weights["downCorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicDownCorrelated");
+    weights["upUncorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicUpUncorrelated");
+    weights["downUncorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicDownUncorrelated");
+  }
   return weights;
 }
 
 map<string,float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<NanoJets> jets) {
-  auto weight = 1.0;
-  for (auto jet : * jets) {
-    weight *= jet->GetPUJetIDScaleFactor("PUjetIDtight");
-  }
   map<string,float> weights;
-  weights["central"] = weight;
+  weights["central"] = 1.0;
+  weights["up"] = 1.0;
+  weights["down"] = 1.0;
+  for (auto jet : * jets) {
+    weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight");
+    weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicUp");
+    weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicDown");
+  }
   return weights;
 }
 

@@ -22,20 +22,28 @@ class HistogramsHandler {
   TH1D* GetHistogram1D(std::string name) { return histograms1D[name]; }
   std::map<std::string, TH1D*> GetHistograms1D() { return histograms1D; }
   void SaveHistograms();
-
+  
  private:
   std::map<std::string, TH1D*> histograms1D;
   std::map<std::string, TH2D*> histograms2D;
+  std::map<std::string, TH1D*> histograms1Dsf;
+  std::map<std::string, TH2D*> histograms2Dsf;
 
   std::map<std::string, HistogramParams> histParams;
+  std::map<std::string, HistogramParams> extraSFsHistParams1D;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
+  std::map<std::string, HistogramParams2D> extraSFsHistParams2D;
   std::string outputPath;
   std::map<std::string,float> eventWeights;
-  std::vector<std::string> scaleFactorTypes;
+  std::vector<std::string> extraSFs;
 
   void CheckHistogram(std::string name);
   void SetupHistograms();
+  void SetupExtraSFsHistograms();
+
+  void Save1DHistogram(std::string name, TH1D* hist, TFile* outputFile, bool extraSFs = false);
+  void Save2DHistogram(std::string name, TH2D* hist, TFile* outputFile, bool extraSFs = false);
 };
 
 #endif /* HistogramsHandler_hpp */

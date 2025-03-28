@@ -42,54 +42,79 @@ HistogramsHandler::HistogramsHandler() {
     info() << "No histogramsOutputFilePath found in config file" << endl;
   }
   try {
-    config.GetVector("scaleFactorTypes", scaleFactorTypes);
+    config.GetVector("extraSFs", extraSFs);
   } catch (const Exception &e) {
-    info() << "Couldn't read scaleFactorTypes from config file - will only use ['central'] SF" << endl;
-    scaleFactorTypes = {"central"};
+    info() << "Couldn't read extraSFs from config file - no up/down hists will be created" << endl;
+  }
+  try {
+    config.GetHistogramsParams(extraSFsHistParams1D, "extraSFsHistParams1D");
+  } catch (const Exception &e) {
+    info() << "Couldn't read extraSFsHistParams1D from config file - no 1D up/down hists will be created" << endl;
+  }
+  try {
+    config.GetHistogramsParams(extraSFsHistParams2D, "extraSFsHistParams2D");
+  } catch (const Exception &e) {
+    info() << "Couldn't read extraSFsHistParams2D from config file - no 2D up/down hists will be created" << endl;
   }
 
   SetupHistograms();
+  SetupExtraSFsHistograms();
 }
 
 HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
-  for (auto sfType : scaleFactorTypes) {
-    string sfName = "";
-      if (sfType != "central") sfName = "_"+sfType;
-    for (auto &[title_, params] : histParams) {
-      string title = title_ + sfName;
-      histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
-    }
+  for (auto &[title, params] : histParams) {
+    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+  }
 
-    for (auto &[title_, params] : irregularHistParams) {
-      string title = title_ + sfName;
-      histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
-    }
+  for (auto &[title, params] : irregularHistParams) {
+    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+  }
 
-    for (auto &[title_, params] : histParams2D) {
-      string title = title_ + sfName;
-      histograms2D[title] =
-          new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+  for (auto &[title, params] : histParams2D) {
+    histograms2D[title] =
+        new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+  }
+}
+
+void HistogramsHandler::SetupExtraSFsHistograms() {
+  for (auto sf : extraSFs) {
+    for (auto &[title_, params] : extraSFsHistParams1D) {
+      string title = title_ + "_" + sf;
+      histograms1Dsf[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+    }
+    for (auto &[title_, params] : extraSFsHistParams2D) {
+      string title = title_ + "_" + sf;
+      histograms2Dsf[title] = 
+        new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
     }
   }
 }
 
 void HistogramsHandler::Fill(string name, double value) {
-  for (auto sfType : scaleFactorTypes) {
-    if (sfType != "central") name = name + "_"+sfType;
-    double weight = eventWeights[sfType];
-    CheckHistogram(name);
-    histograms1D[name]->Fill(value, weight);
+  double weight = eventWeights["central"];
+  CheckHistogram(name);
+  histograms1D[name]->Fill(value, weight);
+  if (extraSFsHistParams1D.find(name) != extraSFsHistParams1D.end()) {
+    for (auto sf : extraSFs) {
+      weight = eventWeights[sf];
+      string namesf = name + "_" + sf;
+      histograms1Dsf[namesf]->Fill(value, weight);
+    }
   }
 }
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
-  for (auto sfType : scaleFactorTypes) {
-    if (sfType != "central") name = name + "_"+sfType;
-    double weight = eventWeights[sfType];
-    CheckHistogram(name);
-    histograms2D[name]->Fill(valueX, valueY, weight);
+  double weight = eventWeights["central"];
+  CheckHistogram(name);
+  histograms2D[name]->Fill(valueX, valueY, weight);
+  if (extraSFsHistParams2D.find(name) != extraSFsHistParams2D.end()) {
+    for (auto sf : extraSFs) {
+      weight = eventWeights[sf];
+      string namesf = name + "_" + sf;
+      histograms2Dsf[namesf]->Fill(valueX, valueY, weight);
+    }
   }
 }
 
@@ -98,6 +123,38 @@ void HistogramsHandler::CheckHistogram(string name) {
     fatal() << "Couldn't find key: " << name << " in histograms map" << endl;
     exit(1);
   }
+}
+
+void HistogramsHandler::Save1DHistogram(string name, TH1D* hist, TFile* outputFile, bool extraSFs) {
+  string outputDir = "";
+  if (!extraSFs) outputDir = histParams[name].directory;
+  else outputDir = extraSFsHistParams1D[name].directory;
+  if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+  outputFile->cd(outputDir.c_str());
+  hist->Write();
+}
+
+void HistogramsHandler::Save2DHistogram(string name, TH2D* hist, TFile* outputFile, bool extraSFs) {
+  string outputDir = histParams2D[name].directory;
+  if (extraSFs) {
+    string sfName = name.substr(name.rfind('_') + 1);
+    outputDir = outputDir + sfName;
+  }
+  if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+  outputFile->cd(outputDir.c_str());
+  if (!hist) {
+    error() << "Histogram " << name << " is null" << endl;
+    return;
+  }
+  if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
+    warn() << "You're creating a very large 2D histogram: " << name << " with ";
+    warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
+    warn() << "This may cause memory issues." << endl;
+  }
+
+  hist->Write();
 }
 
 void HistogramsHandler::SaveHistograms() {
@@ -114,46 +171,69 @@ void HistogramsHandler::SaveHistograms() {
 
   bool emptyHists = false;
 
-  for (auto sfType : scaleFactorTypes) {
-    string sfName = "";
-    if (sfType != "central") sfName = "_"+sfType;
-    for (auto &[name_, hist] : histograms1D) {
-      string name = name_ + sfName;
-      string outputDir = histParams[name].directory;
-      if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-
-      if (hist->GetEntries() == 0) {
-        emptyHists = true;
-        continue;
-      }
-
-      outputFile->cd(outputDir.c_str());
-      hist->Write();
-    }
-    for (auto &[name_, hist] : histograms2D) {
-      string name = name_ + sfName;
-      string outputDir = histParams2D[name].directory;
-      if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-
-      if (hist->GetEntries() == 0) {
-        emptyHists = true;
-        continue;
-      }
-
-      outputFile->cd(outputDir.c_str());
-      if (!hist) {
-        error() << "Histogram " << name << " is null" << endl;
-        continue;
-      }
-      if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
-        warn() << "You're creating a very large 2D histogram: " << name << " with ";
-        warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
-        warn() << "This may cause memory issues." << endl;
-      }
-
-      hist->Write();
-    }
+  for (auto &[name, hist] : histograms1D) {
+    Save1DHistogram(name, hist, outputFile);
   }
+  for (auto &[name, hist] : histograms1Dsf) {
+    Save1DHistogram(name, hist, outputFile, true);
+  }
+  for (auto &[name, hist] : histograms2D) {
+    Save2DHistogram(name, hist, outputFile);
+  }
+  for (auto &[name, hist] : histograms2Dsf) {
+    Save2DHistogram(name, hist, outputFile, true);
+  }
+
+  // for (auto &[name, hist] : histograms1D) {
+  //   string outputDir = histParams[name].directory;
+  //   for (const auto &sfType : scaleFactorTypes) {
+  //     if (sfType == "central") continue;
+  //     if (name.rfind(sfType) == (name.size() - sfType.size())) {
+  //       outputDir = outputDir + "_" + sfType;
+  //       string cleanName = name.substr(0, name.find_last_of("_"));
+  //       // hist->SetName(cleanName.c_str());
+  //     }
+  //   }
+  //   if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+  //   if (hist->GetEntries() == 0) {
+  //     emptyHists = true;
+  //     // continue;
+  //   }
+
+  //   outputFile->cd(outputDir.c_str());
+  //   hist->Write();
+  // }
+  // for (auto &[name, hist] : histograms2D) {
+  //   string outputDir = histParams2D[name].directory;
+  //   for (const auto &sfType : scaleFactorTypes) {
+  //     if (sfType == "central") continue;
+  //     if (name.rfind(sfType) == (name.size() - sfType.size())) {
+  //       outputDir = outputDir + "_" + sfType;
+  //       string cleanName = name.substr(0, name.find_last_of("_"));
+  //       // hist->SetName(cleanName.c_str());
+  //     }
+  //   }
+  //   if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+  //   if (hist->GetEntries() == 0) {
+  //     emptyHists = true;
+  //     // continue;
+  //   }
+
+  //   outputFile->cd(outputDir.c_str());
+  //   if (!hist) {
+  //     error() << "Histogram " << name << " is null" << endl;
+  //     continue;
+  //   }
+  //   if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
+  //     warn() << "You're creating a very large 2D histogram: " << name << " with ";
+  //     warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
+  //     warn() << "This may cause memory issues." << endl;
+  //   }
+
+  //   hist->Write();
+  // }
   outputFile->Close();
 
   info() << "Histograms saved to: " << path << "/" << filename << endl;

@@ -28,7 +28,6 @@ class NanoEventProcessor {
  
  std::string weightsBranchName;
  std::string year;
- std::vector<std::string> scaleFactorTypes;
 };
 
 #endif /* NanoEventProcessor_hpp */
