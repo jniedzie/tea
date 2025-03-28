@@ -31,11 +31,11 @@ class NanoDimuonVertex {
   std::shared_ptr<NanoMuon> Muon1() { return muon1; }
   std::shared_ptr<NanoMuon> Muon2() { return muon2; }
 
-  bool isDSAMuon1() { return float(physicsObject->Get("isDSAMuon1")) == 1.; }
-  bool isDSAMuon2() { return float(physicsObject->Get("isDSAMuon2")) == 1.; }
-  float muonIndex1() { return float(physicsObject->Get("originalMuonIdx1")); }
-  float muonIndex2() { return float(physicsObject->Get("originalMuonIdx2")); }
-  bool isValid() { return (float)Get("isValid") > 0; }
+  bool IsDSAMuon1() { return float(physicsObject->Get("isDSAMuon1")) == 1.; }
+  bool IsDSAMuon2() { return float(physicsObject->Get("isDSAMuon2")) == 1.; }
+  float MuonIndex1() { return float(physicsObject->Get("originalMuonIdx1")); }
+  float MuonIndex2() { return float(physicsObject->Get("originalMuonIdx2")); }
+  bool IsValid() { return (float)Get("isValid") > 0; }
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
@@ -61,11 +61,13 @@ class NanoDimuonVertex {
 
   float GetDimuonChargeProduct();
   float GetOuterDeltaR();
+  float GetDeltaR() { return Get("dR"); }
 
   float GetDeltaEta();
   float GetDeltaPhi();
   float GetOuterDeltaEta();
   float GetOuterDeltaPhi();
+  float GetLeadingMuonPt();
 
   int GetTotalNumberOfSegments();
   int GetTotalNumberOfDTHits();
