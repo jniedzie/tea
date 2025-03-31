@@ -39,6 +39,7 @@ class HistogramsHandler {
   std::vector<std::string> extraSFs;
 
   void CheckHistogram(std::string name);
+  void CheckExtraSFsHistogram(std::string name);
   void SetupHistograms();
   void SetupExtraSFsHistograms();
 

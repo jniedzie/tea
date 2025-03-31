@@ -95,7 +95,7 @@ map<string,float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<Na
 map<string,float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr<NanoMuons> muonCollection) {
   float weight = 1.0;
   for (auto muon : *muonCollection) {
-    if (muon->isTight()) weight *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
+    if (muon->IsTight()) weight *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
     else weight *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
   }
   map<string,float> weights;
