@@ -42,23 +42,12 @@ HistogramsHandler::HistogramsHandler() {
     info() << "No histogramsOutputFilePath found in config file" << endl;
   }
   try {
-    config.GetVector("extraSFs", extraSFs);
+    config.GetVector("SFvariationVariables", SFvariationVariables);
   } catch (const Exception &e) {
-    info() << "Couldn't read extraSFs from config file - no up/down hists will be created" << endl;
-  }
-  try {
-    config.GetHistogramsParams(extraSFsHistParams1D, "extraSFsHistParams1D");
-  } catch (const Exception &e) {
-    info() << "Couldn't read extraSFsHistParams1D from config file - no 1D up/down hists will be created" << endl;
-  }
-  try {
-    config.GetHistogramsParams(extraSFsHistParams2D, "extraSFsHistParams2D");
-  } catch (const Exception &e) {
-    info() << "Couldn't read extraSFsHistParams2D from config file - no 2D up/down hists will be created" << endl;
+    info() << "Couldn't read SFvariationVariables from config file - no up/down hists will be created" << endl;
   }
 
   SetupHistograms();
-  SetupExtraSFsHistograms();
 
 }
 
@@ -66,83 +55,90 @@ HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
   for (auto &[title, params] : histParams) {
-    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+    histograms1D[make_tuple(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
   }
 
   for (auto &[title, params] : irregularHistParams) {
-    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+    histograms1D[make_tuple(title, "")] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
   for (auto &[title, params] : histParams2D) {
-    histograms2D[title] =
+    histograms2D[make_tuple(title, "")] =
         new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
   }
 }
 
-void HistogramsHandler::SetupExtraSFsHistograms() {
-  for (auto sf : extraSFs) {
-    for (auto &[title_, params] : extraSFsHistParams1D) {
-      string title = title_ + "_" + sf;
-      histograms1Dsf[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+void HistogramsHandler::SetupSFvariationHistograms() {
+  for (auto &[title, params] : histParams) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;
+    for (auto &[sfName, weight] : eventWeights) {
+      if (sfName == "systematic") continue;
+      string titlesf = title + "_" + sfName;
+      histograms1D[make_tuple(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
     }
-    for (auto &[title_, params] : extraSFsHistParams2D) {
-      string title = title_ + "_" + sf;
-      histograms2Dsf[title] = 
-        new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+  }
+
+  for (auto &[title, params] : irregularHistParams) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;    
+    for (auto &[sfName, weight] : eventWeights) {
+      if (sfName == "systematic") continue;
+      string titlesf = title + "_" + sfName;
+      histograms1D[make_tuple(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+    }
+  }
+
+  for (auto &[title, params] : histParams2D) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;
+    for (auto &[sfName, weight] : eventWeights) {
+      if (sfName == "systematic") continue;
+      string titlesf = title + "_" + sfName;
+      histograms2D[make_tuple(title, sfName)] = 
+          new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
     }
   }
 }
+
+void HistogramsHandler::SetEventWeights(map<string,float> weights) { 
+  bool firstIteration = eventWeights.empty() ? true : false;
+  eventWeights = weights; 
+  if (firstIteration) SetupSFvariationHistograms();
+};
 
 void HistogramsHandler::Fill(string name, double value) {
-  double weight = eventWeights["central"];
-  CheckHistogram(name);
-  histograms1D[name]->Fill(value, weight);
-  if (extraSFsHistParams1D.find(name) != extraSFsHistParams1D.end()) {
-    for (auto sf : extraSFs) {
-      weight = eventWeights[sf];
-      string namesf = name + "_" + sf;
-      CheckExtraSFsHistogram(name);
-      histograms1Dsf[namesf]->Fill(value, weight);
-    }
+  double weight = eventWeights["systematic"];
+  CheckHistogram(name, "");
+  histograms1D[make_tuple(name, "")]->Fill(value, weight);
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) ==  SFvariationVariables.end()) return;
+  for (auto &[sfName, weight] : eventWeights) {
+    if (sfName == "systematic") continue;
+    CheckHistogram(name, sfName);
+    histograms1D[make_tuple(name, sfName)]->Fill(value, weight);
   }
 }
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
-  double weight = eventWeights["central"];
-  CheckHistogram(name);
-  histograms2D[name]->Fill(valueX, valueY, weight);
-
-  if (extraSFsHistParams2D.find(name) != extraSFsHistParams2D.end()) {
-    for (auto sf : extraSFs) {
-      weight = eventWeights[sf];
-      string namesf = name + "_" + sf;
-      CheckExtraSFsHistogram(namesf);
-      histograms2Dsf[namesf]->Fill(valueX, valueY, weight);
-    }
+  double weight = eventWeights["systematic"];
+  CheckHistogram(name, "");
+  histograms2D[make_tuple(name, "")]->Fill(valueX, valueY, weight);
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) ==  SFvariationVariables.end()) return;
+  for (auto &[sfName, weight] : eventWeights) {
+    if (sfName == "systematic") continue;
+    CheckHistogram(name, sfName);
+    histograms2D[make_tuple(name, sfName)]->Fill(valueX, valueY, weight);
   }
 }
 
-void HistogramsHandler::CheckHistogram(string name) {
-  if (!histograms1D.count(name) && !histograms2D.count(name)) {
+void HistogramsHandler::CheckHistogram(string name, string directory) {
+  if (!histograms1D.count(make_tuple(name,directory)) && !histograms2D.count(make_tuple(name,directory))) {
     fatal() << "Couldn't find key: " << name << " in histograms map" << endl;
     exit(1);
   }
 }
 
-void HistogramsHandler::CheckExtraSFsHistogram(string name) {
-  if (!histograms1Dsf.count(name) && !histograms2Dsf.count(name)) {
-    fatal() << "Couldn't find key: " << name << " in extra SF histograms map" << endl;
-    exit(1);
-  }
-}
-
 template <typename THist>
-void HistogramsHandler::SaveHistogram(string name, THist* hist, TFile* outputFile, bool extraSFs) {
-  string outputDir = histParams2D[name].directory;
-  if (extraSFs) {
-    string sfName = name.substr(name.rfind('_') + 1);
-    outputDir = outputDir + sfName;
-  }
+void HistogramsHandler::SaveHistogram(tuple<string,string> names, THist* hist, TFile* outputFile) {
+  string name = get<0>(names);
+  string outputDir = get<1>(names);
   if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
 
   outputFile->cd(outputDir.c_str());
@@ -175,17 +171,11 @@ void HistogramsHandler::SaveHistograms() {
 
   bool emptyHists = false;
 
-  for (auto &[name, hist] : histograms1D) {
-    SaveHistogram(name, hist, outputFile);
+  for (auto &[names, hist] : histograms1D) {
+    SaveHistogram(names, hist, outputFile);
   }
-  for (auto &[name, hist] : histograms1Dsf) {
-    SaveHistogram(name, hist, outputFile, true);
-  }
-  for (auto &[name, hist] : histograms2D) {
-    SaveHistogram(name, hist, outputFile);
-  }
-  for (auto &[name, hist] : histograms2Dsf) {
-    SaveHistogram(name, hist, outputFile, true);
+  for (auto &[names, hist] : histograms2D) {
+    SaveHistogram(names, hist, outputFile);
   }
   
   outputFile->Close();

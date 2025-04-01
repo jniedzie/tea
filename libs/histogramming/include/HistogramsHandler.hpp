@@ -13,38 +13,34 @@ class HistogramsHandler {
   HistogramsHandler();
   ~HistogramsHandler();
 
-  void SetEventWeights(std::map<std::string,float> weights) { eventWeights = weights; };
+  void SetEventWeights(std::map<std::string,float> weights);
 
   void Fill(std::string name, double value);
   void Fill(std::string name, double valueX, double valueY);
 
-  void SetHistogram1D(std::string name, TH1D *histogram) { histograms1D[name] = histogram; }
-  TH1D* GetHistogram1D(std::string name) { return histograms1D[name]; }
-  std::map<std::string, TH1D*> GetHistograms1D() { return histograms1D; }
+  void SetHistogram1D(std::tuple<std::string,std::string> names, TH1D *histogram) { histograms1D[names] = histogram; }
+  TH1D* GetHistogram1D(std::tuple<std::string,std::string> names) { return histograms1D[names]; }
+  std::map<std::tuple<std::string,std::string>, TH1D*> GetHistograms1D() { return histograms1D; }
   void SaveHistograms();
   
  private:
-  std::map<std::string, TH1D*> histograms1D;
-  std::map<std::string, TH2D*> histograms2D;
-  std::map<std::string, TH1D*> histograms1Dsf;
-  std::map<std::string, TH2D*> histograms2Dsf;
+  std::map<std::tuple<std::string,std::string>, TH1D*> histograms1D;
+  std::map<std::tuple<std::string,std::string>, TH2D*> histograms2D;
 
   std::map<std::string, HistogramParams> histParams;
-  std::map<std::string, HistogramParams> extraSFsHistParams1D;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
-  std::map<std::string, HistogramParams2D> extraSFsHistParams2D;
+  std::vector<std::string> SFvariationVariables;
   std::string outputPath;
   std::map<std::string,float> eventWeights;
   std::vector<std::string> extraSFs;
 
-  void CheckHistogram(std::string name);
-  void CheckExtraSFsHistogram(std::string name);
+  void CheckHistogram(std::string name, std::string directory);
   void SetupHistograms();
-  void SetupExtraSFsHistograms();
+  void SetupSFvariationHistograms();
 
   template <typename THist>
-  void SaveHistogram(std::string name, THist* hist, TFile* outputFile, bool extraSFs = false);
+  void SaveHistogram(std::tuple<std::string,std::string> name, THist* hist, TFile* outputFile);
 };
 
 #endif /* HistogramsHandler_hpp */

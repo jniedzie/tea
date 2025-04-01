@@ -47,11 +47,7 @@ float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> 
 }
 
 map<string,float> NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> event, string name) {
-  map<string,float> weights = {
-    {"central", 1.0},
-    {"up", 1.0},
-    {"down", 1.0}
-  };
+  map<string,float> weights;
   if (!event->GetMuonTriggerSF().empty()) return event->GetMuonTriggerSF();
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
@@ -61,62 +57,66 @@ map<string,float> NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr
     warn() << "No leading muon found in event -- will assume SF=1.0" << endl;
     return weights;
   }
-  weights["central"] *= scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
-  weights["up"] *= scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt(), "ValTypeUp");
-  weights["down"] *= scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt(), "ValTypeDown");
+  weights = scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
   event->SetMuonTriggerSF(weights);
 
   return weights;
 }
 
 map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared_ptr<NanoJets> b_jets) {
-  map<string,float> weights = {
-    {"central", 1.0},
-    {"upCorrelated", 1.0},
-    {"downCorrelated", 1.0},
-    {"upUncorrelated", 1.0},
-    {"downUncorrelated", 1.0}
-  };
+  map<string,float> weights;
+  bool firstIteration = true;
   for (auto b_jet : * b_jets) {
-    weights["central"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium");
-    weights["upCorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicUpCorrelated");
-    weights["downCorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicDownCorrelated");
-    weights["upUncorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicUpUncorrelated");
-    weights["downUncorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicDownUncorrelated");
+    map<string,float> weights_ = b_jet->GetBtaggingScaleFactor("bTaggingMedium");
+    if (firstIteration) {
+      weights = weights_;
+      firstIteration = false;
+      continue;
+    }
+    for (auto &[name, weight] : weights_) {
+      weights[name] *= weight;
+    }
   }
   return weights;
 }
 
 map<string,float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<NanoJets> jets) {
-  map<string,float> weights = {
-    {"central", 1.0},
-    {"up", 1.0},
-    {"down", 1.0}
-  };
+  map<string,float> weights;
+  bool firstIteration = true;
   for (auto jet : * jets) {
-    weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight");
-    weights["up"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicUp");
-    weights["down"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicDown");
+    map<string,float> weights_ = jet->GetPUJetIDScaleFactor("PUjetIDtight");
+    if (firstIteration) {
+      weights = weights_;
+      firstIteration = false;
+      continue;
+    }
+    for (auto &[name, weight] : weights_) {
+      weights[name] *= weight;
+    }
   }
   return weights;
 }
 
 map<string,float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr<NanoMuons> muonCollection) {
-  map<string,float> weights = {
-    {"central", 1.0},
-    {"up", 1.0},
-    {"down", 1.0}
-  };
+  map<string,float> weights;
+  bool firstIteration = true;
   for (auto muon : *muonCollection) {
-    if (muon->IsTight()) {
-      weights["central"] *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
-      weights["up"] *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year, "ValTypeUp");
-      weights["down"] *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year, "ValTypeDown");
+    auto weights_loose = muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
+    auto weights_tight = muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
+    if (firstIteration) {
+      if (muon->IsTight()) weights = weights_tight;
+      else weights = weights_loose;
+      firstIteration = false;
+      continue;
     }
-    else {
-      weights["central"] *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
-      weights["up"] *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year, "ValTypeUp");
-      weights["down"] *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year, "ValTypeDown");
+
+    for (auto &[name, weight] : weights_loose) {
+      if (muon->IsTight()) weight = 1.0;
+      weights[name] *= weight;
+    }
+    for (auto &[name, weight] : weights_tight) {
+      if (!muon->IsTight()) weight = 1.0;
+      weights[name] *= weight;
     }
   }
   return weights;
@@ -152,4 +152,27 @@ pair<shared_ptr<NanoMuon>, shared_ptr<NanoMuon>> NanoEventProcessor::GetMuonPair
   }
 
   return {muonA, muonB};
+}
+
+bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
+  // Test 1: gen wights branch only for MC
+  bool isData = false;
+  if (!weightsBranchName.empty()) {
+    try {
+      float genWeight = event->Get(weightsBranchName);
+    } catch (const Exception &e) {
+      isData = true;
+    }
+  }
+  // Test 2: run run = 1 for MC
+  int run = event->GetAs<int>("run");
+  if (run == 1) {
+    if (isData) {
+      warn() << "Conflicting NanoEventProcessor::IsDataEvent results. Returning IsDataEvent true";
+      return true;
+    }
+    return false;
+  }
+  if (!isData) warn() << "Conflicting NanoEventProcessor::IsDataEvent results. Returning IsDataEvent true";
+  return true;
 }

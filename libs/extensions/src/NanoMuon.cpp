@@ -18,25 +18,37 @@ TLorentzVector NanoMuon::GetFourVector() {
   return v;
 }
 
-float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, string year, string variant) {
-  if (scaleFactor > 0) return scaleFactor;
+map<string,float> NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, string year) {
+  if (!scaleFactor.empty()) return scaleFactor;
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  float idSF = 1.0;
-  float recoSF = 1.0;
+  map<string,float> idSF;
+  map<string,float> recoSF;
   if (IsDSA() && year == "2018") {  // TODO: find DSA SF for other years
     nameID = "dsamuonID";
-    idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt(), variant);
+    idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
   } else
-    idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt(), variant);
-  float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt(), variant);
+    idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
+  map<string,float> isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
   // No Muon Reco SF for Run 3
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
-    recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt(), variant);
+    recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
   }
 
-  scaleFactor = recoSF * idSF * isoSF;
+  scaleFactor["systematic"] = recoSF["systematic"] * idSF["systematic"] * isoSF["systematic"];
+  for (auto &[name, weight] : recoSF) {
+    if (name == "systematic") continue;
+    scaleFactor[name] = recoSF[name] * idSF["systematic"] * isoSF["systematic"];
+  }
+  for (auto &[name, weight] : idSF) {
+    if (name == "systematic") continue;
+    scaleFactor[name] = recoSF["systematic"] * idSF[name] * isoSF["systematic"];
+  }
+  for (auto &[name, weight] : recoSF) {
+    if (name == "systematic") continue;
+    scaleFactor[name] = recoSF["systematic"] * idSF["systematic"] * isoSF[name];
+  }
 
   return scaleFactor;
 }

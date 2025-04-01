@@ -34,8 +34,8 @@ class NanoJet {
 
   TLorentzVector GetFourVector();
 
-  float GetBtaggingScaleFactor(std::string workingPoint, std::string variant = "systematic");
-  float GetPUJetIDScaleFactor(std::string name, std::string variant = "systematic");
+  std::map<std::string,float> GetBtaggingScaleFactor(std::string workingPoint);
+  std::map<std::string,float> GetPUJetIDScaleFactor(std::string name);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

@@ -21,11 +21,11 @@ class ScaleFactorsManager {
   ScaleFactorsManager(ScaleFactorsManager const &) = delete;
   void operator=(ScaleFactorsManager const &) = delete;
 
-  float GetPUJetIDScaleFactor(std::string name, float eta, float pt, std::string variant = "systematic");
-  float GetMuonScaleFactor(std::string name, float eta, float pt, std::string variant = "ValType");
-  float GetDSAMuonScaleFactor(std::string name, float eta, float pt, std::string variant = "ValType");
-  float GetMuonTriggerScaleFactor(std::string name, float eta, float pt, std::string variant = "ValType");
-  float GetBTagScaleFactor(std::string name, float eta, float pt, std::string variant = "systematic");
+  std::map<std::string,float> GetPUJetIDScaleFactor(std::string name, float eta, float pt);
+  std::map<std::string,float> GetMuonScaleFactor(std::string name, float eta, float pt);
+  std::map<std::string,float> GetDSAMuonScaleFactor(std::string name, float eta, float pt);
+  std::map<std::string,float> GetMuonTriggerScaleFactor(std::string name, float eta, float pt);
+  std::map<std::string,float> GetBTagScaleFactor(std::string name, float eta, float pt);
 
   float GetPileupScaleFactorCustom(int nVertices);
   float GetPileupScaleFactor(std::string name, float nVertices);
@@ -55,6 +55,8 @@ class ScaleFactorsManager {
   void ReadPileupSFs();
 
   float TryToEvaluate(const correction::Correction::Ref &correction, const std::vector<std::variant<int, double, std::string>> &args);
+
+  std::vector<std::string> GetSFVariations(std::map<std::string, std::string> extraArgs);
 };
 
 struct MuonID {

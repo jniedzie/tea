@@ -23,6 +23,8 @@ class NanoEventProcessor {
 
   std::pair<std::shared_ptr<NanoMuon>, std::shared_ptr<NanoMuon>> GetMuonPairClosestToZ(const std::shared_ptr<NanoEvent> event, std::string collection);
 
+  bool IsDataEvent(const std::shared_ptr<NanoEvent> event);
+
  private:
  std::unique_ptr<EventProcessor> eventProcessor;
  

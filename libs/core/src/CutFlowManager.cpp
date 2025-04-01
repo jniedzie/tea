@@ -148,9 +148,9 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
 }
 
 float CutFlowManager::GetCurrentEventWeight() {
-  // Check if the "central" weight exists and is non-zero
-  if (eventWeights.find("central") != eventWeights.end() && eventWeights["central"] != 0.0f) {  
-    return eventWeights["central"];
+  // Check if the "systematic" weight exists and is non-zero
+  if (eventWeights.find("systematic") != eventWeights.end() && eventWeights["systematic"] != 0.0f) {  
+    return eventWeights["systematic"];
   }
   float weight = 1.0;
   try {

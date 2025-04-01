@@ -67,6 +67,6 @@ void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlow
     rawEventsCutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(sortedRawEventsAfterCuts[index]).c_str());
     bin++;
   }
-  histogramsHandler->SetHistogram1D("cutFlow", cutFlowHist);
-  histogramsHandler->SetHistogram1D("rawEventsCutFlow", rawEventsCutFlowHist);
+  histogramsHandler->SetHistogram1D(make_tuple("cutFlow",""), cutFlowHist);
+  histogramsHandler->SetHistogram1D(make_tuple("rawEventsCutFlow",""), rawEventsCutFlowHist);
 }
