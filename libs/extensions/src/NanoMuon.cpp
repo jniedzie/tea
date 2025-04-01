@@ -18,7 +18,7 @@ TLorentzVector NanoMuon::GetFourVector() {
   return v;
 }
 
-float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, string year) {
+float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, string year, string variant) {
   if (scaleFactor > 0) return scaleFactor;
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
@@ -27,13 +27,13 @@ float NanoMuon::GetScaleFactor(string nameID, string nameIso, string nameReco, s
   float recoSF = 1.0;
   if (IsDSA() && year == "2018") {  // TODO: find DSA SF for other years
     nameID = "dsamuonID";
-    idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
+    idSF = scaleFactorsManager.GetDSAMuonScaleFactor(nameID, fabs(GetEta()), GetPt(), variant);
   } else
-    idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt());
-  float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt());
+    idSF = scaleFactorsManager.GetMuonScaleFactor(nameID, fabs(GetEta()), GetPt(), variant);
+  float isoSF = scaleFactorsManager.GetMuonScaleFactor(nameIso, fabs(GetEta()), GetPt(), variant);
   // No Muon Reco SF for Run 3
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
-    recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt());
+    recoSF = scaleFactorsManager.GetMuonScaleFactor(nameReco, fabs(GetEta()), GetPt(), variant);
   }
 
   scaleFactor = recoSF * idSF * isoSF;

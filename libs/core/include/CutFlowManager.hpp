@@ -28,6 +28,7 @@ class CutFlowManager {
 
   void SaveCutFlow();
 
+  // event weights (standard and up/down variations) mapped to strings naming type the of event weigth
   void SetEventWeights(std::map<std::string,float> weights) { eventWeights = weights; };
 
  private:

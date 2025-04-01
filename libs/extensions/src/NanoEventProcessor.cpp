@@ -46,29 +46,37 @@ float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> 
   }
 }
 
-float NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> event, string name) {
-  if (event->GetMuonTriggerSF() > 0) return event->GetMuonTriggerSF();
+map<string,float> NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> event, string name) {
+  map<string,float> weights = {
+    {"central", 1.0},
+    {"up", 1.0},
+    {"down", 1.0}
+  };
+  if (!event->GetMuonTriggerSF().empty()) return event->GetMuonTriggerSF();
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   auto leadingMuon = asNanoMuon(eventProcessor->GetMaxPtObject(event->GetEvent(), "Muon"));
   if(!leadingMuon) {
     warn() << "No leading muon found in event -- will assume SF=1.0" << endl;
-    return 1.0;
+    return weights;
   }
-  float scaleFactor = scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
-  event->SetMuonTriggerSF(scaleFactor);
+  weights["central"] *= scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
+  weights["up"] *= scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt(), "ValTypeUp");
+  weights["down"] *= scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt(), "ValTypeDown");
+  event->SetMuonTriggerSF(weights);
 
-  return scaleFactor;
+  return weights;
 }
 
 map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared_ptr<NanoJets> b_jets) {
-  map<string,float> weights;
-  weights["central"] = 1.0;
-  weights["upCorrelated"] = 1.0;
-  weights["downCorrelated"] = 1.0;
-  weights["upUncorrelated"] = 1.0;
-  weights["downUncorrelated"] = 1.0;
+  map<string,float> weights = {
+    {"central", 1.0},
+    {"upCorrelated", 1.0},
+    {"downCorrelated", 1.0},
+    {"upUncorrelated", 1.0},
+    {"downUncorrelated", 1.0}
+  };
   for (auto b_jet : * b_jets) {
     weights["central"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium");
     weights["upCorrelated"] *= b_jet->GetBtaggingScaleFactor("bTaggingMedium", "systematicUpCorrelated");
@@ -80,26 +88,37 @@ map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared
 }
 
 map<string,float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<NanoJets> jets) {
-  map<string,float> weights;
-  weights["central"] = 1.0;
-  weights["up"] = 1.0;
-  weights["down"] = 1.0;
+  map<string,float> weights = {
+    {"central", 1.0},
+    {"up", 1.0},
+    {"down", 1.0}
+  };
   for (auto jet : * jets) {
     weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight");
-    weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicUp");
-    weights["central"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicDown");
+    weights["up"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicUp");
+    weights["down"] *= jet->GetPUJetIDScaleFactor("PUjetIDtight", "systematicDown");
   }
   return weights;
 }
 
 map<string,float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr<NanoMuons> muonCollection) {
-  float weight = 1.0;
+  map<string,float> weights = {
+    {"central", 1.0},
+    {"up", 1.0},
+    {"down", 1.0}
+  };
   for (auto muon : *muonCollection) {
-    if (muon->IsTight()) weight *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
-    else weight *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
+    if (muon->IsTight()) {
+      weights["central"] *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
+      weights["up"] *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year, "ValTypeUp");
+      weights["down"] *= muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year, "ValTypeDown");
+    }
+    else {
+      weights["central"] *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
+      weights["up"] *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year, "ValTypeUp");
+      weights["down"] *= muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year, "ValTypeDown");
+    }
   }
-  map<string,float> weights;
-  weights["central"] = weight;
   return weights;
 }
 

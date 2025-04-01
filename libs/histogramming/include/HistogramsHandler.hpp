@@ -43,8 +43,8 @@ class HistogramsHandler {
   void SetupHistograms();
   void SetupExtraSFsHistograms();
 
-  void Save1DHistogram(std::string name, TH1D* hist, TFile* outputFile, bool extraSFs = false);
-  void Save2DHistogram(std::string name, TH2D* hist, TFile* outputFile, bool extraSFs = false);
+  template <typename THist>
+  void SaveHistogram(std::string name, THist* hist, TFile* outputFile, bool extraSFs = false);
 };
 
 #endif /* HistogramsHandler_hpp */

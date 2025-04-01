@@ -136,17 +136,8 @@ void HistogramsHandler::CheckExtraSFsHistogram(string name) {
   }
 }
 
-void HistogramsHandler::Save1DHistogram(string name, TH1D* hist, TFile* outputFile, bool extraSFs) {
-  string outputDir = "";
-  if (!extraSFs) outputDir = histParams[name].directory;
-  else outputDir = extraSFsHistParams1D[name].directory;
-  if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-
-  outputFile->cd(outputDir.c_str());
-  hist->Write();
-}
-
-void HistogramsHandler::Save2DHistogram(string name, TH2D* hist, TFile* outputFile, bool extraSFs) {
+template <typename THist>
+void HistogramsHandler::SaveHistogram(string name, THist* hist, TFile* outputFile, bool extraSFs) {
   string outputDir = histParams2D[name].directory;
   if (extraSFs) {
     string sfName = name.substr(name.rfind('_') + 1);
@@ -159,10 +150,12 @@ void HistogramsHandler::Save2DHistogram(string name, TH2D* hist, TFile* outputFi
     error() << "Histogram " << name << " is null" << endl;
     return;
   }
-  if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
-    warn() << "You're creating a very large 2D histogram: " << name << " with ";
-    warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
-    warn() << "This may cause memory issues." << endl;
+  if constexpr (std::is_same<THist, TH2D>::value) {
+    if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
+      warn() << "You're creating a very large 2D histogram: " << name << " with ";
+      warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
+      warn() << "This may cause memory issues." << endl;
+    }
   }
 
   hist->Write();
@@ -183,16 +176,16 @@ void HistogramsHandler::SaveHistograms() {
   bool emptyHists = false;
 
   for (auto &[name, hist] : histograms1D) {
-    Save1DHistogram(name, hist, outputFile);
+    SaveHistogram(name, hist, outputFile);
   }
   for (auto &[name, hist] : histograms1Dsf) {
-    Save1DHistogram(name, hist, outputFile, true);
+    SaveHistogram(name, hist, outputFile, true);
   }
   for (auto &[name, hist] : histograms2D) {
-    Save2DHistogram(name, hist, outputFile);
+    SaveHistogram(name, hist, outputFile);
   }
   for (auto &[name, hist] : histograms2Dsf) {
-    Save2DHistogram(name, hist, outputFile, true);
+    SaveHistogram(name, hist, outputFile, true);
   }
   
   outputFile->Close();

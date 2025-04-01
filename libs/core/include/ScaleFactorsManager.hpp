@@ -21,11 +21,11 @@ class ScaleFactorsManager {
   ScaleFactorsManager(ScaleFactorsManager const &) = delete;
   void operator=(ScaleFactorsManager const &) = delete;
 
-  float GetPUJetIDScaleFactor(std::string name, float eta, float pt, std::string systematic = "");
-  float GetMuonScaleFactor(std::string name, float eta, float pt);
-  float GetDSAMuonScaleFactor(std::string name, float eta, float pt);
-  float GetMuonTriggerScaleFactor(std::string name, float eta, float pt);
-  float GetBTagScaleFactor(std::string name, float eta, float pt, std::string systematic = "");
+  float GetPUJetIDScaleFactor(std::string name, float eta, float pt, std::string variant = "systematic");
+  float GetMuonScaleFactor(std::string name, float eta, float pt, std::string variant = "ValType");
+  float GetDSAMuonScaleFactor(std::string name, float eta, float pt, std::string variant = "ValType");
+  float GetMuonTriggerScaleFactor(std::string name, float eta, float pt, std::string variant = "ValType");
+  float GetBTagScaleFactor(std::string name, float eta, float pt, std::string variant = "systematic");
 
   float GetPileupScaleFactorCustom(int nVertices);
   float GetPileupScaleFactor(std::string name, float nVertices);

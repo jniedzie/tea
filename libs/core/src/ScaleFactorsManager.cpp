@@ -65,41 +65,39 @@ void ScaleFactorsManager::ReadPileupSFs() {
   pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
 }
 
-float ScaleFactorsManager::GetPUJetIDScaleFactor(string name, float eta, float pt, string systematic) {
+float ScaleFactorsManager::GetPUJetIDScaleFactor(string name, float eta, float pt, string variant) {
   if (!applyScaleFactors["PUjetID"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  if (systematic == "") systematic = "systematic";
-  return TryToEvaluate(corrections[name], {eta, pt, extraArgs[systematic], extraArgs["workingPoint"]});
+  return TryToEvaluate(corrections[name], {eta, pt, extraArgs[variant], extraArgs["workingPoint"]});
 }
 
-float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt) {
+float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt, string variant) {
   if (!applyScaleFactors["muon"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs[variant]});
 }
 
-float ScaleFactorsManager::GetDSAMuonScaleFactor(string name, float eta, float pt) {
+float ScaleFactorsManager::GetDSAMuonScaleFactor(string name, float eta, float pt, string variant) {
   if (!applyScaleFactors["muon"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs[variant]});
 }
 
-float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, float pt) {
+float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, float pt, string variant) {
   if (!applyScaleFactors["muonTrigger"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
+  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs[variant]});
 }
 
-float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt, string systematic) {
+float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt, string variant) {
   if (!applyScaleFactors["bTagging"]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
-  if (systematic == "") systematic = "systematic";
-  return TryToEvaluate(corrections[name], {extraArgs[systematic], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+  return TryToEvaluate(corrections[name], {extraArgs[variant], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
 }
 
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {

@@ -12,14 +12,14 @@ TLorentzVector NanoJet::GetFourVector() {
   return v;
 }
 
-float NanoJet::GetBtaggingScaleFactor(string workingPoint, string systematic) {
+float NanoJet::GetBtaggingScaleFactor(string workingPoint, string variant) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  float sf = scaleFactorsManager.GetBTagScaleFactor(workingPoint, GetEta(), GetPt(), systematic);
+  float sf = scaleFactorsManager.GetBTagScaleFactor(workingPoint, GetEta(), GetPt(), variant);
   return sf;
 }
 
-float NanoJet::GetPUJetIDScaleFactor(string name, string systematic) {
+float NanoJet::GetPUJetIDScaleFactor(string name, string variant) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  float sf = scaleFactorsManager.GetPUJetIDScaleFactor(name, GetEta(), GetPt(), systematic);
+  float sf = scaleFactorsManager.GetPUJetIDScaleFactor(name, GetEta(), GetPt(), variant);
   return sf;
 }

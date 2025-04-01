@@ -6,6 +6,9 @@
 #include "HistogramsHandler.hpp"
 #include "Logger.hpp"
 #include "ArgsManager.hpp"
+#include "NanoEvent.hpp"
+#include "EventProcessor.hpp"
+#include "NanoEventProcessor.hpp"
 
 using namespace std;
 
@@ -47,11 +50,26 @@ int main(int argc, char **argv) {
   auto histogramsHandler = make_shared<HistogramsHandler>();
   auto cutFlowManager = make_shared<CutFlowManager>(eventReader);
   auto histogramsFiller = make_unique<HistogramsFiller>(histogramsHandler);
+  auto eventProcessor = make_unique<EventProcessor>();
+  auto nanoEventProcessor = make_unique<NanoEventProcessor>();
 
   cutFlowManager->RegisterCut("initial");
 
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
     auto event = eventReader->GetEvent(iEvent);
+
+    // example: setting muonSF for the leading muon in the event
+    float genWeight = nanoEventProcessor->GetGenWeight(asNanoEvent(event));
+    auto leadingMuon = make_shared<NanoMuons>();
+    leadingMuon->push_back(asNanoMuon(eventProcessor->GetMaxPtObject(event, "Muon")));
+    auto muonSF = nanoEventProcessor->GetMuonScaleFactors(leadingMuon);
+    map<string,float> eventWeights = {
+      {"central", genWeight*muonSF["central"]},
+      {"muonUp", genWeight*muonSF["up"]},
+      {"muonDown", genWeight*muonSF["down"]}
+    };
+    histogramsHandler->SetEventWeights(eventWeights);
+    cutFlowManager->SetEventWeights(eventWeights);
 
     cutFlowManager->UpdateCutFlow("initial");
     histogramsFiller->FillDefaultVariables(event);
