@@ -190,12 +190,12 @@ class ABCDHelper:
   def get_nice_name(self, name):
     return self.config.nice_names[name] if name in self.config.nice_names else name
 
-  def get_projection_true(self, hist):
+  def get_projection_true(self, hist, x_max):
     if hist is None or type(hist) is not ROOT.TH2:
       return None
     
     hist_clone = hist.Clone()
-    hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], self.config.variable_2_max)
+    hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], x_max)
 
     hist_true = hist_clone.ProjectionY(
         hist.GetName() + "_projection_true",
@@ -204,9 +204,9 @@ class ABCDHelper:
     )
     return hist_true
 
-  def get_projection_prediction(self, hist):
+  def get_projection_prediction(self, hist, x_max):
     hist_clone = hist.Clone()
-    hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], self.config.variable_2_max)
+    hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], x_max)
 
     hist_prediction = hist_clone.ProjectionY(
         "projection_c",
