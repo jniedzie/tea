@@ -55,15 +55,15 @@ HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
   for (auto &[title, params] : histParams) {
-    histograms1D[make_tuple(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+    histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
   }
 
   for (auto &[title, params] : irregularHistParams) {
-    histograms1D[make_tuple(title, "")] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+    histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
   for (auto &[title, params] : histParams2D) {
-    histograms2D[make_tuple(title, "")] =
+    histograms2D[make_pair(title, "")] =
         new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
   }
 }
@@ -74,7 +74,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
     for (auto &[sfName, weight] : eventWeights) {
       if (sfName == "systematic") continue;
       string titlesf = title + "_" + sfName;
-      histograms1D[make_tuple(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
+      histograms1D[make_pair(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
     }
   }
 
@@ -83,7 +83,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
     for (auto &[sfName, weight] : eventWeights) {
       if (sfName == "systematic") continue;
       string titlesf = title + "_" + sfName;
-      histograms1D[make_tuple(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+      histograms1D[make_pair(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
     }
   }
 
@@ -92,7 +92,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
     for (auto &[sfName, weight] : eventWeights) {
       if (sfName == "systematic") continue;
       string titlesf = title + "_" + sfName;
-      histograms2D[make_tuple(title, sfName)] = 
+      histograms2D[make_pair(title, sfName)] = 
           new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
     }
   }
@@ -107,38 +107,38 @@ void HistogramsHandler::SetEventWeights(map<string,float> weights) {
 void HistogramsHandler::Fill(string name, double value) {
   double weight = eventWeights["systematic"];
   CheckHistogram(name, "");
-  histograms1D[make_tuple(name, "")]->Fill(value, weight);
+  histograms1D[make_pair(name, "")]->Fill(value, weight);
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) ==  SFvariationVariables.end()) return;
   for (auto &[sfName, weight] : eventWeights) {
     if (sfName == "systematic") continue;
     CheckHistogram(name, sfName);
-    histograms1D[make_tuple(name, sfName)]->Fill(value, weight);
+    histograms1D[make_pair(name, sfName)]->Fill(value, weight);
   }
 }
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   double weight = eventWeights["systematic"];
   CheckHistogram(name, "");
-  histograms2D[make_tuple(name, "")]->Fill(valueX, valueY, weight);
+  histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) ==  SFvariationVariables.end()) return;
   for (auto &[sfName, weight] : eventWeights) {
     if (sfName == "systematic") continue;
     CheckHistogram(name, sfName);
-    histograms2D[make_tuple(name, sfName)]->Fill(valueX, valueY, weight);
+    histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
   }
 }
 
 void HistogramsHandler::CheckHistogram(string name, string directory) {
-  if (!histograms1D.count(make_tuple(name,directory)) && !histograms2D.count(make_tuple(name,directory))) {
+  if (!histograms1D.count(make_pair(name,directory)) && !histograms2D.count(make_pair(name,directory))) {
     fatal() << "Couldn't find key: " << name << " in histograms map" << endl;
     exit(1);
   }
 }
 
 template <typename THist>
-void HistogramsHandler::SaveHistogram(tuple<string,string> names, THist* hist, TFile* outputFile) {
-  string name = get<0>(names);
-  string outputDir = get<1>(names);
+void HistogramsHandler::SaveHistogram(HistName names, THist* hist, TFile* outputFile) {
+  string name = names.first;
+  string outputDir = names.second;
   if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
 
   outputFile->cd(outputDir.c_str());

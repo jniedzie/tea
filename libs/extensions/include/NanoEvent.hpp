@@ -42,8 +42,8 @@ class NanoEvent {
   bool MuonIndexExist(std::shared_ptr<NanoMuons> muons, float index, bool isDSAMuon = false);
   float DeltaR(float eta1, float phi1, float eta2, float phi2);
 
-  std::map<std::string, float> GetMuonTriggerSF() { return muonTriggerSF; }
-  void SetMuonTriggerSF(std::map<std::string, float> sf) { muonTriggerSF = sf; }
+  std::map<std::string, float> GetMuonTriggerScaleFactors() { return muonTriggerSF; }
+  void SetMuonTriggerScaleFactors(std::map<std::string, float> sf) { muonTriggerSF = sf; }
 
   float GetNDSAMuon(std::string collectionName);
   float GetNMuon(std::string collectionName);

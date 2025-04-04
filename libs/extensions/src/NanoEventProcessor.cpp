@@ -46,19 +46,19 @@ float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> 
   }
 }
 
-map<string,float> NanoEventProcessor::GetMuonTriggerScaleFactor(const shared_ptr<NanoEvent> event, string name) {
+map<string,float> NanoEventProcessor::GetMuonTriggerScaleFactors(const shared_ptr<NanoEvent> event, string name) {
   map<string,float> weights;
-  if (!event->GetMuonTriggerSF().empty()) return event->GetMuonTriggerSF();
+  if (!event->GetMuonTriggerScaleFactors().empty()) return event->GetMuonTriggerScaleFactors();
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   auto leadingMuon = asNanoMuon(eventProcessor->GetMaxPtObject(event->GetEvent(), "Muon"));
   if(!leadingMuon) {
     warn() << "No leading muon found in event -- will assume SF=1.0" << endl;
-    return weights;
+    return {{"systematic", 1.0}};
   }
-  weights = scaleFactorsManager.GetMuonTriggerScaleFactor(name, leadingMuon->GetEta(), leadingMuon->GetPt());
-  event->SetMuonTriggerSF(weights);
+  weights = scaleFactorsManager.GetMuonTriggerScaleFactors(name, leadingMuon->GetEta(), leadingMuon->GetPt());
+  event->SetMuonTriggerScaleFactors(weights);
 
   return weights;
 }
@@ -67,7 +67,7 @@ map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared
   map<string,float> weights;
   bool firstIteration = true;
   for (auto b_jet : * b_jets) {
-    map<string,float> weights_ = b_jet->GetBtaggingScaleFactor("bTaggingMedium");
+    map<string,float> weights_ = b_jet->GetBtaggingScaleFactors("bTaggingMedium");
     if (firstIteration) {
       weights = weights_;
       firstIteration = false;
@@ -84,7 +84,7 @@ map<string,float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<Na
   map<string,float> weights;
   bool firstIteration = true;
   for (auto jet : * jets) {
-    map<string,float> weights_ = jet->GetPUJetIDScaleFactor("PUjetIDtight");
+    map<string,float> weights_ = jet->GetPUJetIDScaleFactors("PUjetIDtight");
     if (firstIteration) {
       weights = weights_;
       firstIteration = false;
@@ -101,22 +101,19 @@ map<string,float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr<
   map<string,float> weights;
   bool firstIteration = true;
   for (auto muon : *muonCollection) {
-    auto weights_loose = muon->GetScaleFactor("muonIDLoose", "muonIsoLoose", "muonReco", year);
-    auto weights_tight = muon->GetScaleFactor("muonIDTight", "muonIsoTight", "muonReco", year);
+    auto weights_loose = muon->GetScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
+    auto weights_tight = muon->GetScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
     if (firstIteration) {
-      if (muon->IsTight()) weights = weights_tight;
-      else weights = weights_loose;
+      for (auto &[name, weight] : weights_loose) weights[name] = 1.0;
+      for (auto &[name, weight] : weights_tight) weights[name] = 1.0;
       firstIteration = false;
-      continue;
     }
 
-    for (auto &[name, weight] : weights_loose) {
-      if (muon->IsTight()) weight = 1.0;
-      weights[name] *= weight;
+    if (muon->IsTight()) {
+      for (auto &[name, weight] : weights_tight) weights[name] *= weight;
     }
-    for (auto &[name, weight] : weights_tight) {
-      if (!muon->IsTight()) weight = 1.0;
-      weights[name] *= weight;
+    else {
+      for (auto &[name, weight] : weights_loose) weights[name] *= weight;
     }
   }
   return weights;
@@ -168,11 +165,14 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
   int run = event->GetAs<int>("run");
   if (run == 1) {
     if (isData) {
-      warn() << "Conflicting NanoEventProcessor::IsDataEvent results. Returning IsDataEvent true";
-      return true;
+      fatal() << "Conflicting NanoEventProcessor::IsDataEvent results.";
+      exit(0);
     }
     return false;
   }
-  if (!isData) warn() << "Conflicting NanoEventProcessor::IsDataEvent results. Returning IsDataEvent true";
+  if (!isData) {
+    fatal() << "Conflicting NanoEventProcessor::IsDataEvent results.";
+    exit(0);
+  }
   return true;
 }

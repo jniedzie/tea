@@ -48,7 +48,7 @@ class NanoMuon {
 
   TLorentzVector GetFourVector();
 
-  std::map<std::string,float> GetScaleFactor(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
+  std::map<std::string,float> GetScaleFactors(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
 
   MuonID GetID();
   MuonIso GetIso();

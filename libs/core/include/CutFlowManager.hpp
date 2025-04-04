@@ -29,7 +29,7 @@ class CutFlowManager {
   void SaveCutFlow();
 
   // event weights (standard and up/down variations) mapped to strings naming type the of event weigth
-  void SetEventWeights(std::map<std::string,float> weights) { eventWeights = weights; };
+  void SetEventWeight(float weight) { eventWeight = weight; };
 
  private:
   std::string weightsBranchName;
@@ -41,7 +41,7 @@ class CutFlowManager {
   std::map<std::string, float> rawEventsAfterCuts;
   std::map<std::string,std::map<std::string, float>> weightsAfterCollectionCuts;
   std::map<std::string,std::map<std::string, float>> rawEventsAfterCollectionCuts;
-  std::map<std::string,float> eventWeights;
+  float eventWeight = 0;
 
   int currentIndex;
   std::map<std::string,int> currentCollectionIndex;

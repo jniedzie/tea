@@ -16,7 +16,7 @@ class NanoEventProcessor {
 
   float GetGenWeight(const std::shared_ptr<NanoEvent> event);
   float GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event, std::string name);
-  std::map<std::string,float> GetMuonTriggerScaleFactor(const std::shared_ptr<NanoEvent> event, std::string name);
+  std::map<std::string,float> GetMuonTriggerScaleFactors(const std::shared_ptr<NanoEvent> event, std::string name);
   std::map<std::string,float> GetMediumBTaggingScaleFactors(const std::shared_ptr<NanoJets> b_jets);
   std::map<std::string,float> GetPUJetIDScaleFactors(const std::shared_ptr<NanoJets> jets);
   std::map<std::string,float> GetMuonScaleFactors(const std::shared_ptr<NanoMuons> looseMuonCollection);

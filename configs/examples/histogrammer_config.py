@@ -21,11 +21,6 @@ extraEventCollections = {
     },
 }
 
-# Extra up/down SFs: comment out all to run not include them in histograms
-extraSFs = [ 
-  "muonUp", 
-  "muonDown"
-]
 
 defaultHistParams = (
 #  collection      variable          bins    xmin     xmax     dir
@@ -45,5 +40,4 @@ weightsBranchName = "genWeight"
 applyMuonScaleFactors = True
 applyMuonTriggerScaleFactors = True
 
-extraSFsHistParams1D = ()
-extraSFsHistParams2D = ()
+SFvariationVariables = ["Muon_pt"]

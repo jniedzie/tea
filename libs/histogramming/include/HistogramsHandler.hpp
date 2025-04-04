@@ -8,6 +8,8 @@
 #include "Event.hpp"
 #include "Helpers.hpp"
 
+typedef std::pair<std::string,std::string> HistName;
+
 class HistogramsHandler {
  public:
   HistogramsHandler();
@@ -18,14 +20,14 @@ class HistogramsHandler {
   void Fill(std::string name, double value);
   void Fill(std::string name, double valueX, double valueY);
 
-  void SetHistogram1D(std::tuple<std::string,std::string> names, TH1D *histogram) { histograms1D[names] = histogram; }
-  TH1D* GetHistogram1D(std::tuple<std::string,std::string> names) { return histograms1D[names]; }
-  std::map<std::tuple<std::string,std::string>, TH1D*> GetHistograms1D() { return histograms1D; }
+  void SetHistogram1D(HistName names, TH1D *histogram) { histograms1D[names] = histogram; }
+  TH1D* GetHistogram1D(HistName names) { return histograms1D[names]; }
+  std::map<HistName, TH1D*> GetHistograms1D() { return histograms1D; }
   void SaveHistograms();
   
  private:
-  std::map<std::tuple<std::string,std::string>, TH1D*> histograms1D;
-  std::map<std::tuple<std::string,std::string>, TH2D*> histograms2D;
+  std::map<HistName, TH1D*> histograms1D;
+  std::map<HistName, TH2D*> histograms2D;
 
   std::map<std::string, HistogramParams> histParams;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
@@ -40,7 +42,7 @@ class HistogramsHandler {
   void SetupSFvariationHistograms();
 
   template <typename THist>
-  void SaveHistogram(std::tuple<std::string,std::string> name, THist* hist, TFile* outputFile);
+  void SaveHistogram(HistName name, THist* hist, TFile* outputFile);
 };
 
 #endif /* HistogramsHandler_hpp */
