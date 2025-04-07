@@ -8,30 +8,40 @@
 #include "Event.hpp"
 #include "Helpers.hpp"
 
+typedef std::pair<std::string,std::string> HistNames;
+
 class HistogramsHandler {
  public:
   HistogramsHandler();
   ~HistogramsHandler();
 
-  void Fill(std::string name, double value, double weight);
-  void Fill(std::string name, double valueX, double valueY, double weight);
+  void SetEventWeights(std::map<std::string,float> weights);
 
-  void SetHistogram1D(std::string name, TH1D *histogram) { histograms1D[name] = histogram; }
-  TH1D* GetHistogram1D(std::string name) { return histograms1D[name]; }
-  std::map<std::string, TH1D*> GetHistograms1D() { return histograms1D; }
+  void Fill(std::string name, double value);
+  void Fill(std::string name, double valueX, double valueY);
+
+  void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
+  TH1D* GetHistogram1D(HistNames names) { return histograms1D[names]; }
+  std::map<HistNames, TH1D*> GetHistograms1D() { return histograms1D; }
   void SaveHistograms();
-
+  
  private:
-  std::map<std::string, TH1D*> histograms1D;
-  std::map<std::string, TH2D*> histograms2D;
+  std::map<HistNames, TH1D*> histograms1D;
+  std::map<HistNames, TH2D*> histograms2D;
 
   std::map<std::string, HistogramParams> histParams;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
+  std::vector<std::string> SFvariationVariables;
   std::string outputPath;
+  std::map<std::string,float> eventWeights;
 
-  void CheckHistogram(std::string name);
+  void CheckHistogram(std::string name, std::string directory);
   void SetupHistograms();
+  void SetupSFvariationHistograms();
+
+  template <typename THist>
+  void SaveHistogram(HistNames name, THist* hist, TFile* outputFile);
 };
 
 #endif /* HistogramsHandler_hpp */

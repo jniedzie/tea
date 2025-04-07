@@ -37,10 +37,12 @@ def get_scale_factors(year):
   scaleFactors = {
 
     # b-tagging
+    # systematic options: "central", "up/down_correlated" or "up/down_uncorrelated"
     "bTaggingMedium": {
       "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
       "type": "deepJet_mujets",
       "systematic": "central",
+      "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
       "workingPoint": "M",
       "jetID": "5",
     },
@@ -48,6 +50,7 @@ def get_scale_factors(year):
       "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
       "type": "deepJet_mujets",
       "systematic": "central",
+      "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
       "workingPoint": "T",
       "jetID": "5",
     },
@@ -56,43 +59,50 @@ def get_scale_factors(year):
     "muonIDLoose": {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": "NUM_LooseID_DEN_TrackerMuons", 
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown",
     },
     "muonIDMedium": {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": "NUM_MediumID_DEN_TrackerMuons", 
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown"
     },
     "muonIDTight": {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": "NUM_TightID_DEN_TrackerMuons", 
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown"
     },
 
     # Muon Iso
     "muonIsoLoose": {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": loose_muon_iso_type,
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown"
     },
     "muonIsoTight": {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": tight_muon_iso_type,
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown"
     },
     
     # Muon trigger
     "muonTriggerIsoMu24": {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown"
     },
     
     # Pileup
     "pileup": {
       "path": f"../tea/jsonPOG/POG/LUM/{year_path}/puWeights.json.gz",
       "type": f"{pu_type}",
-      "weights": "nominal",
+      "systematic": "nominal",
+      "variations": "",
     },
   }
   if run2: # No Run3 PUjetID SF yet
@@ -100,19 +110,22 @@ def get_scale_factors(year):
       "path": f"../tea/jsonPOG/POG/JME/{year_path}/jmar.json.gz",
       "type": "PUJetID_eff",
       "systematic": "nom",
+      "variations": "up,down",
       "workingPoint": "T",
     }
     #  Muon Reco no medium pt RECO SF for Run 3
     scaleFactors["muonReco"] = {
       "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
       "type": "NUM_TrackerMuons_DEN_genTracks",
-      "ValType": "nominal",
+      "systematic": "nominal",
+      "variations": "systup,systdown",
     }
   if year == "2018": # TODO: add DSA SF for all years
     scaleFactors["dsamuonID"] = {
       "path": f"../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
       "type": "NUM_DisplacedID_DEN_dSAMuons", 
       "year": "2018_preUL",
-      "ValType": "sf",
+      "systematic": "sf",
+      "variations": "",
     }
   return scaleFactors

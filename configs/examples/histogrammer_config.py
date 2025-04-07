@@ -21,6 +21,7 @@ extraEventCollections = {
     },
 }
 
+
 defaultHistParams = (
 #  collection      variable          bins    xmin     xmax     dir
   ("Event"       , "nMuon"         , 50,     0,       50,      ""  ),
@@ -38,3 +39,5 @@ histParams = (
 weightsBranchName = "genWeight"
 applyMuonScaleFactors = True
 applyMuonTriggerScaleFactors = True
+
+SFvariationVariables = ["Muon_pt"]

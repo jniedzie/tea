@@ -48,7 +48,7 @@ class NanoMuon {
 
   TLorentzVector GetFourVector();
 
-  float GetScaleFactor(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
+  std::map<std::string,float> GetScaleFactors(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
 
   MuonID GetID();
   MuonIso GetIso();
@@ -59,7 +59,7 @@ class NanoMuon {
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
-  float scaleFactor = -1;
+  std::map<std::string,float> scaleFactor;
 };
 
 #endif /* NanoMuon_hpp */
