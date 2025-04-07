@@ -73,6 +73,9 @@ class NanoDimuonVertex {
   int GetTotalNumberOfDTHits();
   int GetTotalNumberOfCSCHits();
 
+  std::shared_ptr<NanoMuon> GetLeadingMuon();
+  std::shared_ptr<NanoMuon> GetSubleadingMuon();
+
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
   std::shared_ptr<NanoMuon> muon1;
