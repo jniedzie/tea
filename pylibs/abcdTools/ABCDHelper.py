@@ -3,9 +3,15 @@ from Logger import warn
 from ctypes import c_double
 import ROOT
 
+
 class ABCDHelper:
-  def __init__(self, config):
+  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination):
     self.config = config
+
+    self.max_error = max_error
+    self.max_closure = max_closure
+    self.min_n_events = min_n_events
+    self.max_signal_contamination = max_signal_contamination
 
   def get_abcd(self, hist, point, values_instead_of_bins=False):
     # The method returns the number of events in the four regions
@@ -43,7 +49,7 @@ class ABCDHelper:
     if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
       warn("ABCDHelper.get_significance_hist: signal_hist is None")
       return None
-    
+
     significance_hist = signal_hist.Clone()
     significance_hist.SetTitle("")
 
@@ -63,7 +69,7 @@ class ABCDHelper:
     if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
       warn("ABCDHelper.get_signal_contramination_hist: signal_hist is None")
       return None
-    
+
     signal_contamination_hist = signal_hist.Clone()
     signal_contamination_hist.SetTitle("")
 
@@ -120,7 +126,7 @@ class ABCDHelper:
     if significance_hist is None:
       warn("ABCDHelper.get_optimal_point_for_significance: significance_hist is None")
       return best_point
-  
+
     for i in range(1, significance_hist.GetNbinsX() + 1):
       for j in range(1, significance_hist.GetNbinsY() + 1):
         significance = significance_hist.GetBinContent(i, j)
@@ -133,16 +139,16 @@ class ABCDHelper:
         signal_contamination = signal_contamination_hist.GetBinContent(
             signal_contamination_hist.FindBin(x_value, y_value))
 
-        if values["error"] > self.config.max_error:
+        if values["error"] > self.max_error:
           continue
 
-        if values["closure"] > self.config.max_closure:
+        if values["closure"] > self.max_closure:
           continue
 
-        if values["min_n_events"] < self.config.min_n_events:
+        if values["min_n_events"] < self.min_n_events:
           continue
 
-        if signal_contamination > self.config.max_signal_contamination:
+        if signal_contamination > self.max_signal_contamination:
           continue
 
         if significance > max_significance:
@@ -169,13 +175,13 @@ class ABCDHelper:
 
         values = {name: hist.GetBinContent(hist.FindBin(x_value, y_value)) for name, hist in other_hists.items()}
 
-        if "error" in values and values["error"] > self.config.max_error:
+        if "error" in values and values["error"] > self.max_error:
           continue
 
-        if "closure" in values and values["closure"] > self.config.max_closure:
+        if "closure" in values and values["closure"] > self.max_closure:
           continue
 
-        if "min_n_events" in values and values["min_n_events"] < self.config.min_n_events:
+        if "min_n_events" in values and values["min_n_events"] < self.min_n_events:
           continue
 
         if (param == "error" or param == "closure") and optimization_value < min_value:
@@ -193,7 +199,7 @@ class ABCDHelper:
   def get_projection_true(self, hist, x_max):
     if hist is None or type(hist) is not ROOT.TH2:
       return None
-    
+
     hist_clone = hist.Clone()
     hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], x_max)
 
