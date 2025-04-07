@@ -44,19 +44,6 @@ int main(int argc, char **argv) {
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {    
     auto event = eventReader->GetEvent(iEvent);
 
-    // example of setting eventWeight
-    map<string,float> eventWeights;
-    if (nanoEventProcessor->IsDataEvent(asNanoEvent(event))) {
-      eventWeights = {{"systematic", 1.0}};
-    } else {
-      float genWeight = nanoEventProcessor->GetGenWeight(asNanoEvent(event));
-      map<string,float> muonTriggerSF = nanoEventProcessor->GetMuonTriggerScaleFactors(asNanoEvent(event), "muonTriggerIsoMu24");
-      for (auto &[name, weight] : muonTriggerSF) {
-        eventWeights[name] = genWeight*muonTriggerSF[name];
-      }
-    }
-    cutFlowManager->SetEventWeight(eventWeights["systematic"]);
-
     cutFlowManager->UpdateCutFlow("initial");
     if(!eventProcessor->PassesTriggerCuts(event)) continue;
     cutFlowManager->UpdateCutFlow("trigger");
