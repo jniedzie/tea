@@ -171,15 +171,9 @@ int NanoDimuonVertex::GetTotalNumberOfCSCHits() {
 }
 
 shared_ptr<NanoMuon> NanoDimuonVertex::GetLeadingMuon() {
-  if (muon1->GetAs<float>("pt") > muon2->GetAs<float>("pt"))
-    return muon1;
-  else
-    return muon2;
+  return (muon1->GetAs<float>("pt") > muon2->GetAs<float>("pt")) ? muon1 : muon2;
 }
 
 shared_ptr<NanoMuon> NanoDimuonVertex::GetSubleadingMuon() {
-  if (muon1->GetAs<float>("pt") < muon2->GetAs<float>("pt"))
-    return muon1;
-  else
-    return muon2;
+  return (muon1->GetAs<float>("pt") < muon2->GetAs<float>("pt")) ? muon1 : muon2;
 }
