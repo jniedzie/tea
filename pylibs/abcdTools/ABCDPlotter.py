@@ -101,18 +101,15 @@ class ABCDPlotter:
     self.signal_overlap[(mass, ctau)] = coeff
     return coeff  # 1 = identical, 0 = no overlap
 
-  def get_n_signals_with_overlap_with_background_below(self, theshold):
+  def get_n_signals_with_overlap_with_background_below(self, threshold):
     n_signals = 0
-    for mass, ctau in self.signal_hists.keys():
-      if (mass, ctau) not in self.signal_hists:
-        continue
-
+    for mass, ctau in self.signal_hists:
       signal_hist = self.signal_hists[(mass, ctau)]
       if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
         continue
 
       coeff = self.__get_overlap_coefficient(mass, ctau)
-      if coeff < theshold:
+      if coeff < threshold:
         n_signals += 1
 
     return n_signals
