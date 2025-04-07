@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     // example: setting genWeights and muon trigger SFs
     map<string,float> eventWeights;
     if (nanoEventProcessor->IsDataEvent(asNanoEvent(event))) {
-      eventWeights = {{"systematic", 1.0}};
+      eventWeights = {{"default", 1.0}};
     } else {
       float genWeight = nanoEventProcessor->GetGenWeight(asNanoEvent(event));
       map<string,float> muonTriggerSF = nanoEventProcessor->GetMuonTriggerScaleFactors(asNanoEvent(event), "muonTriggerIsoMu24");
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
       }
     }
     histogramsHandler->SetEventWeights(eventWeights);
-    cutFlowManager->SetEventWeight(eventWeights["systematic"]);
+    cutFlowManager->SetEventWeight(eventWeights["default"]);
 
     cutFlowManager->UpdateCutFlow("initial");
     histogramsFiller->FillDefaultVariables(event);

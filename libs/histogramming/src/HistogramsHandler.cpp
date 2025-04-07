@@ -72,7 +72,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   for (auto &[title, params] : histParams) {
     if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "systematic") continue;
+      if (sfName == "default") continue;
       string titlesf = title + "_" + sfName;
       histograms1D[make_pair(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
     }
@@ -81,7 +81,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   for (auto &[title, params] : irregularHistParams) {
     if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;    
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "systematic") continue;
+      if (sfName == "default") continue;
       string titlesf = title + "_" + sfName;
       histograms1D[make_pair(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
     }
@@ -90,7 +90,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   for (auto &[title, params] : histParams2D) {
     if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "systematic") continue;
+      if (sfName == "default") continue;
       string titlesf = title + "_" + sfName;
       histograms2D[make_pair(title, sfName)] = 
           new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
@@ -105,24 +105,24 @@ void HistogramsHandler::SetEventWeights(map<string,float> weights) {
 };
 
 void HistogramsHandler::Fill(string name, double value) {
-  double weight = eventWeights["systematic"];
+  double weight = eventWeights["default"];
   CheckHistogram(name, "");
   histograms1D[make_pair(name, "")]->Fill(value, weight);
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) ==  SFvariationVariables.end()) return;
   for (auto &[sfName, weight] : eventWeights) {
-    if (sfName == "systematic") continue;
+    if (sfName == "default") continue;
     CheckHistogram(name, sfName);
     histograms1D[make_pair(name, sfName)]->Fill(value, weight);
   }
 }
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
-  double weight = eventWeights["systematic"];
+  double weight = eventWeights["default"];
   CheckHistogram(name, "");
   histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) ==  SFvariationVariables.end()) return;
   for (auto &[sfName, weight] : eventWeights) {
-    if (sfName == "systematic") continue;
+    if (sfName == "default") continue;
     CheckHistogram(name, sfName);
     histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
   }
