@@ -18,9 +18,9 @@ class NanoDimuonVertex {
  public:
   NanoDimuonVertex(std::shared_ptr<PhysicsObject> physicsObject_, const std::shared_ptr<Event> event);
 
-  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
            int line = __builtin_LINE()) {
-    return physicsObject->Get(branchName, file, function, line);
+    return physicsObject->Get(branchName, verbose, file, function, line);
   }
 
   template <typename T>
