@@ -8,7 +8,7 @@
 #include "Event.hpp"
 #include "Helpers.hpp"
 
-typedef std::pair<std::string,std::string> HistName;
+typedef std::pair<std::string,std::string> HistNames;
 
 class HistogramsHandler {
  public:
@@ -20,14 +20,14 @@ class HistogramsHandler {
   void Fill(std::string name, double value);
   void Fill(std::string name, double valueX, double valueY);
 
-  void SetHistogram1D(HistName names, TH1D *histogram) { histograms1D[names] = histogram; }
-  TH1D* GetHistogram1D(HistName names) { return histograms1D[names]; }
-  std::map<HistName, TH1D*> GetHistograms1D() { return histograms1D; }
+  void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
+  TH1D* GetHistogram1D(HistNames names) { return histograms1D[names]; }
+  std::map<HistNames, TH1D*> GetHistograms1D() { return histograms1D; }
   void SaveHistograms();
   
  private:
-  std::map<HistName, TH1D*> histograms1D;
-  std::map<HistName, TH2D*> histograms2D;
+  std::map<HistNames, TH1D*> histograms1D;
+  std::map<HistNames, TH2D*> histograms2D;
 
   std::map<std::string, HistogramParams> histParams;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
@@ -35,14 +35,13 @@ class HistogramsHandler {
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
   std::map<std::string,float> eventWeights;
-  std::vector<std::string> extraSFs;
 
   void CheckHistogram(std::string name, std::string directory);
   void SetupHistograms();
   void SetupSFvariationHistograms();
 
   template <typename THist>
-  void SaveHistogram(HistName name, THist* hist, TFile* outputFile);
+  void SaveHistogram(HistNames name, THist* hist, TFile* outputFile);
 };
 
 #endif /* HistogramsHandler_hpp */

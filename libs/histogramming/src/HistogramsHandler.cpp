@@ -136,7 +136,7 @@ void HistogramsHandler::CheckHistogram(string name, string directory) {
 }
 
 template <typename THist>
-void HistogramsHandler::SaveHistogram(HistName names, THist* hist, TFile* outputFile) {
+void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outputFile) {
   string name = names.first;
   string outputDir = names.second;
   if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
