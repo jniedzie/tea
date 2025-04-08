@@ -25,13 +25,13 @@ class PhysicsObject {
   inline void SetIndex(int index_) { index = index_; }
   inline int GetIndex() { return index; }
 
-  inline auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
-                  int line = __builtin_LINE()) {
+  inline auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
+                  const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
 
-      fatal(file, function, line) << message << std::endl;
+      if (verbose) fatal(file, function, line) << message << std::endl;
       throw Exception(message.c_str());
     }
     return Multitype(this, branchName);

@@ -13,40 +13,23 @@ def get_args():
   parser.add_argument("--app", type=str, help="Name of the app to run.", required=True)
   parser.add_argument("--config", type=str, required=True, help="Config to be executed by the app.")
   parser.add_argument("--files_config", type=str, default=None, help="Python config with a list of input/output paths.")
-
   parser.add_argument("--local", action="store_true", default=False, help="Run locally.")
   parser.add_argument("--condor", action="store_true", default=False, help="Run on condor.")
   parser.add_argument("--save_logs", action="store_true", default=False, help="Save condor logs.")
-
-  parser.add_argument(
-      "--job_flavour",
-      type=str,
-      default="espresso",
-      help=(
-          "Condor job flavour: espresso (20 min), microcentury (1h), longlunch (2h), workday (8h), "
-          "tomorrow (1d), testmatch (3d), nextweek (1w)."
-      )
-  )
-  parser.add_argument(
-      "--resubmit_job",
-      type=int,
-      default=None,
-      help="Resubmitt a specific job."
-  )
-
-  parser.add_argument(
-      "--memory",
-      type=float,
-      default=1.0,
-      help="Requested memory in GB."
-  )
-
-  parser.add_argument(
-      "--max_materialize",
-      type=int,
-      default=5000,
-      help="An overall limit on the number of jobs that can be materialized in the condor_schedd at any one time."
-  )
+  parser.add_argument("--job_flavour", type=str, default="espresso",
+                      help=(
+                          "Condor job flavour: espresso (20 min), microcentury (1h), longlunch (2h), workday (8h), "
+                          "tomorrow (1d), testmatch (3d), nextweek (1w)."
+                      )
+                      )
+  parser.add_argument("--resubmit_job", type=int, default=None, help="Resubmitt a specific job.")
+  parser.add_argument("--memory", type=float, default=1.0, help="Requested memory in GB.")
+  parser.add_argument("--max_materialize", type=int, default=5000,
+                      help=(
+                          "An overall limit on the number of jobs that can be materialized "
+                          "in the condor_schedd at any one time."
+                      )
+                      )
 
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")
 
@@ -152,13 +135,13 @@ def main():
 
     for input_dasfiles, output_dir in input_dasfiles_and_output_dirs:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
-      
+
       for name, apply in applyScaleFactors.items():
-          update_config(tmp_config_path, f"  \"{name}\":", False if "collision" in sample else f"{apply},\n")
-      
+        update_config(tmp_config_path, f"  \"{name}\":", False if "collision" in sample else f"{apply},\n")
+
       update_config(tmp_files_config_path, "input_dasfiles = ", f"\"{input_dasfiles}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
-      
+
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   else:
     tmp_configs_paths.append((args.config, args.files_config))

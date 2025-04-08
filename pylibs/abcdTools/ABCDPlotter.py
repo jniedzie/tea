@@ -1,25 +1,28 @@
 import ROOT
 import os
+import math
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
-from Logger import fatal
+from Logger import fatal, warn, info
 
 
 class ABCDPlotter:
-  def __init__(self, config):
+  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination):
     self.config = config
 
-    self.abcdHelper = ABCDHelper(config)
+    self.abcdHelper = ABCDHelper(config, max_error, max_closure, min_n_events, max_signal_contamination)
     self.histogramsHelper = ABCDHistogramsHelper(config)
 
     self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
     self.background_files = {}
     self.background_hists = {}
+    self.background_hist = None
     self.data_file = None
     self.signal_files = {}
     self.signal_hists = {}
+    self.signal_overlap = {}
     self.canvases = None
     self.projections_pads = {}
     self.significance_hists = {}
@@ -29,6 +32,11 @@ class ABCDPlotter:
     self.signal_projections = {}
     self.ratio_hist = None
     self.ratio_hist_err = None
+
+    self.variable_1_min = None
+    self.variable_1_max = None
+    self.variable_2_min = None
+    self.variable_2_max = None
 
     os.makedirs(config.output_path, exist_ok=True)
 
@@ -40,8 +48,9 @@ class ABCDPlotter:
     self.optimization_hists = self.abcdHelper.get_optimization_hists(self.background_hist)
 
     self.setup_signal_hists()
-    self.true_projection_hist = self.abcdHelper.get_projection_true(self.background_hist)
-    self.prediction_projection_hist = self.abcdHelper.get_projection_prediction(self.background_hist)
+    self.true_projection_hist = self.abcdHelper.get_projection_true(self.background_hist, self.variable_2_max)
+    self.prediction_projection_hist = self.abcdHelper.get_projection_prediction(
+        self.background_hist, self.variable_2_max)
 
     self.true_projection_hist, self.smart_binning = self.histogramsHelper.rebin(
         self.true_projection_hist)
@@ -60,6 +69,51 @@ class ABCDPlotter:
       ROOT.gPad.SetLogz(self.config.z_params[name][3])
       hist.GetZaxis().SetRangeUser(self.config.z_params[name][1], self.config.z_params[name][2])
 
+  def __get_overlap_coefficient(self, mass, ctau):
+    if (mass, ctau) in self.signal_overlap:
+      return self.signal_overlap[(mass, ctau)]
+
+    background_hist = self.background_hist.Clone("background_hist_norm")
+    signal_hist = self.signal_hists[(mass, ctau)].Clone("signal_hist_norm")
+    background_hist.Rebin2D(self.config.rebin_grid, self.config.rebin_grid)
+    signal_hist.Rebin2D(self.config.rebin_grid, self.config.rebin_grid)
+    background_hist.Scale(1.0 / background_hist.Integral())
+    signal_hist.Scale(1.0 / signal_hist.Integral())
+
+    numerator = 0.0
+    sig_norm = 0.0
+    bck_norm = 0.0
+
+    for i in range(1, background_hist.GetNbinsX() + 1):
+      for j in range(1, background_hist.GetNbinsY() + 1):
+
+        bck = background_hist.GetBinContent(i, j)
+        sig = signal_hist.GetBinContent(i, j)
+
+        if sig <= 0 or bck <= 0:  # in some corner cases, MC histograms can have negative-content bins
+          continue
+
+        numerator += sig*bck
+        sig_norm += sig * sig
+        bck_norm += bck * bck
+
+    coeff = numerator / math.sqrt(sig_norm*bck_norm) if sig_norm > 0 and bck_norm > 0 else 0.0
+    self.signal_overlap[(mass, ctau)] = coeff
+    return coeff  # 1 = identical, 0 = no overlap
+
+  def get_n_signals_with_overlap_with_background_below(self, threshold):
+    n_signals = 0
+    for mass, ctau in self.signal_hists:
+      signal_hist = self.signal_hists[(mass, ctau)]
+      if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
+        continue
+
+      coeff = self.__get_overlap_coefficient(mass, ctau)
+      if coeff < threshold:
+        n_signals += 1
+
+    return n_signals
+
   def plot_per_signal_hists(self):
     clones = {}
 
@@ -69,6 +123,9 @@ class ABCDPlotter:
     for i_mass, mass in enumerate(self.config.masses):
       for i_ctau, ctau in enumerate(self.config.ctaus):
         if (mass, ctau) not in self.signal_hists:
+          continue
+
+        if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
           continue
 
         clones["background"] = self.background_hist.Clone()
@@ -87,13 +144,17 @@ class ABCDPlotter:
         clones["background"].GetYaxis().SetTitleOffset(1.0)
         clones["background"].GetXaxis().SetTitleOffset(1.0)
         clones["background"].DrawNormalized("BOX")
-        
+
         clones[(mass, ctau)].DrawNormalized("BOX SAME")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
+        overlap = self.__get_overlap_coefficient(mass, ctau)
+        label.DrawLatexNDC(0.13, 0.92, f"Overlap: {overlap:.2f}")
+
         self.canvases["significance"].cd(i_pad)
         self.set_pad_style()
-        self.significance_hists[(mass, ctau)].Draw("colz")
+        if self.significance_hists[(mass, ctau)] is not None:
+          self.significance_hists[(mass, ctau)].Draw("colz")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
   def plot_background_hist(self):
@@ -102,6 +163,8 @@ class ABCDPlotter:
     clone.GetYaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_1))
     clone.GetXaxis().SetTitle(self.abcdHelper.get_nice_name(self.config.variable_2))
     self.canvases["background"].cd()
+    ROOT.gStyle.SetOptStat(0)
+
     clone.DrawNormalized("BOX")
 
     # print correlation between variables in the plot
@@ -110,12 +173,41 @@ class ABCDPlotter:
     label.SetTextSize(0.03)
     label.DrawLatexNDC(0.15, 0.85, f"Correlation: {correlation:.2f}")
 
+    return correlation
+
+  def get_n_signals_with_good_binning(self):
+    n_points_found = 0
+
+    for mass in self.config.masses:
+      for ctau in self.config.ctaus:
+        if (mass, ctau) not in self.signal_hists:
+          continue
+
+        if self.config.optimization_param == "significance":
+          best_point = self.abcdHelper.get_optimal_point_for_significance(
+              self.significance_hists[(mass, ctau)],
+              self.contamination_hists[(mass, ctau)],
+              self.optimization_hists
+          )
+        else:
+          best_point = self.abcdHelper.get_optimal_point_for_param(
+              self.optimization_hists,
+              self.config.optimization_param
+          )
+
+        if best_point is None:
+          continue
+
+        n_points_found += 1
+
+    return n_points_found
+
   def plot_and_save_best_abcd_points(self):
     best_point = None
     best_x = None
     best_y = None
 
-    file_path = f"{self.config.output_path}/best_points.txt"
+    file_path = f"{self.config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
     with open(file_path, "w") as f:
       f.write("mass, ctau, best_x, best_y, closure, error, min_n_events, significance, contamination\n")
 
@@ -137,9 +229,13 @@ class ABCDPlotter:
             )
 
           if best_point is None:
+            warn(f"Best point for {mass} GeV, {ctau} mm not found")
             continue
 
           significance_hist = self.significance_hists[(mass, ctau)]
+          if significance_hist is None or not isinstance(significance_hist, ROOT.TH2):
+            warn(f"Significance histogram for {mass} GeV, {ctau} mm not found")
+            continue
 
           best_x = significance_hist.GetXaxis(
           ).GetBinCenter(best_point[0])
@@ -162,8 +258,8 @@ class ABCDPlotter:
 
           i_pad = 1 + i_mass * len(self.config.ctaus) + i_ctau
 
-          self.lines[i_pad] = (ROOT.TLine(best_x, self.config.variable_2_min, best_x, self.config.variable_2_max),
-                               ROOT.TLine(self.config.variable_1_min, best_y, self.config.variable_1_max, best_y))
+          self.lines[i_pad] = (ROOT.TLine(best_x, self.variable_2_min, best_x, self.variable_2_max),
+                               ROOT.TLine(self.variable_1_min, best_y, self.variable_1_max, best_y))
 
           self.lines[i_pad][0].SetLineColor(self.config.abcd_line_color)
           self.lines[i_pad][1].SetLineColor(self.config.abcd_line_color)
@@ -172,17 +268,25 @@ class ABCDPlotter:
           self.lines[i_pad][1].SetLineWidth(self.config.abcd_line_width)
 
           self.canvases["grid"].cd(i_pad)
+          ROOT.gStyle.SetOptStat(0)
           self.lines[i_pad][0].Draw()
           self.lines[i_pad][1].Draw()
+          self.canvases["grid"].Update()
 
           self.canvases["significance"].cd(i_pad)
+          ROOT.gStyle.SetOptStat(0)
           self.lines[i_pad][0].Draw()
           self.lines[i_pad][1].Draw()
+          self.canvases["significance"].Update()
 
       f.close()
-      print(f"\nBest points saved to {file_path}\n")
+      info(f"\nBest points saved to {file_path}\n")
 
   def plot_background_projections(self):
+
+    if self.true_projection_hist is None:
+      return
+
     self.true_projection_hist.SetLineColor(self.config.true_background_color)
     self.true_projection_hist.SetFillColorAlpha(self.config.true_background_color, 0.5)
     self.true_projection_hist.SetMarkerStyle(20)
@@ -215,9 +319,12 @@ class ABCDPlotter:
           continue
 
         self.signal_projections[(mass, ctau)] = self.abcdHelper.get_projection_true(
-            self.signal_hists[(mass, ctau)])
+            self.signal_hists[(mass, ctau)], self.variable_2_max)
         self.signal_projections[(mass, ctau)], _ = self.histogramsHelper.rebin(
             self.signal_projections[(mass, ctau)], self.smart_binning)
+
+        if self.signal_projections[(mass, ctau)] is None:
+          continue
 
         color = self.config.signal_colors[(mass, ctau)] if (
             mass, ctau) in self.config.signal_colors else ROOT.kRed
@@ -238,6 +345,12 @@ class ABCDPlotter:
     self.projections_legend.Draw()
 
   def plot_projections_ratio(self):
+    if self.prediction_projection_hist is None or not isinstance(self.prediction_projection_hist, ROOT.TH1):
+      return
+
+    if self.true_projection_hist is None or not isinstance(self.true_projection_hist, ROOT.TH1):
+      return
+
     self.projections_pads["ratio"].cd()
 
     self.ratio_hist = self.prediction_projection_hist.Clone()
@@ -276,11 +389,19 @@ class ABCDPlotter:
 
     self.ratio_hist.GetYaxis().SetRangeUser(0, self.config.y_max_ratio)
 
-  def save_canvases(self):
+  def __get_lines(self):
     line_x = ROOT.TLine(
-        self.config.abcd_point[0], self.config.variable_2_min, self.config.abcd_point[0], self.config.variable_2_max)
-    line_y = ROOT.TLine(self.config.variable_1_min,
-                        self.config.abcd_point[1], self.config.variable_1_max, self.config.abcd_point[1])
+        self.config.abcd_point[0],
+        self.variable_2_min,
+        self.config.abcd_point[0],
+        self.variable_2_max
+    )
+    line_y = ROOT.TLine(
+        self.variable_1_min,
+        self.config.abcd_point[1],
+        self.variable_1_max,
+        self.config.abcd_point[1]
+    )
 
     line_x.SetLineColor(self.config.abcd_line_color)
     line_x.SetLineWidth(self.config.abcd_line_width)
@@ -288,15 +409,31 @@ class ABCDPlotter:
     line_y.SetLineColor(self.config.abcd_line_color)
     line_y.SetLineWidth(self.config.abcd_line_width)
 
-    for key, canvas in self.canvases.items():
+    return line_x, line_y
 
+  def save_background_canvas(self):
+    canvas = self.canvases["background"]
+    canvas.cd()
+
+    lines = self.__get_lines()
+    lines[0].Draw()
+    lines[1].Draw()
+
+    canvas.Update()
+    canvas.SaveAs(f"{self.config.output_path}/abcd_hists_background_{self.config.variable_1}_vs_{self.config.variable_2}.pdf")
+
+  def save_canvases(self):
+    lines = self.__get_lines()
+
+    for key, canvas in self.canvases.items():
       if key in ["closure", "error", "min_n_events", "background"]:
         canvas.cd()
-        line_x.Draw()
-        line_y.Draw()
+        ROOT.gStyle.SetOptStat(0)
+        lines[0].Draw()
+        lines[1].Draw()
 
       canvas.Update()
-      canvas.SaveAs(f"{self.config.output_path}/abcd_hists_{key}.pdf")
+      canvas.SaveAs(f"{self.config.output_path}/abcd_hists_{key}_{self.config.variable_1}_vs_{self.config.variable_2}.pdf")
 
   def print_params_for_selected_point(self):
     x_value, y_value = self.config.abcd_point
@@ -307,8 +444,8 @@ class ABCDPlotter:
     a, b, c, d, a_err, b_err, c_err, d_err = self.abcdHelper.get_abcd(
         self.background_hist, self.config.abcd_point, values_instead_of_bins=True)
 
-    print(f"\n\nSelected point: {x_value}, {y_value}")
-    print(f"True background in A: {a:.2f} +/- {a_err:.2f}")
+    info(f"\n\nSelected point: {x_value}, {y_value}")
+    info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
 
     closure = -1
     error = -1
@@ -322,18 +459,18 @@ class ABCDPlotter:
       closure = self.abcdHelper.get_closure(a, prediction)
       error = self.abcdHelper.get_error(a, b, c, d, a_err, b_err, c_err, d_err, prediction)
       min_n_events = min(a, b, c, d)
-      print(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
+      info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
 
-    print("\n\nOptimization values:")
-    print(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
+    info("\n\nOptimization values:")
+    info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
 
-    print(f"\n\n{a:.2f}\t{a_err:.2f}".replace(".", ","))
+    info(f"\n\n{a:.2f}\t{a_err:.2f}".replace(".", ","))
     if prediction is not None:
-      print(f"{prediction:.2f}\t{prediction_err:.2f}".replace(".", ","))
-      print(f"{prediction_err/prediction:.2f}".replace(".", ","))
-    print(f"{closure:.2e}".replace(".", ","))
-    print(f"{error:.2e}".replace(".", ","))
-    print(f"{min_n_events:.1f}\n\n".replace(".", ","))
+      info(f"{prediction:.2f}\t{prediction_err:.2f}".replace(".", ","))
+      info(f"{prediction_err/prediction:.2f}".replace(".", ","))
+    info(f"{closure:.2e}".replace(".", ","))
+    info(f"{error:.2e}".replace(".", ","))
+    info(f"{min_n_events:.1f}\n\n".replace(".", ","))
 
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
@@ -342,14 +479,18 @@ class ABCDPlotter:
 
         hist = self.significance_hists[(mass, ctau)]
 
+        if hist is None or type(hist) is not ROOT.TH2D:
+          continue
+
         x_index = hist.GetXaxis().FindFixBin(x_value)
         y_index = hist.GetYaxis().FindFixBin(y_value)
 
-        print(f"Signal {mass} GeV, {ctau} mm:", end=" ")
-        print(f"Significance: {hist.GetBinContent(x_index, y_index):.2f}", end=" ")
-        print(f"Contamination: {self.contamination_hists[(mass, ctau)].GetBinContent(x_index, y_index):.2f}")
+        significance = hist.GetBinContent(x_index, y_index)
+        contamination = self.contamination_hists[(mass, ctau)].GetBinContent(x_index, y_index)
+        info(f"Signal {mass} GeV, {ctau} mm: Significance: {significance:.2f} Contamination: {contamination:.2f}")
 
   def load_background_histograms(self):
+
     for path, cross_section in self.config.background_params:
       intput_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_dir)
       file_path = f"{self.config.base_path}/{intput_path}"
@@ -357,17 +498,23 @@ class ABCDPlotter:
       self.background_files[path] = ROOT.TFile.Open(file_path)
 
       if not self.background_files[path]:
-        print(f"Could not open file {file_path}")
+        warn(f"Could not open file {file_path}")
         continue
 
       self.background_hists[path] = self.background_files[path].Get(self.hist_name)
 
       if not self.background_hists[path]:
-        print(f"Could not open histogram {self.hist_name} in file {file_path}")
+        warn(f"Could not open histogram {self.hist_name} in file {file_path}")
         continue
 
       inital_events = self.background_files[path].Get("cutFlow").GetBinContent(1)
       self.background_hists[path].Scale(self.config.lumi*cross_section/inital_events)
+
+      if self.variable_1_min is None:
+        self.variable_1_min = self.background_hists[path].GetXaxis().GetXmin()
+        self.variable_1_max = self.background_hists[path].GetXaxis().GetXmax()
+        self.variable_2_min = self.background_hists[path].GetYaxis().GetXmin()
+        self.variable_2_max = self.background_hists[path].GetYaxis().GetXmax()
 
   def setup_backgrounds_sum_histogram(self):
     if self.config.do_data:
@@ -375,25 +522,29 @@ class ABCDPlotter:
       self.data_file = ROOT.TFile.Open(file_path)
 
       if not self.data_file:
-        print(f"Could not open file {file_path}")
+        warn(f"Could not open file {file_path}")
         return
 
       self.background_hist = self.data_file.Get(self.hist_name)
 
       if not self.background_hist:
-        print(f"Could not open histogram {self.hist_name} in file {file_path}")
+        warn(f"Could not open histogram {self.hist_name} in file {file_path}")
         return
     else:
       for path, _ in self.config.background_params:
         if path not in self.background_hists or not self.background_hists[path]:
           continue
+
+        if self.background_hists[path] is None or self.background_hists[path].Integral() == 0:
+          continue
+
         self.background_hist = self.background_hists[path].Clone()
         break
-      
+
       if not self.background_hist:
         fatal("No background histograms found")
         exit()
-      
+
       for path, _ in self.config.background_params[1:]:
         if not self.background_hists[path]:
           continue
@@ -413,18 +564,22 @@ class ABCDPlotter:
           continue
 
         self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.hist_name)
+        if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
+          info(f"Could not open histogram {self.hist_name} in file {input_path}")
+          continue
+
         self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
         self.signal_hists[(mass, ctau)].SetFillColorAlpha(self.config.signal_color, 0.5)
 
   def setup_canvases(self):
     self.canvases = {
-        "grid": ROOT.TCanvas("grid", "grid", 1000, 1000),
-        "background": ROOT.TCanvas("background", "background", 200, 200),
-        "significance": ROOT.TCanvas("significance", "significance", 1000, 1000),
-        "closure": ROOT.TCanvas("closure", "closure", 200, 200),
-        "error": ROOT.TCanvas("error", "error", 200, 200),
-        "min_n_events": ROOT.TCanvas("min_n_events", "min_n_events", 200, 200),
-        "projections": ROOT.TCanvas("projections", "projections", 200, 200),
+        "grid": ROOT.TCanvas("grid", "grid", self.config.canvas_size * len(self.config.ctaus), self.config.canvas_size * len(self.config.masses)),
+        "background": ROOT.TCanvas("background", "background", self.config.canvas_size, self.config.canvas_size),
+        "significance": ROOT.TCanvas("significance", "significance", self.config.canvas_size * len(self.config.ctaus), self.config.canvas_size * len(self.config.masses)),
+        "closure": ROOT.TCanvas("closure", "closure", self.config.canvas_size, self.config.canvas_size),
+        "error": ROOT.TCanvas("error", "error", self.config.canvas_size, self.config.canvas_size),
+        "min_n_events": ROOT.TCanvas("min_n_events", "min_n_events", self.config.canvas_size, self.config.canvas_size),
+        "projections": ROOT.TCanvas("projections", "projections", self.config.canvas_size, self.config.canvas_size),
     }
 
     for key in ["grid", "significance"]:
@@ -507,7 +662,11 @@ class ABCDPlotter:
     collection = self.config.collection
     do_data = self.config.do_data
 
-    input_path = f"../abcd/results_{region}_{collection}_{'data' if do_data else 'mc'}/best_points.txt"
+    input_path = (
+        f"../abcd/results_{region}_{collection}_"
+        f"{'data' if do_data else 'mc'}{self.config.category}/best_points_"
+        f"{self.config.variable_1}_vs_{self.config.variable_2}.txt"
+    )
     results = self.__get_input_dict(input_path)
 
     mass_to_bin = {
@@ -567,4 +726,6 @@ class ABCDPlotter:
       y = hist.GetYaxis().GetBinCenter(y)
       latex.DrawLatex(x, y, f"{best_x}, {best_y}")
 
-    canvas.SaveAs(f"../abcd/results_{region}_{collection}_{'data' if do_data else 'mc'}/best_points.pdf")
+    canvas.SaveAs(
+        f"../abcd/results_{region}_{collection}_{'data' if do_data else 'mc'}{self.config.category}/best_points_"
+        f"{self.config.variable_1}_vs_{self.config.variable_2}.pdf")

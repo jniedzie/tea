@@ -6,9 +6,9 @@
 #define NanoMuon_hpp
 
 #include "Helpers.hpp"
+#include "NanoGenParticle.hpp"
 #include "PhysicsObject.hpp"
 #include "ScaleFactorsManager.hpp"
-#include "NanoGenParticle.hpp"
 
 class NanoMuon;
 typedef Collection<std::shared_ptr<NanoMuon>> NanoMuons;
@@ -19,13 +19,15 @@ class NanoMuon {
  public:
   NanoMuon(std::shared_ptr<PhysicsObject> physicsObject_);
 
-  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
            int line = __builtin_LINE()) {
-    return physicsObject->Get(branchName, file, function, line);
+    return physicsObject->Get(branchName, verbose, file, function, line);
   }
 
   template <typename T>
-  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
+  T GetAs(std::string branchName) {
+    return physicsObject->GetAs<T>(branchName);
+  }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
@@ -48,7 +50,7 @@ class NanoMuon {
 
   TLorentzVector GetFourVector();
 
-  std::map<std::string,float> GetScaleFactors(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
+  std::map<std::string, float> GetScaleFactors(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
 
   MuonID GetID();
   MuonIso GetIso();
@@ -59,7 +61,7 @@ class NanoMuon {
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
-  std::map<std::string,float> scaleFactor;
+  std::map<std::string, float> scaleFactor;
 };
 
 #endif /* NanoMuon_hpp */

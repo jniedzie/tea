@@ -136,6 +136,19 @@ float NanoDimuonVertex::GetOuterDeltaPhi() { return muon1->GetAs<float>("outerPh
 
 float NanoDimuonVertex::GetLeadingMuonPt() { return max((float)muon1->Get("pt"), (float)muon2->Get("pt")); }
 
+float NanoDimuonVertex::GetDeltaDisplacedTrackIso03()
+{
+  double iso03_1 = GetAs<float>("displacedTrackIso03Dimuon1");
+  double iso03_2 = GetAs<float>("displacedTrackIso03Dimuon2");
+  return abs(iso03_1 - iso03_2);
+}
+float NanoDimuonVertex::GetDeltaDisplacedTrackIso04()
+{
+  double iso04_1 = GetAs<float>("displacedTrackIso04Dimuon1");
+  double iso04_2 = GetAs<float>("displacedTrackIso04Dimuon2");
+  return abs(iso04_1 - iso04_2);
+}
+
 int NanoDimuonVertex::GetTotalNumberOfSegments() {
   std::string category = GetVertexCategory();
   if (category == "Pat") return 0;
@@ -158,15 +171,9 @@ int NanoDimuonVertex::GetTotalNumberOfCSCHits() {
 }
 
 shared_ptr<NanoMuon> NanoDimuonVertex::GetLeadingMuon() {
-  if (muon1->GetAs<float>("pt") > muon2->GetAs<float>("pt"))
-    return muon1;
-  else
-    return muon2;
+  return (muon1->GetAs<float>("pt") > muon2->GetAs<float>("pt")) ? muon1 : muon2;
 }
 
 shared_ptr<NanoMuon> NanoDimuonVertex::GetSubleadingMuon() {
-  if (muon1->GetAs<float>("pt") < muon2->GetAs<float>("pt"))
-    return muon1;
-  else
-    return muon2;
+  return (muon1->GetAs<float>("pt") < muon2->GetAs<float>("pt")) ? muon1 : muon2;
 }
