@@ -151,7 +151,7 @@ class ABCDPlotter:
         if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
           continue
 
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_vertically(signal_hist)
+        signal_hist = self.abcdHelper.flip_hist_vertically(signal_hist)
         self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_horizontally(signal_hist)
 
     if self.variable_1_min is None:
@@ -297,8 +297,8 @@ class ABCDPlotter:
       return None
 
     point = (
-        self.background_hist.GetXaxis().FindBin(point[0]),
-        self.background_hist.GetYaxis().FindBin(point[1])
+        self.background_hist.GetXaxis().FindFixBin(point[0]),
+        self.background_hist.GetYaxis().FindFixBin(point[1])
     )
 
     return point

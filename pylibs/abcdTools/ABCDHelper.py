@@ -63,8 +63,8 @@ class ABCDHelper:
     # B  |  D
 
     point = (
-        hist.GetXaxis().FindBin(point[0]),
-        hist.GetYaxis().FindBin(point[1])
+        hist.GetXaxis().FindFixBin(point[0]),
+        hist.GetYaxis().FindFixBin(point[1])
     )
 
     a_err = c_double(0)
@@ -87,6 +87,18 @@ class ABCDHelper:
     c = hist.IntegralAndError(x_post_bin, x_max_bin, y_post_bin, y_max_bin, c_err)
     d = hist.IntegralAndError(x_post_bin, x_max_bin, y_min_bin , y_pre_bin, d_err)
 
+    if x_pre_bin < x_min_bin:
+      a = 0
+      a_err = c_double(0)
+      b = 0
+      b_err = c_double(0)
+      
+    if y_pre_bin < y_min_bin:
+      b = 0
+      b_err = c_double(0)
+      d = 0
+      d_err = c_double(0)
+
     return a, b, c, d, a_err.value, b_err.value, c_err.value, d_err.value
 
   def get_significance_hist(self, signal_hist, background_hist):
@@ -103,10 +115,17 @@ class ABCDHelper:
     significance_hist = signal_hist.Clone()
     significance_hist.SetTitle("")
 
+    x_min_bin = 1
+    y_max_bin = signal_hist.GetNbinsY()
+
     for i in range(1, significance_hist.GetNbinsX() + 1):
       for j in range(1, significance_hist.GetNbinsY() + 1):
-        n_signal = signal_hist.Integral(1, i, j, significance_hist.GetNbinsY())
-        n_background = background_hist.Integral(1, i, j, significance_hist.GetNbinsY())
+        
+        x_pre_bin = i-1
+        y_post_bin = j
+        
+        n_signal = signal_hist.Integral(x_min_bin, x_pre_bin, y_post_bin, y_max_bin)
+        n_background = background_hist.Integral(x_min_bin, x_pre_bin, y_post_bin, y_max_bin)
 
         significance_hist.SetBinContent(i, j, self.__get_significance(n_signal, n_background))
 
@@ -125,12 +144,23 @@ class ABCDHelper:
 
     total_signal = signal_hist.Integral()
 
+    x_min_bin = 1
+    x_max_bin = signal_contamination_hist.GetNbinsX()
+    y_min_bin = 1
+    y_max_bin = signal_contamination_hist.GetNbinsY()
+
     for i in range(1, signal_contamination_hist.GetNbinsX() + 1):
       for j in range(1, signal_contamination_hist.GetNbinsY() + 1):
-        n_signal_b = signal_hist.Integral(1, i, 1, j)
-        n_signal_c = signal_hist.Integral(i, signal_contamination_hist.GetNbinsX(),
-                                          j, signal_contamination_hist.GetNbinsY())
-        n_signal_d = signal_hist.Integral(i, signal_contamination_hist.GetNbinsX(), 1, j)
+        
+        x_pre_bin = i-1
+        x_post_bin = i
+        y_pre_bin = j-1
+        y_post_bin = j
+        
+        n_signal_b = signal_hist.Integral(x_min_bin , x_pre_bin, y_min_bin  , y_pre_bin)
+        n_signal_c = signal_hist.Integral(x_post_bin, x_max_bin, y_post_bin , y_max_bin)
+        n_signal_d = signal_hist.Integral(x_post_bin, x_max_bin, y_min_bin  , y_pre_bin)
+        
         n_signal = max(n_signal_b, n_signal_c, n_signal_d)
         signal_contamination_hist.SetBinContent(i, j, n_signal / total_signal if total_signal > 0 else 0)
 
@@ -233,8 +263,8 @@ class ABCDHelper:
     if point is None:
       return False
 
-    x_bin = significance_hist.GetXaxis().FindBin(point[0])
-    y_bin = significance_hist.GetYaxis().FindBin(point[1])
+    x_bin = significance_hist.GetXaxis().FindFixBin(point[0])
+    y_bin = significance_hist.GetYaxis().FindFixBin(point[1])
 
     values = {name: hist.GetBinContent(x_bin, y_bin) for name, hist in optimization_hists.items()}
 
@@ -315,7 +345,7 @@ class ABCDHelper:
     hist_true = hist_clone.ProjectionY(
         hist.GetName() + "_projection_true",
         1,
-        hist_clone.GetXaxis().FindBin(self.config.abcd_point[0])
+        hist_clone.GetXaxis().FindFixBin(self.config.abcd_point[0])
     )
     return hist_true
 
@@ -325,7 +355,7 @@ class ABCDHelper:
 
     hist_prediction = hist_clone.ProjectionY(
         "projection_c",
-        hist_clone.GetXaxis().FindBin(self.config.abcd_point[0]),
+        hist_clone.GetXaxis().FindFixBin(self.config.abcd_point[0]),
         hist_clone.GetNbinsX()
     )
 
