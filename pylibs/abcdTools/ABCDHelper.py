@@ -13,29 +13,79 @@ class ABCDHelper:
     self.min_n_events = min_n_events
     self.max_signal_contamination = max_signal_contamination
 
-  def get_abcd(self, hist, point, values_instead_of_bins=False):
+  def flip_hist_vertically(self, hist):
+    # The method changes the y-axis from Y to -Y. The range of the axis will
+    # be changed from (a, b) to (-b, -a), and the value on the y-axis will be changed
+    # from y to -y. The x-axis will not be changed.
+
+    flipped_hist = ROOT.TH2F(hist.GetName() + "_flipped", hist.GetTitle(),
+                             hist.GetNbinsX(), hist.GetXaxis().GetXmin(), hist.GetXaxis().GetXmax(),
+                             hist.GetNbinsY(), -hist.GetYaxis().GetXmax(), -hist.GetYaxis().GetXmin())
+
+    for i in range(1, hist.GetNbinsX() + 1):
+      for j in range(1, hist.GetNbinsY() + 1):
+        flipped_hist.SetBinContent(i, hist.GetNbinsY()+1-j, hist.GetBinContent(i, j))
+        flipped_hist.SetBinError(i,  hist.GetNbinsY()+1-j, hist.GetBinError(i, j))
+
+    flipped_hist.GetXaxis().SetTitle(hist.GetXaxis().GetTitle())
+    flipped_hist.GetYaxis().SetTitle("-")
+    flipped_hist.SetFillColorAlpha(hist.GetFillColor(), 0.5)
+
+    return flipped_hist
+
+  def flip_hist_horizontally(self, hist):
+    # The method changes the x-axis from X to -X. The range of the axis will
+    # be changed from (a, b) to (-b, -a), and the value on the x-axis will be changed
+    # from x to -x. The y-axis will not be changed.
+
+    flipped_hist = ROOT.TH2F(hist.GetName() + "_flipped", hist.GetTitle(),
+                             hist.GetNbinsX(), -hist.GetXaxis().GetXmax(), -hist.GetXaxis().GetXmin(),
+                             hist.GetNbinsY(), hist.GetYaxis().GetXmin(), hist.GetYaxis().GetXmax())
+
+    for i in range(1, hist.GetNbinsX() + 1):
+      for j in range(1, hist.GetNbinsY() + 1):
+        flipped_hist.SetBinContent(hist.GetNbinsX()+1-i, j, hist.GetBinContent(i, j))
+        flipped_hist.SetBinError(hist.GetNbinsX()+1-i, j, hist.GetBinError(i, j))
+
+    flipped_hist.GetXaxis().SetTitle("-")
+    flipped_hist.GetYaxis().SetTitle(hist.GetYaxis().GetTitle())
+    flipped_hist.SetFillColorAlpha(hist.GetFillColor(), 0.5)
+
+    return flipped_hist
+
+  def get_abcd(self, hist, point):
     # The method returns the number of events in the four regions
     # of the ABCD plane, given a 2D histogram and a point in the
-    # histogram. The point is a tuple (x, y) where x is the bin
-    # number in the x-axis and y is the bin number in the y-axis.
+    # histogram. The point is a tuple (x, y).
     #
     # A  |  C
     # -------
     # B  |  D
 
-    if values_instead_of_bins:
-      point = (hist.GetXaxis().FindBin(
-          point[0]), hist.GetYaxis().FindBin(point[1]))
+    point = (
+        hist.GetXaxis().FindBin(point[0]),
+        hist.GetYaxis().FindBin(point[1])
+    )
 
     a_err = c_double(0)
     b_err = c_double(0)
     c_err = c_double(0)
     d_err = c_double(0)
 
-    a = hist.IntegralAndError(1, point[0], point[1], hist.GetNbinsY(), a_err)
-    b = hist.IntegralAndError(1, point[0], 1, point[1], b_err)
-    c = hist.IntegralAndError(point[0], hist.GetNbinsX(), point[1], hist.GetNbinsY(), c_err)
-    d = hist.IntegralAndError(point[0], hist.GetNbinsX(), 1, point[1], d_err)
+    x_min_bin = 1
+    x_pre_bin = point[0]-1
+    x_post_bin = point[0]
+    x_max_bin = hist.GetNbinsX()
+
+    y_min_bin = 1
+    y_pre_bin = point[1]-1
+    y_post_bin = point[1]
+    y_max_bin = hist.GetNbinsY()
+
+    a = hist.IntegralAndError(x_min_bin , x_pre_bin, y_post_bin, y_max_bin, a_err)
+    b = hist.IntegralAndError(x_min_bin , x_pre_bin, y_min_bin , y_pre_bin, b_err)
+    c = hist.IntegralAndError(x_post_bin, x_max_bin, y_post_bin, y_max_bin, c_err)
+    d = hist.IntegralAndError(x_post_bin, x_max_bin, y_min_bin , y_pre_bin, d_err)
 
     return a, b, c, d, a_err.value, b_err.value, c_err.value, d_err.value
 
@@ -55,13 +105,13 @@ class ABCDHelper:
 
     for i in range(1, significance_hist.GetNbinsX() + 1):
       for j in range(1, significance_hist.GetNbinsY() + 1):
-        n_signal = signal_hist.Integral(1, i, 1, j)
-        n_background = background_hist.Integral(1, i, 1, j)
-        significance_hist.SetBinContent(
-            i, j, self.__get_significance(n_signal, n_background))
+        n_signal = signal_hist.Integral(1, i, j, significance_hist.GetNbinsY())
+        n_background = background_hist.Integral(1, i, j, significance_hist.GetNbinsY())
 
-    significance_hist.Rebin2D(self.config.rebin_optimization, self.config.rebin_optimization)
-    significance_hist.Scale(1/self.config.rebin_optimization**2)
+        significance_hist.SetBinContent(i, j, self.__get_significance(n_signal, n_background))
+
+    significance_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+    significance_hist.Scale(1/self.config.rebin_2D**2)
 
     return significance_hist
 
@@ -84,8 +134,8 @@ class ABCDHelper:
         n_signal = max(n_signal_b, n_signal_c, n_signal_d)
         signal_contamination_hist.SetBinContent(i, j, n_signal / total_signal if total_signal > 0 else 0)
 
-    signal_contamination_hist.Rebin2D(self.config.rebin_optimization, self.config.rebin_optimization)
-    signal_contamination_hist.Scale(1/self.config.rebin_optimization**2)
+    signal_contamination_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+    signal_contamination_hist.Scale(1/self.config.rebin_2D**2)
     return signal_contamination_hist
 
   def get_optimization_hists(self, background_hist):
@@ -110,7 +160,7 @@ class ABCDHelper:
 
     return optimization_hists
 
-  def get_optimal_point_for_significance(self, significance_hist, signal_contamination_hist, optimization_hists):
+  def get_optimal_point_for_significance(self, significance_hists, signal_contamination_hists, optimization_hists):
     # Returns the bin with the highest significance that satisfies
     # the optimization criteria. The optimization criteria are:
     #
@@ -118,44 +168,95 @@ class ABCDHelper:
     # - The closure is less than the maximum closure.
     # - The minimum number of events in the four regions is greater
     #   than the minimum number of events.
+    # - The signal contamination is less than the maximum signal contamination.
     #
 
     max_significance = 0
     best_point = None
 
-    if significance_hist is None:
-      warn("ABCDHelper.get_optimal_point_for_significance: significance_hist is None")
-      return best_point
+    first_hist = next(iter(significance_hists.values()))
+    if first_hist is None or not isinstance(first_hist, ROOT.TH2):
+      warn("ABCDHelper.get_optimal_point_for_significance: first_hist is None")
+      return None
 
-    for i in range(1, significance_hist.GetNbinsX() + 1):
-      for j in range(1, significance_hist.GetNbinsY() + 1):
-        significance = significance_hist.GetBinContent(i, j)
+    for i in range(1, first_hist.GetNbinsX() + 1):
+      for j in range(1, first_hist.GetNbinsY() + 1):
+        values = {name: hist.GetBinContent(i, j) for name, hist in optimization_hists.items()}
 
-        x_value = significance_hist.GetXaxis().GetBinCenter(i)
-        y_value = significance_hist.GetYaxis().GetBinCenter(j)
-
-        values = {name: hist.GetBinContent(hist.FindBin(x_value, y_value)) for name, hist in optimization_hists.items()}
-
-        signal_contamination = signal_contamination_hist.GetBinContent(
-            signal_contamination_hist.FindBin(x_value, y_value))
-
-        if values["error"] > self.max_error:
+        if values["error"] < 0 or values["error"] > self.max_error:
+          warn("ABCDHelper.get_optimal_point_for_significance: error is too high")
           continue
 
-        if values["closure"] > self.max_closure:
+        if values["closure"] < 0 or values["closure"] > self.max_closure:
+          warn("ABCDHelper.get_optimal_point_for_significance: closure is too high")
           continue
 
-        if values["min_n_events"] < self.min_n_events:
+        if values["min_n_events"] < 0 or values["min_n_events"] < self.min_n_events:
+          warn("ABCDHelper.get_optimal_point_for_significance: min_n_events is too low")
           continue
 
-        if signal_contamination > self.max_signal_contamination:
-          continue
+        total_significance = 0
 
-        if significance > max_significance:
-          max_significance = significance
+        for hist_name, significance_hist in significance_hists.items():
+          signal_contamination_hist = signal_contamination_hists[hist_name]
+
+          if significance_hist is None:
+            warn("ABCDHelper.get_optimal_point_for_significance: significance_hist is None")
+            return best_point
+
+          significance = significance_hist.GetBinContent(i, j)
+
+          signal_contamination = signal_contamination_hist.GetBinContent(i, j)
+
+          if signal_contamination < 0 or signal_contamination > self.max_signal_contamination:
+            warn("ABCDHelper.get_optimal_point_for_significance: signal contamination is too high")
+            continue
+
+          total_significance += significance
+
+        if total_significance > max_significance:
+          max_significance = total_significance
           best_point = (i, j)
 
+    if best_point is None:
+      return None
+
+    # convert the bin number to the x and y value
+    best_point = (
+      first_hist.GetXaxis().GetBinLowEdge(best_point[0]),
+      first_hist.GetYaxis().GetBinLowEdge(best_point[1])
+    )
+
     return best_point
+
+  def is_point_good_for_signal(self, significance_hist, signal_contamination_hist, optimization_hists, point):
+    if point is None:
+      return False
+
+    x_bin = significance_hist.GetXaxis().FindBin(point[0])
+    y_bin = significance_hist.GetYaxis().FindBin(point[1])
+
+    values = {name: hist.GetBinContent(x_bin, y_bin) for name, hist in optimization_hists.items()}
+
+    if values["error"] > self.max_error:
+      warn("ABCDHelper.is_point_good_for_signal: error is too high")
+      return False
+
+    if values["closure"] > self.max_closure:
+      warn("ABCDHelper.is_point_good_for_signal: closure is too high")
+      return False
+
+    if values["min_n_events"] < self.min_n_events:
+      warn("ABCDHelper.is_point_good_for_signal: min_n_events is too low")
+      return False
+
+    signal_contamination = signal_contamination_hist.GetBinContent(x_bin, y_bin)
+
+    if signal_contamination > self.max_signal_contamination:
+      warn("ABCDHelper.is_point_good_for_signal: signal contamination is too high")
+      return False
+
+    return True
 
   def get_optimal_point_for_param(self, optimization_hists, param):
 
@@ -169,19 +270,18 @@ class ABCDHelper:
     for i in range(1, optimization_hist.GetNbinsX() + 1):
       for j in range(1, optimization_hist.GetNbinsY() + 1):
         optimization_value = optimization_hist.GetBinContent(i, j)
-
-        x_value = optimization_hist.GetXaxis().GetBinCenter(i)
-        y_value = optimization_hist.GetYaxis().GetBinCenter(j)
-
-        values = {name: hist.GetBinContent(hist.FindBin(x_value, y_value)) for name, hist in other_hists.items()}
+        values = {name: hist.GetBinContent(i, j) for name, hist in other_hists.items()}
 
         if "error" in values and values["error"] > self.max_error:
+          warn("ABCDHelper.get_optimal_point_for_param: error is too high")
           continue
 
         if "closure" in values and values["closure"] > self.max_closure:
+          warn("ABCDHelper.get_optimal_point_for_param: closure is too high")
           continue
 
         if "min_n_events" in values and values["min_n_events"] < self.min_n_events:
+          warn("ABCDHelper.get_optimal_point_for_param: min_n_events is too low")
           continue
 
         if (param == "error" or param == "closure") and optimization_value < min_value:
@@ -191,6 +291,15 @@ class ABCDHelper:
           max_value = optimization_value
           best_point = (i, j)
 
+    if best_point is None:
+      return None
+
+    # convert the bin number to the x and y value
+    best_point = (
+      optimization_hist.GetXaxis().GetLowEdge(best_point[0]),
+      optimization_hist.GetYaxis().GetLowEdge(best_point[1])
+    )
+    
     return best_point
 
   def get_nice_name(self, name):
@@ -220,8 +329,7 @@ class ABCDHelper:
         hist_clone.GetNbinsX()
     )
 
-    _, b, _, d, _, _, _, _ = self.get_abcd(
-        hist, self.config.abcd_point, values_instead_of_bins=True)
+    _, b, _, d, _, _, _, _ = self.get_abcd(hist, self.config.abcd_point)
     abcd_ratio = b/d if d > 0 else 1
     hist_prediction.Scale(abcd_ratio)
 
@@ -257,7 +365,10 @@ class ABCDHelper:
     for i in range(1, optimization_hist.GetNbinsX() + 1):
       for j in range(1, optimization_hist.GetNbinsY() + 1):
 
-        a, b, c, d, a_err, b_err, c_err, d_err = self.get_abcd(background_hist, (i, j))
+        x_value = optimization_hist.GetXaxis().GetBinLowEdge(i)
+        y_value = optimization_hist.GetYaxis().GetBinLowEdge(j)
+
+        a, b, c, d, a_err, b_err, c_err, d_err = self.get_abcd(background_hist, (x_value, y_value))
 
         closure = -1
         error = -1
@@ -287,8 +398,8 @@ class ABCDHelper:
     default_value = optimization_hist.GetMaximum() if hist_type != "min_n_events" else 0
     self.__replace_default_values(optimization_hist, default_value)
 
-    optimization_hist.Rebin2D(self.config.rebin_optimization, self.config.rebin_optimization)
-    optimization_hist.Scale(1/self.config.rebin_optimization**2)
+    optimization_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+    optimization_hist.Scale(1/self.config.rebin_2D**2)
 
     return optimization_hist
 
