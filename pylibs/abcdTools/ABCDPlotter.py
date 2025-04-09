@@ -87,9 +87,6 @@ class ABCDPlotter:
     }
 
     for mass, ctau in self.signal_hists:
-      if (mass, ctau) not in self.signal_hists:
-        continue
-
       signal_hist = self.signal_hists[(mass, ctau)]
 
       if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
