@@ -105,7 +105,6 @@ class ABCDPlotter:
       elif mean_x > background_mean_x and mean_y < background_mean_y:
         signal_region_count["D"] += 1
 
-    # find which region most signals are in
     max_region = max(signal_region_count, key=signal_region_count.get)
 
     if max_region == "A":
@@ -166,8 +165,6 @@ class ABCDPlotter:
 
     background_hist = self.background_hist.Clone("background_hist_norm")
     signal_hist = self.signal_hists[(mass, ctau)].Clone("signal_hist_norm")
-    background_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
-    signal_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
     background_hist.Scale(1.0 / background_hist.Integral())
     signal_hist.Scale(1.0 / signal_hist.Integral())
 
@@ -222,9 +219,6 @@ class ABCDPlotter:
         clones["background"] = self.background_hist.Clone()
         clones[(mass, ctau)] = self.signal_hists[(mass, ctau)].Clone()
 
-        clones["background"].Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
-        clones[(mass, ctau)].Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
-
         i_pad = 1 + i_mass * len(self.config.ctaus) + i_ctau
         mass_label = f"{mass.replace('p', '.')} GeV, {ctau} mm"
 
@@ -252,7 +246,6 @@ class ABCDPlotter:
 
   def plot_background_hist(self):
     clone = self.background_hist.Clone()
-    clone.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
     clone.GetYaxis().SetTitle(clone.GetYaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_1))
     clone.GetXaxis().SetTitle(clone.GetXaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_2))
     self.canvases["background"].cd()
@@ -292,17 +285,6 @@ class ABCDPlotter:
       self.best_points["all"] = self.abcdHelper.get_optimal_point_for_param(
           self.optimization_hists, self.config.optimization_param)
 
-  def __values_to_bins(self, point):
-    if point is None:
-      return None
-
-    point = (
-        self.background_hist.GetXaxis().FindFixBin(point[0]),
-        self.background_hist.GetYaxis().FindFixBin(point[1])
-    )
-
-    return point
-
   def print_params_for_best_point(self):
 
     if "all" in self.best_points:
@@ -310,8 +292,8 @@ class ABCDPlotter:
       if best_point is None:
         warn("Best point not found")
         return
-      
-      i, j = self.__values_to_bins(best_point)
+
+      i, j = best_point
       error = self.optimization_hists["error"].GetBinContent(i, j)
       closure = self.optimization_hists["closure"].GetBinContent(i, j)
       min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
@@ -330,8 +312,7 @@ class ABCDPlotter:
           if best_point is None:
             warn(f"Best point for {mass} GeV, {ctau} mm not found")
             continue
-          
-          i, j = self.__values_to_bins(best_point)
+
           error = self.optimization_hists["error"].GetBinContent(i, j)
           closure = self.optimization_hists["closure"].GetBinContent(i, j)
           min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
@@ -349,7 +330,6 @@ class ABCDPlotter:
           continue
 
         if self.abcdHelper.is_point_good_for_signal(
-            self.significance_hists[(mass, ctau)],
             self.contamination_hists[(mass, ctau)],
             self.optimization_hists,
             self.best_points["all"] if "all" in self.best_points else self.best_points[(mass, ctau)],
@@ -376,7 +356,6 @@ class ABCDPlotter:
             continue
 
           if not self.abcdHelper.is_point_good_for_signal(
-              self.significance_hists[(mass, ctau)],
               self.contamination_hists[(mass, ctau)],
               self.optimization_hists,
               best_point,
@@ -389,8 +368,7 @@ class ABCDPlotter:
             warn(f"Significance histogram for {mass} GeV, {ctau} mm not found")
             continue
 
-          i, j = self.__values_to_bins(best_point)
-
+          i, j = best_point
           values = {name: hist.GetBinContent(i, j) for name, hist in self.optimization_hists.items()}
           significance = significance_hist.GetBinContent(i, j)
           contamination = self.contamination_hists[(mass, ctau)].GetBinContent(i, j)
@@ -402,8 +380,11 @@ class ABCDPlotter:
 
           i_pad = 1 + i_mass * len(self.config.ctaus) + i_ctau
 
-          self.lines[i_pad] = (ROOT.TLine(best_point[0], self.variable_2_min, best_point[0], self.variable_2_max),
-                               ROOT.TLine(self.variable_1_min, best_point[1], self.variable_1_max, best_point[1]))
+          line_x = self.background_hist.GetXaxis().GetBinLowEdge(i)
+          line_y = self.background_hist.GetYaxis().GetBinLowEdge(j)
+
+          self.lines[i_pad] = (ROOT.TLine(line_x, self.variable_2_min, line_x, self.variable_2_max),
+                               ROOT.TLine(self.variable_1_min, line_y, self.variable_1_max, line_y))
 
           self.lines[i_pad][0].SetLineColor(self.config.abcd_line_color)
           self.lines[i_pad][1].SetLineColor(self.config.abcd_line_color)
@@ -535,18 +516,12 @@ class ABCDPlotter:
     self.ratio_hist.GetYaxis().SetRangeUser(0, self.config.y_max_ratio)
 
   def __get_lines(self):
-    line_x = ROOT.TLine(
-        self.config.abcd_point[0],
-        self.variable_2_min,
-        self.config.abcd_point[0],
-        self.variable_2_max
-    )
-    line_y = ROOT.TLine(
-        self.variable_1_min,
-        self.config.abcd_point[1],
-        self.variable_1_max,
-        self.config.abcd_point[1]
-    )
+    i, j = self.config.abcd_point
+    x = self.background_hist.GetXaxis().GetBinLowEdge(i)
+    y = self.background_hist.GetYaxis().GetBinLowEdge(j)
+
+    line_x = ROOT.TLine(x, self.variable_2_min, x, self.variable_2_max)
+    line_y = ROOT.TLine(self.variable_1_min, y, self.variable_1_max, y)
 
     line_x.SetLineColor(self.config.abcd_line_color)
     line_x.SetLineWidth(self.config.abcd_line_width)
@@ -583,15 +558,17 @@ class ABCDPlotter:
   def print_params_for_selected_point(self):
     a, b, c, d, a_err, b_err, c_err, d_err = self.abcdHelper.get_abcd(self.background_hist, self.config.abcd_point)
 
-    info(f"\n\nSelected point: {self.config.abcd_point[0]}, {self.config.abcd_point[1]}")
-    info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
+    info(f"\n\nSelected point: {self.config.abcd_point[0]:.2f}, {self.config.abcd_point[1]:.2f}")
+    i, j = self.config.abcd_point
+    info(f"{i=}, {j=}")
 
+    info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
     closure = -1
     error = -1
     min_n_events = -1
     prediction = None
 
-    if a > 0 and b > 0 and c > 0 and d > 0:
+    if a != 0 and b != 0 and c != 0 and d != 0:
       prediction = c/d * b
       prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
       prediction_err *= prediction
@@ -600,31 +577,37 @@ class ABCDPlotter:
       min_n_events = min(a, b, c, d)
       info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
 
-    info("\n\nOptimization values:")
+    info("\n\nOptimization values (re-calculated):")
     info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
 
-    info(f"\n\n{a:.2f}\t{a_err:.2f}".replace(".", ","))
-    if prediction is not None:
-      info(f"{prediction:.2f}\t{prediction_err:.2f}".replace(".", ","))
-      info(f"{prediction_err/prediction:.2f}".replace(".", ","))
-    info(f"{closure:.2e}".replace(".", ","))
-    info(f"{error:.2e}".replace(".", ","))
-    info(f"{min_n_events:.1f}\n\n".replace(".", ","))
+    # extract optimization values from histograms for a cross check
+    closure = self.optimization_hists["closure"].GetBinContent(i, j)
+    error = self.optimization_hists["error"].GetBinContent(i, j)
+    min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
 
+    info("\nOptimization values (from hists):")
+    info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
+
+    info("\n\nSignal parameters:")
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
         if (mass, ctau) not in self.signal_hists:
           continue
 
-        hist = self.significance_hists[(mass, ctau)]
+        significance_hist = self.significance_hists[(mass, ctau)]
+        contamination_hist = self.contamination_hists[(mass, ctau)]
 
-        if hist is None or type(hist) is not ROOT.TH2D:
+        if significance_hist is None or type(significance_hist) is not ROOT.TH2D:
           continue
 
-        i, j = self.__values_to_bins(self.config.abcd_point)
-        significance = hist.GetBinContent(i, j)
-        contamination = self.contamination_hists[(mass, ctau)].GetBinContent(i, j)
-        info(f"Signal {mass} GeV, {ctau} mm: Significance: {significance:.2f} Contamination: {contamination:.2f}")
+        if contamination_hist is None or type(contamination_hist) is not ROOT.TH2D:
+          continue
+
+        significance = significance_hist.GetBinContent(i, j)
+        contamination = contamination_hist.GetBinContent(i, j)
+        info(f"Signal {mass} GeV, {ctau} mm: Significance: {significance:.2e} Contamination: {contamination:.2e}")
+
+    info("\n\n")
 
   def __load_background_histograms(self):
 
@@ -688,6 +671,8 @@ class ABCDPlotter:
     self.background_hist.SetFillColorAlpha(self.config.background_color, 0.5)
     self.background_hist.SetTitle("")
 
+    self.background_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+
   def __load_signal_hists(self):
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
@@ -705,6 +690,8 @@ class ABCDPlotter:
 
         self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
         self.signal_hists[(mass, ctau)].SetFillColorAlpha(self.config.signal_color, 0.5)
+
+        self.signal_hists[(mass, ctau)].Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
 
   def __setup_canvases(self):
     self.canvases = {
