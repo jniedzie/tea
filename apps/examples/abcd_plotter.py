@@ -13,7 +13,8 @@ parser.add_argument("--max_overlap", type=float, default=1.0, help="Max overlap 
 parser.add_argument("--max_error", type=float, default=1.0, help="Max allowed error expressed in number of sigmas.")
 parser.add_argument("--max_closure", type=float, default=0.20, help="Max allowed closure.")
 parser.add_argument("--min_n_events", type=int, default=10, help="Min number of events in any of the ABCD bins.")
-parser.add_argument("--max_signal_contamination", type=float, default=0.20, help="Max allowed signal contamination in any of the ABCD bins.")
+parser.add_argument("--max_signal_contamination", type=float, default=0.20,
+                    help="Max allowed signal contamination in any of the ABCD bins.")
 args = parser.parse_args()
 
 
@@ -37,6 +38,7 @@ def main():
     warn("Correlation is too high, skipping the signal plots")
     return
 
+  abcdPlotter.calculate_best_points()
   n_points_found = abcdPlotter.get_n_signals_with_good_binning()
 
   if n_points_found < args.min_signals:
@@ -60,7 +62,9 @@ def main():
   abcdPlotter.save_canvases()
   abcdPlotter.print_params_for_selected_point()
   abcdPlotter.plot_optimal_points()
-  
+
+  abcdPlotter.print_params_for_best_point()
+
   logger_print()
 
 
