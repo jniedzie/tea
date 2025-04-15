@@ -1,17 +1,20 @@
-from Logger import warn, info
+from Logger import warn
 
+import math
 from ctypes import c_double
 import ROOT
 
 
 class ABCDHelper:
-  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination):
+  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination, max_overlap):
     self.config = config
 
     self.max_error = max_error
     self.max_closure = max_closure
     self.min_n_events = min_n_events
     self.max_signal_contamination = max_signal_contamination
+    self.max_overlap = max_overlap
+    self.signal_overlap = {}
 
   def flip_hist_vertically(self, hist):
     # The method changes the y-axis from Y to -Y. The range of the axis will
@@ -107,6 +110,36 @@ class ABCDHelper:
       c_err = c_double(0)
 
     return a, b, c, d, a_err.value, b_err.value, c_err.value, d_err.value
+
+  def get_overlap_coefficient(self, signal_hist, background_hist, mass, ctau):
+    if (mass, ctau) in self.signal_overlap:
+      return self.signal_overlap[(mass, ctau)]
+
+    background_hist = background_hist.Clone()
+    signal_hist = signal_hist.Clone()
+    background_hist.Scale(1.0 / background_hist.Integral())
+    signal_hist.Scale(1.0 / signal_hist.Integral())
+
+    numerator = 0.0
+    sig_norm = 0.0
+    bck_norm = 0.0
+
+    for i in range(1, background_hist.GetNbinsX() + 1):
+      for j in range(1, background_hist.GetNbinsY() + 1):
+
+        bck = background_hist.GetBinContent(i, j)
+        sig = signal_hist.GetBinContent(i, j)
+
+        if sig <= 0 or bck <= 0:  # in some corner cases, MC histograms can have negative-content bins
+          continue
+
+        numerator += sig*bck
+        sig_norm += sig * sig
+        bck_norm += bck * bck
+
+    coeff = numerator / math.sqrt(sig_norm*bck_norm) if sig_norm > 0 and bck_norm > 0 else 0.0
+    self.signal_overlap[(mass, ctau)] = coeff
+    return coeff  # 1 = identical, 0 = no overlap
 
   def get_significance_hist(self, signal_hist, background_hist):
     # The method returns a 2D histogram with the significance
@@ -255,7 +288,8 @@ class ABCDHelper:
 
     return best_point
 
-  def is_point_good_for_signal(self, signal_contamination_hist, optimization_hists, point):
+  def is_point_good_for_signal(self, signal_hist, background_hist, ctau, mass,
+                               signal_contamination_hist, optimization_hists, point):
     if point is None:
       return False
 
@@ -277,6 +311,11 @@ class ABCDHelper:
 
     if signal_contamination > self.max_signal_contamination:
       warn("ABCDHelper.is_point_good_for_signal: signal contamination is too high")
+      return False
+
+    overlap = self.get_overlap_coefficient(signal_hist, background_hist, mass, ctau)
+    if overlap > self.max_overlap:
+      warn("ABCDHelper.is_point_good_for_signal: signal overlap is too high")
       return False
 
     return True
@@ -338,7 +377,7 @@ class ABCDHelper:
     closure = -1
     if true != 0:
       closure = abs(true - pred) / true
-      
+
     return closure
 
   def get_error(self, a, b, c, d, a_err, b_err, c_err, d_err, prediction):
@@ -350,7 +389,7 @@ class ABCDHelper:
     if prediction_err != 0 and a_err != 0:
       error = abs(a - prediction)
       error /= (prediction_err**2 + a_err**2)**0.5
-    
+
     return error
 
   # -----------------------------------------------------------------------

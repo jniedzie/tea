@@ -3,7 +3,7 @@ import importlib
 import argparse
 
 from ABCDPlotter import ABCDPlotter
-from Logger import warn, logger_print
+from Logger import warn, logger_print, info
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="", help="Path to the config file.")
@@ -30,7 +30,14 @@ def main():
   ROOT.gROOT.SetBatch(True)
 
   config = getConfig(args.config)
-  abcdPlotter = ABCDPlotter(config, args.max_error, args.max_closure, args.min_n_events, args.max_signal_contamination)
+  abcdPlotter = ABCDPlotter(
+      config,
+      args.max_error,
+      args.max_closure,
+      args.min_n_events,
+      args.max_signal_contamination,
+      args.max_overlap
+  )
 
   correlation = abcdPlotter.plot_background_hist()
 
@@ -45,11 +52,7 @@ def main():
     warn("Too few optimal points found, skipping the signal plots.")
     return
 
-  n_signals_overlap_below_threshold = abcdPlotter.get_n_signals_with_overlap_with_background_below(args.max_overlap)
-
-  if n_signals_overlap_below_threshold < args.min_signals:
-    warn("Too few signals with overlap below threshold, skipping the signal plots.")
-    return
+  info(f"Found {n_points_found} optimal points with good binning.")
 
   abcdPlotter.plot_optimization_hists()
   abcdPlotter.plot_per_signal_hists()
