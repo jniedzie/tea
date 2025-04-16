@@ -62,7 +62,6 @@ pair<shared_ptr<NanoMuon>, shared_ptr<NanoMuon>> NanoDimuonVertex::GetMuons(cons
 }
 
 TLorentzVector NanoDimuonVertex::GetFourVector() {
-  TLorentzVector v;
   auto muonVector1 = muon1->GetFourVector();
   auto muonVector2 = muon2->GetFourVector();
   return muonVector1 + muonVector2;
