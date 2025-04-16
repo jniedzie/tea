@@ -6,10 +6,13 @@ from Legend import Legend
 from Logger import error
 
 # enum class with signal, background, data
+
+
 class SampleType(Enum):
   background = 0
   data = 1
   signal = 2
+
 
 @dataclass
 class Sample:
@@ -32,13 +35,16 @@ class Sample:
   legend_description: str = ""
   plotting_options: str = ""
   custom_legend: Legend = None
-  
+
   def __post_init__(self):
     if self.cross_sections is not None and self.cross_section < 0:
-      if self.name in self.cross_sections:
-        self.cross_section = self.cross_sections[self.name]
-      elif "signal_" in self.name:
-        self.cross_section = self.cross_sections[self.name.replace("signal_", "")]
+
+      name = self.name.replace("signal_", "")
+
+      for key, cross_section in self.cross_sections.items():
+        if name in key:
+          self.cross_section = cross_section
+          break
       else:
-        error(f"Sample {self.name} not found in cross sections dict")
+        error(f"Sample {name} not found in cross sections dict")
         exit(0)
