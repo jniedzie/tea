@@ -45,7 +45,7 @@ map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, strin
     if (name == "systematic") continue;
     scaleFactor[name] = recoSF["systematic"] * idSF[name] * isoSF["systematic"];
   }
-  for (auto &[name, weight] : recoSF) {
+  for (auto &[name, weight] : isoSF) {
     if (name == "systematic") continue;
     scaleFactor[name] = recoSF["systematic"] * idSF["systematic"] * isoSF[name];
   }
