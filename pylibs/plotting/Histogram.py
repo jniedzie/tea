@@ -1,11 +1,11 @@
-from Logger import info, warn
-
 from dataclasses import dataclass
+from copy import deepcopy
 from array import array
-from ROOT import TObject
+import ROOT
+
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
-import ROOT
+from Logger import info, warn
 
 
 @dataclass
@@ -47,7 +47,7 @@ class Histogram:
       warn(f"Could not find histogram: {self.name}")
       return
 
-    if not self.hist or type(self.hist) is TObject:
+    if not self.hist or type(self.hist) is ROOT.TObject:
       warn("Some histograms are invalid.")
       return
 
@@ -81,7 +81,7 @@ class Histogram:
     if self.hist is None:
       warn(f"Could not find histogram: {self.name}")
       return
-    if not self.hist or type(self.hist) is TObject:
+    if not self.hist or type(self.hist) is ROOT.TObject:
       warn("Some histograms are invalid.")
       return
     if self.hist.GetEntries() == 0:
@@ -137,14 +137,14 @@ class Histogram2D:
     self.hist = hist
 
   def load(self, input_file):
-    self.hist = input_file.Get(self.name)
+    self.hist = deepcopy(input_file.Get(self.name))
 
   def set_hist_name(self, name):
     self.hist.SetName(name)
     self.name = name
 
   def isGood(self):
-    if self.hist is None or type(self.hist) is TObject:
+    if self.hist is None or type(self.hist) is ROOT.TObject:
       warn(f"Could not find histogram: {self.name}")
       return False
     if self.hist.GetEntries() == 0:

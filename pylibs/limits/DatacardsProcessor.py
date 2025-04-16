@@ -2,7 +2,7 @@ import os
 import ROOT
 from ctypes import c_double
 
-from Logger import error, info, warn
+from Logger import error, warn
 from ABCDHelper import ABCDHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
