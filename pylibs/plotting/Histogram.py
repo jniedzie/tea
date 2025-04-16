@@ -31,6 +31,9 @@ class Histogram:
     self.rand = ROOT.TRandom3()
     self.rand.SetSeed(0)
 
+  def set_hist(self, hist):
+    self.hist = hist
+
   def getName(self):
     return self.name + self.suffix
 
@@ -130,8 +133,15 @@ class Histogram2D:
   z_label: str = ""
   suffix: str = ""
 
+  def set_hist(self, hist):
+    self.hist = hist
+
   def load(self, input_file):
     self.hist = input_file.Get(self.name)
+
+  def set_hist_name(self, name):
+    self.hist.SetName(name)
+    self.name = name
 
   def isGood(self):
     if self.hist is None or type(self.hist) is TObject:
@@ -143,7 +153,7 @@ class Histogram2D:
 
     return True
 
-  def setup(self):
+  def setup(self, sample=None):
     self.hist.Rebin2D(self.x_rebin, self.y_rebin)
 
   def getName(self):

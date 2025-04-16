@@ -6,7 +6,7 @@ import ROOT
 
 
 class ABCDHelper:
-  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination, max_overlap):
+  def __init__(self, config=None, max_error=None, max_closure=None, min_n_events=None, max_signal_contamination=None, max_overlap=None):
     self.config = config
 
     self.max_error = max_error
@@ -56,7 +56,7 @@ class ABCDHelper:
 
     return flipped_hist
 
-  def get_abcd(self, hist, point):
+  def get_abcd(self, hist, point, raw_errors=False):
     # The method returns the number of events in the four regions
     # of the ABCD plane, given a 2D histogram and a point in the
     # histogram. The point is a tuple (x_bin, y_bin).
@@ -109,7 +109,18 @@ class ABCDHelper:
       c = 0
       c_err = c_double(0)
 
-    return a, b, c, d, a_err.value, b_err.value, c_err.value, d_err.value
+    if raw_errors:
+      a_err = a**0.5 if a > 0 else 0
+      b_err = b**0.5 if b > 0 else 0
+      c_err = c**0.5 if c > 0 else 0
+      d_err = d**0.5 if d > 0 else 0
+    else:
+      a_err = a_err.value
+      b_err = b_err.value
+      c_err = c_err.value
+      d_err = d_err.value
+
+    return a, b, c, d, a_err, b_err, c_err, d_err
 
   def get_overlap_coefficient(self, signal_hist, background_hist, mass, ctau):
     if (mass, ctau) in self.signal_overlap:
@@ -380,11 +391,8 @@ class ABCDHelper:
 
     return closure
 
-  def get_error(self, a, b, c, d, a_err, b_err, c_err, d_err, prediction):
+  def get_error(self, a, a_err, prediction, prediction_err):
     error = -1
-
-    prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
-    prediction_err *= prediction
 
     if prediction_err != 0 and a_err != 0:
       error = abs(a - prediction)
@@ -395,6 +403,16 @@ class ABCDHelper:
   # -----------------------------------------------------------------------
   # Private methods
   # -----------------------------------------------------------------------
+
+  def get_prediction(self, b, c, d, b_err, c_err, d_err):
+    if b <= 0 or c <= 0 or d <= 0:
+      warn("ABCDHelper.get_prediction: b, c or d is less than or equal to 0")
+      return 0, 0
+    
+    prediction = c/d * b
+    prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
+
+    return prediction, prediction_err
 
   def __get_optimization_hist(self, background_hist, hist_type):
     optimization_hist = background_hist.Clone()
@@ -412,10 +430,9 @@ class ABCDHelper:
         min_n_events = -1
 
         if a != 0 and b != 0 and c != 0 and d != 0:
-          prediction = c/d * b
+          prediction, prediction_err = self.get_prediction(b, c, d, b_err, c_err, d_err)
           closure = self.get_closure(a, prediction)
-          error = self.get_error(a, b, c, d, a_err, b_err, c_err, d_err, prediction)
-          # min_n_events = min(a, b, c, d) * self.config.rebin_2D**2
+          error = self.get_error(a, a_err, prediction, prediction_err)
           min_n_events = min(a, b, c, d)
 
         value = None
