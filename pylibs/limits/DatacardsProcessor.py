@@ -1,5 +1,6 @@
 import ROOT
 from ctypes import c_double
+from copy import deepcopy
 
 from Logger import error, warn, info
 from ABCDHelper import ABCDHelper
@@ -21,7 +22,7 @@ class DatacardsProcessor:
     self.normalizer = HistogramNormalizer(config)
 
   def create_new_datacard(
-      self, hist_name, obs_histosample, bkg_histosamples, signal_histosample, 
+      self, hist_name, obs_histosample, bkg_histosamples, signal_histosample,
       nuisances, input_files, add_uncertainties_on_zero=False
   ):
     self.datacard = ""
@@ -49,17 +50,18 @@ class DatacardsProcessor:
     # sort self.histosamples such that entries starting with "signal_" go first:
     self.histosamples = dict(sorted(self.histosamples.items(), key=lambda x: not x[0].startswith("signal")))
 
+    nuisances_for_sample = deepcopy(nuisances)
+
     if self.do_abcd:
       self.__insert_background_sum_hist()
-      nuisances = self.__fill_in_variation_nuisances(
-          hist_name, self.histosamples["signal"][1].name, nuisances, input_files)
+      self.__fill_in_variation_nuisances(hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
 
       if self.config.use_abcd_prediction:
-        self.__fill_closure_nuisance(nuisances)
+        self.__fill_closure_nuisance(nuisances_for_sample)
 
     self.__add_header(n_backgrounds)
     self.__add_rates()
-    self.__add_nuisances(nuisances)
+    self.__add_nuisances(nuisances_for_sample)
 
     datacards_path = self.config.datacards_output_path + self.datacard_file_name + ".txt"
     info(f"Storing datacard in {datacards_path}")
@@ -107,6 +109,7 @@ class DatacardsProcessor:
       n_base = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)[0]
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
       variation = abs(n_variation - n_base) / n_base
+      
       nuisances[variation_name] = {"signal": 1+variation}
 
     return nuisances
@@ -120,7 +123,7 @@ class DatacardsProcessor:
     d = bkg_hist.GetBinContent(2, 1)
     prediction = self.abcd_helper.get_prediction(b, c, d, 0, 0, 0)[0]
     closure = abs(prediction - a) / a
-    
+
     for key, value in nuisances.items():
       if value == "closure":
         nuisances[key] = {"bkg": 1+closure}
@@ -263,7 +266,7 @@ class DatacardsProcessor:
     if self.do_abcd:
       for name, (hist, sample) in self.histosamples.items():
         if "signal" in name:
-          abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=True)
+          abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=False)
           signal_rate, _, _, _, signal_rate_err, _, _, _ = abcd_values
           break
 
@@ -285,13 +288,13 @@ class DatacardsProcessor:
 
       rate = rate if rate > 0 else 1e-99
       rate_err = 1 + rate_err/rate if rate > 0 else 1.0
-      
+
       signal_rate = signal_rate if signal_rate > 0 else 1e-99
       signal_rate_err = 1 + signal_rate_err/signal_rate if signal_rate > 0 else 1.0
 
       self.datacard += f" {signal_rate} {rate}"
-      statistical_errors["signal"] = 1 + signal_rate_err/signal_rate
-      statistical_errors["bck"] = 1 + rate_err/rate
+      statistical_errors["signal"] = signal_rate_err
+      statistical_errors["bck"] = rate_err
     else:
       for name, hist in self.histosamples.items():
         if name == "data_obs":
@@ -316,29 +319,40 @@ class DatacardsProcessor:
 
     self.datacard += "\n"
 
+  def __get_first_background_name(self):
+    first_background_name = None
+
+    for name in self.histosamples:
+      if name == "data_obs":
+        continue
+
+      if "signal" not in name:
+        first_background_name = name
+        break
+
+    return first_background_name
+
   def __add_nuisances(self, nuisances):
 
-    if self.do_abcd:
-      first_background_name = None
-
-      for name in self.histosamples:
-        if name == "data_obs":
-          continue
-
-        if "signal" not in name:
-          first_background_name = name
-          break
+    first_background_name = self.__get_first_background_name()
 
     for param_name, values in nuisances.items():
       self.datacard += f"{param_name} lnN"
 
       if self.do_abcd:
+        signal_unc = "-"
+        bkg_unc = "-"
+
         if "signal" in values:
-          self.datacard += f" {values['signal']} -"
+          signal_unc = values["signal"]
+
         if "bkg" in values:
-          self.datacard += f" - {values['bkg']}"
-        if first_background_name in values:
-          self.datacard += f" - {values[first_background_name]}"
+          bkg_unc = values["bkg"]
+        elif first_background_name in values:
+          bkg_unc = values[first_background_name]
+
+        self.datacard += f" {signal_unc} {bkg_unc}"
+
       else:
         for name in self.histosamples:
           if name == "data_obs":
