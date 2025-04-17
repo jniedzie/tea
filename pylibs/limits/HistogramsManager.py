@@ -13,12 +13,12 @@ import os
 
 
 class HistogramsManager:
-  def __init__(self, config, input_files, output_path):
+  def __init__(self, config, input_files, datacard_file_name):
     self.config = config
     self.input_files = input_files
 
     self.normalizer = HistogramNormalizer(config)
-    self.datacardsProcessor = DatacardsProcessor(output_path, config)
+    self.datacardsProcessor = DatacardsProcessor(config, datacard_file_name)
     self.abcd_helper = ABCDHelper(config)
 
     self.stacks = {sample_type: self.__getStackDict(sample_type) for sample_type in SampleType}
@@ -30,8 +30,11 @@ class HistogramsManager:
 
     self.histosamples = []
 
-    if not os.path.exists(os.path.dirname(output_path)):
-      os.makedirs(os.path.dirname(output_path))
+    if not os.path.exists(os.path.dirname(self.config.datacards_output_path)):
+      os.makedirs(os.path.dirname(self.config.datacards_output_path))
+
+    if not os.path.exists(os.path.dirname(self.config.plots_output_path)):
+      os.makedirs(os.path.dirname(self.config.plots_output_path))
 
   def addHistosample(self, hist, sample):
     hist.load(self.input_files[sample.name])

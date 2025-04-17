@@ -1,17 +1,16 @@
-import os
 import ROOT
 from ctypes import c_double
 
-from Logger import error, warn
+from Logger import error, warn, info
 from ABCDHelper import ABCDHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
 
 
 class DatacardsProcessor:
-  def __init__(self, output_path, config):
-    self.output_path = output_path + ".txt"
+  def __init__(self, config, datacard_file_name):
     self.config = config
+    self.datacard_file_name = datacard_file_name
 
     self.datacard = None
     self.histosamples = {}
@@ -21,10 +20,10 @@ class DatacardsProcessor:
     self.abcd_helper = ABCDHelper()
     self.normalizer = HistogramNormalizer(config)
 
-    # get directory from the full path:
-    os.system(f"mkdir -p {os.path.dirname(output_path)}")
-
-  def create_new_datacard(self, hist_name, obs_histosample, bkg_histosamples, signal_histosample, nuisances, input_files, add_uncertainties_on_zero=False):
+  def create_new_datacard(
+      self, hist_name, obs_histosample, bkg_histosamples, signal_histosample, 
+      nuisances, input_files, add_uncertainties_on_zero=False
+  ):
     self.datacard = ""
 
     if type(obs_histosample[0]) == ROOT.TObject or obs_histosample is None:
@@ -52,17 +51,22 @@ class DatacardsProcessor:
 
     if self.do_abcd:
       self.__insert_background_sum_hist()
-      nuisances = self.__fill_in_variation_nuisances(hist_name, self.histosamples["signal"][1].name, nuisances, input_files)
+      nuisances = self.__fill_in_variation_nuisances(
+          hist_name, self.histosamples["signal"][1].name, nuisances, input_files)
+
+      if self.config.use_abcd_prediction:
+        self.__fill_closure_nuisance(nuisances)
 
     self.__add_header(n_backgrounds)
     self.__add_rates()
     self.__add_nuisances(nuisances)
 
-    print(f"Storing datacard in {self.output_path}")
-    outfile = open(self.output_path, "w")
+    datacards_path = self.config.datacards_output_path + self.datacard_file_name + ".txt"
+    info(f"Storing datacard in {datacards_path}")
+    outfile = open(datacards_path, "w")
     outfile.write(self.datacard)
 
-    print(f"Storing histograms in {self.output_path.replace('.txt', '.root')}")
+    info(f"Storing histograms in {datacards_path.replace('.txt', '.root')}")
     self.__save_histograms(add_uncertainties_on_zero)
 
   def __remove_empty_histograms(self, n_backgrounds):
@@ -106,6 +110,20 @@ class DatacardsProcessor:
       nuisances[variation_name] = {"signal": 1+variation}
 
     return nuisances
+
+  def __fill_closure_nuisance(self, nuisances):
+
+    bkg_hist = self.histosamples["bkg"][0].hist
+    a = bkg_hist.GetBinContent(1, 2)
+    b = bkg_hist.GetBinContent(1, 1)
+    c = bkg_hist.GetBinContent(2, 2)
+    d = bkg_hist.GetBinContent(2, 1)
+    prediction = self.abcd_helper.get_prediction(b, c, d, 0, 0, 0)[0]
+    closure = abs(prediction - a) / a
+    
+    for key, value in nuisances.items():
+      if value == "closure":
+        nuisances[key] = {"bkg": 1+closure}
 
   def __insert_background_sum_hist(self):
     background_sum_a = 0
@@ -171,14 +189,14 @@ class DatacardsProcessor:
 
   def __add_header(self, n_backgrounds):
     # define number of parameters
-    self.datacard += f"imax 1 number of channels\n"
+    self.datacard += "imax 1 number of channels\n"
     self.datacard += f"jmax {1 if self.do_abcd else n_backgrounds}  number of backgrounds\n"
     self.datacard += "kmax * number of nuisance parameters\n"
 
     # point to the root file for shapes
     if self.config.include_shapes:
       # get file name from the full path:
-      file_name = self.output_path.split("/")[-1].replace(".txt", ".root")
+      file_name = self.datacard_file_name.replace(".txt", ".root")
       self.datacard += f"shapes * * {file_name} $PROCESS $PROCESS_$SYSTEMATIC\n"
 
     # set observed
@@ -267,7 +285,7 @@ class DatacardsProcessor:
 
       if rate <= 0:
         warn("DatacardsProcessor::add_rates: rate is less than 0. Setting it to 1e-99")
-        self.datacard += f" {signal_rate} 1e-99"  
+        self.datacard += f" {signal_rate} 1e-99"
         statistical_errors["signal"] = 1.0
         statistical_errors["bck"] = 1.0
       else:
@@ -317,6 +335,8 @@ class DatacardsProcessor:
       if self.do_abcd:
         if "signal" in values:
           self.datacard += f" {values['signal']} -"
+        if "bkg" in values:
+          self.datacard += f" - {values['bkg']}"
         if first_background_name in values:
           self.datacard += f" - {values[first_background_name]}"
       else:
@@ -355,7 +375,8 @@ class DatacardsProcessor:
 
   def __save_histograms(self, add_uncertainties_on_zero=False):
 
-    output_file = ROOT.TFile(self.output_path.replace(".txt", ".root"), "recreate")
+    output_path = self.config.datacards_output_path + self.datacard_file_name
+    output_file = ROOT.TFile(f"{output_path}.root", "recreate")
 
     for name, (hist, sample) in self.histosamples.items():
       if add_uncertainties_on_zero and name == "data_obs":
@@ -387,6 +408,7 @@ class DatacardsProcessor:
 
       canvas.Update()
       canvas.Write()
-      canvas.SaveAs(f"{self.output_path.replace('.txt', '.pdf')}")
+      plots_path = self.config.plots_output_path + self.datacard_file_name
+      canvas.SaveAs(f"{plots_path}.pdf")
 
     output_file.Close()
