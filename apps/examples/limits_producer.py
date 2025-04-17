@@ -8,7 +8,7 @@ import time
 import re
 
 from HistogramsManager import HistogramsManager
-from Logger import fatal, info
+from Logger import fatal, info, error
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="", help="Path to the config file.")
@@ -25,8 +25,14 @@ def get_file(sample):
   return file
 
 
-def get_datacard_path(config, signal_sample):
-  datacard_path = f"{config.output_path}/datacard_{config.histogram.getName()}_{signal_sample.name}"
+def get_datacard_file_name(config, signal_sample):
+  datacard_path = f"datacard_{config.histogram.getName()}_{signal_sample.name}"
+  if config.do_abcd:
+    datacard_path += "_ABCD"
+    if config.use_abcd_prediction:
+      datacard_path += "pred"
+    else:
+      datacard_path += "real"
   return datacard_path
 
 
@@ -62,9 +68,10 @@ def run_commands_with_condor(commands):
     f.write("error = error/$(Cluster).$(Process).err\n")
     f.write("log = log/$(Cluster).log\n")
     f.write("RequestCpus = 1\n")
-    f.write("RequestMemory = 512MB\n")
+    f.write("RequestMemory = 4000MB\n")
     f.write("Initialdir = .\n")
     f.write("GetEnv = True\n")
+    f.write("+JobFlavour = \"espresso\"\n")
     f.write(f"queue {len(commands)}\n")
 
   submit_output = subprocess.check_output(["condor_submit", submit_file], text=True)
@@ -100,14 +107,16 @@ def run_commands_with_condor(commands):
       break
 
 
-def run_combine(cmssw_path, output_paths):
-
-  cwd = os.getcwd()
-  base_command = f'cd {cmssw_path}; cmssw-el7 --command-to-run \"cmsenv; cd {cwd}/../datacards/;'
+def run_combine(config, datacard_file_names):
+  base_command = (
+      f'cd {config.combine_path}; '
+      f'cmssw-el7 --no-home --command-to-run \"cmsenv; '
+      f'cd {config.datacards_output_path};'
+  )
   commands = []
 
-  for output_path in output_paths:
-    datacard_path = os.path.basename(output_path) + ".txt"
+  for datacard_file_name in datacard_file_names:
+    datacard_path = config.datacards_output_path + datacard_file_name + ".txt"
     combine_output_path = datacard_path.replace('.txt', '.log')
 
     command = f'{base_command} combine -M AsymptoticLimits {datacard_path} > {combine_output_path} \"'
@@ -125,12 +134,16 @@ def get_limits(config):
   limits_per_process = {}
 
   for signal_sample in config.signal_samples:
-    combine_output_path = os.path.basename(get_datacard_path(config, signal_sample)) + ".log"
+    combine_output_path = get_datacard_file_name(config, signal_sample) + ".log"
 
-    with open(f"{config.output_path}/{combine_output_path}", "r") as combine_output_file:
-      combine_output = combine_output_file.read()
-      r_values = [line.split("r < ")[1].strip() for line in combine_output.split("\n") if "r < " in line]
-      limits_per_process[signal_sample.name] = r_values
+    try:
+      with open(f"{config.datacards_output_path}/{combine_output_path}", "r") as combine_output_file:
+        combine_output = combine_output_file.read()
+        r_values = [line.split("r < ")[1].strip() for line in combine_output.split("\n") if "r < " in line]
+        limits_per_process[signal_sample.name] = r_values
+    except FileNotFoundError:
+      error(f"File {combine_output_path} not found.")
+      continue
 
   return limits_per_process
 
@@ -138,10 +151,22 @@ def get_limits(config):
 def save_limits(config):
   limits_per_process = get_limits(config)
 
-  file_path = f"limits_{config.histogram.getName()}.txt"
+  file_path = f"limits_{config.histogram.getName()}"
+  if config.do_abcd:
+    file_path += "_ABCD"
+    if config.use_abcd_prediction:
+      file_path += "pred"
+    else:
+      file_path += "real"
+
+  file_path += ".txt"
+
   info(f"Saving limits to {file_path}")
 
-  with open(f"../datacards/{file_path}", "w") as limits_file:
+  if not os.path.exists(os.path.dirname(config.results_output_path)):
+    os.makedirs(os.path.dirname(config.results_output_path))
+
+  with open(f"{config.results_output_path}/{file_path}", "w") as limits_file:
     for signal_name, limits in limits_per_process.items():
       limits_file.write(f"{signal_name}: {limits}\n")
       info(f"{signal_name}: {limits}")
@@ -153,26 +178,30 @@ def main():
   config = importlib.import_module(args.config.replace(".py", "").replace("/", "."))
 
   input_files = {}
-  output_paths = []
+  datacard_file_names = []
 
   for signal_sample in config.signal_samples:
-    output_path = get_datacard_path(config, signal_sample)
-    manager = HistogramsManager(config, output_path)
-
     input_files[signal_sample.name] = get_file(signal_sample)
-    manager.addHistosample(config.histogram, signal_sample, input_files[signal_sample.name])
+
+  for background_sample in config.background_samples:
+    input_files[background_sample.name] = get_file(background_sample)
+
+  for signal_sample in config.signal_samples:
+    datacard_file_name = get_datacard_file_name(config, signal_sample)
+
+    manager = HistogramsManager(config, input_files, datacard_file_name)
+    manager.addHistosample(config.histogram, signal_sample)
 
     for background_sample in config.background_samples:
+      manager.addHistosample(config.histogram, background_sample)
 
-      input_files[background_sample.name] = get_file(background_sample)
-      manager.addHistosample(config.histogram, background_sample, input_files[background_sample.name])
-
+    manager.normalizeHistograms()
     manager.buildStacks()
     manager.saveDatacards()
-    output_paths.append(output_path)
+    datacard_file_names.append(datacard_file_name)
 
   if not config.skip_combine:
-    run_combine(config.combine_path, output_paths)
+    run_combine(config, datacard_file_names)
 
   save_limits(config)
 

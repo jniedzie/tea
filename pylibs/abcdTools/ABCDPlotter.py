@@ -439,8 +439,7 @@ class ABCDPlotter:
 
         # normalize signal to background in A
         signal_integral = self.signal_projections[(mass, ctau)].Integral()
-        scale = (self.true_projection_hist.Integral() / signal_integral
-                 if signal_integral > 0 else 1)
+        scale = (self.true_projection_hist.Integral() / signal_integral if signal_integral > 0 else 1)
         self.signal_projections[(mass, ctau)].Scale(scale)
 
         self.signal_projections[(mass, ctau)].Draw("SAME")
