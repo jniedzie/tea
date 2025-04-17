@@ -283,15 +283,15 @@ class DatacardsProcessor:
       else:
         rate, rate_err = a, a_err
 
-      if rate <= 0:
-        warn("DatacardsProcessor::add_rates: rate is less than 0. Setting it to 1e-99")
-        self.datacard += f" {signal_rate} 1e-99"
-        statistical_errors["signal"] = 1.0
-        statistical_errors["bck"] = 1.0
-      else:
-        self.datacard += f" {signal_rate} {rate}"
-        statistical_errors["signal"] = 1 + signal_rate_err/signal_rate
-        statistical_errors["bck"] = 1 + rate_err/rate
+      rate = rate if rate > 0 else 1e-99
+      rate_err = 1 + rate_err/rate if rate > 0 else 1.0
+      
+      signal_rate = signal_rate if signal_rate > 0 else 1e-99
+      signal_rate_err = 1 + signal_rate_err/signal_rate if signal_rate > 0 else 1.0
+
+      self.datacard += f" {signal_rate} {rate}"
+      statistical_errors["signal"] = 1 + signal_rate_err/signal_rate
+      statistical_errors["bck"] = 1 + rate_err/rate
     else:
       for name, hist in self.histosamples.items():
         if name == "data_obs":
