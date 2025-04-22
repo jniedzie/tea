@@ -592,8 +592,8 @@ class ABCDPlotter:
   def __load_background_histograms(self):
 
     for path, cross_section in self.config.background_params:
-      intput_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_path)
-      file_path = f"{self.config.base_path}/{intput_path}"
+      input_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_path)
+      file_path = f"{self.config.base_path}/{input_path}"
 
       try:
         self.background_files[path] = ROOT.TFile.Open(file_path)
