@@ -130,6 +130,16 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
   return scaleFactors;
 }
 
+vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
+  vector<string> variations;
+  if (!applyScaleFactors["bTagging"]) return variations;
+
+  auto extraArgs = correctionsExtraArgs[name];
+  variations = GetScaleFactorVariations(extraArgs["variations"]);
+  return variations;
+}
+
+
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
   if (!applyScaleFactors["pileup"]) return 1.0;
 

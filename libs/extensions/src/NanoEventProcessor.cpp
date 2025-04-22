@@ -77,6 +77,15 @@ map<string,float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared
       weights[name] *= weight;
     }
   }
+  // special case for 0 b-jets but we still need all variation names for histograms
+  if (b_jets->size() == 0) {
+    weights["systematic"] = 1.0;
+    auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
+    auto variations = scaleFactorsManager.GetBTagVariationNames("bTaggingMedium");
+    for (auto variation : variations) {
+      weights["bTaggingMedium_"+variation] = 1.0;
+    }
+  }
   return weights;
 }
 

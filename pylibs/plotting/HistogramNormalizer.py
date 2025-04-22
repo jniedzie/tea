@@ -18,8 +18,9 @@ class HistogramNormalizer:
     self.config = config
 
     # Check if any of histograms in the config has NormalizationType different than none or to_one:  
-    if config.histogram.norm_type != NormalizationType.none and config.histogram.norm_type != NormalizationType.to_one:
-      self.__setBackgroundEntries()
+    for hist in self.config.histograms:
+      if hist.norm_type != NormalizationType.none and hist.norm_type != NormalizationType.to_one:
+        self.__setBackgroundEntries()
 
   def normalize(self, hist, sample, data_integral=None, total_backgrounds_integral=None):
     if hist.norm_type == NormalizationType.none:

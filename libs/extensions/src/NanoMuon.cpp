@@ -35,6 +35,7 @@ map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, strin
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
     recoSF = scaleFactorsManager.GetMuonScaleFactors(nameReco, fabs(GetEta()), GetPt());
   }
+  else recoSF = {{"systematic", 1.0}};
 
   scaleFactor["systematic"] = recoSF["systematic"] * idSF["systematic"] * isoSF["systematic"];
   for (auto &[name, weight] : recoSF) {
