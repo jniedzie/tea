@@ -551,28 +551,20 @@ class ABCDPlotter:
     info(f"{i=}, {j=}")
 
     info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
-    closure = -1
-    error = -1
-    min_n_events = -1
-    prediction = None
-
+    
     if a != 0 and b != 0 and c != 0 and d != 0:
-      prediction = c/d * b
-      prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
-      prediction_err *= prediction
+      prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
       closure = self.abcdHelper.get_closure(a, prediction)
-      error = self.abcdHelper.get_error(a, b, c, d, a_err, b_err, c_err, d_err, prediction)
+      error = self.abcdHelper.get_error(a, a_err, prediction, prediction_err)
       min_n_events = min(a, b, c, d)
       info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
-
-    info("\n\nOptimization values (re-calculated):")
-    info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
+      info("\n\nOptimization values (re-calculated):")
+      info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
 
     # extract optimization values from histograms for a cross check
     closure = self.optimization_hists["closure"].GetBinContent(i, j)
     error = self.optimization_hists["error"].GetBinContent(i, j)
     min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
-
     info("\nOptimization values (from hists):")
     info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
 
@@ -600,8 +592,8 @@ class ABCDPlotter:
   def __load_background_histograms(self):
 
     for path, cross_section in self.config.background_params:
-      intput_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_dir)
-      file_path = f"{self.config.base_path}/{intput_path}"
+      input_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_path)
+      file_path = f"{self.config.base_path}/{input_path}"
 
       try:
         self.background_files[path] = ROOT.TFile.Open(file_path)
@@ -664,7 +656,7 @@ class ABCDPlotter:
   def __load_signal_hists(self):
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
-        input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim[0], self.config.hist_dir)
+        input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim[0], self.config.hist_path)
 
         try:
           self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
