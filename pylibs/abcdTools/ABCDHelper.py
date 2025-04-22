@@ -411,7 +411,8 @@ class ABCDHelper:
     
     prediction = c/d * b
     prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
-
+    prediction_err *= prediction
+    
     return prediction, prediction_err
 
   def __get_optimization_hist(self, background_hist, hist_type):
