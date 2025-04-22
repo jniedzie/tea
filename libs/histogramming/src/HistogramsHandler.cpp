@@ -138,7 +138,7 @@ void HistogramsHandler::CheckHistogram(string name, string directory) {
 template <typename THist>
 void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outputFile) {
   string name = names.first;
-  string outputDir = names.second;
+  string outputDir = names.second;  
   if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
 
   outputFile->cd(outputDir.c_str());
@@ -169,8 +169,6 @@ void HistogramsHandler::SaveHistograms() {
   auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
   outputFile->cd();
 
-  bool emptyHists = false;
-
   for (auto &[names, hist] : histograms1D) {
     SaveHistogram(names, hist, outputFile);
   }
@@ -181,9 +179,5 @@ void HistogramsHandler::SaveHistograms() {
   outputFile->Close();
 
   info() << "Histograms saved to: " << path << "/" << filename << endl;
-
-  if (emptyHists) {
-    warn() << "Some histograms were defined but never filled -- they will not be stored." << endl;
-  }
 
 }

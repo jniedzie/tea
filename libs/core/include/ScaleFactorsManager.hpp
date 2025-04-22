@@ -30,6 +30,8 @@ class ScaleFactorsManager {
   float GetPileupScaleFactorCustom(int nVertices);
   float GetPileupScaleFactor(std::string name, float nVertices);
 
+  std::vector<std::string> GetBTagVariationNames(std::string name);
+
  private:
   ScaleFactorsManager();
   ~ScaleFactorsManager() {}
