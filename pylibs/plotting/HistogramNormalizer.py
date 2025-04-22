@@ -17,10 +17,17 @@ class HistogramNormalizer:
   def __init__(self, config):
     self.config = config
 
-    # Check if any of histograms in the config has NormalizationType different than none or to_one:  
-    for hist in self.config.histograms:
+    # Check if any of histograms in the config has NormalizationType different than none or to_one:
+    normalize_hists = False
+
+    histograms = config.histograms if hasattr(config, "histograms") else [config.histogram]
+    for hist in histograms:
       if hist.norm_type != NormalizationType.none and hist.norm_type != NormalizationType.to_one:
-        self.__setBackgroundEntries()
+        normalize_hists = True
+        break
+
+    if normalize_hists:
+      self.__setBackgroundEntries()
 
   def normalize(self, hist, sample, data_integral=None, total_backgrounds_integral=None):
     if hist.norm_type == NormalizationType.none:
