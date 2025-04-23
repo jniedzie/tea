@@ -6,14 +6,9 @@ import ROOT
 
 
 class ABCDHelper:
-  def __init__(self, config=None, max_error=None, max_closure=None, min_n_events=None, max_signal_contamination=None, max_overlap=None):
+  def __init__(self, config=None, args=None):
     self.config = config
-
-    self.max_error = max_error
-    self.max_closure = max_closure
-    self.min_n_events = min_n_events
-    self.max_signal_contamination = max_signal_contamination
-    self.max_overlap = max_overlap
+    self.args = args
     self.signal_overlap = {}
 
   def flip_hist_vertically(self, hist):
@@ -259,15 +254,15 @@ class ABCDHelper:
       for j in range(1, first_hist.GetNbinsY() + 1):
         values = {name: hist.GetBinContent(i, j) for name, hist in optimization_hists.items()}
 
-        if values["error"] < 0 or values["error"] > self.max_error:
+        if values["error"] < 0 or values["error"] > self.args.max_error:
           warn("ABCDHelper.get_optimal_point_for_significance: error is too high")
           continue
 
-        if values["closure"] < 0 or values["closure"] > self.max_closure:
+        if values["closure"] < 0 or values["closure"] > self.args.max_closure:
           warn("ABCDHelper.get_optimal_point_for_significance: closure is too high")
           continue
 
-        if values["min_n_events"] < 0 or values["min_n_events"] < self.min_n_events:
+        if values["min_n_events"] < 0 or values["min_n_events"] < self.args.min_n_events:
           warn("ABCDHelper.get_optimal_point_for_significance: min_n_events is too low")
           continue
 
@@ -284,7 +279,7 @@ class ABCDHelper:
 
           signal_contamination = signal_contamination_hist.GetBinContent(i, j)
 
-          if signal_contamination < 0 or signal_contamination > self.max_signal_contamination:
+          if signal_contamination < 0 or signal_contamination > self.args.max_signal_contamination:
             warn("ABCDHelper.get_optimal_point_for_significance: signal contamination is too high")
             continue
 
@@ -306,26 +301,26 @@ class ABCDHelper:
 
     values = {name: hist.GetBinContent(*point) for name, hist in optimization_hists.items()}
 
-    if "error" in values and values["error"] > self.max_error:
+    if "error" in values and values["error"] > self.args.max_error:
       warn("ABCDHelper.is_point_good_for_signal: error is too high")
       return False
 
-    if "closure" in values and values["closure"] > self.max_closure:
+    if "closure" in values and values["closure"] > self.args.max_closure:
       warn("ABCDHelper.is_point_good_for_signal: closure is too high")
       return False
 
-    if "min_n_events" in values and values["min_n_events"] < self.min_n_events:
+    if "min_n_events" in values and values["min_n_events"] < self.args.min_n_events:
       warn("ABCDHelper.is_point_good_for_signal: min_n_events is too low")
       return False
 
     signal_contamination = signal_contamination_hist.GetBinContent(*point)
 
-    if signal_contamination > self.max_signal_contamination:
+    if signal_contamination > self.args.max_signal_contamination:
       warn("ABCDHelper.is_point_good_for_signal: signal contamination is too high")
       return False
 
     overlap = self.get_overlap_coefficient(signal_hist, background_hist, mass, ctau)
-    if overlap > self.max_overlap:
+    if overlap > self.args.max_overlap:
       warn("ABCDHelper.is_point_good_for_signal: signal overlap is too high")
       return False
 

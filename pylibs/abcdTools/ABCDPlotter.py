@@ -3,21 +3,25 @@ import os
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
+from HistogramNormalizer import HistogramNormalizer, NormalizationType
+from Histogram import Histogram2D
 from Logger import fatal, warn, info
 
 
 class ABCDPlotter:
-  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination, max_overlap):
+  def __init__(self, config, args):
     self.config = config
 
-    self.abcdHelper = ABCDHelper(config, max_error, max_closure, min_n_events, max_signal_contamination, max_overlap)
+    self.abcdHelper = ABCDHelper(config, args)
     self.histogramsHelper = ABCDHistogramsHelper(config)
+    self.normalizer = HistogramNormalizer(config)
 
     self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
     self.background_files = {}
     self.background_hists = {}
     self.background_hist = None
+
     self.data_file = None
     self.signal_files = {}
     self.signal_hists = {}
@@ -165,8 +169,8 @@ class ABCDPlotter:
         continue
 
       coeff = self.abcdHelper.get_overlap_coefficient(
-        self.signal_hists[(mass, ctau)],
-        self.background_hist, mass, ctau
+          self.signal_hists[(mass, ctau)],
+          self.background_hist, mass, ctau
       )
       if coeff < threshold:
         n_signals += 1
@@ -207,9 +211,9 @@ class ABCDPlotter:
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
         overlap = self.abcdHelper.get_overlap_coefficient(
-          self.signal_hists[(mass, ctau)],
-          self.background_hist,
-          mass, ctau)
+            self.signal_hists[(mass, ctau)],
+            self.background_hist,
+            mass, ctau)
         label.DrawLatexNDC(0.13, 0.92, f"Overlap: {overlap:.2f}")
 
         self.canvases["significance"].cd(i_pad)
@@ -217,6 +221,10 @@ class ABCDPlotter:
         if self.significance_hists[(mass, ctau)] is not None:
           self.significance_hists[(mass, ctau)].Draw("colz")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
+
+  def get_background_correlation(self):
+    correlation = self.background_hist.GetCorrelationFactor()
+    return correlation
 
   def plot_background_hist(self):
     clone = self.background_hist.Clone()
@@ -272,9 +280,8 @@ class ABCDPlotter:
       closure = self.optimization_hists["closure"].GetBinContent(i, j)
       min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
 
-      info("Best point for all signals: ")
-      info(f"{self.config.variable_1} = {best_point[0]}, {self.config.variable_2} = {best_point[1]}")
-      info(f"Error: {error:.2f}, Closure: {closure:.2f}, Min n events: {min_n_events:.1f}")
+      info(f"Best point for all signals: {best_point}")
+      info(f"Closure: {closure:.2f}, Error: {error:.2f}, , Min n events: {min_n_events:.1f}")
 
     else:
       for mass in self.config.masses:
@@ -551,7 +558,7 @@ class ABCDPlotter:
     info(f"{i=}, {j=}")
 
     info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
-    
+
     if a != 0 and b != 0 and c != 0 and d != 0:
       prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
       closure = self.abcdHelper.get_closure(a, prediction)
@@ -591,28 +598,30 @@ class ABCDPlotter:
 
   def __load_background_histograms(self):
 
-    for path, cross_section in self.config.background_params:
-      input_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_path)
-      file_path = f"{self.config.base_path}/{input_path}"
+    for sample in self.config.background_samples:
+      hist = Histogram2D(
+          name=f"{self.config.collection}_{self.config.variable_1}_vs_{self.config.variable_2}{self.config.category}",
+          norm_type=NormalizationType.to_lumi,
+          x_rebin=self.config.rebin_2D,
+          y_rebin=self.config.rebin_2D,
+      )
+
+      path = sample.file_path
 
       try:
-        self.background_files[path] = ROOT.TFile.Open(file_path)
+        self.background_files[path] = ROOT.TFile.Open(path)
       except OSError:
-        warn(f"Could not open file {file_path}")
+        warn(f"Could not open file {path}")
         continue
 
       if not self.background_files[path]:
-        warn(f"Could not open file {file_path}")
+        warn(f"Could not open file {path}")
         continue
 
-      self.background_hists[path] = self.background_files[path].Get(self.hist_name)
-
-      if not self.background_hists[path]:
-        warn(f"Could not open histogram {self.hist_name} in file {file_path}")
-        continue
-
-      inital_events = self.background_files[path].Get("cutFlow").GetBinContent(1)
-      self.background_hists[path].Scale(self.config.lumi*cross_section/inital_events)
+      hist.load(self.background_files[path])
+      hist.setup(sample)
+      self.normalizer.normalize(hist, sample, None, None)
+      self.background_hists[path] = hist.hist
 
   def __setup_backgrounds_sum_histogram(self):
     if self.config.do_data:
@@ -629,29 +638,22 @@ class ABCDPlotter:
         warn(f"Could not open histogram {self.hist_name} in file {file_path}")
         return
     else:
-      for path, _ in self.config.background_params:
-        if path not in self.background_hists or not self.background_hists[path]:
+      for path, hist in self.background_hists.items():
+        if hist is None or hist.Integral() == 0:
+          warn(f"Background histogram {path} is empty or has integral=0")
           continue
 
-        if self.background_hists[path] is None or self.background_hists[path].Integral() == 0:
-          continue
-
-        self.background_hist = self.background_hists[path].Clone()
-        break
+        if self.background_hist is None:
+          self.background_hist = hist.Clone()
+        else:
+          self.background_hist.Add(hist)
 
       if not self.background_hist:
         fatal("No background histograms found")
         exit()
 
-      for path, _ in self.config.background_params[1:]:
-        if path not in self.background_hists or not self.background_hists[path]:
-          continue
-        self.background_hist.Add(self.background_hists[path])
-
     self.background_hist.SetFillColorAlpha(self.config.background_color, 0.5)
     self.background_hist.SetTitle("")
-
-    self.background_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
 
   def __load_signal_hists(self):
     for mass in self.config.masses:

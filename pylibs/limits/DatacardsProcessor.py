@@ -54,7 +54,8 @@ class DatacardsProcessor:
 
     if self.do_abcd:
       self.__insert_background_sum_hist()
-      self.__fill_in_variation_nuisances(hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
+      self.__fill_in_variation_nuisances(
+          hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
 
       if self.config.use_abcd_prediction:
         self.__fill_closure_nuisance(nuisances_for_sample)
@@ -109,7 +110,7 @@ class DatacardsProcessor:
       n_base = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)[0]
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
       variation = abs(n_variation - n_base) / n_base
-      
+
       nuisances[variation_name] = {"signal": 1+variation}
 
     return nuisances
@@ -134,32 +135,15 @@ class DatacardsProcessor:
     background_sum_c = 0
     background_sum_d = 0
 
-    background_sum_a_err = 0
-    background_sum_b_err = 0
-    background_sum_c_err = 0
-    background_sum_d_err = 0
-
     for name, (hist, sample) in self.histosamples.items():
       if name == "data_obs" or "signal" in name:
         continue
 
-      abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=True)
-      a, b, c, d, a_err, b_err, c_err, d_err = abcd_values
-
-      background_sum_a += a
-      background_sum_b += b
-      background_sum_c += c
-      background_sum_d += d
-
-      background_sum_a_err += a_err**2
-      background_sum_b_err += b_err**2
-      background_sum_c_err += c_err**2
-      background_sum_d_err += d_err**2
-
-    background_sum_a_err = background_sum_a_err**0.5
-    background_sum_b_err = background_sum_b_err**0.5
-    background_sum_c_err = background_sum_c_err**0.5
-    background_sum_d_err = background_sum_d_err**0.5
+      abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)
+      background_sum_a += abcd_values[0]
+      background_sum_b += abcd_values[1]
+      background_sum_c += abcd_values[2]
+      background_sum_d += abcd_values[3]
 
     hist = ROOT.TH2D("bkg", "bkg", 2, 0, 2, 2, 0, 2)
     hist.SetBinContent(1, 2, background_sum_a)
@@ -167,14 +151,16 @@ class DatacardsProcessor:
     hist.SetBinContent(2, 2, background_sum_c)
     hist.SetBinContent(2, 1, background_sum_d)
 
-    hist.SetBinError(1, 2, background_sum_a_err)
-    hist.SetBinError(1, 1, background_sum_b_err)
-    hist.SetBinError(2, 2, background_sum_c_err)
-    hist.SetBinError(2, 1, background_sum_d_err)
+    hist.SetBinError(1, 2, background_sum_a**0.5)
+    hist.SetBinError(1, 1, background_sum_b**0.5)
+    hist.SetBinError(2, 2, background_sum_c**0.5)
+    hist.SetBinError(2, 1, background_sum_d**0.5)
+
+    hist.SaveAs("../limits/bkg.root")
 
     histogram = Histogram2D(
         name="bkg",
-        norm_type=NormalizationType.to_lumi,
+        norm_type=None,
         x_rebin=self.config.rebin_2D,
         y_rebin=self.config.rebin_2D,
     )
@@ -276,15 +262,10 @@ class DatacardsProcessor:
       c = bkg_hist.GetBinContent(2, 2)
       d = bkg_hist.GetBinContent(2, 1)
 
-      a_err = bkg_hist.GetBinError(1, 2)
-      b_err = bkg_hist.GetBinError(1, 1)
-      c_err = bkg_hist.GetBinError(2, 2)
-      d_err = bkg_hist.GetBinError(2, 1)
-
       if self.config.use_abcd_prediction:
-        rate, rate_err = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+        rate, rate_err = self.abcd_helper.get_prediction(b, c, d, b**0.5, c**0.5, d**0.5)
       else:
-        rate, rate_err = a, a_err
+        rate, rate_err = a, a**0.5
 
       rate = rate if rate > 0 else 1e-99
       rate_err = 1 + rate_err/rate if rate > 0 else 1.0
@@ -378,14 +359,11 @@ class DatacardsProcessor:
     return hist
 
   def __get_signal_hist(self):
-    signal_hist = None
-
     for name, (hist, sample) in self.histosamples.items():
       if "signal" in name:
-        signal_hist = hist.hist
-        break
+        return hist.hist
 
-    return signal_hist
+    return None
 
   def __save_histograms(self, add_uncertainties_on_zero=False):
 
