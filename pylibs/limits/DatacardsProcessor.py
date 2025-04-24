@@ -53,6 +53,8 @@ class DatacardsProcessor:
     nuisances_for_sample = deepcopy(nuisances)
 
     if self.do_abcd:
+      self.__flip_signal_to_region_a()
+
       self.__insert_background_sum_hist()
       self.__fill_in_variation_nuisances(
           hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
@@ -71,6 +73,13 @@ class DatacardsProcessor:
 
     info(f"Storing histograms in {datacards_path.replace('.txt', '.root')}")
     self.__save_histograms(add_uncertainties_on_zero)
+
+  def __flip_signal_to_region_a(self):
+    histograms = {key: hist.hist for key, (hist, sample) in self.histosamples.items()}
+    histograms = self.abcd_helper.flip_signal_to_region_a(histograms, self.config.signal_bin)
+
+    for key in self.histosamples:
+      self.histosamples[key][0].set_hist(histograms[key])
 
   def __remove_empty_histograms(self, n_backgrounds):
     to_remove = []
@@ -106,10 +115,18 @@ class DatacardsProcessor:
       variation_hist.setup(sample)
       self.normalizer.normalize(variation_hist, sample, None, None)
 
+      histograms = self.abcd_helper.flip_signal_to_region_a({"signal": variation_hist.hist}, self.config.signal_bin)
+      variation_hist.set_hist(histograms["signal"])
+
       # get number of events in the signal bin
       n_base = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)[0]
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
-      variation = abs(n_variation - n_base) / n_base
+
+      if n_base != 0:
+        variation = abs(n_variation - n_base) / n_base
+      else:
+        variation = 0
+        warn(f"Histogram {hist_name} has no events in the signal bin. Setting variation to 0.")
 
       nuisances[variation_name] = {"signal": 1+variation}
 

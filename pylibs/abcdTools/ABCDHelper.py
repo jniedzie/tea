@@ -1,4 +1,4 @@
-from Logger import warn
+from Logger import warn, info
 
 import math
 from ctypes import c_double
@@ -11,12 +11,75 @@ class ABCDHelper:
     self.args = args
     self.signal_overlap = {}
 
+  def flip_signal_to_region_a(self, histograms, max_region=None):
+    if max_region is None:
+      background_hist = histograms["background"]
+      signal_hists = {key: hist for key, hist in histograms.items() if key != "background"}
+      max_region = self.__find_signal_bin(background_hist, signal_hists)
+      info(f"\n\nSignal found in region {max_region}\n\n")
+
+    if max_region == "A":
+      pass  # already in region A
+    elif max_region == "B":
+      warn("Signal in region B, flipping to A")
+      for key in histograms:
+        histograms[key] = self.flip_hist_horizontally(histograms[key])
+    elif max_region == "C":
+      warn("Signal in region C, flipping to A")
+      for key in histograms:
+        histograms[key] = self.flip_hist_vertically(histograms[key])
+    elif max_region == "D":
+      warn("Signal in region D, flipping to A")
+      for key in histograms:
+        histograms[key] = self.flip_hist_horizontally(histograms[key])
+        histograms[key] = self.flip_hist_vertically(histograms[key])
+
+    return histograms
+
+  def __find_signal_bin(self, background_hist, signal_hists):
+    background_mean_x = background_hist.GetMean(1)
+    background_mean_y = background_hist.GetMean(2)
+
+    # A  |  C
+    # -------
+    # B  |  D
+
+    signal_region_count = {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 0
+    }
+
+    for signal_hist in signal_hists.values():
+      if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
+        warn(f"ABCDHelper.__find_signal_bin: signal_hist is None")
+        continue
+
+      # get mean if the signal in x and y dimentions
+      mean_x = signal_hist.GetMean(1)
+      mean_y = signal_hist.GetMean(2)
+
+      if mean_x < background_mean_x and mean_y > background_mean_y:
+        signal_region_count["A"] += 1
+      elif mean_x < background_mean_x and mean_y < background_mean_y:
+        signal_region_count["B"] += 1
+      elif mean_x > background_mean_x and mean_y > background_mean_y:
+        signal_region_count["C"] += 1
+      elif mean_x > background_mean_x and mean_y < background_mean_y:
+        signal_region_count["D"] += 1
+
+    return max(signal_region_count, key=signal_region_count.get)
+
   def flip_hist_vertically(self, hist):
     # The method changes the y-axis from Y to -Y. The range of the axis will
     # be changed from (a, b) to (-b, -a), and the value on the y-axis will be changed
     # from y to -y. The x-axis will not be changed.
 
-    flipped_hist = ROOT.TH2F(hist.GetName() + "_flipped", hist.GetTitle(),
+    if hist is None:
+      return None
+
+    flipped_hist = ROOT.TH2F(hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}", hist.GetTitle(),
                              hist.GetNbinsX(), hist.GetXaxis().GetXmin(), hist.GetXaxis().GetXmax(),
                              hist.GetNbinsY(), -hist.GetYaxis().GetXmax(), -hist.GetYaxis().GetXmin())
 
@@ -36,7 +99,10 @@ class ABCDHelper:
     # be changed from (a, b) to (-b, -a), and the value on the x-axis will be changed
     # from x to -x. The y-axis will not be changed.
 
-    flipped_hist = ROOT.TH2F(hist.GetName() + "_flipped", hist.GetTitle(),
+    if hist is None:
+      return None
+
+    flipped_hist = ROOT.TH2F(hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}", hist.GetTitle(),
                              hist.GetNbinsX(), -hist.GetXaxis().GetXmax(), -hist.GetXaxis().GetXmin(),
                              hist.GetNbinsY(), hist.GetYaxis().GetXmin(), hist.GetYaxis().GetXmax())
 
@@ -403,11 +469,11 @@ class ABCDHelper:
     if b <= 0 or c <= 0 or d <= 0:
       warn("ABCDHelper.get_prediction: b, c or d is less than or equal to 0")
       return 0, 0
-    
+
     prediction = c/d * b
     prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
     prediction_err *= prediction
-    
+
     return prediction, prediction_err
 
   def __get_optimization_hist(self, background_hist, hist_type):

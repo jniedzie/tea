@@ -74,87 +74,14 @@ class ABCDPlotter:
       hist.GetZaxis().SetRangeUser(self.config.z_params[name][1], self.config.z_params[name][2])
 
   def __flip_signal_to_region_a(self):
+    histograms = self.signal_hists
+    histograms["background"] = self.background_hist
+    
+    histograms = self.abcdHelper.flip_signal_to_region_a(histograms)
 
-    background_mean_x = self.background_hist.GetMean(1)
-    background_mean_y = self.background_hist.GetMean(2)
-
-    # A  |  C
-    # -------
-    # B  |  D
-
-    signal_region_count = {
-        "A": 0,
-        "B": 0,
-        "C": 0,
-        "D": 0
-    }
-
-    for mass, ctau in self.signal_hists:
-      signal_hist = self.signal_hists[(mass, ctau)]
-
-      if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-        continue
-
-      # get mean if the signal in x and y dimentions
-      mean_x = signal_hist.GetMean(1)
-      mean_y = signal_hist.GetMean(2)
-
-      if mean_x < background_mean_x and mean_y > background_mean_y:
-        signal_region_count["A"] += 1
-      elif mean_x < background_mean_x and mean_y < background_mean_y:
-        signal_region_count["B"] += 1
-      elif mean_x > background_mean_x and mean_y > background_mean_y:
-        signal_region_count["C"] += 1
-      elif mean_x > background_mean_x and mean_y < background_mean_y:
-        signal_region_count["D"] += 1
-
-    max_region = max(signal_region_count, key=signal_region_count.get)
-
-    if max_region == "A":
-      pass  # already in region A
-    elif max_region == "B":
-      warn("Signal in region B, flipping to region A")
-      self.background_hist = self.abcdHelper.flip_hist_vertically(self.background_hist)
-      for mass, ctau in self.signal_hists:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        signal_hist = self.signal_hists[(mass, ctau)]
-
-        if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-          continue
-
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_vertically(signal_hist)
-
-    elif max_region == "C":
-      warn("Signal in region C, flipping to region A")
-      self.background_hist = self.abcdHelper.flip_hist_horizontally(self.background_hist)
-      for mass, ctau in self.signal_hists:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        signal_hist = self.signal_hists[(mass, ctau)]
-
-        if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-          continue
-
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_horizontally(signal_hist)
-    elif max_region == "D":
-      warn("Signal in region D, flipping to region A")
-      self.background_hist = self.abcdHelper.flip_hist_vertically(self.background_hist)
-      self.background_hist = self.abcdHelper.flip_hist_horizontally(self.background_hist)
-
-      for mass, ctau in self.signal_hists:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        signal_hist = self.signal_hists[(mass, ctau)]
-
-        if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-          continue
-
-        signal_hist = self.abcdHelper.flip_hist_vertically(signal_hist)
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_horizontally(signal_hist)
+    self.background_hist = histograms["background"]
+    del histograms["background"]
+    self.signal_hists = histograms
 
     if self.variable_1_min is None:
       self.variable_1_min = self.background_hist.GetXaxis().GetXmin()
