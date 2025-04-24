@@ -30,22 +30,17 @@ def main():
   ROOT.gROOT.SetBatch(True)
 
   config = getConfig(args.config)
-  abcdPlotter = ABCDPlotter(
-      config,
-      args.max_error,
-      args.max_closure,
-      args.min_n_events,
-      args.max_signal_contamination,
-      args.max_overlap
-  )
+  abcdPlotter = ABCDPlotter(config, args)
 
-  correlation = abcdPlotter.plot_background_hist()
+  correlation = abcdPlotter.get_background_correlation()
+  info(f"Background correlation: {correlation:.2f}")
 
   if abs(correlation) > args.max_correlation:
     warn("Correlation is too high, skipping the signal plots")
     return
 
   abcdPlotter.calculate_best_points()
+
   n_points_found = abcdPlotter.get_n_signals_with_good_binning()
 
   if n_points_found < args.min_signals:
@@ -54,6 +49,7 @@ def main():
 
   info(f"Found {n_points_found} optimal points with good binning.")
 
+  abcdPlotter.plot_background_hist()
   abcdPlotter.plot_optimization_hists()
   abcdPlotter.plot_per_signal_hists()
 

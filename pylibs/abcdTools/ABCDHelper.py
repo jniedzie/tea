@@ -1,4 +1,4 @@
-from Logger import warn
+from Logger import warn, info
 
 import math
 from ctypes import c_double
@@ -6,22 +6,80 @@ import ROOT
 
 
 class ABCDHelper:
-  def __init__(self, config=None, max_error=None, max_closure=None, min_n_events=None, max_signal_contamination=None, max_overlap=None):
+  def __init__(self, config=None, args=None):
     self.config = config
-
-    self.max_error = max_error
-    self.max_closure = max_closure
-    self.min_n_events = min_n_events
-    self.max_signal_contamination = max_signal_contamination
-    self.max_overlap = max_overlap
+    self.args = args
     self.signal_overlap = {}
+
+  def flip_signal_to_region_a(self, histograms, max_region=None):
+    if max_region is None:
+      background_hist = histograms["background"]
+      signal_hists = {key: hist for key, hist in histograms.items() if key != "background"}
+      max_region = self.__find_signal_bin(background_hist, signal_hists)
+      info(f"\n\nSignal found in region {max_region}\n\n")
+
+    if max_region == "A":
+      pass  # already in region A
+    elif max_region == "B":
+      warn("Signal in region B, flipping to A")
+      for key in histograms:
+        histograms[key] = self.flip_hist_horizontally(histograms[key])
+    elif max_region == "C":
+      warn("Signal in region C, flipping to A")
+      for key in histograms:
+        histograms[key] = self.flip_hist_vertically(histograms[key])
+    elif max_region == "D":
+      warn("Signal in region D, flipping to A")
+      for key in histograms:
+        histograms[key] = self.flip_hist_horizontally(histograms[key])
+        histograms[key] = self.flip_hist_vertically(histograms[key])
+
+    return histograms
+
+  def __find_signal_bin(self, background_hist, signal_hists):
+    background_mean_x = background_hist.GetMean(1)
+    background_mean_y = background_hist.GetMean(2)
+
+    # A  |  C
+    # -------
+    # B  |  D
+
+    signal_region_count = {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 0
+    }
+
+    for signal_hist in signal_hists.values():
+      if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
+        warn(f"ABCDHelper.__find_signal_bin: signal_hist is None")
+        continue
+
+      # get mean if the signal in x and y dimentions
+      mean_x = signal_hist.GetMean(1)
+      mean_y = signal_hist.GetMean(2)
+
+      if mean_x < background_mean_x and mean_y > background_mean_y:
+        signal_region_count["A"] += 1
+      elif mean_x < background_mean_x and mean_y < background_mean_y:
+        signal_region_count["B"] += 1
+      elif mean_x > background_mean_x and mean_y > background_mean_y:
+        signal_region_count["C"] += 1
+      elif mean_x > background_mean_x and mean_y < background_mean_y:
+        signal_region_count["D"] += 1
+
+    return max(signal_region_count, key=signal_region_count.get)
 
   def flip_hist_vertically(self, hist):
     # The method changes the y-axis from Y to -Y. The range of the axis will
     # be changed from (a, b) to (-b, -a), and the value on the y-axis will be changed
     # from y to -y. The x-axis will not be changed.
 
-    flipped_hist = ROOT.TH2F(hist.GetName() + "_flipped", hist.GetTitle(),
+    if hist is None:
+      return None
+
+    flipped_hist = ROOT.TH2F(hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}", hist.GetTitle(),
                              hist.GetNbinsX(), hist.GetXaxis().GetXmin(), hist.GetXaxis().GetXmax(),
                              hist.GetNbinsY(), -hist.GetYaxis().GetXmax(), -hist.GetYaxis().GetXmin())
 
@@ -41,7 +99,10 @@ class ABCDHelper:
     # be changed from (a, b) to (-b, -a), and the value on the x-axis will be changed
     # from x to -x. The y-axis will not be changed.
 
-    flipped_hist = ROOT.TH2F(hist.GetName() + "_flipped", hist.GetTitle(),
+    if hist is None:
+      return None
+
+    flipped_hist = ROOT.TH2F(hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}", hist.GetTitle(),
                              hist.GetNbinsX(), -hist.GetXaxis().GetXmax(), -hist.GetXaxis().GetXmin(),
                              hist.GetNbinsY(), hist.GetYaxis().GetXmin(), hist.GetYaxis().GetXmax())
 
@@ -259,15 +320,15 @@ class ABCDHelper:
       for j in range(1, first_hist.GetNbinsY() + 1):
         values = {name: hist.GetBinContent(i, j) for name, hist in optimization_hists.items()}
 
-        if values["error"] < 0 or values["error"] > self.max_error:
+        if values["error"] < 0 or values["error"] > self.args.max_error:
           warn("ABCDHelper.get_optimal_point_for_significance: error is too high")
           continue
 
-        if values["closure"] < 0 or values["closure"] > self.max_closure:
+        if values["closure"] < 0 or values["closure"] > self.args.max_closure:
           warn("ABCDHelper.get_optimal_point_for_significance: closure is too high")
           continue
 
-        if values["min_n_events"] < 0 or values["min_n_events"] < self.min_n_events:
+        if values["min_n_events"] < 0 or values["min_n_events"] < self.args.min_n_events:
           warn("ABCDHelper.get_optimal_point_for_significance: min_n_events is too low")
           continue
 
@@ -284,7 +345,7 @@ class ABCDHelper:
 
           signal_contamination = signal_contamination_hist.GetBinContent(i, j)
 
-          if signal_contamination < 0 or signal_contamination > self.max_signal_contamination:
+          if signal_contamination < 0 or signal_contamination > self.args.max_signal_contamination:
             warn("ABCDHelper.get_optimal_point_for_significance: signal contamination is too high")
             continue
 
@@ -306,26 +367,26 @@ class ABCDHelper:
 
     values = {name: hist.GetBinContent(*point) for name, hist in optimization_hists.items()}
 
-    if "error" in values and values["error"] > self.max_error:
+    if "error" in values and values["error"] > self.args.max_error:
       warn("ABCDHelper.is_point_good_for_signal: error is too high")
       return False
 
-    if "closure" in values and values["closure"] > self.max_closure:
+    if "closure" in values and values["closure"] > self.args.max_closure:
       warn("ABCDHelper.is_point_good_for_signal: closure is too high")
       return False
 
-    if "min_n_events" in values and values["min_n_events"] < self.min_n_events:
+    if "min_n_events" in values and values["min_n_events"] < self.args.min_n_events:
       warn("ABCDHelper.is_point_good_for_signal: min_n_events is too low")
       return False
 
     signal_contamination = signal_contamination_hist.GetBinContent(*point)
 
-    if signal_contamination > self.max_signal_contamination:
+    if signal_contamination > self.args.max_signal_contamination:
       warn("ABCDHelper.is_point_good_for_signal: signal contamination is too high")
       return False
 
     overlap = self.get_overlap_coefficient(signal_hist, background_hist, mass, ctau)
-    if overlap > self.max_overlap:
+    if overlap > self.args.max_overlap:
       warn("ABCDHelper.is_point_good_for_signal: signal overlap is too high")
       return False
 
@@ -408,11 +469,11 @@ class ABCDHelper:
     if b <= 0 or c <= 0 or d <= 0:
       warn("ABCDHelper.get_prediction: b, c or d is less than or equal to 0")
       return 0, 0
-    
+
     prediction = c/d * b
     prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
     prediction_err *= prediction
-    
+
     return prediction, prediction_err
 
   def __get_optimization_hist(self, background_hist, hist_type):
