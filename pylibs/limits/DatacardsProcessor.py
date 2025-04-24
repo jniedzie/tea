@@ -156,8 +156,6 @@ class DatacardsProcessor:
     hist.SetBinError(2, 2, background_sum_c**0.5)
     hist.SetBinError(2, 1, background_sum_d**0.5)
 
-    hist.SaveAs("../limits/bkg.root")
-
     histogram = Histogram2D(
         name="bkg",
         norm_type=None,

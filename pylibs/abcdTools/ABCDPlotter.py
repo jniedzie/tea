@@ -18,6 +18,7 @@ class ABCDPlotter:
 
     self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
+    self.best_points_path = f"{config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
     self.background_files = {}
     self.background_hists = {}
     self.background_hist = None
@@ -281,7 +282,7 @@ class ABCDPlotter:
       min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
 
       info(f"Best point for all signals: {best_point}")
-      info(f"Closure: {closure:.2f}, Error: {error:.2f}, , Min n events: {min_n_events:.1f}")
+      info(f"Closure: {closure:.2f}, Error: {error:.2f}, Min n events: {min_n_events:.1f}")
 
     else:
       for mass in self.config.masses:
@@ -324,8 +325,7 @@ class ABCDPlotter:
 
   def plot_and_save_best_abcd_points(self):
 
-    file_path = f"{self.config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
-    with open(file_path, "w") as f:
+    with open(self.best_points_path, "w") as f:
       f.write("mass, ctau, best_x, best_y, closure, error, min_n_events, significance, contamination\n")
 
       for i_mass, mass in enumerate(self.config.masses):
@@ -392,7 +392,7 @@ class ABCDPlotter:
           self.canvases["significance"].Update()
 
       f.close()
-      info(f"\nBest points saved to {file_path}\n")
+      info(f"\nBest points saved to {self.best_points_path}\n")
 
   def plot_background_projections(self):
 
@@ -734,10 +734,10 @@ class ABCDPlotter:
         self.contamination_hists[(mass, ctau)] = self.abcdHelper.get_signal_contramination_hist(
             self.signal_hists[(mass, ctau)])
 
-  def __get_input_dict(self, input_path):
+  def __get_input_dict(self):
     results = {}
 
-    with open(input_path, "r") as f:
+    with open(self.best_points_path, "r") as f:
       lines = f.readlines()
 
       for line in lines[1:]:
@@ -770,16 +770,7 @@ class ABCDPlotter:
   def plot_optimal_points(self):
     ROOT.gStyle.SetOptStat(0)
 
-    region = self.config.do_region
-    collection = self.config.collection
-    do_data = self.config.do_data
-
-    input_path = (
-        f"../abcd/results_{region}_{collection}_"
-        f"{'data' if do_data else 'mc'}{self.config.category}/best_points_"
-        f"{self.config.variable_1}_vs_{self.config.variable_2}.txt"
-    )
-    results = self.__get_input_dict(input_path)
+    results = self.__get_input_dict()
 
     mass_to_bin = {
         0.35: 1,
@@ -840,6 +831,4 @@ class ABCDPlotter:
       y = hist.GetYaxis().GetBinCenter(y)
       latex.DrawLatex(x, y, f"{best_x}, {best_y}")
 
-    canvas.SaveAs(
-        f"../abcd/results_{region}_{collection}_{'data' if do_data else 'mc'}{self.config.category}/best_points_"
-        f"{self.config.variable_1}_vs_{self.config.variable_2}.pdf")
+    canvas.SaveAs(self.best_points_path.replace(".txt", ".pdf"))
