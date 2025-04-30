@@ -379,23 +379,24 @@ class ABCDHelper:
       warn("ABCDHelper.is_point_good_for_signal: min_n_events is too low")
       return False
 
-    signal_contamination = signal_contamination_hist.GetBinContent(*point)
+    if signal_contamination_hist is not None:
+      signal_contamination = signal_contamination_hist.GetBinContent(*point)
 
-    if signal_contamination > self.args.max_signal_contamination:
-      warn("ABCDHelper.is_point_good_for_signal: signal contamination is too high")
-      return False
+      if signal_contamination > self.args.max_signal_contamination:
+        warn("ABCDHelper.is_point_good_for_signal: signal contamination is too high")
+        return False
 
-    overlap = self.get_overlap_coefficient(signal_hist, background_hist, mass, ctau)
-    if overlap > self.args.max_overlap:
-      warn("ABCDHelper.is_point_good_for_signal: signal overlap is too high")
-      return False
+    if signal_hist is not None:
+      overlap = self.get_overlap_coefficient(signal_hist, background_hist, mass, ctau)
+      if overlap > self.args.max_overlap:
+        warn("ABCDHelper.is_point_good_for_signal: signal overlap is too high")
+        return False
 
     return True
 
   def get_optimal_point_for_param(self, optimization_hists, param):
 
     optimization_hist = optimization_hists[param]
-    other_hists = {name: hist for name, hist in optimization_hists.items() if name != param}
 
     best_point = None
     min_value = 999999
@@ -405,7 +406,15 @@ class ABCDHelper:
       for j in range(1, optimization_hist.GetNbinsY() + 1):
         optimization_value = optimization_hist.GetBinContent(i, j)
 
-        if not self.is_point_good_for_signal(optimization_hist, other_hists, (i, j)):
+        if not self.is_point_good_for_signal(
+            signal_hist=None,
+            background_hist=None,
+            ctau=None,
+            mass=None,
+            signal_contamination_hist=None,
+            optimization_hists=optimization_hists,
+            point=(i, j)
+        ):
           continue
 
         if (param == "error" or param == "closure") and optimization_value < min_value:
