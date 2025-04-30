@@ -10,10 +10,10 @@ parser.add_argument("--config", type=str, default="", help="Path to the config f
 parser.add_argument("--max_correlation", type=float, default=1.0, help="Max correlation for the background histograms.")
 parser.add_argument("--min_signals", type=int, default=0, help="Min number of ""good"" signals.")
 parser.add_argument("--max_overlap", type=float, default=1.0, help="Max overlap between background and signal.")
-parser.add_argument("--max_error", type=float, default=1.0, help="Max allowed error expressed in number of sigmas.")
-parser.add_argument("--max_closure", type=float, default=0.20, help="Max allowed closure.")
-parser.add_argument("--min_n_events", type=int, default=10, help="Min number of events in any of the ABCD bins.")
-parser.add_argument("--max_signal_contamination", type=float, default=0.20,
+parser.add_argument("--max_error", type=float, default=10.0, help="Max allowed error expressed in number of sigmas.")
+parser.add_argument("--max_closure", type=float, default=1.0, help="Max allowed closure.")
+parser.add_argument("--min_n_events", type=int, default=0, help="Min number of events in any of the ABCD bins.")
+parser.add_argument("--max_signal_contamination", type=float, default=1.00,
                     help="Max allowed signal contamination in any of the ABCD bins.")
 args = parser.parse_args()
 
