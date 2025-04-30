@@ -46,7 +46,7 @@ class NanoMuon {
   int GetMatchIdxForNthBestMatch(int N);
   int GetMatchesForNthBestMatch(int N);
 
-  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3);
+  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false);
 
   TLorentzVector GetFourVector();
 

@@ -79,7 +79,7 @@ int NanoMuon::GetMatchesForNthBestMatch(int N) {
   return GetAs<int>(matchString);
 }
 
-shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR) {
+shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR, bool allowNonMuons) {
   shared_ptr<NanoGenParticle> bestGenMuon = nullptr;
   float bestDeltaR = maxDeltaR;
 
@@ -88,7 +88,7 @@ shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genP
 
   for (auto physObj : *genParticles) {
     auto genParticle = asNanoGenParticle(physObj);
-    if (!genParticle->IsMuon()) continue;
+    if (!genParticle->IsMuon() && !allowNonMuons) continue;
 
     float genEta = genParticle->Get("eta");
     float genPhi = genParticle->Get("phi");
