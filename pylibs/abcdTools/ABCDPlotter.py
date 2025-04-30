@@ -16,7 +16,8 @@ class ABCDPlotter:
     self.histogramsHelper = ABCDHistogramsHelper(config)
     self.normalizer = HistogramNormalizer(config)
 
-    self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+    self.signal_hist_name = f"{config.signal_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+    self.background_hist_name = f"{config.background_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
     self.best_points_path = f"{config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
     self.background_files = {}
@@ -76,7 +77,7 @@ class ABCDPlotter:
   def __flip_signal_to_region_a(self):
     histograms = self.signal_hists
     histograms["background"] = self.background_hist
-    
+
     histograms = self.abcdHelper.flip_signal_to_region_a(histograms)
 
     self.background_hist = histograms["background"]
@@ -527,7 +528,10 @@ class ABCDPlotter:
 
     for sample in self.config.background_samples:
       hist = Histogram2D(
-          name=f"{self.config.collection}_{self.config.variable_1}_vs_{self.config.variable_2}{self.config.category}",
+          name=(
+              f"{self.config.background_collection}_{self.config.variable_1}_vs_"
+              f"{self.config.variable_2}{self.config.category}"
+          ),
           norm_type=NormalizationType.to_lumi,
           x_rebin=self.config.rebin_2D,
           y_rebin=self.config.rebin_2D,
@@ -552,17 +556,30 @@ class ABCDPlotter:
 
   def __setup_backgrounds_sum_histogram(self):
     if self.config.do_data:
-      file_path = f"{self.config.base_path}/{self.config.data_path}"
-      self.data_file = ROOT.TFile.Open(file_path)
+      path = f"{self.config.base_path}/{self.config.data_path}"
+      
+      hist = Histogram2D(
+          name=(
+              f"{self.config.background_collection}_{self.config.variable_1}_vs_"
+              f"{self.config.variable_2}{self.config.category}"
+          ),
+          norm_type=NormalizationType.to_lumi,
+          x_rebin=self.config.rebin_2D,
+          y_rebin=self.config.rebin_2D,
+      )
+
+      self.data_file = ROOT.TFile.Open(path)
 
       if not self.data_file:
-        warn(f"Could not open file {file_path}")
+        warn(f"Could not open file {path}")
         return
 
-      self.background_hist = self.data_file.Get(self.hist_name)
+      hist.load(self.data_file)
+      hist.setup()
+      self.background_hist = hist.hist
 
       if not self.background_hist:
-        warn(f"Could not open histogram {self.hist_name} in file {file_path}")
+        warn(f"Could not open histogram {self.background_hist_name} in file {path}")
         return
     else:
       for path, hist in self.background_hists.items():
@@ -585,16 +602,17 @@ class ABCDPlotter:
   def __load_signal_hists(self):
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
-        input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim[0], self.config.hist_path)
+        input_path = self.config.signal_path_pattern.format(
+            mass, ctau, self.config.signal_skim[0], self.config.signal_hist_path)
 
         try:
           self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
         except OSError:
           continue
 
-        self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.hist_name)
+        self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.signal_hist_name)
         if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
-          info(f"Could not open histogram {self.hist_name} in file {input_path}")
+          info(f"Could not open histogram {self.signal_hist_name} in file {input_path}")
           continue
 
         self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")

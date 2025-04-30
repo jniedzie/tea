@@ -46,7 +46,15 @@ class NanoMuon {
   int GetMatchIdxForNthBestMatch(int N);
   int GetMatchesForNthBestMatch(int N);
 
-  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3);
+  /**
+   * Retrieves the best-matching NanoGenParticle from the provided genMuonCollection.
+   *
+   * @param genMuonCollection A collection of PhysicsObjects representing generated muons.
+   * @param maxDeltaR The maximum allowed deltaR for matching (default: 0.3).
+   * @param allowNonMuons If true, allows matching to non-muon particles in the collection (default: false).
+   * @return A shared pointer to the best-matching NanoGenParticle, or nullptr if no match is found.
+   */
+  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false);
 
   TLorentzVector GetFourVector();
 
