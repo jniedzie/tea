@@ -102,8 +102,10 @@ def main():
     for sample in samples:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
-      for name, apply in applyScaleFactors.items():
-        update_config(tmp_config_path, f"  \"{name}\":", "False,\n" if "collision" in sample else f"{apply},\n")
+      for name, applyPair in applyScaleFactors.items():
+        applyDefault = applyPair[0]
+        applyVariation = applyPair[1]
+        update_config(tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n")
       update_config(tmp_files_config_path, "sample_path = ", f"\"{sample}\"\n")
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
@@ -122,8 +124,10 @@ def main():
     for dataset, output_dir in datasets_and_output_dirs:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
-      for name, apply in applyScaleFactors.items():
-        update_config(tmp_config_path, f"  \"{name}\":", False if "collision" in sample else f"{apply},\n")
+      for name, applyPair in applyScaleFactors.items():
+        applyDefault = applyPair[0]
+        applyVariation = applyPair[1]
+        update_config(tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n")
 
       update_config(tmp_files_config_path, "dataset = ", f"\"{dataset}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
@@ -136,8 +140,10 @@ def main():
     for input_dasfiles, output_dir in input_dasfiles_and_output_dirs:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
-      for name, apply in applyScaleFactors.items():
-        update_config(tmp_config_path, f"  \"{name}\":", False if "collision" in sample else f"{apply},\n")
+      for name, applyPair in applyScaleFactors.items():
+        applyDefault = applyPair[0]
+        applyVariation = applyPair[1]
+        update_config(tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n")
 
       update_config(tmp_files_config_path, "input_dasfiles = ", f"\"{input_dasfiles}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")

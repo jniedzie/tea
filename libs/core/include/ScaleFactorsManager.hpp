@@ -32,6 +32,8 @@ class ScaleFactorsManager {
 
   std::vector<std::string> GetBTagVariationNames(std::string name);
 
+  std::map<std::string,float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
+
  private:
   ScaleFactorsManager();
   ~ScaleFactorsManager() {}
@@ -40,7 +42,7 @@ class ScaleFactorsManager {
     static ScaleFactorsManager instance;
     return instance;
   }
-  std::map<std::string, bool> applyScaleFactors;
+  std::map<std::string, std::vector<bool>> applyScaleFactors;
 
   correction::Correction::Ref bTaggingCorrections;
   correction::Correction::Ref muonCorrections;
