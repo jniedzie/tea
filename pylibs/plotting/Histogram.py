@@ -158,6 +158,10 @@ class Histogram2D:
     return True
 
   def setup(self, sample=None):
+    if self.hist is None or type(self.hist) is ROOT.TObject:
+      error(f"Could not find histogram: {self.name}")
+      return
+    
     self.hist.Rebin2D(self.x_rebin, self.y_rebin)
 
   def getName(self):

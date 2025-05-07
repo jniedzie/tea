@@ -190,7 +190,9 @@ class ABCDHelper:
     background_hist = background_hist.Clone()
     signal_hist = signal_hist.Clone()
     background_hist.Scale(1.0 / background_hist.Integral())
-    signal_hist.Scale(1.0 / signal_hist.Integral())
+    
+    if signal_hist.Integral() != 0:
+      signal_hist.Scale(1.0 / signal_hist.Integral())
 
     numerator = 0.0
     sig_norm = 0.0
