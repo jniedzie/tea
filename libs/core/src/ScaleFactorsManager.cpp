@@ -135,8 +135,8 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 }
 
 map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["muonTrigger"][0];
-  bool applyVariations = applyScaleFactors["muonTrigger"][1];
+  bool applyDefault = applyScaleFactors["bTagging"][0];
+  bool applyVariations = applyScaleFactors["bTagging"][1];
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
