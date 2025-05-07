@@ -130,7 +130,7 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
 
 void HistogramsHandler::CheckHistogram(string name, string directory) {
   if (!histograms1D.count(make_pair(name,directory)) && !histograms2D.count(make_pair(name,directory))) {
-    fatal() << "Couldn't find key: " << name << " in histograms map" << endl;
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in histograms map" << endl;
     exit(1);
   }
 }

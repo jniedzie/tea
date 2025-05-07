@@ -12,7 +12,7 @@ using correction::CorrectionSet;
 ScaleFactorsManager::ScaleFactorsManager() {
   ReadScaleFactorFlags();
   ReadScaleFactors();
-  if (applyScaleFactors["pileup"]) ReadPileupSFs();
+  if (applyScaleFactors["pileup"][0]) ReadPileupSFs();
 }
 
 void ScaleFactorsManager::ReadScaleFactors() {
@@ -49,8 +49,8 @@ void ScaleFactorsManager::ReadScaleFactorFlags() {
 
   info() << "\n------------------------------------" << endl;
   info() << "Applying scale factors:" << endl;
-  for (auto &[name, apply] : applyScaleFactors) {
-    info() << "  " << name << ": " << apply << endl;
+  for (auto &[name, applyVector] : applyScaleFactors) {
+    info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
   }
   info() << "------------------------------------\n" << endl;
 }
@@ -66,11 +66,15 @@ void ScaleFactorsManager::ReadPileupSFs() {
 }
 
 map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, float eta, float pt) {
-  if (!applyScaleFactors["PUjetID"]) return {{"systematic", 1.0}};
+  bool applyDefault = applyScaleFactors["PUjetID"][0];
+  bool applyVariations = applyScaleFactors["PUjetID"][1];
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
-  scaleFactors["systematic"] = TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});  
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  else scaleFactors["systematic"] = TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+  if (!applyVariations) return scaleFactors;
+
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {eta, pt, variation, extraArgs["workingPoint"]});
@@ -79,11 +83,15 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
 }
 
 map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float eta, float pt) {
-  if (!applyScaleFactors["muon"]) return {{"systematic", 1.0}};
+  bool applyDefault = applyScaleFactors["muon"][0];
+  bool applyVariations = applyScaleFactors["muon"][1];
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
-  scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  else scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+  if(!applyVariations) return scaleFactors;
+  
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation});
@@ -92,11 +100,15 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
 }
 
 map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, float eta, float pt) {
-  if (!applyScaleFactors["muon"]) return {{"systematic", 1.0}};
+  bool applyDefault = applyScaleFactors["muon"][0];
+  bool applyVariations = applyScaleFactors["muon"][1];
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
-  scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  else scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyVariations) return scaleFactors;
+
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, variation});
@@ -105,11 +117,16 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, floa
 }
 
 map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
-  if (!applyScaleFactors["muonTrigger"]) return {{"systematic", 1.0}};
+  bool applyDefault = applyScaleFactors["muonTrigger"][0];
+  bool applyVariations = applyScaleFactors["muonTrigger"][1];
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
-  scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyVariations) return scaleFactors;
+
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation});
@@ -118,11 +135,16 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 }
 
 map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float eta, float pt) {
-  if (!applyScaleFactors["bTagging"]) return {{"systematic", 1.0}};
+  bool applyDefault = applyScaleFactors["bTagging"][0];
+  bool applyVariations = applyScaleFactors["bTagging"][1];
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
-  scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+  if (!applyVariations) return scaleFactors;
+
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
@@ -132,7 +154,7 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
 
 vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
   vector<string> variations;
-  if (!applyScaleFactors["bTagging"]) return variations;
+  if (!applyScaleFactors["bTagging"][1]) return variations;
 
   auto extraArgs = correctionsExtraArgs[name];
   variations = GetScaleFactorVariations(extraArgs["variations"]);
@@ -141,7 +163,7 @@ vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
 
 
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
-  if (!applyScaleFactors["pileup"]) return 1.0;
+  if (!applyScaleFactors["pileup"][0]) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
   return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
@@ -169,7 +191,7 @@ float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &corr
 }
 
 float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
-  if (!applyScaleFactors["pileup"]) return 1.0;
+  if (!applyScaleFactors["pileup"][0]) return 1.0;
 
   if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
     warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
@@ -193,4 +215,28 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
     variations.push_back(item);
   }
   return variations;
+}
+
+map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string name, string category) {
+  bool applyDefault = applyScaleFactors[name][0];
+  bool applyVariations = applyScaleFactors[name][1];
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  // handle empty category - needed to setup the scale factor names for the first event
+  else if (category == "") scaleFactors["systematic"] = 1.0;
+  else 
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {category, extraArgs["systematic"]});
+
+  if (!applyVariations) return scaleFactors;
+  
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    if (category == "") {
+      scaleFactors[name + "_" + variation] = 1.0;
+      continue;
+    }
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {category, variation});
+  }
+  return scaleFactors;
 }
