@@ -31,6 +31,10 @@ class DatacardsProcessor:
       error("DatacardsProcessor::create_new_datacard: obs_histosample is not a histogram.")
       return
 
+    if signal_histosample is None:
+      error("DatacardsProcessor::create_new_datacard: signal_histosample is None.")
+      return
+
     if type(signal_histosample[0]) == ROOT.TObject or signal_histosample is None:
       error("DatacardsProcessor::create_new_datacard: signal_histosample is not a histogram.")
       return
