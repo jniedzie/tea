@@ -1,9 +1,8 @@
 from Logger import warn, info, fatal
 from Sample import Sample, SampleType
-from HistogramNormalizer import HistogramNormalizer
+from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from DatacardsProcessor import DatacardsProcessor
 from Histogram import Histogram, Histogram2D
-from HistogramNormalizer import NormalizationType
 from ABCDHelper import ABCDHelper
 
 import ROOT

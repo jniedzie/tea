@@ -8,7 +8,7 @@ import time
 import re
 
 from HistogramsManager import HistogramsManager
-from Logger import fatal, info, error
+from Logger import fatal, info, error, logger_print
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="", help="Path to the config file.")
@@ -204,6 +204,8 @@ def main():
     run_combine(config, datacard_file_names)
 
   save_limits(config)
+
+  logger_print()
 
 
 if __name__ == "__main__":

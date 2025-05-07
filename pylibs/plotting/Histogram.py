@@ -5,7 +5,7 @@ import ROOT
 
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
-from Logger import info, warn
+from Logger import info, warn, error
 
 
 @dataclass
@@ -138,6 +138,10 @@ class Histogram2D:
 
   def load(self, input_file):
     self.hist = deepcopy(input_file.Get(self.name))
+
+    if self.hist is None or type(self.hist) is ROOT.TObject:
+      error(f"Could not find histogram: {self.name} in file {input_file.GetName()}")
+      return
 
   def set_hist_name(self, name):
     self.hist.SetName(name)

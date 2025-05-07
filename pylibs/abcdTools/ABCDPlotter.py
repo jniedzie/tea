@@ -3,21 +3,27 @@ import os
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
+from HistogramNormalizer import HistogramNormalizer, NormalizationType
+from Histogram import Histogram2D
 from Logger import fatal, warn, info
 
 
 class ABCDPlotter:
-  def __init__(self, config, max_error, max_closure, min_n_events, max_signal_contamination, max_overlap):
+  def __init__(self, config, args):
     self.config = config
 
-    self.abcdHelper = ABCDHelper(config, max_error, max_closure, min_n_events, max_signal_contamination, max_overlap)
+    self.abcdHelper = ABCDHelper(config, args)
     self.histogramsHelper = ABCDHistogramsHelper(config)
+    self.normalizer = HistogramNormalizer(config)
 
-    self.hist_name = f"{config.collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+    self.signal_hist_name = f"{config.signal_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+    self.background_hist_name = f"{config.background_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
+    self.best_points_path = f"{config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
     self.background_files = {}
     self.background_hists = {}
     self.background_hist = None
+
     self.data_file = None
     self.signal_files = {}
     self.signal_hists = {}
@@ -69,87 +75,14 @@ class ABCDPlotter:
       hist.GetZaxis().SetRangeUser(self.config.z_params[name][1], self.config.z_params[name][2])
 
   def __flip_signal_to_region_a(self):
+    histograms = self.signal_hists
+    histograms["background"] = self.background_hist
 
-    background_mean_x = self.background_hist.GetMean(1)
-    background_mean_y = self.background_hist.GetMean(2)
+    histograms = self.abcdHelper.flip_signal_to_region_a(histograms)
 
-    # A  |  C
-    # -------
-    # B  |  D
-
-    signal_region_count = {
-        "A": 0,
-        "B": 0,
-        "C": 0,
-        "D": 0
-    }
-
-    for mass, ctau in self.signal_hists:
-      signal_hist = self.signal_hists[(mass, ctau)]
-
-      if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-        continue
-
-      # get mean if the signal in x and y dimentions
-      mean_x = signal_hist.GetMean(1)
-      mean_y = signal_hist.GetMean(2)
-
-      if mean_x < background_mean_x and mean_y > background_mean_y:
-        signal_region_count["A"] += 1
-      elif mean_x < background_mean_x and mean_y < background_mean_y:
-        signal_region_count["B"] += 1
-      elif mean_x > background_mean_x and mean_y > background_mean_y:
-        signal_region_count["C"] += 1
-      elif mean_x > background_mean_x and mean_y < background_mean_y:
-        signal_region_count["D"] += 1
-
-    max_region = max(signal_region_count, key=signal_region_count.get)
-
-    if max_region == "A":
-      pass  # already in region A
-    elif max_region == "B":
-      warn("Signal in region B, flipping to region A")
-      self.background_hist = self.abcdHelper.flip_hist_vertically(self.background_hist)
-      for mass, ctau in self.signal_hists:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        signal_hist = self.signal_hists[(mass, ctau)]
-
-        if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-          continue
-
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_vertically(signal_hist)
-
-    elif max_region == "C":
-      warn("Signal in region C, flipping to region A")
-      self.background_hist = self.abcdHelper.flip_hist_horizontally(self.background_hist)
-      for mass, ctau in self.signal_hists:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        signal_hist = self.signal_hists[(mass, ctau)]
-
-        if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-          continue
-
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_horizontally(signal_hist)
-    elif max_region == "D":
-      warn("Signal in region D, flipping to region A")
-      self.background_hist = self.abcdHelper.flip_hist_vertically(self.background_hist)
-      self.background_hist = self.abcdHelper.flip_hist_horizontally(self.background_hist)
-
-      for mass, ctau in self.signal_hists:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        signal_hist = self.signal_hists[(mass, ctau)]
-
-        if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-          continue
-
-        signal_hist = self.abcdHelper.flip_hist_vertically(signal_hist)
-        self.signal_hists[(mass, ctau)] = self.abcdHelper.flip_hist_horizontally(signal_hist)
+    self.background_hist = histograms["background"]
+    del histograms["background"]
+    self.signal_hists = histograms
 
     if self.variable_1_min is None:
       self.variable_1_min = self.background_hist.GetXaxis().GetXmin()
@@ -165,8 +98,8 @@ class ABCDPlotter:
         continue
 
       coeff = self.abcdHelper.get_overlap_coefficient(
-        self.signal_hists[(mass, ctau)],
-        self.background_hist, mass, ctau
+          self.signal_hists[(mass, ctau)],
+          self.background_hist, mass, ctau
       )
       if coeff < threshold:
         n_signals += 1
@@ -207,9 +140,9 @@ class ABCDPlotter:
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
         overlap = self.abcdHelper.get_overlap_coefficient(
-          self.signal_hists[(mass, ctau)],
-          self.background_hist,
-          mass, ctau)
+            self.signal_hists[(mass, ctau)],
+            self.background_hist,
+            mass, ctau)
         label.DrawLatexNDC(0.13, 0.92, f"Overlap: {overlap:.2f}")
 
         self.canvases["significance"].cd(i_pad)
@@ -217,6 +150,10 @@ class ABCDPlotter:
         if self.significance_hists[(mass, ctau)] is not None:
           self.significance_hists[(mass, ctau)].Draw("colz")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
+
+  def get_background_correlation(self):
+    correlation = self.background_hist.GetCorrelationFactor()
+    return correlation
 
   def plot_background_hist(self):
     clone = self.background_hist.Clone()
@@ -272,9 +209,8 @@ class ABCDPlotter:
       closure = self.optimization_hists["closure"].GetBinContent(i, j)
       min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
 
-      info("Best point for all signals: ")
-      info(f"{self.config.variable_1} = {best_point[0]}, {self.config.variable_2} = {best_point[1]}")
-      info(f"Error: {error:.2f}, Closure: {closure:.2f}, Min n events: {min_n_events:.1f}")
+      info(f"Best point for all signals: {best_point}")
+      info(f"Closure: {closure:.2f}, Error: {error:.2f}, Min n events: {min_n_events:.1f}")
 
     else:
       for mass in self.config.masses:
@@ -317,8 +253,7 @@ class ABCDPlotter:
 
   def plot_and_save_best_abcd_points(self):
 
-    file_path = f"{self.config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
-    with open(file_path, "w") as f:
+    with open(self.best_points_path, "w") as f:
       f.write("mass, ctau, best_x, best_y, closure, error, min_n_events, significance, contamination\n")
 
       for i_mass, mass in enumerate(self.config.masses):
@@ -385,7 +320,7 @@ class ABCDPlotter:
           self.canvases["significance"].Update()
 
       f.close()
-      info(f"\nBest points saved to {file_path}\n")
+      info(f"\nBest points saved to {self.best_points_path}\n")
 
   def plot_background_projections(self):
 
@@ -551,7 +486,7 @@ class ABCDPlotter:
     info(f"{i=}, {j=}")
 
     info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
-    
+
     if a != 0 and b != 0 and c != 0 and d != 0:
       prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
       closure = self.abcdHelper.get_closure(a, prediction)
@@ -591,81 +526,93 @@ class ABCDPlotter:
 
   def __load_background_histograms(self):
 
-    for path, cross_section in self.config.background_params:
-      input_path = self.config.background_path_pattern.format(path, self.config.skim[0], self.config.hist_path)
-      file_path = f"{self.config.base_path}/{input_path}"
+    for sample in self.config.background_samples:
+      hist = Histogram2D(
+          name=(
+              f"{self.config.background_collection}_{self.config.variable_1}_vs_"
+              f"{self.config.variable_2}{self.config.category}"
+          ),
+          norm_type=NormalizationType.to_lumi,
+          x_rebin=self.config.rebin_2D,
+          y_rebin=self.config.rebin_2D,
+      )
+
+      path = sample.file_path
 
       try:
-        self.background_files[path] = ROOT.TFile.Open(file_path)
+        self.background_files[path] = ROOT.TFile.Open(path)
       except OSError:
-        warn(f"Could not open file {file_path}")
+        warn(f"Could not open file {path}")
         continue
 
       if not self.background_files[path]:
-        warn(f"Could not open file {file_path}")
+        warn(f"Could not open file {path}")
         continue
 
-      self.background_hists[path] = self.background_files[path].Get(self.hist_name)
-
-      if not self.background_hists[path]:
-        warn(f"Could not open histogram {self.hist_name} in file {file_path}")
-        continue
-
-      inital_events = self.background_files[path].Get("cutFlow").GetBinContent(1)
-      self.background_hists[path].Scale(self.config.lumi*cross_section/inital_events)
+      hist.load(self.background_files[path])
+      hist.setup(sample)
+      self.normalizer.normalize(hist, sample, None, None)
+      self.background_hists[path] = hist.hist
 
   def __setup_backgrounds_sum_histogram(self):
     if self.config.do_data:
-      file_path = f"{self.config.base_path}/{self.config.data_path}"
-      self.data_file = ROOT.TFile.Open(file_path)
+      path = f"{self.config.base_path}/{self.config.data_path}"
+      
+      hist = Histogram2D(
+          name=(
+              f"{self.config.background_collection}_{self.config.variable_1}_vs_"
+              f"{self.config.variable_2}{self.config.category}"
+          ),
+          norm_type=NormalizationType.to_lumi,
+          x_rebin=self.config.rebin_2D,
+          y_rebin=self.config.rebin_2D,
+      )
+
+      self.data_file = ROOT.TFile.Open(path)
 
       if not self.data_file:
-        warn(f"Could not open file {file_path}")
+        warn(f"Could not open file {path}")
         return
 
-      self.background_hist = self.data_file.Get(self.hist_name)
+      hist.load(self.data_file)
+      hist.setup()
+      self.background_hist = hist.hist
 
       if not self.background_hist:
-        warn(f"Could not open histogram {self.hist_name} in file {file_path}")
+        warn(f"Could not open histogram {self.background_hist_name} in file {path}")
         return
     else:
-      for path, _ in self.config.background_params:
-        if path not in self.background_hists or not self.background_hists[path]:
+      for path, hist in self.background_hists.items():
+        if hist is None or hist.Integral() == 0:
+          warn(f"Background histogram {path} is empty or has integral=0")
           continue
 
-        if self.background_hists[path] is None or self.background_hists[path].Integral() == 0:
-          continue
-
-        self.background_hist = self.background_hists[path].Clone()
-        break
+        if self.background_hist is None:
+          self.background_hist = hist.Clone()
+        else:
+          self.background_hist.Add(hist)
 
       if not self.background_hist:
         fatal("No background histograms found")
         exit()
 
-      for path, _ in self.config.background_params[1:]:
-        if path not in self.background_hists or not self.background_hists[path]:
-          continue
-        self.background_hist.Add(self.background_hists[path])
-
     self.background_hist.SetFillColorAlpha(self.config.background_color, 0.5)
     self.background_hist.SetTitle("")
-
-    self.background_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
 
   def __load_signal_hists(self):
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
-        input_path = self.config.signal_path_pattern.format(mass, ctau, self.config.skim[0], self.config.hist_path)
+        input_path = self.config.signal_path_pattern.format(
+            mass, ctau, self.config.signal_skim[0], self.config.signal_hist_path)
 
         try:
           self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
         except OSError:
           continue
 
-        self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.hist_name)
+        self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.signal_hist_name)
         if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
-          info(f"Could not open histogram {self.hist_name} in file {input_path}")
+          info(f"Could not open histogram {self.signal_hist_name} in file {input_path}")
           continue
 
         self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
@@ -732,10 +679,10 @@ class ABCDPlotter:
         self.contamination_hists[(mass, ctau)] = self.abcdHelper.get_signal_contramination_hist(
             self.signal_hists[(mass, ctau)])
 
-  def __get_input_dict(self, input_path):
+  def __get_input_dict(self):
     results = {}
 
-    with open(input_path, "r") as f:
+    with open(self.best_points_path, "r") as f:
       lines = f.readlines()
 
       for line in lines[1:]:
@@ -768,16 +715,7 @@ class ABCDPlotter:
   def plot_optimal_points(self):
     ROOT.gStyle.SetOptStat(0)
 
-    region = self.config.do_region
-    collection = self.config.collection
-    do_data = self.config.do_data
-
-    input_path = (
-        f"../abcd/results_{region}_{collection}_"
-        f"{'data' if do_data else 'mc'}{self.config.category}/best_points_"
-        f"{self.config.variable_1}_vs_{self.config.variable_2}.txt"
-    )
-    results = self.__get_input_dict(input_path)
+    results = self.__get_input_dict()
 
     mass_to_bin = {
         0.35: 1,
@@ -838,6 +776,4 @@ class ABCDPlotter:
       y = hist.GetYaxis().GetBinCenter(y)
       latex.DrawLatex(x, y, f"{best_x}, {best_y}")
 
-    canvas.SaveAs(
-        f"../abcd/results_{region}_{collection}_{'data' if do_data else 'mc'}{self.config.category}/best_points_"
-        f"{self.config.variable_1}_vs_{self.config.variable_2}.pdf")
+    canvas.SaveAs(self.best_points_path.replace(".txt", ".pdf"))
