@@ -321,7 +321,7 @@ void ConfigManager::GetMap<string, vector<bool>>(string name, map<string, vector
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || (!PyList_Check(pValue) && !PyTuple_Check(pValue))) {
-      error() << "Failed retriving python key-value pair (string-vector<bool>)" << endl;
+      error() << "Failed retrieving python key-value pair (string-vector<bool>)" << endl;
       continue;
     }
     vector<bool> outputVector;
