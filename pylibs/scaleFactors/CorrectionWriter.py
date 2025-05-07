@@ -51,7 +51,7 @@ class CorrectionWriter:
             input=name,
             edges=edges,
             content=content,
-            flow="error"
+            flow=flow
         )
 
 
