@@ -39,7 +39,7 @@ class ScaleFactorProducer:
         return root_file
     
 
-    def __getInitalWeightSum(self,root_file):
+    def __getInitialWeightSum(self,root_file):
         cut_flow = root_file.Get("cutFlow")
         return cut_flow.GetBinContent(1)
     
@@ -83,7 +83,7 @@ class ScaleFactorProducer:
         for sample in self.backgroundSamples:
             root_file = self.__getRootFile(sample.file_path)
 
-            sample.initial_weight_sum = self.__getInitalWeightSum(root_file)
+            sample.initial_weight_sum = self.__getInitialWeightSum(root_file)
 
             hist = deepcopy(root_file.Get(hist_name))
             if not hist or hist.ClassName() == "TObject":
