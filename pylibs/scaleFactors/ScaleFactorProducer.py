@@ -11,7 +11,7 @@ class ScaleFactorProducer:
         self.config = None
         self.backgroundSamples = []
         self.dataSample = None
-        self.luminostiy = None
+        self.luminosity = None
 
         if config != None:
             self.config = config
