@@ -132,6 +132,20 @@ class CorrectionWriter:
        
         self.corrections[name] = correction
 
+
+    def add_multibinned_correction_for_config(self, config, data):
+        self.add_multibinned_correction(
+            config.correction_name,
+            config.correction_description,
+            config.correction_version,
+            config.correction_inputs,
+            config.correction_output,
+            config.correction_edges,
+            data,
+            config.correction_flow
+        )
+
+
     """
         Assemble into a dict ready for json.dump(...)
         Excluding None values
