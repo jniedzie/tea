@@ -190,8 +190,6 @@ vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
   if (!applyScaleFactors["pileup"][0]) return 1.0;
 
-  cout << "Getting pileup scale factor (2)" << endl;
-
   auto extraArgs = correctionsExtraArgs[name];
   return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
 }
