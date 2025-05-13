@@ -115,6 +115,14 @@ def get_scale_factors(year):
         "systematic": "nominal",
         "variations": "systup,systdown",
     }
+  else:
+    # Muon trigger
+    scaleFactors["muonTriggerIsoMu24"] = {
+        "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+        "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+        "systematic": "nominal",
+        "variations": "systup,systdown"
+    }
   if year == "2018":  # TODO: add DSA SF for all years
     scaleFactors["dsamuonID"] = {
         "path": f"../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
