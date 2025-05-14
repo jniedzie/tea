@@ -133,6 +133,11 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
   bool applyDefault = applyScaleFactors["PUjetID"][0];
   bool applyVariations = applyScaleFactors["PUjetID"][1];
 
+  if (corrections.find(name) == corrections.end()) {
+    warn() << "Requested PUJetID SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
+
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
@@ -149,6 +154,11 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
 map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float eta, float pt) {
   bool applyDefault = applyScaleFactors["muon"][0];
   bool applyVariations = applyScaleFactors["muon"][1];
+
+  if (corrections.find(name) == corrections.end()) {
+    warn() << "Requested muon SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
@@ -167,6 +177,11 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, s
   bool applyDefault = applyScaleFactors["muon"][0];
   bool applyVariations = applyScaleFactors["muon"][1];
 
+  if (corrections.find(dsaname) == corrections.end()) {
+    warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << dsaname << endl;
+    return {{"systematic", 1.0}};
+  }
+
   auto extraArgs = correctionsExtraArgs[dsaname];
   map<string, float> scaleFactors;
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
@@ -183,6 +198,11 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, s
 map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
   bool applyDefault = applyScaleFactors["muonTrigger"][0];
   bool applyVariations = applyScaleFactors["muonTrigger"][1];
+
+  if (corrections.find(name) == corrections.end()) {
+    warn() << "Requested muon trigger SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
@@ -201,6 +221,11 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float eta, float pt) {
   bool applyDefault = applyScaleFactors["bTagging"][0];
   bool applyVariations = applyScaleFactors["bTagging"][1];
+
+  if (corrections.find(name) == corrections.end()) {
+    warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];

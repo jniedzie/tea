@@ -1,4 +1,7 @@
 
+from Logger import error
+
+
 def get_scale_factors(year):
   run2 = True
   if year == "2016preVFP" or year == "2016postVFP":
@@ -36,115 +39,122 @@ def get_scale_factors(year):
 
   scaleFactors = {
 
-    # b-tagging
-    # systematic options: "central", "up/down_correlated" or "up/down_uncorrelated"
-    "bTaggingMedium": {
-      "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
-      "type": "deepJet_mujets",
-      "systematic": "central",
-      "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
-      "workingPoint": "M",
-      "jetID": "5",
-    },
-    "bTaggingTight": {
-      "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
-      "type": "deepJet_mujets",
-      "systematic": "central",
-      "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
-      "workingPoint": "T",
-      "jetID": "5",
-    },
-        
-    # Muon ID
-    "muonIDLoose": {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": "NUM_LooseID_DEN_TrackerMuons", 
-      "systematic": "nominal",
-      "variations": "systup,systdown",
-    },
-    "muonIDMedium": {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": "NUM_MediumID_DEN_TrackerMuons", 
-      "systematic": "nominal",
-      "variations": "systup,systdown"
-    },
-    "muonIDTight": {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": "NUM_TightID_DEN_TrackerMuons", 
-      "systematic": "nominal",
-      "variations": "systup,systdown"
-    },
+      # b-tagging
+      # systematic options: "central", "up/down_correlated" or "up/down_uncorrelated"
+      "bTaggingMedium": {
+          "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+          "type": "deepJet_mujets",
+          "systematic": "central",
+          "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
+          "workingPoint": "M",
+          "jetID": "5",
+      },
+      "bTaggingTight": {
+          "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+          "type": "deepJet_mujets",
+          "systematic": "central",
+          "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
+          "workingPoint": "T",
+          "jetID": "5",
+      },
 
-    # Muon Iso
-    "muonIsoLoose": {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": loose_muon_iso_type,
-      "systematic": "nominal",
-      "variations": "systup,systdown"
-    },
-    "muonIsoTight": {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": tight_muon_iso_type,
-      "systematic": "nominal",
-      "variations": "systup,systdown"
-    },
-    
-    # Muon trigger
-    "muonTriggerIsoMu24": {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
-      "systematic": "nominal",
-      "variations": "systup,systdown"
-    },
-    
-    # Pileup
-    "pileup": {
-      "path": f"../tea/jsonPOG/POG/LUM/{year_path}/puWeights.json.gz",
-      "type": f"{pu_type}",
-      "systematic": "nominal",
-      "variations": "",
-    },
+      # Muon ID
+      "muonIDLoose": {
+          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+          "type": "NUM_LooseID_DEN_TrackerMuons",
+          "systematic": "nominal",
+          "variations": "systup,systdown",
+      },
+      "muonIDMedium": {
+          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+          "type": "NUM_MediumID_DEN_TrackerMuons",
+          "systematic": "nominal",
+          "variations": "systup,systdown"
+      },
+      "muonIDTight": {
+          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+          "type": "NUM_TightID_DEN_TrackerMuons",
+          "systematic": "nominal",
+          "variations": "systup,systdown"
+      },
+
+      # Muon Iso
+      "muonIsoLoose": {
+          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+          "type": loose_muon_iso_type,
+          "systematic": "nominal",
+          "variations": "systup,systdown"
+      },
+      "muonIsoTight": {
+          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+          "type": tight_muon_iso_type,
+          "systematic": "nominal",
+          "variations": "systup,systdown"
+      },
+
+      # Pileup
+      "pileup": {
+          "path": f"../tea/jsonPOG/POG/LUM/{year_path}/puWeights.json.gz",
+          "type": f"{pu_type}",
+          "systematic": "nominal",
+          "variations": "",
+      },
+      "jecMC": {
+          "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+          "campaign": "Summer19UL18",
+          "version": "V5",
+          "sampleType": "MC",
+          "level": "L1L2L3Res", # make sure for all years that L2L3Residual returns 1.0 for MC
+          "algo": "AK4PFchs",
+          "uncertainties": "Total,CorrelationGroupMPFInSitu,CorrelationGroupIntercalibration,CorrelationGroupbJES,CorrelationGroupFlavor,CorrelationGroupUncorrelated",
+      },
+      "jecDATA": {
+          "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+          "campaign": "Summer19UL18",
+          "version": "V5",
+          "sampleType": "DATA",
+          "level": "L1L2L3Res",
+          "algo": "AK4PFchs",
+          "uncertainties": "Total,CorrelationGroupMPFInSitu,CorrelationGroupIntercalibration,CorrelationGroupbJES,CorrelationGroupFlavor,CorrelationGroupUncorrelated",
+      },
   }
-  if run2: # No Run3 PUjetID SF yet
+  if run2:  # No Run3 PUjetID SF yet
     scaleFactors["PUjetIDtight"] = {
-      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jmar.json.gz",
-      "type": "PUJetID_eff",
-      "systematic": "nom",
-      "variations": "up,down",
-      "workingPoint": "T",
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jmar.json.gz",
+        "type": "PUJetID_eff",
+        "systematic": "nom",
+        "variations": "up,down",
+        "workingPoint": "T",
     }
     #  Muon Reco no medium pt RECO SF for Run 3
     scaleFactors["muonReco"] = {
-      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-      "type": "NUM_TrackerMuons_DEN_genTracks",
-      "systematic": "nominal",
-      "variations": "systup,systdown",
+        "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+        "type": "NUM_TrackerMuons_DEN_genTracks",
+        "systematic": "nominal",
+        "variations": "systup,systdown",
     }
-    scaleFactors["jecMC"] = {
-      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-      "campaign": "Summer19UL18",
-      "version": "V5",
-      "sampleType": "MC",
-      "level": "L1L2L3Res", # make sure for all years that L2L3Residual returns 1.0 for MC
-      "algo": "AK4PFchs",
-      "uncertainties": "Total,CorrelationGroupMPFInSitu,CorrelationGroupIntercalibration,CorrelationGroupbJES,CorrelationGroupFlavor,CorrelationGroupUncorrelated",
+  else:
+    # Muon trigger
+    scaleFactors["muonTriggerIsoMu24"] = {
+        "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+        "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+        "systematic": "nominal",
+        "variations": "systup,systdown"
     }
-    scaleFactors["jecDATA"] = {
-      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-      "campaign": "Summer19UL18",
-      "version": "V5",
-      "sampleType": "DATA",
-      "level": "L1L2L3Res",
-      "algo": "AK4PFchs",
-      "uncertainties": "Total,CorrelationGroupMPFInSitu,CorrelationGroupIntercalibration,CorrelationGroupbJES,CorrelationGroupFlavor,CorrelationGroupUncorrelated",
-    }
-  if year == "2018": # TODO: add DSA SF for all years
+  if year == "2018":  # TODO: add DSA SF for all years
     scaleFactors["dsamuonID"] = {
-      "path": f"../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
-      "type": "NUM_DisplacedID_DEN_dSAMuons", 
-      "year": "2018_preUL",
-      "systematic": "sf",
-      "variations": "",
+        "path": f"../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
+        "type": "NUM_DisplacedID_DEN_dSAMuons",
+        "year": "2018_preUL",
+        "systematic": "sf",
+        "variations": "",
+    }
+    # Muon trigger
+    scaleFactors["muonTriggerIsoMu24"] = {
+        "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+        "type": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+        "systematic": "nominal",
+        "variations": "systup,systdown"
     }
     scaleFactors["JpsiInvMassSFs"] = {
       "path": f"../data/JPsiCRsf2018.json",

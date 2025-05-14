@@ -31,7 +31,7 @@ class NanoGenParticle {
   float GetEta() { return physicsObject->Get("eta"); }
   float GetPhi() { return physicsObject->Get("phi"); }
   int GetPdgId() { return physicsObject->Get("pdgId"); }
-  int GetMotherIndex() { return physicsObject->Get("genPartIdxMother"); }
+  int GetMotherIndex() { return physicsObject->GetAs<int>("genPartIdxMother"); }
   int GetStatusFlags() { return physicsObject->GetAs<int>("statusFlags"); }
   float GetDxy(float pv_x, float pv_y);
 
