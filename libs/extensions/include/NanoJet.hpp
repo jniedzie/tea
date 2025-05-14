@@ -29,6 +29,7 @@ class NanoJet {
   inline float GetEta() { return physicsObject->Get("eta"); }
   inline float GetPhi() { return physicsObject->Get("phi"); }
   inline float GetMass() { return physicsObject->Get("mass"); }
+  inline float GetArea() { return physicsObject->Get("area"); }
   inline float GetDeepCSVscore() { return physicsObject->Get("btagDeepB"); }
   inline float GetDeepJetScore() { return physicsObject->Get("btagDeepFlavB"); }
 

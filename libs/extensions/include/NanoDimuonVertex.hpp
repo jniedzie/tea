@@ -37,6 +37,10 @@ class NanoDimuonVertex {
   float MuonIndex2() { return float(physicsObject->Get("originalMuonIdx2")); }
   bool IsValid() { return (float)Get("isValid") > 0; }
 
+  bool IsPatDimuon() { return GetVertexCategory() == "Pat"; }
+  bool IsPatDSADimuon() { return GetVertexCategory() == "PatDSA"; }
+  bool IsDSADimuon() { return GetVertexCategory() == "DSA"; }
+
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
   std::string GetVertexCategory();

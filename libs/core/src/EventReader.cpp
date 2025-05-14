@@ -350,6 +350,8 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
     collection->ChangeVisibleSize(collectionSize);
   }
 
+  currentEvent->AddJetEnergyCorrections();
+
   currentEvent->AddExtraCollections();
   return currentEvent;
 }

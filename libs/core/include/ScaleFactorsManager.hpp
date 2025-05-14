@@ -23,7 +23,7 @@ class ScaleFactorsManager {
 
   std::map<std::string,float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
   std::map<std::string,float> GetMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string,float> GetDSAMuonScaleFactors(std::string name, float eta, float pt);
+  std::map<std::string,float> GetDSAMuonScaleFactors(std::string patname, std::string dsaname, float eta, float pt);
   std::map<std::string,float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string,float> GetBTagScaleFactors(std::string name, float eta, float pt);
 
@@ -33,6 +33,10 @@ class ScaleFactorsManager {
   std::vector<std::string> GetBTagVariationNames(std::string name);
 
   std::map<std::string,float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
+
+  void ReadJetEnergyCorrections();
+  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
+  bool ApplyJetEnergyCorrections() { return applyJEC; }
 
  private:
   ScaleFactorsManager();
@@ -48,15 +52,22 @@ class ScaleFactorsManager {
   correction::Correction::Ref muonCorrections;
 
   std::map<std::string, correction::Correction::Ref> corrections;
+  std::map<std::string, correction::CompoundCorrection::Ref > compoundCorrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
   std::map<std::string, TH2D *> muonSFvalues;
   TH1D *pileupSFvalues;
   std::map<std::string, TF1 *> btaggingSFvalues;
 
+  std::string sampleType;
+  std::string sampleEra;
+  bool applyJEC = false;
+
   void ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
+
+  std::string GetJetEnergyCorrectionType(std::string name, std::map<std::string, std::string> values, std::string sampleType, std::string sampleEra, std::string unceratinty = "");
 
   float TryToEvaluate(const correction::Correction::Ref &correction, const std::vector<std::variant<int, double, std::string>> &args);
 

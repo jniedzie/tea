@@ -120,6 +120,24 @@ def get_scale_factors(year):
       "systematic": "nominal",
       "variations": "systup,systdown",
     }
+    scaleFactors["jecMC"] = {
+      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+      "campaign": "Summer19UL18",
+      "version": "V5",
+      "sampleType": "MC",
+      "level": "L1L2L3Res", # make sure for all years that L2L3Residual returns 1.0 for MC
+      "algo": "AK4PFchs",
+      "uncertainties": "Total,CorrelationGroupMPFInSitu,CorrelationGroupIntercalibration,CorrelationGroupbJES,CorrelationGroupFlavor,CorrelationGroupUncorrelated",
+    }
+    scaleFactors["jecDATA"] = {
+      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+      "campaign": "Summer19UL18",
+      "version": "V5",
+      "sampleType": "DATA",
+      "level": "L1L2L3Res",
+      "algo": "AK4PFchs",
+      "uncertainties": "Total,CorrelationGroupMPFInSitu,CorrelationGroupIntercalibration,CorrelationGroupbJES,CorrelationGroupFlavor,CorrelationGroupUncorrelated",
+    }
   if year == "2018": # TODO: add DSA SF for all years
     scaleFactors["dsamuonID"] = {
       "path": f"../tea/DSAMuonSF/2018_Z/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",

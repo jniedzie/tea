@@ -121,6 +121,7 @@ class Event {
     throw Exception(message.c_str());
   }
 
+  void AddJetEnergyCorrections();
   void AddExtraCollections();
   void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
 
@@ -166,6 +167,8 @@ class Event {
   bool hasExtraCollections = true;
   std::map<std::string, ExtraCollection> extraCollectionsDescriptions;
   std::map<std::string, std::string> defaultCollectionsTypes;
+
+  std::string rhoBranchName;
 
   friend class EventReader;
   template <typename T>
