@@ -37,6 +37,10 @@ class ABCDHelper:
     return histograms
 
   def __find_signal_bin(self, background_hist, signal_hists):
+    if background_hist is None or type(background_hist) is ROOT.TObject:
+      warn("ABCDHelper.__find_signal_bin: background_hist is None")
+      return "A"
+    
     background_mean_x = background_hist.GetMean(1)
     background_mean_y = background_hist.GetMean(2)
 
@@ -313,7 +317,11 @@ class ABCDHelper:
     max_significance = 0
     best_point = None
 
-    first_hist = next(iter(significance_hists.values()))
+    try:
+      first_hist = next(iter(significance_hists.values()))
+    except StopIteration:
+      first_hist = None
+    
     if first_hist is None or not isinstance(first_hist, ROOT.TH2):
       warn("ABCDHelper.get_optimal_point_for_significance: first_hist is None")
       return None

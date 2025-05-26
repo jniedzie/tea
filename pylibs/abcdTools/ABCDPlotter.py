@@ -552,6 +552,16 @@ class ABCDPlotter:
       hist.load(self.background_files[path])
       hist.setup(sample)
       self.normalizer.normalize(hist, sample, None, None)
+
+      n_entries = hist.hist.GetEntries()
+
+      if n_entries < self.config.exclude_backgrounds_with_less_than:
+        warn(
+            (f"Histogram {sample.name} has less than "
+             f"{self.config.exclude_backgrounds_with_less_than} entries and will be excluded.")
+        )
+        continue
+
       self.background_hists[path] = hist.hist
 
   def __setup_backgrounds_sum_histogram(self):
