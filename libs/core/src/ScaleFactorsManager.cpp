@@ -10,9 +10,11 @@ using namespace std;
 using correction::CorrectionSet;
 
 ScaleFactorsManager::ScaleFactorsManager() {
-  ReadScaleFactorFlags();
-  ReadScaleFactors();
-  if (applyScaleFactors["pileup"][0]) ReadPileupSFs();
+  scaleFactorsInitialized = ReadScaleFactorFlags();
+  if (scaleFactorsInitialized) {
+    ReadScaleFactors();
+    if (applyScaleFactors["pileup"][0]) ReadPileupSFs();
+  }
 }
 
 void ScaleFactorsManager::ReadScaleFactors() {
@@ -107,16 +109,23 @@ string ScaleFactorsManager::GetJetEnergyCorrectionType(string name, map<string, 
   return values["campaign"] + sampleEra + "_" + values["version"] + "_" + sampleType + "_" + uncertainty + "_" + values["algo"];
 }
 
-void ScaleFactorsManager::ReadScaleFactorFlags() {
+bool ScaleFactorsManager::ReadScaleFactorFlags() {
   auto &config = ConfigManager::GetInstance();
-  config.GetMap("applyScaleFactors", applyScaleFactors);
 
-  info() << "\n------------------------------------" << endl;
-  info() << "Applying scale factors:" << endl;
-  for (auto &[name, applyVector] : applyScaleFactors) {
-    info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
+  try {
+    config.GetMap("applyScaleFactors", applyScaleFactors);
+
+    info() << "\n------------------------------------" << endl;
+    info() << "Applying scale factors:" << endl;
+    for (auto &[name, applyVector] : applyScaleFactors) {
+      info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
+    }
+    info() << "------------------------------------\n" << endl;
+  } catch (const Exception &e) {
+    warn() << "Couldn't read applyScaleFactors from config file - no scale factors will be applied" << endl;
+    return false;
   }
-  info() << "------------------------------------\n" << endl;
+  return true;
 }
 
 void ScaleFactorsManager::ReadPileupSFs() {
@@ -196,8 +205,8 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, s
 }
 
 map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["muonTrigger"][0];
-  bool applyVariations = applyScaleFactors["muonTrigger"][1];
+  bool applyDefault = applyScaleFactors["muonTriggerIsoMu24"][0];
+  bool applyVariations = applyScaleFactors["muonTriggerIsoMu24"][1];
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested muon trigger SF, which was not defined in the scale_factors_config: " << name << endl;

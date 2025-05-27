@@ -38,6 +38,8 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
   bool ApplyJetEnergyCorrections() { return applyJEC; }
 
+  bool HasScaleFactors() { return scaleFactorsInitialized; }
+
  private:
   ScaleFactorsManager();
   ~ScaleFactorsManager() {}
@@ -62,8 +64,9 @@ class ScaleFactorsManager {
   std::string sampleType;
   std::string sampleEra;
   bool applyJEC = false;
+  bool scaleFactorsInitialized = false;
 
-  void ReadScaleFactorFlags();
+  bool ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
 

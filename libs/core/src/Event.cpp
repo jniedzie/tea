@@ -58,6 +58,10 @@ bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName
 
 void Event::AddJetEnergyCorrections() {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  if (!scaleFactorsManager.HasScaleFactors()) {
+    warn() << "Scale factors not initialized, skipping jet energy corrections." << endl;
+    return;
+  }
   scaleFactorsManager.ReadJetEnergyCorrections();
 
   if (!scaleFactorsManager.ApplyJetEnergyCorrections()) return;
