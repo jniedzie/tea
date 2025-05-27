@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
       eventWeights = {{"default", 1.0}};
     } else {
       float genWeight = nanoEventProcessor->GetGenWeight(asNanoEvent(event));
-      map<string,float> muonTriggerSF = nanoEventProcessor->GetMuonTriggerScaleFactors(asNanoEvent(event), "muonTriggerIsoMu24");
+      map<string,float> muonTriggerSF = nanoEventProcessor->GetMuonTriggerScaleFactors(asNanoEvent(event), "muonTrigger");
       for (auto &[name, weight] : muonTriggerSF) {
         eventWeights[name] = genWeight*muonTriggerSF[name];
       }
