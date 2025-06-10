@@ -6,7 +6,14 @@
 #define ScaleFactorsManager_hpp
 
 #include "Helpers.hpp"
+
+#ifdef USE_CORRECTIONLIB
 #include "correction.h"
+using CorrectionRef = correction::Correction::Ref;
+#else
+struct DummyCorrectionRef {};
+using CorrectionRef = DummyCorrectionRef;
+#endif
 
 struct MuonID;
 struct MuonIso;
@@ -21,18 +28,18 @@ class ScaleFactorsManager {
   ScaleFactorsManager(ScaleFactorsManager const &) = delete;
   void operator=(ScaleFactorsManager const &) = delete;
 
-  std::map<std::string,float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string,float> GetMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string,float> GetDSAMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string,float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string,float> GetBTagScaleFactors(std::string name, float eta, float pt);
+  std::map<std::string, float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
+  std::map<std::string, float> GetMuonScaleFactors(std::string name, float eta, float pt);
+  std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, float eta, float pt);
+  std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
+  std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
 
   float GetPileupScaleFactorCustom(int nVertices);
   float GetPileupScaleFactor(std::string name, float nVertices);
 
   std::vector<std::string> GetBTagVariationNames(std::string name);
 
-  std::map<std::string,float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
+  std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
 
  private:
   ScaleFactorsManager();
@@ -44,10 +51,10 @@ class ScaleFactorsManager {
   }
   std::map<std::string, std::vector<bool>> applyScaleFactors;
 
-  correction::Correction::Ref bTaggingCorrections;
-  correction::Correction::Ref muonCorrections;
+  CorrectionRef bTaggingCorrections;
+  CorrectionRef muonCorrections;
 
-  std::map<std::string, correction::Correction::Ref> corrections;
+  std::map<std::string, CorrectionRef> corrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
   std::map<std::string, TH2D *> muonSFvalues;
@@ -58,7 +65,7 @@ class ScaleFactorsManager {
   void ReadScaleFactors();
   void ReadPileupSFs();
 
-  float TryToEvaluate(const correction::Correction::Ref &correction, const std::vector<std::variant<int, double, std::string>> &args);
+  float TryToEvaluate(const CorrectionRef &correction, const std::vector<std::variant<int, double, std::string>> &args);
 
   std::vector<std::string> GetScaleFactorVariations(std::string variations_str);
 };

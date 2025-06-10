@@ -29,13 +29,18 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # setup correctionlib
 find_package(ZLIB REQUIRED)
-find_package(correctionlib REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
 
-get_target_property(CORRECTIONLIB_INCLUDE_DIRS correctionlib INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "correctionlib includes: ${CORRECTIONLIB_INCLUDE_DIRS}")
-set(CORRECTIONLIB_INCLUDE_DIRS ${CORRECTIONLIB_INCLUDE_DIRS} CACHE INTERNAL "Correctionlib include dirs")
+find_package(correctionlib QUIET)
+if(correctionlib_FOUND)
+  get_target_property(CORRECTIONLIB_INCLUDE_DIRS correctionlib INTERFACE_INCLUDE_DIRECTORIES)
+  message(STATUS "correctionlib includes: ${CORRECTIONLIB_INCLUDE_DIRS}")
+  set(CORRECTIONLIB_INCLUDE_DIRS ${CORRECTIONLIB_INCLUDE_DIRS} CACHE INTERNAL "Correctionlib include dirs")
+  add_definitions(-DUSE_CORRECTIONLIB)
+else()
+  message(WARNING "correctionlib not found. The project will be built without correctionlib support.")
+endif()
 
 # Detect the platform
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -85,7 +90,11 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 file(GLOB SOURCES "src/*.cpp")
 add_library(core SHARED ${SOURCES})
 
-target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} correctionlib ZLIB::ZLIB Threads::Threads)
+if(correctionlib_FOUND)
+  target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} correctionlib ZLIB::ZLIB Threads::Threads)
+else()
+  target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
+endif()
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 set_target_properties(core PROPERTIES INSTALL_RPATH "$ORIGIN/../tea/libs/core")
