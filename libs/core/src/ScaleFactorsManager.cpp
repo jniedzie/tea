@@ -205,8 +205,8 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, s
 }
 
 map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["muonTriggerIsoMu24"][0];
-  bool applyVariations = applyScaleFactors["muonTriggerIsoMu24"][1];
+  bool applyDefault = applyScaleFactors["muonTrigger"][0];
+  bool applyVariations = applyScaleFactors["muonTrigger"][1];
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested muon trigger SF, which was not defined in the scale_factors_config: " << name << endl;

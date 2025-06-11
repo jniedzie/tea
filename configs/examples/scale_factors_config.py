@@ -157,7 +157,9 @@ def get_scale_factors(year):
         "variations": "systup,systdown"
     }
     scaleFactors["JpsiInvMass"] = {
-      "path": f"../data/JPsiCRsf2018.json",
+      # "path": f"../data/JPsiCRsf2018.json",
+      # "path": f"../data/JPsiCRsf2018_newMatching.json",
+      "path": f"../data/JPsiCRsf2018_newMatching_minBkg3.json",
       "type": "JpsiInvMass",
       "systematic": "nominal",
       "variations": "up,down",

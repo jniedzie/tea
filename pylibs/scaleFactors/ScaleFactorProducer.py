@@ -91,6 +91,14 @@ class ScaleFactorProducer:
                 root_file.Close()
                 break
 
+            n_entries = hist.GetEntries()
+            if n_entries < self.config.exclude_backgrounds_with_less_than:
+                warn(
+                    (f"Histogram {sample.name} has less than "
+                    f"{self.config.exclude_backgrounds_with_less_than} entries and will be excluded.")
+                )
+                continue
+
             rebinned_hist = deepcopy(self.__rebinXaxis(hist, hist_name, histogram.x_min, histogram.x_max))
             one_binned_hist = self.__getOneBinnedHistogram(rebinned_hist)
             normalized_hist = self.__getNormalizedHist(one_binned_hist, sample)

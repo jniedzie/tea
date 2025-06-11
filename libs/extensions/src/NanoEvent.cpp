@@ -106,119 +106,131 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
   return allMuons;
 }
 
-shared_ptr<PhysicsObjects> NanoEvent::GetSegmentMatchedMuonVertices(shared_ptr<PhysicsObjects> vertexCollection, float minMatchRatio) {
-  
-  auto patMuonCollection = make_shared<NanoMuons>();
-  auto patDSAVertexCollection = make_shared<PhysicsObjects>();
+shared_ptr<PhysicsObject> NanoEvent::GetSegmentMatchedBestMuonVertex(shared_ptr<PhysicsObject> bestVertex, shared_ptr<PhysicsObjects> goodVerticesCollection, float minMatchRatio) {
+  auto nanoVertex = asNanoDimuonVertex(bestVertex,event);
+  bestVertex->AddVariable("matchedVertex", 0.0f);
+  // Pat-PAT dimuon vertex
+  if (nanoVertex->IsPatDimuon()) return bestVertex;
+
   auto patVertexCollection = make_shared<PhysicsObjects>();
-  auto dsaVertexCollection = make_shared<PhysicsObjects>();
-
-  auto goodMatchedVertexCollection = make_shared<PhysicsObjects>();
-
-  for (auto vertex : *vertexCollection) {
-    if (asNanoDimuonVertex(vertex,event)->IsPatDimuon()) {
-      patVertexCollection->push_back(vertex);
-      goodMatchedVertexCollection->push_back(vertex); // all PAT-PAT dimuons pass the matching
-
-      auto muon1 = asNanoDimuonVertex(vertex,event)->Muon1();
-      auto muon2 = asNanoDimuonVertex(vertex,event)->Muon2();
-      if (!(PATMuonIndexExist(patMuonCollection, (float)muon1->Get("idx")))) {
-        patMuonCollection->push_back(muon1);
-      }
-      if (!(PATMuonIndexExist(patMuonCollection, (float)muon2->Get("idx")))) {
-        patMuonCollection->push_back(muon2);
-      }
+  auto patDSAVertexCollection = make_shared<PhysicsObjects>();
+  for (auto goodVertex : *goodVerticesCollection) {
+    if (asNanoDimuonVertex(goodVertex,event)->IsPatDimuon()) {
+      patVertexCollection->push_back(goodVertex);
     }
-    if (asNanoDimuonVertex(vertex,event)->IsPatDSADimuon()) patDSAVertexCollection->push_back(vertex);
-    if (asNanoDimuonVertex(vertex,event)->IsDSADimuon()) dsaVertexCollection->push_back(vertex);
+    if (asNanoDimuonVertex(goodVertex,event)->IsPatDSADimuon()) {
+      patDSAVertexCollection->push_back(goodVertex);
+    }
   }
-
-  for (auto dsaVertex : *dsaVertexCollection) {
-    auto dsaMuon1 = asNanoDimuonVertex(dsaVertex,event)->Muon1();
-    auto dsaMuon2 = asNanoDimuonVertex(dsaVertex,event)->Muon2();
-    float nSegments1 = float(dsaMuon1->Get("nSegments"));
-    float nSegments2 = float(dsaMuon2->Get("nSegments"));
-    bool matchFound = false;
-
-    vector<float> patMatchIndices1;
-    vector<float> patMatchIndices2;
-        
+  // DSA-DSA dimuon vertex
+  if (nanoVertex->IsDSADimuon()) {
+    auto dsaMuon1 = nanoVertex->Muon1();
+    auto dsaMuon2 = nanoVertex->Muon2();
+    float nSegments1 = dsaMuon1->Get("nSegments");
+    float nSegments2 = dsaMuon2->Get("nSegments");
+    vector<int> patMatchIndices1;
+    vector<int> patMatchIndices2;
+    // Get all mathed PAT muons
     for (int i = 1; i <= 5; i++) {
       float ratio_tmp1 = dsaMuon1->GetMatchesForNthBestMatch(i) / nSegments1;
       float ratio_tmp2 = dsaMuon2->GetMatchesForNthBestMatch(i) / nSegments2;
 
       if(ratio_tmp1 >= minMatchRatio) {
-        if (PATMuonIndexExist(patMuonCollection, dsaMuon1->GetMatchIdxForNthBestMatch(i))) {
-          patMatchIndices1.push_back(dsaMuon1->GetMatchIdxForNthBestMatch(i));
-        }
+        patMatchIndices1.push_back(dsaMuon1->GetMatchIdxForNthBestMatch(i));
       }
       if(ratio_tmp2 >= minMatchRatio) {
-        if (PATMuonIndexExist(patMuonCollection, dsaMuon2->GetMatchIdxForNthBestMatch(i))) {
-          patMatchIndices2.push_back(dsaMuon2->GetMatchIdxForNthBestMatch(i));
-        }
+        patMatchIndices2.push_back(dsaMuon2->GetMatchIdxForNthBestMatch(i));
       }
     }
-
+    int matchedVertexIdx = -1;
+    float minChi2 = 9999.;
+    // Check if any PAT muon combinations are in patVertexCollection
+    // If more than one vertex we select the one with lowest chi2
     for (auto matchIndex1 : patMatchIndices1) {
       for (auto matchIndex2 : patMatchIndices2) {
         if (matchIndex1 == matchIndex2) continue;
-        for (auto patVertex : *patVertexCollection) {
+        for (int i=0; i<patVertexCollection->size(); i++) {
+          auto patVertex = patVertexCollection->at(i);
           auto muon1 = asNanoDimuonVertex(patVertex,event)->Muon1();
           auto muon2 = asNanoDimuonVertex(patVertex,event)->Muon2();
-          if ((float)muon1->Get("idx") == matchIndex1 && (float)muon2->Get("idx") == matchIndex2) {
-            matchFound = true;
-            break;
-          }
-          if ((float)muon1->Get("idx") == matchIndex2 && (float)muon2->Get("idx") == matchIndex1) {
-            matchFound = true;
-            break;
+          if (((float)muon1->Get("idx") == matchIndex1 && (float)muon2->Get("idx") == matchIndex2) || 
+            ((float)muon1->Get("idx") == matchIndex2 && (float)muon2->Get("idx") == matchIndex1)) {          
+            if ((float)patVertex->Get("normChi2") < minChi2) {
+              matchedVertexIdx = i;
+              minChi2 = (float)patVertex->Get("normChi2");
+            }
           }
         }
       }
     }
-    if (!matchFound) goodMatchedVertexCollection->push_back(dsaVertex);
-  }
-  
-  for (auto patDSAvertex : *patDSAVertexCollection) {
-    auto patMuon = asNanoDimuonVertex(patDSAvertex,event)->Muon1();
-    auto dsaMuon = asNanoDimuonVertex(patDSAvertex,event)->Muon2();
-    float nSegments = float(dsaMuon->Get("nSegments"));
-    bool matchFound = false;
-
-    vector<float> patMatchIndices1;
-    vector<float> patMatchIndices2;
-
-    if (PATMuonIndexExist(patMuonCollection, (float)patMuon->Get("idx"))) {
-      patMatchIndices1.push_back((float)patMuon->Get("idx"));
+    if (matchedVertexIdx > -1) {
+      auto newVertex = patVertexCollection->at(matchedVertexIdx);
+      newVertex->AddVariable("matchedVertex", 1.0f);
+      return newVertex;
     }
+    // Check if any PAT-DSA muon combinations are in patDSAVertexCollection
+    matchedVertexIdx = -1;
+    minChi2 = 9999.;
+    for (auto matchIndex1 : patMatchIndices1) {
+      for (auto matchIndex2 : patMatchIndices2) {
+        for (int i=0; i<patDSAVertexCollection->size(); i++) {
+          auto patDSAVertex = patDSAVertexCollection->at(i);
+          auto muon1 = asNanoDimuonVertex(patDSAVertex,event)->Muon1();
+          if ((float)muon1->Get("idx") == matchIndex1 && (float)muon1->Get("idx") == matchIndex2) {          
+            if ((float)patDSAVertex->Get("normChi2") < minChi2) {
+              matchedVertexIdx = i;
+              minChi2 = (float)patDSAVertex->Get("normChi2");
+            }
+          }
+        }
+      }
+    }
+    if (matchedVertexIdx > -1) {
+      auto newVertex = patDSAVertexCollection->at(matchedVertexIdx);
+      newVertex->AddVariable("matchedVertex", 1.0f);
+      return newVertex;
+    }
+    return bestVertex;
+  }
+  // PAT-DSA dimuon vertex
+  if (nanoVertex->IsPatDSADimuon()) {
+    auto patMuon = nanoVertex->Muon1();
+    auto dsaMuon = nanoVertex->Muon2();
+    float nSegments = dsaMuon->Get("nSegments");
+    float patMatchIndex1 = patMuon->Get("idx");
+    vector<int> patMatchIndices2;
+    // Get all mathed PAT muons
     for (int i = 1; i <= 5; i++) {
       float ratio_tmp = dsaMuon->GetMatchesForNthBestMatch(i) / nSegments;
       if(ratio_tmp >= minMatchRatio) {
-        if (PATMuonIndexExist(patMuonCollection, dsaMuon->GetMatchIdxForNthBestMatch(i))) {
-          patMatchIndices2.push_back(dsaMuon->GetMatchIdxForNthBestMatch(i));
-        }
+        patMatchIndices2.push_back(dsaMuon->GetMatchIdxForNthBestMatch(i));
       }
     }
-    for (auto matchIndex1 : patMatchIndices1) {
-      for (auto matchIndex2 : patMatchIndices2) {
-        if (matchIndex1 == matchIndex2) continue;
-        for (auto patVertex : *patVertexCollection) {
-          auto muon1 = asNanoDimuonVertex(patVertex,event)->Muon1();
-          auto muon2 = asNanoDimuonVertex(patVertex,event)->Muon2();
-          if ((float)muon1->Get("idx") == matchIndex1 && (float)muon2->Get("idx") == matchIndex2) {
-            matchFound = true;
-            break;
-          }
-          if ((float)muon1->Get("idx") == matchIndex2 && (float)muon2->Get("idx") == matchIndex1) {
-            matchFound = true;
-            break;
+    // Check if any PAT muon combinations are in patVertexCollection
+    int matchedVertexIdx = -1;
+    float minChi2 = 9999.;
+    for (auto matchIndex2 : patMatchIndices2) {
+      if (patMatchIndex1 == matchIndex2) continue;
+      for (int i=0; i<patVertexCollection->size(); i++) {
+        auto patVertex = patVertexCollection->at(i);
+        auto muon1 = asNanoDimuonVertex(patVertex,event)->Muon1();
+        auto muon2 = asNanoDimuonVertex(patVertex,event)->Muon2();
+        if ((float)muon1->Get("idx") == patMatchIndex1 && (float)muon2->Get("idx") == matchIndex2) {          
+          if ((float)patVertex->Get("normChi2") < minChi2) {
+            matchedVertexIdx = i;
+            minChi2 = (float)patVertex->Get("normChi2");
           }
         }
       }
     }
-    if (!matchFound) goodMatchedVertexCollection->push_back(patDSAvertex);
+    if (matchedVertexIdx > -1) {
+      auto newVertex = patDSAVertexCollection->at(matchedVertexIdx);
+      newVertex->AddVariable("matchedVertex", 1.0f);
+      return newVertex;
+    }
+    return bestVertex;
   }
-  return goodMatchedVertexCollection;
+  return bestVertex;
 }
 
 bool NanoEvent::DSAMuonIndexExist(shared_ptr<NanoMuons> muons, float index) {
