@@ -61,6 +61,9 @@ class ScaleFactorsManager {
   TH1D *pileupSFvalues;
   std::map<std::string, TF1 *> btaggingSFvalues;
 
+  bool ShouldApplyScaleFactor(const std::string &name);
+  bool ShouldApplyVariation(const std::string &name);
+
   void ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();

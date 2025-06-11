@@ -10,22 +10,26 @@ using namespace std;
 
 #ifdef USE_CORRECTIONLIB
 using correction::CorrectionSet;
-
 #else
-std::map<string, CorrectionRef> *from_file(const string &path) {
-  // Dummy implementation
-  std::map<string, CorrectionRef> *dummy = new std::map<string, CorrectionRef>();
-  return dummy;
+namespace {
+std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string &path) {
+  return std::make_shared<std::map<string, CorrectionRef>>();
 }
-
+}  // namespace
 #endif
 
 ScaleFactorsManager::ScaleFactorsManager() {
   ReadScaleFactorFlags();
   ReadScaleFactors();
-  if (applyScaleFactors.count("pileup")) {
-    if (applyScaleFactors.at("pileup")[0]) ReadPileupSFs();  
-  }
+  if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
+}
+
+bool ScaleFactorsManager::ShouldApplyScaleFactor(const std::string &name) {
+  return applyScaleFactors.count(name) ? applyScaleFactors[name][0] : false;
+}
+
+bool ScaleFactorsManager::ShouldApplyVariation(const std::string &name) {
+  return applyScaleFactors.count(name) ? applyScaleFactors[name][1] : false;
 }
 
 void ScaleFactorsManager::ReadScaleFactors() {
@@ -88,8 +92,8 @@ void ScaleFactorsManager::ReadPileupSFs() {
 }
 
 map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors.count("PUjetID") ? applyScaleFactors["PUjetID"][0] : false;
-  bool applyVariations = applyScaleFactors.count("PUjetID") ? applyScaleFactors["PUjetID"][1] : false;
+  bool applyDefault = ShouldApplyScaleFactor("PUjetID");
+  bool applyVariations = ShouldApplyVariation("PUjetID");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested PUJetID SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -112,8 +116,8 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
 }
 
 map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors.count("muon") ? applyScaleFactors["muon"][0] : false;
-  bool applyVariations = applyScaleFactors.count("muon") ? applyScaleFactors["muon"][1] : false;
+  bool applyDefault = ShouldApplyScaleFactor("muon");
+  bool applyVariations = ShouldApplyVariation("muon");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested muon SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -136,8 +140,8 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
 }
 
 map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors.count("muon") ? applyScaleFactors["muon"][0] : false;
-  bool applyVariations = applyScaleFactors.count("muon") ? applyScaleFactors["muon"][1] : false;
+  bool applyDefault = ShouldApplyScaleFactor("muon");
+  bool applyVariations = ShouldApplyVariation("muon");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -160,8 +164,8 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, floa
 }
 
 map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors.contains("muonTrigger") ? applyScaleFactors["muonTrigger"][0] : false;
-  bool applyVariations = applyScaleFactors.count("muonTrigger") ? applyScaleFactors["muonTrigger"][1] : false;
+  bool applyDefault = ShouldApplyScaleFactor("muonTrigger");
+  bool applyVariations = ShouldApplyVariation("muonTrigger");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested muon trigger SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -184,8 +188,8 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 }
 
 map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors.count("bTagging") ? applyScaleFactors["bTagging"][0] : false;
-  bool applyVariations = applyScaleFactors.count("bTagging") ? applyScaleFactors["bTagging"][1] : false;
+  bool applyDefault = ShouldApplyScaleFactor("bTagging");
+  bool applyVariations = ShouldApplyVariation("bTagging");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -227,7 +231,7 @@ float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
 
 float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const vector<std::variant<int, double, std::string>> &args) {
 #ifndef USE_CORRECTIONLIB
-  return 1.0;  // Dummy implementation for non-correctionlib builds
+  return 1.0;
 #else
   try {
     return correction->evaluate(args);
