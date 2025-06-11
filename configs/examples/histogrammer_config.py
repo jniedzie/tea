@@ -36,6 +36,12 @@ histParams = (
   ("Muon", "scaledPt", 400, 0, 200, ""),
 )
 
+eventsTreeNames = ["Events",]
+
+specialBranchSizes = {
+    "Particle": "Event_numberP",
+}
+
 weightsBranchName = "genWeight"
 applyMuonScaleFactors = True
 applyMuonTriggerScaleFactors = True

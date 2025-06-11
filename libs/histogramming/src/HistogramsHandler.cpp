@@ -47,6 +47,8 @@ HistogramsHandler::HistogramsHandler() {
     info() << "Couldn't read SFvariationVariables from config file - no up/down hists will be created" << endl;
   }
 
+  eventWeights["default"] = 1.0; // Default weight
+
   SetupHistograms();
 
 }
@@ -98,7 +100,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   }
 }
 
-void HistogramsHandler::SetEventWeights(map<string,float> weights) { 
+void HistogramsHandler::SetEventWeights(map<string, float> weights) { 
   bool firstIteration = eventWeights.empty() ? true : false;
   eventWeights = weights; 
   if (firstIteration) SetupSFvariationHistograms();

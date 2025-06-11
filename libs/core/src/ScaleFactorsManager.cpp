@@ -7,22 +7,43 @@
 #include "ConfigManager.hpp"
 
 using namespace std;
+
+#ifdef USE_CORRECTIONLIB
 using correction::CorrectionSet;
+#else
+namespace {
+std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string &path) {
+  return std::make_shared<std::map<string, CorrectionRef>>();
+}
+}  // namespace
+#endif
 
 ScaleFactorsManager::ScaleFactorsManager() {
   ReadScaleFactorFlags();
   ReadScaleFactors();
-  if (applyScaleFactors["pileup"][0]) ReadPileupSFs();
+  if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
+}
+
+bool ScaleFactorsManager::ShouldApplyScaleFactor(const std::string &name) {
+  return applyScaleFactors.count(name) ? applyScaleFactors[name][0] : false;
+}
+
+bool ScaleFactorsManager::ShouldApplyVariation(const std::string &name) {
+  return applyScaleFactors.count(name) ? applyScaleFactors[name][1] : false;
 }
 
 void ScaleFactorsManager::ReadScaleFactors() {
+#ifndef USE_CORRECTIONLIB
+  return;
+#endif
+
   auto &config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
   config.GetMap("scaleFactors", scaleFactors);
-  
+
   for (auto &[name, values] : scaleFactors) {
-    auto cset = correction::CorrectionSet::from_file(values["path"]);
+    auto cset = from_file(values["path"]);
     map<string, string> extraArgs;
 
     for (auto &[key, value] : values) {
@@ -45,7 +66,12 @@ void ScaleFactorsManager::ReadScaleFactors() {
 
 void ScaleFactorsManager::ReadScaleFactorFlags() {
   auto &config = ConfigManager::GetInstance();
-  config.GetMap("applyScaleFactors", applyScaleFactors);
+
+  try {
+    config.GetMap("applyScaleFactors", applyScaleFactors);
+  } catch (Exception &e) {
+    warn() << "Couldn't read applyScaleFactors from config." << endl;
+  }
 
   info() << "\n------------------------------------" << endl;
   info() << "Applying scale factors:" << endl;
@@ -66,8 +92,8 @@ void ScaleFactorsManager::ReadPileupSFs() {
 }
 
 map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["PUjetID"][0];
-  bool applyVariations = applyScaleFactors["PUjetID"][1];
+  bool applyDefault = ShouldApplyScaleFactor("PUjetID");
+  bool applyVariations = ShouldApplyVariation("PUjetID");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested PUJetID SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -76,8 +102,10 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
-  if (!applyDefault) scaleFactors["systematic"] = 1.0;
-  else scaleFactors["systematic"] = TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
@@ -88,8 +116,8 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
 }
 
 map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["muon"][0];
-  bool applyVariations = applyScaleFactors["muon"][1];
+  bool applyDefault = ShouldApplyScaleFactor("muon");
+  bool applyVariations = ShouldApplyVariation("muon");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested muon SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -98,10 +126,12 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
-  if (!applyDefault) scaleFactors["systematic"] = 1.0;
-  else scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
-  if(!applyVariations) return scaleFactors;
-  
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyVariations) return scaleFactors;
+
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation});
@@ -110,8 +140,8 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
 }
 
 map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["muon"][0];
-  bool applyVariations = applyScaleFactors["muon"][1];
+  bool applyDefault = ShouldApplyScaleFactor("muon");
+  bool applyVariations = ShouldApplyVariation("muon");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -120,8 +150,10 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, floa
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
-  if (!applyDefault) scaleFactors["systematic"] = 1.0;
-  else scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
@@ -132,8 +164,8 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, floa
 }
 
 map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["muonTrigger"][0];
-  bool applyVariations = applyScaleFactors["muonTrigger"][1];
+  bool applyDefault = ShouldApplyScaleFactor("muonTrigger");
+  bool applyVariations = ShouldApplyVariation("muonTrigger");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested muon trigger SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -142,7 +174,8 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
-  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
   else
     scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
   if (!applyVariations) return scaleFactors;
@@ -155,8 +188,8 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 }
 
 map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float eta, float pt) {
-  bool applyDefault = applyScaleFactors["bTagging"][0];
-  bool applyVariations = applyScaleFactors["bTagging"][1];
+  bool applyDefault = ShouldApplyScaleFactor("bTagging");
+  bool applyVariations = ShouldApplyVariation("bTagging");
 
   if (corrections.find(name) == corrections.end()) {
     warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name << endl;
@@ -165,14 +198,17 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
-  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+    scaleFactors["systematic"] =
+        TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+    scaleFactors[name + "_" + variation] =
+        TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
   }
   return scaleFactors;
 }
@@ -186,7 +222,6 @@ vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
   return variations;
 }
 
-
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
   if (!applyScaleFactors["pileup"][0]) return 1.0;
 
@@ -194,7 +229,10 @@ float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
   return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
 }
 
-float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &correction, const vector<std::variant<int, double, std::string>> &args) {
+float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const vector<std::variant<int, double, std::string>> &args) {
+#ifndef USE_CORRECTIONLIB
+  return 1.0;
+#else
   try {
     return correction->evaluate(args);
   } catch (std::runtime_error &e) {
@@ -213,6 +251,7 @@ float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &corr
       exit(0);
     }
   }
+#endif
 }
 
 float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
@@ -249,12 +288,13 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string 
   auto extraArgs = correctionsExtraArgs[name];
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
   // handle empty category - needed to setup the scale factor names for the first event
-  else if (category == "") scaleFactors["systematic"] = 1.0;
-  else 
+  else if (category == "")
+    scaleFactors["systematic"] = 1.0;
+  else
     scaleFactors["systematic"] = TryToEvaluate(corrections[name], {category, extraArgs["systematic"]});
 
   if (!applyVariations) return scaleFactors;
-  
+
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     if (category == "") {
