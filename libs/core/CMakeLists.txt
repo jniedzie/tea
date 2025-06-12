@@ -27,19 +27,15 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH "/cvmfs/sft.cern.ch/lcg/releases/vdt/0.4.3-992df/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/tbb/2019_U7-ba3eb/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/Davix/0.7.3-d94fa/x86_64-centos7-gcc8-opt/lib64/:/cvmfs/sft.cern.ch/lcg/releases/png/1.6.37-9c2fe/x86_64-centos7-gcc8-opt/lib/:/cvmfs/sft.cern.ch/lcg/releases/GSL/2.5-32fc5/x86_64-centos7-gcc8-opt/lib/")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# setup correctionlib
 find_package(ZLIB REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
-
 find_package(correctionlib QUIET)
-if(correctionlib_FOUND)
-  message(STATUS "correctionlib found. Linking with correctionlib::correctionlib.")
-  target_link_libraries(${PROJECT_NAME} PRIVATE correctionlib::correctionlib)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE -DUSE_CORRECTIONLIB)
-else()
-  message(WARNING "correctionlib not found. The project will be built without correctionlib support.")
-endif()
+
+# setup core library
+file(GLOB SOURCES "src/*.cpp")
+add_library(core SHARED ${SOURCES})
+
 
 # Detect the platform
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -85,14 +81,14 @@ endif()
 # setup includes
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-# setup core library
-file(GLOB SOURCES "src/*.cpp")
-add_library(core SHARED ${SOURCES})
+target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
 
 if(correctionlib_FOUND)
-  target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} correctionlib ZLIB::ZLIB Threads::Threads)
+  message(STATUS "correctionlib target found. Linking with correctionlib::correctionlib.")
+  target_link_libraries(core PRIVATE correctionlib)
+  target_compile_definitions(core PRIVATE -DUSE_CORRECTIONLIB)
 else()
-  target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
+  message(WARNING "correctionlib target not found. Building without correctionlib.")
 endif()
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
