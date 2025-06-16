@@ -43,22 +43,18 @@ Upcoming features:
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_grid.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_plotting.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_nano.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_hepmc.png" alt="Alt Text">
+    </a>
+  </div>
+
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_skimming.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
@@ -68,13 +64,45 @@ Upcoming features:
   </div>
   <div class="image-link">
     <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_skimming.png" alt="Alt Text">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_SFs.png" alt="Alt Text">
     </a>
   </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_plotting.png" alt="Alt Text">
+    </a>
+  </div>
+  
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_grid.png" alt="Alt Text">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_abcd.png" alt="Alt Text">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_uncertainties.png" alt="Alt Text">
+    </a>
+  </div>
+  <div class="image-link">
+    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+      <img src="{{site.baseurl}}//assets/img/tea_icons_limits.png" alt="Alt Text">
+    </a>
+  </div>
+  
+  
+  
+  
 </div>
 
 ## Analyses implemented with `tea`
 So far, `tea` has been used by the following analyses:
+- [CMS Light-by-light](https://github.com/jniedzie/tea_lbl), [2412.15413](https://arxiv.org/abs/2412.15413)
+- [SHIFT@LHC](https://github.com/jniedzie/tea_shift), [2406.08557](https://arxiv.org/abs/2406.08557)
 - [Search for long-lived ALPs in tt̄ events](https://github.com/jniedzie/tea_ttalps)
 - [CMS HGCal beam-test analysis](https://github.com/jniedzie/tea_hgcal)
 - [Search for Hexaquarks](https://github.com/jniedzie/tea_hexaquarks)
