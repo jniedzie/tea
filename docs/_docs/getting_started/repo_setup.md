@@ -6,12 +6,6 @@ permalink: /docs/repo_setup/
 #### Initial setup
 We highly recommend that you keep your analysis code in a git repository, while (optionally) downloading updates in the `tea` framework from our repository. As a rule of thumb, you should not modify `tea` code, only your apps, configs and classes.
 
-In case you're working with an older version of git, we suggest to set default branch name to `main`:
-
-```bash
-git config --global init.defaultBranch main
-```
-
 Then, to set up `tea` together with your analysis code:
 
 1. Create your analysis repository on github (go to your profile > repositories > new, pick a suitable name and create). You can choose to add README, licence or gitignore. When the repo is ready, save the URL it gave you (or click on "Code" button to find it), something like: 
