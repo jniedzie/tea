@@ -3,4 +3,4 @@ WORKDIR /srv/jekyll
 COPY . .
 RUN chmod -R a+w .
 RUN bundle install
-CMD ["jekyll", "serve", "--watch", "--host", "0.0.0.0"]
+CMD ["jekyll", "serve", "--watch", "--livereload", "--force_polling", "--host", "0.0.0.0"]
