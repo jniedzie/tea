@@ -1,0 +1,6 @@
+FROM jekyll/builder:latest
+WORKDIR /srv/jekyll
+COPY . .
+RUN chmod -R a+w .
+RUN bundle install
+CMD ["jekyll", "serve", "--watch", "--host", "0.0.0.0"]
