@@ -1,9 +1,9 @@
 # !/bin/bash
 
-# check if an argument was passed, otherwise print a message and exit
+SETUP_REMOTE=true
 if [ $# -eq 0 ]; then
-    echo "No arguments provided. Please provide a link to the remote repository."
-    exit 1
+    echo "No remote repository provided. Git setup will be skipped."
+    SETUP_REMOTE=false
 fi
 
 # create necessary directories
@@ -14,7 +14,6 @@ mkdir -p apps bin build configs utils libs/user_extensions/include
 echo "Initializing git repository"
 git init
 
-# add tea as a submodule
 echo "Adding tea as a submodule"
 git submodule add git@github.com:jniedzie/tea.git tea
 git submodule update --init --recursive
@@ -27,12 +26,13 @@ cp tea/templates/gitignore.template .gitignore
 cp tea/templates/UserExtensionsHelpers.template.hpp libs/user_extensions/include/UserExtensionsHelpers.hpp
 rm install.sh
 
-# setup remote
-echo "Setting up remote"
-git remote add origin $1
-git add .
-git commit -m "Initial commit"
+if [ "$SETUP_REMOTE" = true ]; then
+    echo "Setting up remote"
+    git remote add origin $1
+    git add .
+    git commit -m "Initial commit"
 
-# take what's in the repo already (like gitignore, README, etc.) and push all other files
-git pull --rebase origin main
-git push -u origin main
+    # take what's in the repo already (like gitignore, README, etc.) and push all other files
+    git pull --rebase origin main
+    git push -u origin main
+fi
