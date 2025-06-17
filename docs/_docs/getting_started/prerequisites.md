@@ -13,7 +13,7 @@ git config --global init.defaultBranch main
 
 ## Dependencies
 
-`tea` only depends on `ROOT` libraries and optionally `correctionlib` if you're planning on applying CMS scale factors. 
+`tea` only depends on `ROOT` libraries, you need `cmake ≥3.14`, and optionally `correctionlib` if you're planning on applying CMS scale factors. 
 
 Below you can find instructions for some common situations, but basically you can just install ROOT your prefered way.
 

@@ -12,10 +12,25 @@
   - build
   - create_script
 
+- title: Features
+  docs:
+  - tree_reader
+  - tree_writer
+  - nano_aod
+  - hepmc
+  - skimming
+  - histogramming
+  - scale_factors
+  - plotting
+  - submitter
+  - abcd
+  - systematics
+  - limits
+
 - title: Tutorial
   docs:
   - my_first_histogrammer
-  - plotting
+  - my_first_plots
   - my_first_skimming
   - custom_app_printer
   - extra_event_collections

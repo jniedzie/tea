@@ -1,6 +1,6 @@
 ---
-title: Plotting
-permalink: /docs/plotting/
+title: My first plots
+permalink: /docs/my_first_plots/
 ---
 
 The goal of this exercise is to create PDF files with plots of pt and η of electrons from the [My first histogrammer]({{site.baseurl}}/docs/my_first_histogrammer/) exercise. If you haven't already, complete this exercise first, as we will need files created there as an input for this exercise.

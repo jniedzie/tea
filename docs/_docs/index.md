@@ -10,8 +10,11 @@ redirect_from: /docs/index.html
 
 It is designed for speed (CPU-intensive operations implemented in C++), based on intuitive loop-based logic, while hidding most of the tricky and tedious operations behind a user-friendly API and using Python for configuration and lightweight operations.
 
-To get a feel for how a `tea` app looks like, have a look at an [example app]({{site.baseurl}}/docs/example_app/)
+To get a feel for how a `tea` app looks like, have a look at an [example app]({{site.baseurl}}/docs/example_app/).
 
+If you are ready to dive into the world of `tea`, check out the [installation instructions]({{site.baseurl}}/docs/repo_setup/), and then head to our [tutorials]({{site.baseurl}}/docs/my_first_histogrammer/).
+
+In case of any questions, ideas, bugs, feature requests, etc. - please open a [GitHub issue](https://github.com/jniedzie/tea/issues) - we will be more than happy to discuss!
 
 ## Features
 The framework will help you with:
@@ -32,64 +35,64 @@ Upcoming features:
 
 <div class="grid-container">
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/tree_reader/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/tree_writer/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_tree_writer.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/nano_aod/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_nano.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/hepmc/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_hepmc.png" alt="Alt Text">
     </a>
   </div>
 
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/skimming/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_skimming.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/histogramming/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_hist.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/scale_factors/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_SFs.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/plotting/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_plotting.png" alt="Alt Text">
     </a>
   </div>
   
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/submitter/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_grid.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/abcd/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_abcd.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/systematics/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_uncertainties.png" alt="Alt Text">
     </a>
   </div>
   <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/general_concepts/">
+    <a class="image-link" href="{{site.baseurl}}/docs/limits/">
       <img src="{{site.baseurl}}//assets/img/tea_icons_limits.png" alt="Alt Text">
     </a>
   </div>
