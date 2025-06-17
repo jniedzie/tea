@@ -9,6 +9,11 @@
 using namespace std;
 
 #ifdef USE_CORRECTIONLIB
+#include "correction.h"
+namespace correction {
+  std::shared_ptr<CorrectionSet> from_file(const std::string &fname);
+}
+using correction::from_file;
 using correction::CorrectionSet;
 #else
 namespace {
