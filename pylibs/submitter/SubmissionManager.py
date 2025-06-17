@@ -310,7 +310,7 @@ class SubmissionManager:
       os.system(f"sed -i '' 's|<log_path>|\\/dev\\/null|g' {self.condor_config_name}")
 
     if self.resubmit_job is not None:
-      os.system(f"sed -i '' 's/$(ProcId)/{self.resubmit_job}|g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|$(ProcId)|{self.resubmit_job}|g' {self.condor_config_name}")
       os.system(f"sed -i '' 's|<n_jobs>|1|g' {self.condor_config_name}")
     elif hasattr(self.files_config, "file_name"):
       os.system(f"sed -i '' 's|<n_jobs>|1|g' {self.condor_config_name}")
