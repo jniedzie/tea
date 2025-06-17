@@ -267,7 +267,6 @@ class SubmissionManager:
 
     # set working directory
     workDir = os.getcwd().replace("/", "\\/")
-    info("5")
     os.system(f"{self.sed_command} 's{self.sed_char}<work_dir>{self.sed_char}{workDir}{self.sed_char}g' {self.condor_run_script_name}")
 
     self.__set_python_executable()
