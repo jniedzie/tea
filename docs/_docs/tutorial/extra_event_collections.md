@@ -5,6 +5,8 @@ permalink: /docs/extra_event_collections/
 
 Let's say we want to produce a ROOT file with 2 histograms: transverse momenta and pseudorapidity of leptons (e/μ) with φ ∈ (0, 2) from `backgrounds_dy.root` file.
 
+---
+
 ## Prepare config file
 
 For this we can use the existing `histogrammer` app and copy the example histogrammer config:
@@ -14,9 +16,9 @@ cp tea/configs/examples/histogrammer_config.py configs/my_histogrammer_config.py
 ```
 
 We will use a feature called `extraEventCollections` to achieve our goal. It allows us to define new collections on the fly. All we need to provide are:
-- the name of the new collection
-- input collections
-- (optional) selections on variables that exist in all input collections
+- The name of the new collection.
+- Input collections.
+- (Optional) selections on variables that exist in all input collections.
 
 For instance, it could look like this:
 
@@ -39,14 +41,16 @@ defaultHistParams = (
 )
 ```
 
-## Build and run
+---
+
+## Build & run
 
 Then, build the project and run `histogrammer`, specifying the corresponding config file:
 
 ```bash
-./tea/build.sh
+source /tea/build.sh
 cd bin
-./histogrammer my_histogrammer_config.py
+./histogrammer --config my_histogrammer_config.py
 ```
 
-Have a look at the output file - you should see filled-in histograms of lepton pt and η, only for leptons with φ ∈ (0, 2).
+Have a look at the output file - you should see histograms of lepton pt and η, only for leptons with φ ∈ (0, 2).

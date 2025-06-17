@@ -21,10 +21,10 @@ branchesToRemove = (
 ```
 
 The order in which branches to be stored are defined is the following:
-- by default, all branches are switched off
-- then, all branches in `branchesToKeep` are turned on
-- finally, branches listed in `branchesToRemove` are turned off again
+- By default, all branches are switched off.
+- Then, all branches in `branchesToKeep` are turned on.
+- Finally, branches listed in `branchesToRemove` are turned off again.
 
-In the example above, the wildcard character `"*"` turns all branches on, and then all branches starging with `"L1"`, `"HLT"` or `"Flag"` are turned off.
+In the example above, the wildcard character `"*"` turns all branches on, and then all branches statging with `"L1"`, `"HLT"` or `"Flag"` are turned off.
 
 This logic allows you to specify only a few branches you want to keep (then you would leave `branchesToRemove` empty), or just a few you want to remove (then you put `"*"` in `branchesToKeep`, and list a few branches in `branchesToRemove`).

@@ -3,7 +3,7 @@ title: Prerequisites
 permalink: /docs/prerequisites/
 ---
 
-### Git setup
+## Git setup
 
 In case you're working with an older version of git, we suggest to set default branch name to `main`:
 
@@ -11,13 +11,15 @@ In case you're working with an older version of git, we suggest to set default b
 git config --global init.defaultBranch main
 ```
 
-### Dependencies
+## Dependencies
 
 `tea` only depends on `ROOT` libraries and optionally `correctionlib` if you're planning on applying CMS scale factors. 
 
 Below you can find instructions for some common situations, but basically you can just install ROOT your prefered way.
 
-#### lxplus
+---
+
+### Option 1: lxplus
 
 The only important thing is to use lxplus9, where new versions of cmake, GCC, etc. are available by default. Simply login using:
 
@@ -37,7 +39,9 @@ In case you see some errors related to `correctionlib`, you can also try install
 python3 -m pip install git+https://github.com/cms-nanoAOD/correctionlib.git
 ```
 
-#### Setting environment with Conda
+---
+
+### Option 2: Setting environment with Conda
 
 If you prefer to use a Conda environemnt, make sure you have Miniconda or Anaconda installed on your machine - see [Conda installation instructions](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
@@ -62,7 +66,9 @@ In case you see some errors related to `correctionlib`, you can also try install
 python3 -m pip install git+https://github.com/cms-nanoAOD/correctionlib.git
 ```
 
-#### Conda on NAF
+---
+
+### Option 3: Conda on NAF
 
 If you're working on NAF, you can use an existing Conda environment:
 

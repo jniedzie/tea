@@ -5,6 +5,8 @@ permalink: /docs/plotting/
 
 The goal of this exercise is to create PDF files with plots of pt and η of electrons from the [My first histogrammer]({{site.baseurl}}/docs/my_first_histogrammer/) exercise. If you haven't already, complete this exercise first, as we will need files created there as an input for this exercise.
 
+---
+
 ## Prepare config file
 
 Start by copying an example plotter config:
@@ -58,9 +60,9 @@ luminosity = 63670. # pb^-1 (2018)
 ### Legends and other visuals
 
 Finally, let’s specify:
-- where to put the legend: we only have one background, but in principle, you could specify positions of signals and data legends here as well
-- the canvas size
-- we should turn off ratio plotting (since we only have one sample)
+- Where to put the legend: we only have one background, but in principle, you could specify positions of signals and data legends here as well.
+- The canvas size.
+- We should turn off ratio plotting (since we only have one sample).
 
 Here's an example of this part of the config:
 
@@ -100,9 +102,9 @@ samples = (
 output_path = "../plots"
 
 histograms = (
-#            name            title             logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
-  Histogram("Electron_pt" , "Electron p_{T}",  True,   NormalizationType.to_lumi, 5,   0  , 150,  1,   1e3 , "p_{T} [GeV]", "# events (2018)"),
-  Histogram("Electron_eta", "Electron #eta",   False,  NormalizationType.to_lumi, 5,  -2.4, 2.4,  0,   70  , "#eta"       , "# events (2018)"),
+#            name            title             logx   logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
+  Histogram("Electron_pt" , "Electron p_{T}",  False, True,   NormalizationType.to_lumi, 5,   0  , 150,  1,   1e3 , "p_{T} [GeV]", "# events (2018)"),
+  Histogram("Electron_eta", "Electron #eta",   False, False,  NormalizationType.to_lumi, 5,  -2.4, 2.4,  0,   70  , "#eta"       , "# events (2018)"),
 )
 luminosity = 63670. # pb^-1 (2018)
 
@@ -112,14 +114,22 @@ legends = {
 
 canvas_size = (800, 600)
 show_ratio_plots = False
+
+plotting_options = {
+    SampleType.background: "hist",
+    SampleType.signal: "nostack hist",
+    SampleType.data: "nostack e",
+}
 ```
 
-## Build and run
+---
+
+## Build & run
 
 Now we are ready to build and run:
 
 ```bash
-./tea/build.sh
+source tea/build.sh
 cd bin
 python plotter.py my_plotter_config.py
 ```

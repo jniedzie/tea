@@ -3,7 +3,7 @@ title: Custom physics objects
 permalink: /docs/custom_physics_objects/
 ---
 
-Custom physics objects let you add some special functionality on top of the `PhysicsObject`. Imagine you work on an analysis involving top quarks and you want an easy way to check if given top quark is boosted or not. You can create a custom physics object (see [create.py script]({{site.baseurl}}/docs/create_script/) for details), for instance:
+Custom physics objects let you add some special functionality on top of the `PhysicsObject`. Imagine you work on an analysis involving top quarks and you want an easy way to check if a given top quark is boosted or not. You can create a custom physics object (see [Create apps & classes]({{site.baseurl}}/docs/create_script/) for details), for instance:
 
 ```bash
 python tea/create.py --name TopQuark --type PhysicsObject

@@ -29,6 +29,10 @@ If this flag is included, the code will run locally.
 
 If this flag is included (and **&ndash;&ndash;local** is not) the code will run on HTCondor.
 
+**&ndash;&ndash;save_logs**
+
+By default logs are not stored (they will quickly fill up your disk space). If you need them for debugging reasons, use this flag to keep them.
+
 **&ndash;&ndash;job_flavour**
 
 Specify HTCondor job flavour (used if **&ndash;&ndash;condor** included). Available options are:
@@ -43,16 +47,26 @@ Specify HTCondor job flavour (used if **&ndash;&ndash;condor** included). Availa
 **&ndash;&ndash;resubmit_job**
 Imagine that you submitted 100 jobs, but job 77 crashed. You can use this flag to resubmit a job with a specific number (corresponding to a specific file from the input files list).
 
+**&ndash;&ndash;memory**
+
+You can change the memory reqest for your job. The default is 1.0 GB, but sometimes you may need more.
+
+**&ndash;&ndash;--max_materialize**
+
+If your grid has a limit on the number of jobs that can be submitted simultaneously, set this limit here to make the remaining jobs wait to be submitted. The default if 5000.
+
 **&ndash;&ndash;dry**
 If this flag is included (and **&ndash;&ndash;condor** was selected), all files will be prepared, but the job won't actually be submitted. This can be useful to verify that all temporary files were generated correctly, before using large amount of resources.
 
+---
+
 ## Files config
 
-When using `submitter`, most of the time you will want to run on more than one file. The instructions on where input files are located and where to store the output should be provided in a separate config file, e.g. `input_file_list.py`. You can find an example in `configs/examples/input_file_list.py`.
+When using the `submitter`, most of the time you will want to run on more than one file. The instructions on where input files are located and where to store the output should be provided in a separate config file, e.g. `input_file_list.py`. You can find an example in `configs/examples/input_file_list.py`.
 
-There are many ways you can let `submitter` know aobut input/output files. Let us go through them one-by-one.
+There are many ways you can let the `submitter` know about input/output files. Let us go through them one-by-one.
 
-#### Option 1
+### Option 1
 
 List input files and specify one output directory. Output files will have the same name as inputs, but be stored the output directory:
 
@@ -65,9 +79,9 @@ input_file_list = (
 output_dir = "histograms"
 ```
 
-#### Option 2
+### Option 2
 
-List input files and for each of them specify the exact output file. This can be useful if you don't want input and output files to have the same name, or you want to put different files in different directories. Remember, since configs will be properly interpreted, you could also write some Python code that will generate this list for you.
+List input files and for each of them specify the exact output file. This can be useful if you don't want input and output files to have the same name, or you want to put different files in different directories. Remember, since configs will be properly interpreted, you could also write some python code that will generate this list for you.
 
 ```python
 input_output_file_list = (
@@ -76,7 +90,7 @@ input_output_file_list = (
 )
 ```
 
-#### Option 3
+### Option 3
 
 The favorite option of CMS useres: you can simply specify a DAS dataset name and output path. It will run over all files in the dataset (unless `max_files` is specified and different from -1):
 
@@ -86,7 +100,7 @@ output_dir = "../samples/ttbar_hists"
 max_files = 10
 ```
 
-#### Option 4
+### Option 4
 
 This is an extension of **option 3**, allowing to run on one specific file from a DAS dataset. Useful when you know that one file was not processed properly and want to resubmit this specific job:
 
@@ -96,7 +110,7 @@ output_dir = "../samples/ttbar_hists"
 file_name = "8ED6072D-6880-724A-A0E2-A57C700C78CC.root"
 ```
 
-#### Option 5
+### Option 5
 
 Finally, we can also run on all files in a specified directory. Output files will have the same names as inputs, but placed in the output directory:
 
@@ -105,23 +119,33 @@ input_directory = "samples"
 output_dir = "samples/histograms"
 ```
 
+---
+
 ## Example command
 
 Once you prepared your app, config and files config, it's time to test the submission:
 
 ```bash
-python submitter.py --app histogrammer --config histogrammer_config --files_config input_file_list --condor --dry
+python submitter.py                 \
+  --app histogrammer                \
+  --config histogrammer_config.py   \
+  --files_config input_file_list.py \
+  --condor                          \
+  --dry
 ```
 
 This will produce a few temporary files in `bin/tmp/` directory.
 
+---
+
 ## Advanced submitter options
 
 There are a few more advanced options for very specific cases:
-- you can specify a job number to resubmit, which is useful if you know that, e.g. job number 77 failed. Simply add `--resubmit_job 77` to your command to only run this one
-- in the files config, you can use a DAS dataset name as the input path. For this to work you need to first create a VOMS proxy, e.g.:
+- You can specify a job number to resubmit, which is useful if you know that, e.g. job number 77 failed. Simply add `--resubmit_job 77` to your command to only run this one.
+- In the files config, you can use a DAS dataset name as the input path. For this to work you need to first create a VOMS proxy, e.g.:
 
 ```bash
 voms-proxy-init --rfc --voms cms -valid 100:00
 ```
-- you also have an option to limit the number of files you run on (`max_files` variable) or specify an input file name (`file_name` variable), which may be useful for tests, or in case you know a job for a specific file failed.
+
+- You also have an option to limit the number of files you run on (`max_files` variable) or specify an input file name (`file_name` variable), which may be useful for tests, or in case you know a job for a specific file failed.

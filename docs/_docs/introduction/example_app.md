@@ -3,7 +3,7 @@ title: Example apps
 permalink: /docs/example_app/
 ---
 
-This page is supposed to give you a general feel for how `tea` apps and configs look like. To actually learn step by step about different topics, such as skimming, histogramming, plotting, etc., have a look at the tutorial pages in the navigation bar on the left.
+Have a look at these examples to get a general feel for what `tea` apps and configs look like. To actually learn step by step about different topics, such as skimming, histogramming, plotting, etc., go to tutorial pages on the left.
 
 ---
 ## Printing variables from a tree
@@ -79,34 +79,13 @@ defaultHistParams = (
 )
 ```
 
+In reality, you wouldn't even have to write this app - it already exists and is called `histogrammer`. The only thinig you would need to provide is the config file.
+
 ---
 
 ## Skimming
 
-Finally, let's consider a scenario in which you only want to keep events which contain at least two muons. Saving passing events to a tree can be easily achieved with the `EventWriter` class:
-
-```cpp
-#include "ConfigManager.hpp"
-#include "EventReader.hpp"
-#include "EventWriter.hpp"
-
-int main() {
-  ConfigManager::Initialize("config.py");
-  auto eventReader = make_shared<EventReader>();
-  auto eventWriter = make_shared<EventWriter>(eventReader);
-
-  for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
-    auto event = eventReader->GetEvent(iEvent);
-
-    if(event->GetCollectionSize("Muon") < 2) continue;
-    eventWriter->AddCurrentEvent("Events");
-  }
-  eventWriter->Save();
-  return 0;
-}
-```
-
-With the cut on number of muons defined in the `config.py` file:
+Finally, let's consider a scenario in which you only want to keep events which contain at least two muons. While you could write your custom app to handle this task, it is so simple that you can also use the existing `skimmer` app and provide a simple config:
 
 ```python
 inputFilePath = "../samples/background_dy.root"
