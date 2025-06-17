@@ -233,39 +233,42 @@ class SubmissionManager:
         file.write(f"{input_file_path}\n")
 
   def __setup_voms_proxy(self):
-    voms_proxy_path = os.popen("voms-proxy-info -path").read().strip().replace("/", "\\/")
-    os.system(f"cp {voms_proxy_path} voms_proxy")
-    os.system(f"sed -i 's/<voms_proxy>/{voms_proxy_path}/g' {self.condor_run_script_name}")
+    voms_proxy_path = os.popen("voms-proxy-info -path").read().strip()
+    if voms_proxy_path:
+      os.system(f"cp {voms_proxy_path} voms_proxy")
+      os.system(f"sed -i '' 's|<voms_proxy>|{voms_proxy_path}|g' {self.condor_run_script_name}")
+    else:
+      warn("VOMS proxy not found. VOMS authentication will not be available.")
 
   def __set_python_executable(self):
     python_executable = os.popen("which python3").read().strip()
     python_executable = python_executable.replace("/", "\\/")
-    os.system(f"sed -i 's/<python_path>/{python_executable}/g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<python_path>|{python_executable}|g' {self.condor_run_script_name}")
 
   def __set_run_script_variables(self):
     self.__setup_voms_proxy()
 
     # set file name
     if hasattr(self.files_config, "file_name"):
-      os.system(f"sed -i 's/<file_name>/--file_name {self.files_config.file_name}/g' {self.condor_run_script_name}")
+      os.system(f"sed -i '' 's|<file_name>|--file_name {self.files_config.file_name}|g' {self.condor_run_script_name}")
     else:
-      os.system(f"sed -i 's/<file_name>//g' {self.condor_run_script_name}")
+      os.system(f"sed -i '' 's|<file_name>||g' {self.condor_run_script_name}")
 
     # set working directory
     workDir = os.getcwd().replace("/", "\\/")
-    os.system(f"sed -i 's/<work_dir>/{workDir}/g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<work_dir>|{workDir}|g' {self.condor_run_script_name}")
 
     self.__set_python_executable()
 
     # set the app and app config to execute
-    os.system(f"sed -i 's/<app>/{self.app_name}/g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<app>|{self.app_name}|g' {self.condor_run_script_name}")
     config_path_escaped = self.config_path.replace("/", "\\/")
-    os.system(f"sed -i 's/<config>/{config_path_escaped}/g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<config>|{config_path_escaped}|g' {self.condor_run_script_name}")
 
     # set path to the list of input files
     input_files_list_file_name_escaped = self.input_files_list_file_name.replace("/", "\\/")
     os.system(
-        f"sed -i 's/<input_files_list_file_name>/{input_files_list_file_name_escaped}/g' {self.condor_run_script_name}")
+        f"sed -i '' 's|<input_files_list_file_name>|{input_files_list_file_name_escaped}|g' {self.condor_run_script_name}")
 
     # set output directory
     output_trees_dir = ""
@@ -276,8 +279,8 @@ class SubmissionManager:
     if hasattr(self.files_config, "output_hists_dir"):
       if self.files_config.output_hists_dir != "":
         output_hists_dir = "--output_hists_dir " + self.files_config.output_hists_dir.replace("/", "\\/")
-    os.system(f"sed -i 's/<output_trees_dir>/{output_trees_dir}/g' {self.condor_run_script_name}")
-    os.system(f"sed -i 's/<output_hists_dir>/{output_hists_dir}/g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<output_trees_dir>|{output_trees_dir}|g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<output_hists_dir>|{output_hists_dir}|g' {self.condor_run_script_name}")
 
     extra_args = ""
     if self.extra_args is not None:
@@ -288,31 +291,31 @@ class SubmissionManager:
 
     print(f"{extra_args=}")
 
-    os.system(f"sed -i 's/<extra_args>/{extra_args}/g' {self.condor_run_script_name}")
+    os.system(f"sed -i '' 's|<extra_args>|{extra_args}|g' {self.condor_run_script_name}")
 
   def __set_condor_script_variables(self, n_files):
     condor_run_script_name_escaped = self.condor_run_script_name.replace("/", "\\/")
-    os.system(f"sed -i 's/<executable>/{condor_run_script_name_escaped}/g' {self.condor_config_name}")
-    os.system(f"sed -i 's/<memory_request>/{self.memory_request}/g' {self.condor_config_name}")
-    os.system(f"sed -i 's/<job_flavour>/{self.job_flavour}/g' {self.condor_config_name}")
-    os.system(f"sed -i 's/<materialize_max>/{self.materialize_max}/g' {self.condor_config_name}")
+    os.system(f"sed -i '' 's|<executable>|{condor_run_script_name_escaped}|g' {self.condor_config_name}")
+    os.system(f"sed -i '' 's|<memory_request>|{self.memory_request}|g' {self.condor_config_name}")
+    os.system(f"sed -i '' 's|<job_flavour>|{self.job_flavour}|g' {self.condor_config_name}")
+    os.system(f"sed -i '' 's|<materialize_max>|{self.materialize_max}|g' {self.condor_config_name}")
 
     if self.save_logs:
-      os.system(f"sed -i 's/<output_path>/output\\/$(ClusterId).$(ProcId).out/g' {self.condor_config_name}")
-      os.system(f"sed -i 's/<error_path>/error\\/$(ClusterId).$(ProcId).err/g' {self.condor_config_name}")
-      os.system(f"sed -i 's/<log_path>/log\\/$(ClusterId).log/g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<output_path>|output\\/$(ClusterId).$(ProcId).out|g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<error_path>|error\\/$(ClusterId).$(ProcId).err|g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<log_path>|log\\/$(ClusterId).log|g' {self.condor_config_name}")
     else:
-      os.system(f"sed -i 's/<output_path>/\\/dev\\/null/g' {self.condor_config_name}")
-      os.system(f"sed -i 's/<error_path>/\\/dev\\/null/g' {self.condor_config_name}")
-      os.system(f"sed -i 's/<log_path>/\\/dev\\/null/g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<output_path>|\\/dev\\/null|g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<error_path>|\\/dev\\/null|g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<log_path>|\\/dev\\/null|g' {self.condor_config_name}")
 
     if self.resubmit_job is not None:
-      os.system(f"sed -i 's/$(ProcId)/{self.resubmit_job}/g' {self.condor_config_name}")
-      os.system(f"sed -i 's/<n_jobs>/1/g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's/$(ProcId)/{self.resubmit_job}|g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<n_jobs>|1|g' {self.condor_config_name}")
     elif hasattr(self.files_config, "file_name"):
-      os.system(f"sed -i 's/<n_jobs>/1/g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<n_jobs>|1|g' {self.condor_config_name}")
     else:
       max_files = n_files
       if hasattr(self.files_config, "max_files"):
         max_files = self.files_config.max_files if self.files_config.max_files != -1 else n_files
-      os.system(f"sed -i 's/<n_jobs>/{max_files}/g' {self.condor_config_name}")
+      os.system(f"sed -i '' 's|<n_jobs>|{max_files}|g' {self.condor_config_name}")
