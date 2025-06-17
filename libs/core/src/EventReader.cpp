@@ -138,7 +138,7 @@ void EventReader::SetupTrees() {
 
   for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
-      fatal() << "Input file does not contain" << eventsTreeName << "tree" << endl;
+      fatal() << "Input file does not contain " << eventsTreeName << " tree" << endl;
       exit(1);
     }
     if (!inputTrees[eventsTreeName]) {
