@@ -21,6 +21,10 @@ class EventReader {
   int maxEvents;
   int printEveryNevents;
 
+  std::unordered_map<std::string, std::vector<std::string>> branchesPerCollection;
+  std::unordered_map<std::string, std::function<int(const std::shared_ptr<Event>&)>> collectionSizeGetters;
+  std::unordered_map<std::string, std::string> defaultBranchSizeTypes;
+
   TFile *inputFile;
   std::map<std::string, TTree *> inputTrees;
   std::shared_ptr<Event> currentEvent;

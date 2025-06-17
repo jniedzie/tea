@@ -25,10 +25,7 @@ class Profiler {
     for (auto& [name, t] : sortedTimes) info() << name << ": " << t << " (s)" << std::endl;
   }
 
-  static Profiler& GetInstance() {
-    static Profiler instance;
-    return instance;
-  }
+  static Profiler& GetInstance();
 
  private:
   Profiler() {}

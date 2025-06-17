@@ -68,6 +68,7 @@
 #include <fstream>
 #include <set>
 #include <optional>
+#include <variant>
 
 #include "Logger.hpp"
 

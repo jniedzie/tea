@@ -27,15 +27,15 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH "/cvmfs/sft.cern.ch/lcg/releases/vdt/0.4.3-992df/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/tbb/2019_U7-ba3eb/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/Davix/0.7.3-d94fa/x86_64-centos7-gcc8-opt/lib64/:/cvmfs/sft.cern.ch/lcg/releases/png/1.6.37-9c2fe/x86_64-centos7-gcc8-opt/lib/:/cvmfs/sft.cern.ch/lcg/releases/GSL/2.5-32fc5/x86_64-centos7-gcc8-opt/lib/")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# setup correctionlib
 find_package(ZLIB REQUIRED)
-find_package(correctionlib REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
+find_package(correctionlib QUIET)
 
-get_target_property(CORRECTIONLIB_INCLUDE_DIRS correctionlib INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "correctionlib includes: ${CORRECTIONLIB_INCLUDE_DIRS}")
-set(CORRECTIONLIB_INCLUDE_DIRS ${CORRECTIONLIB_INCLUDE_DIRS} CACHE INTERNAL "Correctionlib include dirs")
+# setup core library
+file(GLOB SOURCES "src/*.cpp")
+add_library(core SHARED ${SOURCES})
+
 
 # Detect the platform
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -81,11 +81,15 @@ endif()
 # setup includes
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-# setup core library
-file(GLOB SOURCES "src/*.cpp")
-add_library(core SHARED ${SOURCES})
+target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
 
-target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} correctionlib ZLIB::ZLIB Threads::Threads)
+if(correctionlib_FOUND)
+  message(STATUS "correctionlib target found. Linking with correctionlib::correctionlib.")
+  target_link_libraries(core PRIVATE correctionlib)
+  target_compile_definitions(core PRIVATE -DUSE_CORRECTIONLIB)
+else()
+  message(WARNING "correctionlib target not found. Building without correctionlib.")
+endif()
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 set_target_properties(core PROPERTIES INSTALL_RPATH "$ORIGIN/../tea/libs/core")
