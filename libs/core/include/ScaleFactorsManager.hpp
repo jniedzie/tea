@@ -43,12 +43,6 @@ class ScaleFactorsManager {
 
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
 
-  void ReadJetEnergyCorrections();
-  bool ShouldApplyJetEnergyCorrections() {
-    return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec");
-  }
-  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
-
  private:
   ScaleFactorsManager();
   ~ScaleFactorsManager() {}

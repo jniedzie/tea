@@ -70,53 +70,6 @@ void ScaleFactorsManager::ReadScaleFactors() {
   }
 }
 
-void ScaleFactorsManager::ReadJetEnergyCorrections() {
-#ifndef USE_CORRECTIONLIB
-  return;
-#endif
-
-  if (!ShouldApplyScaleFactor("jec") && !ShouldApplyVariation("jec"))
-    return;
-
-  auto &config = ConfigManager::GetInstance();
-
-  map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
-
-  for (auto &[name, values] : scaleFactors) {
-    if (name.find("jec") == std::string::npos) continue;
-    auto cset = correction::CorrectionSet::from_file(values["path"]);
-
-    if (corrections.count(name)) continue;
-
-    string type = values["type"] + "_" + values["level"] + "_" +  values["algo"];
-    try {
-      compoundCorrections[name] = cset->compound().at(type);
-      correctionsExtraArgs[name] = values;
-    } catch (std::out_of_range &e) {
-      fatal() << "Incorrect correction type: " << type << endl;
-      fatal() << "Available corrections: " << endl;
-      for (auto &[name, corr] : *cset) fatal() << name << endl;
-      exit(0);
-    }
-    vector<string> uncertainties = GetScaleFactorVariations(values["uncertainties"]);
-    for (auto uncertainty : uncertainties) {
-      string unc_type = values["type"] + "_" + uncertainty + "_" +  values["algo"];
-      string unc_name = name + "_" + uncertainty;
-      if (corrections.count(unc_name)) continue;
-      try {
-        corrections[unc_name] = cset->at(unc_type);
-        correctionsExtraArgs[unc_name] = values;
-      } catch (std::out_of_range &e) {
-        fatal() << "Incorrect correction type: " << unc_type << endl;
-        fatal() << "Available corrections: " << endl;
-        for (auto &[name, corr] : *cset) fatal() << name << endl;
-        exit(0);
-      }
-    }
-  }
-}
-
 bool ScaleFactorsManager::ReadScaleFactorFlags() {
   auto &config = ConfigManager::GetInstance();
 
@@ -359,37 +312,5 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string 
     }
     scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {category, variation});
   }
-  return scaleFactors;
-}
-
-map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::string, float> inputArguments) {
-  bool applyDefault = ShouldApplyScaleFactor("jec");
-  bool applyVariations = ShouldApplyVariation("jec");
-
-  string name = "jecMC";
-  auto extraArgs = correctionsExtraArgs[name];
-  map<string, float> scaleFactors;
-  if (!applyDefault) scaleFactors["systematic"] = 1.0;
-  else {
-    vector<correction::Variable::Type> inputs;
-    for (const correction::Variable& input: compoundCorrections[name]->inputs()) {
-      inputs.push_back(inputArguments.at(input.name()));
-    }
-    scaleFactors["systematic"] = compoundCorrections[name]->evaluate(inputs);
-  }
-  if (!applyVariations) return scaleFactors;
-
-  vector<string> uncertainties = GetScaleFactorVariations(extraArgs["uncertainties"]);
-  for (auto uncertainty : uncertainties) {
-    string unc_name = name + "_" + uncertainty;
-    vector<correction::Variable::Type> unc_inputs;
-    for (const correction::Variable& input: corrections[unc_name]->inputs()) {
-      unc_inputs.push_back(inputArguments.at(input.name()));
-    }
-    float unc = TryToEvaluate(corrections[unc_name], unc_inputs);
-    scaleFactors[unc_name + "_up"] = 1 + unc;
-    scaleFactors[unc_name + "_down"] = 1 - unc;
-  }
-
   return scaleFactors;
 }

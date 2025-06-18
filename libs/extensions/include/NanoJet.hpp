@@ -37,7 +37,6 @@ class NanoJet {
 
   std::map<std::string,float> GetBtaggingScaleFactors(std::string workingPoint);
   std::map<std::string,float> GetPUJetIDScaleFactors(std::string name);
-  std::map<std::string,float> GetJetEnergyCorrectionPtVariations(float rho);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
