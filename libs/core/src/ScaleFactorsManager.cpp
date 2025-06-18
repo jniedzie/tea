@@ -10,11 +10,6 @@ using namespace std;
 
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
-namespace correction {
-  std::shared_ptr<CorrectionSet> from_file(const std::string &fname);
-}
-using correction::from_file;
-using correction::CorrectionSet;
 #else
 namespace {
 std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string &path) {
@@ -24,6 +19,12 @@ std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string &path) {
 #endif
 
 ScaleFactorsManager::ScaleFactorsManager() {
+#ifdef USE_CORRECTIONLIB
+  info() << "Using correctionlib for scale factors." << endl;
+#else
+  info() << "correctionlib not found, will assume all SFs = 1.0." << endl;
+#endif
+
   ReadScaleFactorFlags();
   ReadScaleFactors();
   if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
@@ -40,7 +41,7 @@ bool ScaleFactorsManager::ShouldApplyVariation(const std::string &name) {
 void ScaleFactorsManager::ReadScaleFactors() {
 #ifndef USE_CORRECTIONLIB
   return;
-#endif
+#else
 
   auto &config = ConfigManager::GetInstance();
 
@@ -68,6 +69,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
       exit(0);
     }
   }
+#endif
 }
 
 void ScaleFactorsManager::ReadScaleFactorFlags() {
