@@ -10,9 +10,11 @@
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
 using CorrectionRef = correction::Correction::Ref;
+using CompoundCorrectionRef = correction::CompoundCorrection::Ref;
 #else
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
+using CompoundCorrectionRef = DummyCorrectionRef;
 #endif
 
 struct MuonID;
@@ -42,16 +44,10 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
 
   void ReadJetEnergyCorrections();
+  bool ShouldApplyJetEnergyCorrections() {
+    return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec");
+  }
   std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
-  bool ApplyJetEnergyCorrections() { return applyJEC; }
-
-  bool HasScaleFactors() { return scaleFactorsInitialized; }
-
-  void ReadJetEnergyCorrections();
-  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
-  bool ApplyJetEnergyCorrections() { return applyJEC; }
-
-  bool HasScaleFactors() { return scaleFactorsInitialized; }
 
  private:
   ScaleFactorsManager();
@@ -66,8 +62,8 @@ class ScaleFactorsManager {
   CorrectionRef bTaggingCorrections;
   CorrectionRef muonCorrections;
 
-  std::map<std::string, correction::Correction::Ref> corrections;
-  std::map<std::string, correction::CompoundCorrection::Ref > compoundCorrections;
+  std::map<std::string, CorrectionRef> corrections;
+  std::map<std::string, CompoundCorrectionRef> compoundCorrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
   std::map<std::string, TH2D *> muonSFvalues;
@@ -77,19 +73,12 @@ class ScaleFactorsManager {
   bool ShouldApplyScaleFactor(const std::string &name);
   bool ShouldApplyVariation(const std::string &name);
 
-  bool ShouldApplyScaleFactor(const std::string &name);
-  bool ShouldApplyVariation(const std::string &name);
-
   std::string sampleType;
   std::string sampleEra;
-  bool applyJEC = false;
-  bool scaleFactorsInitialized = false;
 
   bool ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
-
-  std::string GetJetEnergyCorrectionType(std::string name, std::map<std::string, std::string> values, std::string sampleType, std::string sampleEra, std::string unceratinty = "");
 
   float TryToEvaluate(const CorrectionRef &correction, const std::vector<std::variant<int, double, std::string>> &args);
 

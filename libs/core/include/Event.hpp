@@ -121,11 +121,12 @@ class Event {
     throw Exception(message.c_str());
   }
 
-  void AddJetEnergyCorrections();
   void AddExtraCollections();
   void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
 
- private:
+  std::map<std::string, ExtraCollection> GetExtraCollectionsDescriptions() { return extraCollectionsDescriptions; }
+ 
+  private:
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
   inline Bool_t GetBool(std::string branchName) { return valuesBool[branchName]; }
@@ -167,8 +168,6 @@ class Event {
   bool hasExtraCollections = true;
   std::map<std::string, ExtraCollection> extraCollectionsDescriptions;
   std::map<std::string, std::string> defaultCollectionsTypes;
-
-  std::string rhoBranchName;
 
   friend class EventReader;
   template <typename T>

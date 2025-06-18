@@ -48,7 +48,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
   config.GetMap("scaleFactors", scaleFactors);
 
   for (auto &[name, values] : scaleFactors) {
-    auto cset = from_file(values["path"]);
+    auto cset = correction::CorrectionSet::from_file(values["path"]);
     map<string, string> extraArgs;
 
     for (auto &[key, value] : values) {
@@ -71,21 +71,14 @@ void ScaleFactorsManager::ReadScaleFactors() {
 }
 
 void ScaleFactorsManager::ReadJetEnergyCorrections() {
-  if(!applyScaleFactors["jec"][0] && !applyScaleFactors["jec"][1]) return;
-  applyJEC = true;
+#ifndef USE_CORRECTIONLIB
+  return;
+#endif
+
+  if (!ShouldApplyScaleFactor("jec") && !ShouldApplyVariation("jec"))
+    return;
+
   auto &config = ConfigManager::GetInstance();
-  try {
-    config.GetValue("sampleType", sampleType);
-  } catch (const Exception &e) {
-    info() << "Couldn't read sampleType from config file - will assume MC sample" << endl;
-    sampleType = "MC";
-  }
-  try {
-    config.GetValue("sampleEra", sampleEra);
-  } catch (const Exception &e) {
-    info() << "Couldn't read sampleEra from config file - will assume MC sample" << endl;
-    sampleEra = "";
-  }
 
   map<string, map<string, string>> scaleFactors;
   config.GetMap("scaleFactors", scaleFactors);
@@ -95,9 +88,8 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
     auto cset = correction::CorrectionSet::from_file(values["path"]);
 
     if (corrections.count(name)) continue;
-    if (sampleType != values["sampleType"]) continue;
 
-    string type = GetJetEnergyCorrectionType(name, values, sampleType, sampleEra);
+    string type = values["type"] + "_" + values["level"] + "_" +  values["algo"];
     try {
       compoundCorrections[name] = cset->compound().at(type);
       correctionsExtraArgs[name] = values;
@@ -109,7 +101,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
     }
     vector<string> uncertainties = GetScaleFactorVariations(values["uncertainties"]);
     for (auto uncertainty : uncertainties) {
-      string unc_type = GetJetEnergyCorrectionType(name, values, sampleType, sampleEra, uncertainty);
+      string unc_type = values["type"] + "_" + uncertainty + "_" +  values["algo"];
       string unc_name = name + "_" + uncertainty;
       if (corrections.count(unc_name)) continue;
       try {
@@ -122,15 +114,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
         exit(0);
       }
     }
-    
   }
-}
-
-string ScaleFactorsManager::GetJetEnergyCorrectionType(string name, map<string, string> values, string sampleType, string sampleEra, string uncertainty) {
-  if (uncertainty == "")
-    return values["campaign"] + sampleEra + "_" + values["version"] + "_" + sampleType + "_" + values["level"] + "_" + values["algo"];
-
-  return values["campaign"] + sampleEra + "_" + values["version"] + "_" + sampleType + "_" + uncertainty + "_" + values["algo"];
 }
 
 bool ScaleFactorsManager::ReadScaleFactorFlags() {
@@ -142,16 +126,13 @@ bool ScaleFactorsManager::ReadScaleFactorFlags() {
     warn() << "Couldn't read applyScaleFactors from config." << endl;
   }
 
-    info() << "\n------------------------------------" << endl;
-    info() << "Applying scale factors:" << endl;
-    for (auto &[name, applyVector] : applyScaleFactors) {
-      info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
-    }
-    info() << "------------------------------------\n" << endl;
-  } catch (const Exception &e) {
-    warn() << "Couldn't read applyScaleFactors from config file - no scale factors will be applied" << endl;
-    return false;
+  info() << "\n------------------------------------" << endl;
+  info() << "Applying scale factors:" << endl;
+  for (auto &[name, applyVector] : applyScaleFactors) {
+    info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
   }
+  info() << "------------------------------------\n" << endl;
+  
   return true;
 }
 
@@ -213,7 +194,7 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, float eta, float pt) {
+map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, string dsaname, float eta, float pt) {
   bool applyDefault = ShouldApplyScaleFactor("muon");
   bool applyVariations = ShouldApplyVariation("muon");
 
@@ -227,7 +208,7 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, floa
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[dsaname], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
@@ -329,7 +310,7 @@ float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const 
 }
 
 float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
-  if (!applyScaleFactors["pileup"][0]) return 1.0;
+  if (!ShouldApplyScaleFactor("PUjetID")) return 1.0;
 
   if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
     warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
@@ -356,8 +337,9 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
 }
 
 map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string name, string category) {
-  bool applyDefault = applyScaleFactors[name][0];
-  bool applyVariations = applyScaleFactors[name][1];
+  bool applyDefault = ShouldApplyScaleFactor(name);
+  bool applyVariations = ShouldApplyVariation(name);
+  
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
@@ -381,10 +363,10 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string 
 }
 
 map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::string, float> inputArguments) {
-  bool applyDefault = applyScaleFactors["jec"][0];
-  bool applyVariations = applyScaleFactors["jec"][1];
+  bool applyDefault = ShouldApplyScaleFactor("jec");
+  bool applyVariations = ShouldApplyVariation("jec");
 
-  string name = "jec" + sampleType;
+  string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
@@ -400,14 +382,14 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   vector<string> uncertainties = GetScaleFactorVariations(extraArgs["uncertainties"]);
   for (auto uncertainty : uncertainties) {
     string unc_name = name + "_" + uncertainty;
-    string type = GetJetEnergyCorrectionType(name, extraArgs, sampleType, sampleEra, uncertainty);
     vector<correction::Variable::Type> unc_inputs;
     for (const correction::Variable& input: corrections[unc_name]->inputs()) {
       unc_inputs.push_back(inputArguments.at(input.name()));
     }
-    scaleFactors[unc_name] = TryToEvaluate(corrections[unc_name], unc_inputs);
+    float unc = TryToEvaluate(corrections[unc_name], unc_inputs);
+    scaleFactors[unc_name + "_up"] = 1 + unc;
+    scaleFactors[unc_name + "_down"] = 1 - unc;
   }
-
 
   return scaleFactors;
 }
