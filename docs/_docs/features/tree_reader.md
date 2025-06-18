@@ -5,6 +5,10 @@ permalink: /docs/tree_reader/
 
 ## Class description
 
+<!-- <div style="float: right; margin: -8em 0em 0em 0em; max-width: 120px;">
+  <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="tea_logo" style="width: 100%; height: auto;">
+</div> -->
+
 Reading events from root trees is handled by `EventReader`. The class itself has a trivial constructor, so you create it without any arguments:
 
 ```cpp

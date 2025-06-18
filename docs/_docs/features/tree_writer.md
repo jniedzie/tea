@@ -5,6 +5,10 @@ permalink: /docs/tree_writer/
 
 ## Class description
 
+<!-- <div style="float: right; margin: -8em 0em 0em 0em; max-width: 120px;">
+  <img src="{{site.baseurl}}//assets/img/tea_icons_tree_writer.png" alt="tea_logo" style="width: 100%; height: auto;">
+</div> -->
+
 Trees can also be stored after some operations (e.g. skimming), which is handled by `EventWriter`. When you create it, it needs to know who is reading the trees, which is why you need to provide it with the `EventReader` object:
 
 ```cpp

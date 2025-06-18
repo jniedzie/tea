@@ -19,10 +19,11 @@
   - nano_aod
   - hepmc
   - skimming
+  - pruning
   - histogramming
   - scale_factors
   - plotting
-  - submitter
+  - job_submission
   - abcd
   - systematics
   - limits
@@ -37,8 +38,3 @@
   - custom_histogrammer
   - custom_physics_objects
   - custom_events
-  - job_submission
-
-- title: Other topics
-  docs:
-  - pruning
