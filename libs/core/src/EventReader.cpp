@@ -12,8 +12,17 @@ using namespace std;
 EventReader::EventReader() {
   auto &config = ConfigManager::GetInstance();
 
-  config.GetVector("eventsTreeNames", eventsTreeNames);
-  config.GetMap("specialBranchSizes", specialBranchSizes);
+  try {
+    config.GetVector("eventsTreeNames", eventsTreeNames);
+  } catch (const Exception &e) {
+    warn() << "No eventsTreeNames found in config file. Assuming the name is Events - if not, it will break." << endl;
+    eventsTreeNames = {"Events"};
+  }
+  try {
+    config.GetMap("specialBranchSizes", specialBranchSizes);
+  } catch (const Exception &e) {
+    info() << "No specialBranchSizes found in config file" << endl;
+  }
 
   config.GetValue("nEvents", maxEvents);
   config.GetValue("printEveryNevents", printEveryNevents);
@@ -26,11 +35,10 @@ EventReader::EventReader() {
 
   // if inputFilePath is a DAS dataset name, insert a redirector into it
   if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
-
     vector<string> redirectors = {
-      "xrootd-cms.infn.it",
-      "cms-xrd-global.cern.ch",
-      "cmsxrootd.fnal.gov",
+        "xrootd-cms.infn.it",
+        "cms-xrd-global.cern.ch",
+        "cmsxrootd.fnal.gov",
     };
 
     string customRedirector = "";
@@ -82,12 +90,10 @@ long long EventReader::GetNevents() const {
 }
 
 tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
-  
-
   // if collection name is specified in special collections, use that exact name as the collection name
-  for(auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+  for (auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
     auto pos = branchName.find(specialCollectionName);
-    
+
     if (pos != string::npos) {
       auto posEnd = pos + specialCollectionName.size();
       string collectionName = branchName.substr(0, specialCollectionName.size());
@@ -105,7 +111,7 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
   // TODO: to improve this, we could add a map in the config for custom collection/variable names.
   // E.g. if someone has branches like "MuonPt", MuonEta",... they could define a map like:
   // "MuonPt": ("Muon", "Pt"), "MuonEta": ("Muon", "Eta"),...
-  // and if there's some logic to how collection and variable names are formed, 
+  // and if there's some logic to how collection and variable names are formed,
   // they could generate it automatically in the config.
 
   // otherwise, cut at the underscore
@@ -132,7 +138,7 @@ void EventReader::SetupTrees() {
 
   for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
-      fatal() << "Input file does not contain Events tree" << endl;
+      fatal() << "Input file does not contain " << eventsTreeName << " tree" << endl;
       exit(1);
     }
     if (!inputTrees[eventsTreeName]) {

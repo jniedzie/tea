@@ -3,8 +3,8 @@ nEvents = 100
 printEveryNevents = 10
 
 # specify input/output paths 
-inputFilePath = "input_tree.root"
-histogramsOutputFilePath = "output_histograms.root"
+inputFilePath = "../tea/samples/background_dy.root"
+histogramsOutputFilePath = "../samples/histograms/custom_histograms.root"
 
 # define default histograms (can be filled automatically with HistogramsFiller, based on collection and variable names)
 defaultHistParams = (
