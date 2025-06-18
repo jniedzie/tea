@@ -24,6 +24,7 @@ map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, strin
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   // map<string,float> idSF;
+  map<string,float> recoSF;
   // if (IsDSA() && year == "2018") {  // TODO: find DSA SF for other years
   //   string dsanameID = "dsamuonID";
   //   idSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameID, dsanameID, fabs(GetEta()), GetPt());
@@ -33,7 +34,6 @@ map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, strin
   map<string,float> idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
   map<string,float> isoSF = scaleFactorsManager.GetMuonScaleFactors(nameIso, fabs(GetEta()), GetPt());
   // No Muon Reco SF for Run 3
-  map<string,float> recoSF;
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
     recoSF = scaleFactorsManager.GetMuonScaleFactors(nameReco, fabs(GetEta()), GetPt());
   }

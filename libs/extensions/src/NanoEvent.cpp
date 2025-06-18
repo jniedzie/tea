@@ -108,7 +108,6 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
 
 shared_ptr<PhysicsObject> NanoEvent::GetSegmentMatchedBestMuonVertex(shared_ptr<PhysicsObject> bestVertex, shared_ptr<PhysicsObjects> goodVerticesCollection, float minMatchRatio) {
   auto nanoVertex = asNanoDimuonVertex(bestVertex,event);
-  bestVertex->AddVariable("matchedVertex", 0.0f);
   // Pat-PAT dimuon vertex
   if (nanoVertex->IsPatDimuon()) return bestVertex;
 
@@ -165,7 +164,6 @@ shared_ptr<PhysicsObject> NanoEvent::GetSegmentMatchedBestMuonVertex(shared_ptr<
     }
     if (matchedVertexIdx > -1) {
       auto newVertex = patVertexCollection->at(matchedVertexIdx);
-      newVertex->AddVariable("matchedVertex", 1.0f);
       return newVertex;
     }
     // Check if any PAT-DSA muon combinations are in patDSAVertexCollection
@@ -187,7 +185,6 @@ shared_ptr<PhysicsObject> NanoEvent::GetSegmentMatchedBestMuonVertex(shared_ptr<
     }
     if (matchedVertexIdx > -1) {
       auto newVertex = patDSAVertexCollection->at(matchedVertexIdx);
-      newVertex->AddVariable("matchedVertex", 1.0f);
       return newVertex;
     }
     return bestVertex;
@@ -225,7 +222,6 @@ shared_ptr<PhysicsObject> NanoEvent::GetSegmentMatchedBestMuonVertex(shared_ptr<
     }
     if (matchedVertexIdx > -1) {
       auto newVertex = patDSAVertexCollection->at(matchedVertexIdx);
-      newVertex->AddVariable("matchedVertex", 1.0f);
       return newVertex;
     }
     return bestVertex;

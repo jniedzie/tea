@@ -70,7 +70,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
   }
 }
 
-bool ScaleFactorsManager::ReadScaleFactorFlags() {
+void ScaleFactorsManager::ReadScaleFactorFlags() {
   auto &config = ConfigManager::GetInstance();
 
   try {
@@ -85,8 +85,6 @@ bool ScaleFactorsManager::ReadScaleFactorFlags() {
     info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
   }
   info() << "------------------------------------\n" << endl;
-  
-  return true;
 }
 
 void ScaleFactorsManager::ReadPileupSFs() {

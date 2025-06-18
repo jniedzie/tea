@@ -10,11 +10,9 @@
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
 using CorrectionRef = correction::Correction::Ref;
-using CompoundCorrectionRef = correction::CompoundCorrection::Ref;
 #else
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
-using CompoundCorrectionRef = DummyCorrectionRef;
 #endif
 
 struct MuonID;
@@ -57,7 +55,6 @@ class ScaleFactorsManager {
   CorrectionRef muonCorrections;
 
   std::map<std::string, CorrectionRef> corrections;
-  std::map<std::string, CompoundCorrectionRef> compoundCorrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
   std::map<std::string, TH2D *> muonSFvalues;
@@ -67,10 +64,7 @@ class ScaleFactorsManager {
   bool ShouldApplyScaleFactor(const std::string &name);
   bool ShouldApplyVariation(const std::string &name);
 
-  std::string sampleType;
-  std::string sampleEra;
-
-  bool ReadScaleFactorFlags();
+  void ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
 
