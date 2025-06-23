@@ -58,7 +58,6 @@ void ScaleFactorsManager::ReadScaleFactors() {
     }
     if (corrections.count(name)) continue;
 
-    if (name.find("jec") != std::string::npos) continue;
     try {
       corrections[name] = cset->at(values["type"]);
       correctionsExtraArgs[name] = extraArgs;

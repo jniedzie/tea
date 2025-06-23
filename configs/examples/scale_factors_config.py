@@ -115,13 +115,6 @@ def get_scale_factors(year):
         "systematic": "nominal",
         "variations": "systup,systdown",
     }
-    scaleFactors["jecMC"] = {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": "Summer19UL18_V5_MC",
-        "level": "L1L2L3Res",
-        "algo": "AK4PFchs",
-        "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{year},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{year},Regrouped_EC2,Regrouped_EC2_{year},Regrouped_HF,Regrouped_HF_{year},Regrouped_RelativeBal,Regrouped_RelativeSample_{year}",
-    }
   else:
     # Muon trigger
     scaleFactors["muonTrigger"] = {
