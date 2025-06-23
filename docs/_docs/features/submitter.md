@@ -114,11 +114,12 @@ file_name = "8ED6072D-6880-724A-A0E2-A57C700C78CC.root"
 
 ### Option 5
 
-Finally, we can also run on all files in a specified directory. Output files will have the same names as inputs, but placed in the output directory:
+Finally, we can also run on all files in a specified directory. Output files will have the same names as inputs, but placed in the output directories (you can omit one of the output directories if you're only storing histograms or only trees):
 
 ```python
 input_directory = "samples"
-output_dir = "samples/histograms"
+output_hists_dir = "../samples/histograms"  # used for histogramming
+output_trees_dir = "../samples/trees"  # used for tree skimming
 ```
 
 ---
