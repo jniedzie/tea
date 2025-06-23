@@ -14,7 +14,7 @@ TEA stands for Toolkit for Efficient Analysis. It is a set of loop-based tools b
 - calculating limits with Combine,
 - ...
 
-For documentation, visit [cern.ch/tea](cern.ch/tea).
+For documentation, visit [cern.ch/tea](https://jniedzie.github.io/tea/docs/home/).
 
 
 
