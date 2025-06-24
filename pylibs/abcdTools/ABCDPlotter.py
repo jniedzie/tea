@@ -192,7 +192,7 @@ class ABCDPlotter:
                   {(mass, ctau): self.contamination_hists[(mass, ctau)]},
                   self.optimization_hists
               )
-    elif self.config.optimization_param == None:
+    elif self.config.optimization_param is None:
       warn("Optimization parameter is not set, using 'all' as default")
       self.best_points["all"] = self.config.abcd_point
     else:
