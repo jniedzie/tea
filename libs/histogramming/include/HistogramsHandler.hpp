@@ -35,6 +35,7 @@ class HistogramsHandler {
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
   std::map<std::string,float> eventWeights;
+  bool sfSetup = false;
 
   void CheckHistogram(std::string name, std::string directory);
   void SetupHistograms();

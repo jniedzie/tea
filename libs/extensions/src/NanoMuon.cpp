@@ -23,13 +23,15 @@ map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, strin
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  map<string,float> idSF;
+  // map<string,float> idSF;
   map<string,float> recoSF;
-  if (IsDSA() && year == "2018") {  // TODO: find DSA SF for other years
-    nameID = "dsamuonID";
-    idSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
-  } else
-    idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
+  // if (IsDSA() && year == "2018") {  // TODO: find DSA SF for other years
+  //   string dsanameID = "dsamuonID";
+  //   idSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameID, dsanameID, fabs(GetEta()), GetPt());
+  // } else {
+  //   idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
+  // }
+  map<string,float> idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
   map<string,float> isoSF = scaleFactorsManager.GetMuonScaleFactors(nameIso, fabs(GetEta()), GetPt());
   // No Muon Reco SF for Run 3
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
@@ -77,6 +79,21 @@ int NanoMuon::GetMatchesForNthBestMatch(int N) {
   if (IsDSA()) matchString = "muonMatch" + to_string(N);
   if (!IsDSA()) matchString = "dsaMatch" + to_string(N);
   return GetAs<int>(matchString);
+}
+
+vector<int> NanoMuon::GetMatchedPATMuonIndices(float minMatchRatio) {
+  vector<int> patIndices;
+  if (!IsDSA()) return patIndices;
+
+  float nSegments = Get("nSegments");
+  for (int i = 1; i <= 5; i++) {
+    float ratio_tmp = GetMatchesForNthBestMatch(i) / nSegments;
+
+    if(ratio_tmp >= minMatchRatio) {
+      patIndices.push_back(GetMatchIdxForNthBestMatch(i));
+    }
+  }
+  return patIndices;
 }
 
 shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR, bool allowNonMuons) {

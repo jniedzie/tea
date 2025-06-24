@@ -36,7 +36,7 @@ def main():
         background_yield, background_uncertainty_down, background_uncertainty_up = sfProducer.getYieldAndAsymmetricUncertainties(background_stack.GetStack().Last())
 
         ratio,ratio_uncertainty_down,ratio_uncertainty_up = sfProducer.getDataMCRatio(data_yield, data_uncertainty_down, data_uncertainty_up, background_yield, background_uncertainty_down, background_uncertainty_up)
-        scale_factors[sfBin] = [ratio, ratio_uncertainty_up, ratio_uncertainty_down]
+        scale_factors[sfBin] = [ratio, ratio+ratio_uncertainty_up, ratio-ratio_uncertainty_down]
 
 
     info("Writing corrections...")

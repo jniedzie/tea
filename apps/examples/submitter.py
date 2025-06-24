@@ -1,7 +1,7 @@
 import argparse
 import importlib.util
 import uuid
-import os
+import os, re
 from SubmissionManager import SubmissionManager, SubmissionSystem
 
 from Logger import info, fatal, logger_print
@@ -62,17 +62,19 @@ def update_config(path, key, value):
         line = f"{key} {value}"
       f.write(line)
 
-def replace_files_config_path(path, key, value):
+def replace_files_config_path(path, value):
 
-  new_value = value.replace("/", ".")
-  new_value = new_value.replace(".py", "")
+  new_module = value.replace("/", ".").replace(".py", "")
+
+  file_config_str = "files_config"
+  pattern = re.compile(rf'\b\w*{file_config_str}\b')
 
   with open(path, "r") as f:
     lines = f.readlines()
   with open(path, "w") as f:
     for line in lines:
-      if key in line:
-        line = line.replace(key, new_value)
+      if file_config_str in line:
+        line = pattern.sub(new_module, line)
       f.write(line)
 
 
@@ -115,7 +117,7 @@ def main():
     for sample in samples:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
-      replace_files_config_path(tmp_config_path, "ttalps_histogrammer_files_config", tmp_files_config_path)
+      replace_files_config_path(tmp_config_path, tmp_files_config_path)
       
       for name, applyPair in applyScaleFactors.items():
         applyDefault = applyPair[0]
@@ -139,7 +141,7 @@ def main():
     for dataset, output_dir in datasets_and_output_dirs:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
-      replace_files_config_path(tmp_config_path, "ttalps_histogrammer_files_config", tmp_files_config_path)
+      replace_files_config_path(tmp_config_path, tmp_files_config_path)
 
       for name, applyPair in applyScaleFactors.items():
         applyDefault = applyPair[0]
@@ -157,7 +159,7 @@ def main():
     for input_dasfiles, output_dir in input_dasfiles_and_output_dirs:
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
-      replace_files_config_path(tmp_config_path, "ttalps_histogrammer_files_config", tmp_files_config_path)
+      replace_files_config_path(tmp_config_path, tmp_files_config_path)
 
       for name, applyPair in applyScaleFactors.items():
         applyDefault = applyPair[0]

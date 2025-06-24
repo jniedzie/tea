@@ -101,9 +101,11 @@ void HistogramsHandler::SetupSFvariationHistograms() {
 }
 
 void HistogramsHandler::SetEventWeights(map<string, float> weights) { 
-  bool firstIteration = eventWeights.empty() ? true : false;
   eventWeights = weights; 
-  if (firstIteration) SetupSFvariationHistograms();
+  if (!sfSetup) {
+    SetupSFvariationHistograms();
+    sfSetup = true; 
+  }
 };
 
 void HistogramsHandler::Fill(string name, double value) {

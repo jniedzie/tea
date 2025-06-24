@@ -12,7 +12,7 @@
 #include "NanoMuon.hpp"
 
 class NanoDimuonVertex;
-typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoMuonVertices;
+typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoDimuonVertices;
 
 class NanoDimuonVertex {
  public:
@@ -36,6 +36,10 @@ class NanoDimuonVertex {
   float MuonIndex1() { return float(physicsObject->Get("originalMuonIdx1")); }
   float MuonIndex2() { return float(physicsObject->Get("originalMuonIdx2")); }
   bool IsValid() { return (float)Get("isValid") > 0; }
+
+  bool IsPatDimuon() { return GetVertexCategory() == "Pat"; }
+  bool IsPatDSADimuon() { return GetVertexCategory() == "PatDSA"; }
+  bool IsDSADimuon() { return GetVertexCategory() == "DSA"; }
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
@@ -78,6 +82,8 @@ class NanoDimuonVertex {
 
   std::shared_ptr<NanoMuon> GetLeadingMuon();
   std::shared_ptr<NanoMuon> GetSubleadingMuon();
+
+  bool HasMuonIndices(int muonIdx1, int muonIdx2);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

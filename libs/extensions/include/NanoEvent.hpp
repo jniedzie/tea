@@ -31,6 +31,7 @@ class NanoEvent {
   std::shared_ptr<NanoMuons> GetOuterDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float matchingDeltaR = 0.1);
   std::shared_ptr<NanoMuons> GetProximityDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float matchingDeltaR = 0.1);
   std::shared_ptr<NanoMuons> GetSegmentMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float minMatchRatio = 2.0f / 3.0f);
+  std::shared_ptr<NanoDimuonVertex> GetSegmentMatchedBestDimuonVertex(std::shared_ptr<NanoDimuonVertex> bestVertex, std::shared_ptr<NanoDimuonVertices> goodVerticesCollection, float minMatchRatio = 2.0f / 3.0f);
 
   std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<NanoMuons> muonCollection);
