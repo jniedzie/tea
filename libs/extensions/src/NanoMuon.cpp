@@ -81,6 +81,21 @@ int NanoMuon::GetMatchesForNthBestMatch(int N) {
   return GetAs<int>(matchString);
 }
 
+vector<int> NanoMuon::GetMatchedPATMuonIndices(float minMatchRatio) {
+  vector<int> patIndices;
+  if (!IsDSA()) return patIndices;
+
+  float nSegments = Get("nSegments");
+  for (int i = 1; i <= 5; i++) {
+    float ratio_tmp = GetMatchesForNthBestMatch(i) / nSegments;
+
+    if(ratio_tmp >= minMatchRatio) {
+      patIndices.push_back(GetMatchIdxForNthBestMatch(i));
+    }
+  }
+  return patIndices;
+}
+
 shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR, bool allowNonMuons) {
   shared_ptr<NanoGenParticle> bestGenMuon = nullptr;
   float bestDeltaR = maxDeltaR;

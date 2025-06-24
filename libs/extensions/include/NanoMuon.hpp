@@ -36,6 +36,7 @@ class NanoMuon {
   bool IsDSA() { return GetOriginalCollection() == "DSAMuon"; };
   bool IsTight();
 
+  inline int GetIdx() { return physicsObject->GetAs<int>("idx"); }
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }
   inline float GetPhi() { return physicsObject->Get("phi"); }
@@ -45,6 +46,7 @@ class NanoMuon {
 
   int GetMatchIdxForNthBestMatch(int N);
   int GetMatchesForNthBestMatch(int N);
+  std::vector<int> GetMatchedPATMuonIndices(float minMatchRatio);
 
   /**
    * Retrieves the best-matching NanoGenParticle from the provided genMuonCollection.

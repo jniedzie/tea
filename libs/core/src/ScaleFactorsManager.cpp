@@ -146,26 +146,26 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, string dsaname, float eta, float pt) {
+map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patName, string dsaName, float eta, float pt) {
   bool applyDefault = ShouldApplyScaleFactor("muon");
   bool applyVariations = ShouldApplyVariation("muon");
 
-  if (corrections.find(dsaname) == corrections.end()) {
-    warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << dsaname << endl;
+  if (corrections.find(dsaName) == corrections.end()) {
+    warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << dsaName << endl;
     return {{"systematic", 1.0}};
   }
 
-  auto extraArgs = correctionsExtraArgs[dsaname];
+  auto extraArgs = correctionsExtraArgs[dsaName];
   map<string, float> scaleFactors;
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[dsaname], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[dsaName], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[patname + "_" + variation] = TryToEvaluate(corrections[dsaname], {extraArgs["year"], fabs(eta), pt, variation});
+    scaleFactors[patName + "_" + variation] = TryToEvaluate(corrections[dsaName], {extraArgs["year"], fabs(eta), pt, variation});
   }
   return scaleFactors;
 }
@@ -222,7 +222,7 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
 
 vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
   vector<string> variations;
-  if (!applyScaleFactors["bTagging"][1]) return variations;
+  if (!ShouldApplyVariation("bTagging")) return variations;
 
   auto extraArgs = correctionsExtraArgs[name];
   variations = GetScaleFactorVariations(extraArgs["variations"]);
@@ -230,7 +230,7 @@ vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
 }
 
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
-  if (!applyScaleFactors["pileup"][0]) return 1.0;
+  if (!ShouldApplyScaleFactor("pileup")) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
   return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
@@ -262,7 +262,7 @@ float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const 
 }
 
 float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
-  if (!ShouldApplyScaleFactor("PUjetID")) return 1.0;
+  if (!ShouldApplyScaleFactor("pileup")) return 1.0;
 
   if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
     warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
