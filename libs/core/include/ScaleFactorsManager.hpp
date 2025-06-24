@@ -73,9 +73,6 @@ class ScaleFactorsManager {
   bool ShouldApplyScaleFactor(const std::string &name);
   bool ShouldApplyVariation(const std::string &name);
 
-  std::string sampleType;
-  std::string sampleEra;
-
   bool ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
