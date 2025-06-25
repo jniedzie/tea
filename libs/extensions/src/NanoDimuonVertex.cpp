@@ -176,9 +176,3 @@ shared_ptr<NanoMuon> NanoDimuonVertex::GetLeadingMuon() {
 shared_ptr<NanoMuon> NanoDimuonVertex::GetSubleadingMuon() {
   return (muon1->GetAs<float>("pt") < muon2->GetAs<float>("pt")) ? muon1 : muon2;
 }
-
-bool NanoDimuonVertex::HasMuonIndices(int muonIdx1, int muonIdx2) {
-  if (Muon1()->GetIdx() == muonIdx1 && Muon2()->GetIdx() == muonIdx2)
-    return true;
-  return false;
-}

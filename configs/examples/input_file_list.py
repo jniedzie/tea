@@ -31,5 +31,5 @@
 
 
 # option 5: only specify local input and output directories
-input_directory = "../samples/skimmed"
+input_directory = "../samples"
 output_dir = "../samples/histograms"

@@ -34,5 +34,5 @@ float TemplateName::GetWeight(const std::shared_ptr<Event> event) {
 
 void TemplateName::Fill(const std::shared_ptr<Event> event) {
   // Fill the histogram for given event (e.g. use EventProcessor to get some variables)
-  histogramsHandler->Fill("test", eventProcessor->GetMaxPt(event, "Muon"));
+  histogramsHandler->Fill("test", eventProcessor->GetMaxPt(event, "Muon"), GetWeight(event));
 }

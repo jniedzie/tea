@@ -8,6 +8,7 @@
 #include "Collection.hpp"
 #include "Helpers.hpp"
 #include "Multitype.hpp"
+#include "Logger.hpp"
 
 class PhysicsObject;
 typedef Collection<std::shared_ptr<PhysicsObject>> PhysicsObjects;
@@ -116,6 +117,9 @@ class PhysicsObject {
     }
     return 0;
   }
+
+  template <typename T>
+  void AddVariable(std::string branchName, T value);
 
  private:
   inline UInt_t GetUint(std::string branchName) { return *valuesUint[branchName]; }
