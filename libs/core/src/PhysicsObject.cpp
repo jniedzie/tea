@@ -17,3 +17,12 @@ void PhysicsObject::Reset() {
   for (auto& [key, value] : valuesUchar) value = 0;
   for (auto& [key, value] : valuesChar) value = 0;
 }
+
+template <>
+void PhysicsObject::AddVariable(string branchName, float value) {
+  if (valuesTypes.count(branchName) == 0) {
+    valuesTypes[branchName] = "Float_t";
+    valuesFloat[branchName] = new Float_t;
+  }
+  *valuesFloat[branchName] = value;
+}

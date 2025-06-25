@@ -27,32 +27,32 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
 CutFlowManager::~CutFlowManager() {}
 
 void CutFlowManager::RegisterPreExistingCutFlows() {
+
   vector<string> existingCutFlows;
   TList *keys = eventReader->inputFile->GetListOfKeys();
   for (int i = 0; i < keys->GetSize(); i++) {
-    TKey *key = (TKey *)keys->At(i);
+    TKey *key = (TKey*)keys->At(i);
     TString keyName = key->GetName();
     if (keyName.Contains("CutFlow")) existingCutFlows.push_back(keyName.Data());
   }
 
-  for (auto cutFlowName : existingCutFlows) {
+  for(auto cutFlowName : existingCutFlows) {
     if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
     info() << "Input file contains " << cutFlowName << " directory - will store existing cutflow in the output." << endl;
 
-    bool rawEvents = cutFlowName.find("RawEvents") != string::npos;
+    bool rawEvents = cutFlowName.find("RawEvents")!=string::npos;
     string collectionName = "";
-    if (cutFlowName == "CutFlow" || cutFlowName == "RawEventsCutFlow")
-      collectionName = "";
-    else if (cutFlowName.find("CollectionCutFlow_") != string::npos) {
-      collectionName = cutFlowName.substr(cutFlowName.find("CollectionCutFlow_") + 17);
-      if (rawEvents) collectionName = collectionName.substr(collectionName.find("RawEventsCollectionCutFlow_") + 26);
-    } else {
-      warn() << "Found cutflow in unknown format: " << cutFlowName
-             << ". Expected cutflow name CutFlow or names starting with CollectionCutFlow_" << endl;
+    if(cutFlowName=="CutFlow" || cutFlowName=="RawEventsCutFlow") collectionName = "";
+    else if(cutFlowName.find("CollectionCutFlow_")!=string::npos) {
+      collectionName = cutFlowName.substr(cutFlowName.find("CollectionCutFlow_")+17);
+      if(rawEvents) collectionName = collectionName.substr(collectionName.find("RawEventsCollectionCutFlow_")+26);
+    }
+    else {
+      warn() << "Found cutflow in unknown format: " << cutFlowName << ". Expected cutflow name CutFlow or names starting with CollectionCutFlow_" << endl;
       collectionName = cutFlowName;
     }
 
-    if (!rawEvents && collectionName != "") RegisterCollection(collectionName);
+    if(!rawEvents && collectionName!="") RegisterCollection(collectionName);
     auto sourceDir = (TDirectory *)eventReader->inputFile->Get(cutFlowName.c_str());
 
     TIter nextKey(sourceDir->GetListOfKeys());
@@ -66,22 +66,22 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
       bool containsInitial = cutName == "0_initial";
       delete obj;
 
-      if (rawEvents) {
-        if (collectionName == "")
-          rawEventsAfterCuts[cutName] = sumOfWeights;
-        else
-          rawEventsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
-      } else {
-        if (collectionName == "") {
+      if(rawEvents) {
+        if(collectionName=="") rawEventsAfterCuts[cutName] = sumOfWeights;
+        else rawEventsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
+      }
+      else {
+        if(collectionName=="") {
           weightsAfterCuts[cutName] = sumOfWeights;
           if (containsInitial) inputContainsInitial = true;
           existingCuts.push_back(cutName);
           currentIndex++;
-        } else {
+        }
+        else {
           weightsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
           if (containsInitial) inputCollectionContainsInitial[collectionName] = true;
           existingCollectionCuts[collectionName].push_back(cutName);
-          currentCollectionIndex[collectionName]++;
+          currentCollectionIndex[collectionName]++;  
         }
       }
     }
@@ -97,16 +97,17 @@ void CutFlowManager::RegisterCollection(string collectionName) {
 }
 
 void CutFlowManager::RegisterCut(string cutName, string collectionName) {
-  if (cutName == "initial" && HasCut("initial", collectionName)) return;
-  bool containsInitial = collectionName == "" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
+  if(cutName == "initial" && HasCut("initial", collectionName)) return;
+  bool containsInitial = collectionName=="" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
   if (cutName == "initial" && containsInitial) return;
-  int index = collectionName == "" ? currentIndex : currentCollectionIndex[collectionName];
+  int index = collectionName=="" ? currentIndex : currentCollectionIndex[collectionName];
   string fullCutName = (cutName == "initial") ? "0_initial" : (to_string(index) + "_" + cutName);
-  if (collectionName == "") {
+  if(collectionName=="") {
     currentIndex++;
     weightsAfterCuts[fullCutName] = 0;
     rawEventsAfterCuts[fullCutName] = 0;
-  } else {
+  }
+  else {
     currentCollectionIndex[collectionName]++;
     weightsAfterCollectionCuts[collectionName][fullCutName] = 0;
     rawEventsAfterCollectionCuts[collectionName][fullCutName] = 0;
@@ -116,7 +117,7 @@ void CutFlowManager::RegisterCut(string cutName, string collectionName) {
 string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
   // Find full names in the cut flow matching the given cut name
   vector<string> matchingFullCutNames;
-  map<string, float> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
   for (auto &[existingCutName, sumOfWeights] : weights) {
     size_t underscorePos = existingCutName.find("_");
     if (underscorePos != string::npos) {
@@ -147,28 +148,29 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
 }
 
 float CutFlowManager::GetCurrentEventWeight() {
+  // Check if the eventWeight has been set to non-zero value
   if (eventWeight != 0) return eventWeight;
-
   float weight = 1.0;
-
-  if (weightsBranchName == "") return weight;
-
   try {
     weight = eventReader->currentEvent->Get(weightsBranchName);
   } catch (const Exception &e) {
-    error() << "CutFlowManager failed to get gen weights from branch " << weightsBranchName << endl;
+    if (!weightsBranchWarningPrinted) {
+      error() << "CutFlowManager failed to get gen weights from branch " << weightsBranchName << endl;
+      weightsBranchWarningPrinted = true;
+    }
   }
   return weight;
 }
 
 void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
-  bool containsInitial = collectionName == "" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
+  bool containsInitial = collectionName=="" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
   if (cutName == "initial" && containsInitial) return;
   string fullCutName = GetFullCutName(cutName, collectionName);
-  if (collectionName == "") {
+  if(collectionName=="") {
     weightsAfterCuts[fullCutName] += GetCurrentEventWeight();
     rawEventsAfterCuts[fullCutName] += 1;
-  } else {
+  }
+  else {
     weightsAfterCollectionCuts[collectionName][fullCutName] += GetCurrentEventWeight();
     rawEventsAfterCollectionCuts[collectionName][fullCutName] += 1;
   }
@@ -181,40 +183,40 @@ void CutFlowManager::SaveSingleCutFlow(string collectionName) {
   map<string, float> weights = weightsAfterCuts;
   map<string, float> rawEvents = rawEventsAfterCuts;
   string cutFlowName = "CutFlow";
-  if (collectionName != "") {
-    cutFlowName = "CollectionCutFlow_" + collectionName;
+  if(collectionName!="") {
+    cutFlowName = "CollectionCutFlow_"+collectionName;
     weights = weightsAfterCollectionCuts[collectionName];
     rawEvents = rawEventsAfterCollectionCuts[collectionName];
   }
   WriteCutFlow(weights, cutFlowName);
-  WriteCutFlow(rawEvents, "RawEvents" + cutFlowName);
+  WriteCutFlow(rawEvents, "RawEvents"+cutFlowName);
 }
 
 void CutFlowManager::SaveCutFlow() {
   SaveSingleCutFlow();
-  for (auto &[collectionName, vertexCuts] : weightsAfterCollectionCuts) {
+  for(auto &[collectionName, vertexCuts] : weightsAfterCollectionCuts){
     SaveSingleCutFlow(collectionName);
   }
 }
 
-bool CutFlowManager::HasCut(string cutName, string collectionName) {
-  vector<string> cuts = collectionName == "" ? existingCuts : existingCollectionCuts[collectionName];
-  return find(cuts.begin(), cuts.end(), cutName) != cuts.end();
+bool CutFlowManager::HasCut(string cutName, string collectionName) { 
+  vector<string> cuts = collectionName=="" ? existingCuts : existingCollectionCuts[collectionName];
+  return find(cuts.begin(), cuts.end(), cutName) != cuts.end(); 
 }
 
-map<string, float> CutFlowManager::GetCutFlow(string collectionName) {
-  if (collectionName != "") return weightsAfterCollectionCuts[collectionName];
-  return weightsAfterCuts;
+map<string, float> CutFlowManager::GetCutFlow(string collectionName) { 
+  if(collectionName!="") return weightsAfterCollectionCuts[collectionName];
+  return weightsAfterCuts; 
 }
 
-map<string, float> CutFlowManager::GetRawEventsCutFlow(string collectionName) {
-  if (collectionName != "") return rawEventsAfterCollectionCuts[collectionName];
-  return rawEventsAfterCuts;
+map<string, float> CutFlowManager::GetRawEventsCutFlow(string collectionName) { 
+  if(collectionName!="") return rawEventsAfterCollectionCuts[collectionName];
+  return rawEventsAfterCuts; 
 }
 
 void CutFlowManager::Print(string collectionName) {
-  map<string, float> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
-  map<string, float> rawEvents = collectionName == "" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
+  map<string, float> weights = collectionName=="" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, float> rawEvents = collectionName=="" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
   map<int, pair<string, float>> sortedWeightsAfterCuts;
   map<int, pair<string, float>> sortedRawEventsAfterCuts;
   for (auto &[cutName, sumOfWeights] : weights) {
@@ -230,14 +232,14 @@ void CutFlowManager::Print(string collectionName) {
   }
 }
 
-bool CutFlowManager::isEmpty(string collectionName) {
-  if (collectionName != "") return weightsAfterCollectionCuts[collectionName].empty();
-  return weightsAfterCuts.empty();
+bool CutFlowManager::isEmpty(string collectionName) { 
+  if(collectionName!="") return weightsAfterCollectionCuts[collectionName].empty();
+  return weightsAfterCuts.empty(); 
 }
 
-bool CutFlowManager::isRawEventsEmpty(string collectionName) {
-  if (collectionName != "") return rawEventsAfterCollectionCuts[collectionName].empty();
-  return rawEventsAfterCuts.empty();
+bool CutFlowManager::isRawEventsEmpty(string collectionName) { 
+  if(collectionName!="") return rawEventsAfterCollectionCuts[collectionName].empty();
+  return rawEventsAfterCuts.empty(); 
 }
 
 void CutFlowManager::WriteCutFlow(map<string, float> weights, string cutFlowName) {

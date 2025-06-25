@@ -44,15 +44,6 @@ inline std::shared_ptr<NanoDimuonVertex> asNanoDimuonVertex(const std::shared_pt
   return std::make_shared<NanoDimuonVertex>(physicsObject, event);
 }
 
-inline std::shared_ptr<NanoDimuonVertices> asNanoDimuonVertices(const std::shared_ptr<Collection<std::shared_ptr<PhysicsObject>>> physicsObjects, const std::shared_ptr<Event> event) {
-  if(!physicsObjects || !event) return nullptr;
-  auto nanoDimuonVertices = std::make_shared<NanoDimuonVertices>();
-  for(auto physicsObject : *physicsObjects) {
-    nanoDimuonVertices->push_back(asNanoDimuonVertex(physicsObject,event));
-  }
-  return nanoDimuonVertices;
-}
-
 inline std::shared_ptr<NanoElectron> asNanoElectron(const std::shared_ptr<PhysicsObject> physicsObject) {
   if(!physicsObject) return nullptr;
   return std::make_shared<NanoElectron>(physicsObject);

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(user_analysis)
 
 # setup variables for macOS builds
@@ -18,33 +18,9 @@ SET(CMAKE_INSTALL_RPATH "/cvmfs/sft.cern.ch/lcg/releases/vdt/0.4.3-992df/x86_64-
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # # find Python
-set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
-set(Python3_EXECUTABLE "${CONDA_PREFIX_PATH}/bin/python3")
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-
-if(Python3_FOUND)
-    # Set Python version variables manually if not set automatically
-    if(NOT DEFINED Python3_VERSION_MAJOR)
-        execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.major)"
-                        OUTPUT_VARIABLE Python3_VERSION_MAJOR
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-    if(NOT DEFINED Python3_VERSION_MINOR)
-        execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.minor)"
-                        OUTPUT_VARIABLE Python3_VERSION_MINOR
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-
-    # Set the Python include directory and library
-    message(STATUS "Deduced python version: ${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-    set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-    set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")
-
-    message(STATUS "Python3 library: ${Python3_LIBRARY}")
-    include_directories(${Python3_INCLUDE_DIR})
-else()
-    message(FATAL_ERROR "Python3 not found in Conda environment")
-endif()
+find_package(Python3 REQUIRED)
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
 
 # setup tea as a subproject
 add_subdirectory(tea)

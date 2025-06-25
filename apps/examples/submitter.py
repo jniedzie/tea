@@ -151,6 +151,10 @@ def main():
       update_config(tmp_files_config_path, "dataset = ", f"\"{dataset}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
 
+      if hasattr(files_config, "sampleNames"):
+        sample = files_config.sampleNames[dataset]
+        update_config(tmp_files_config_path, "sample = ", f"\"{sample}\"\n")
+
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   elif hasattr(files_config, "input_dasfiles_and_output_trees_dirs"):
     input_dasfiles_and_output_dirs = files_config.input_dasfiles_and_output_trees_dirs
@@ -168,6 +172,10 @@ def main():
 
       update_config(tmp_files_config_path, "input_dasfiles = ", f"\"{input_dasfiles}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
+
+      if hasattr(files_config, "sampleNames"):
+        sample = files_config.sampleNames[input_dasfiles]
+        update_config(tmp_files_config_path, "sample = ", f"\"{sample}\"\n")
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   else:

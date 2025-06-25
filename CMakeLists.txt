@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(tea)
 
 # setup variables for macOS builds
@@ -58,6 +58,7 @@ endif()
 
 set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
 set(Python3_EXECUTABLE "${CONDA_PREFIX_PATH}/bin/python3")
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 if(Python3_FOUND)
     # Set Python version variables manually if not set automatically
@@ -76,7 +77,7 @@ if(Python3_FOUND)
     message(STATUS "Deduced python version: ${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
     set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
     set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")
-    message(STATUS "Python3 library: ${Python3_LIBRARY}")
+    
     include_directories(${Python3_INCLUDE_DIR})
 else()
     message(FATAL_ERROR "Python3 not found in Conda environment")

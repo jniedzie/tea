@@ -193,7 +193,7 @@ class ABCDPlotter:
                   self.optimization_hists
               )
     elif self.config.optimization_param == None:
-      warn("Optimization parameter is not set, using 'all' from abcd_point as default")
+      warn("Optimization parameter is not set, using 'all' as default")
       self.best_points["all"] = self.config.abcd_point
     else:
       self.best_points["all"] = self.abcdHelper.get_optimal_point_for_param(

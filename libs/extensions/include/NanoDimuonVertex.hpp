@@ -12,7 +12,7 @@
 #include "NanoMuon.hpp"
 
 class NanoDimuonVertex;
-typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoDimuonVertices;
+typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoMuonVertices;
 
 class NanoDimuonVertex {
  public:
@@ -82,8 +82,6 @@ class NanoDimuonVertex {
 
   std::shared_ptr<NanoMuon> GetLeadingMuon();
   std::shared_ptr<NanoMuon> GetSubleadingMuon();
-
-  bool HasMuonIndices(int muonIdx1, int muonIdx2);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
