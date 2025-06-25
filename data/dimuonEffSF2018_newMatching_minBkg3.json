@@ -1,0 +1,96 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "dimuonEff",
+            "description": "Scale factors for dimuon efficiency from J/Psi invariant mass, using PAT-DSA matching after dimuon selection, excluding background with less than 3 entries.",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "dimuon_category",
+                    "type": "string",
+                    "description": "Dimuon categories Pat, PatDSA or DSA"
+                },
+                {
+                    "name": "scale_factors",
+                    "type": "string",
+                    "description": "Choose nominal scale factor or one of the uncertainties"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real",
+                "description": "Output scale factor (nominal) or uncertainty"
+            },
+            "data": {
+                "nodetype": "category",
+                "input": "dimuon_category",
+                "content": [
+                    {
+                        "key": "Pat",
+                        "value": {
+                            "nodetype": "category",
+                            "input": "scale_factors",
+                            "content": [
+                                {
+                                    "key": "nominal",
+                                    "value": 0.912455572497735
+                                },
+                                {
+                                    "key": "up",
+                                    "value": 0.9583965413767008
+                                },
+                                {
+                                    "key": "down",
+                                    "value": 0.8688852491405913
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": "PatDSA",
+                        "value": {
+                            "nodetype": "category",
+                            "input": "scale_factors",
+                            "content": [
+                                {
+                                    "key": "nominal",
+                                    "value": 1.9165129622076253
+                                },
+                                {
+                                    "key": "up",
+                                    "value": 2.107682859333192
+                                },
+                                {
+                                    "key": "down",
+                                    "value": 1.7447396508317758
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": "DSA",
+                        "value": {
+                            "nodetype": "category",
+                            "input": "scale_factors",
+                            "content": [
+                                {
+                                    "key": "nominal",
+                                    "value": 1.8983022263510994
+                                },
+                                {
+                                    "key": "up",
+                                    "value": 2.2647209459287505
+                                },
+                                {
+                                    "key": "down",
+                                    "value": 1.5967081644011973
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
