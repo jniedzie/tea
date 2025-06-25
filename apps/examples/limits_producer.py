@@ -108,12 +108,15 @@ def run_commands_with_condor(commands):
 
 
 def run_combine(config, datacard_file_names):
-  # base_command = (
-  #     f'cd {config.combine_path}; '
-  #     f'cmssw-el7 --no-home --command-to-run \"cmsenv; '
-  #     f'cd {config.datacards_output_path};'
-  # )
   base_command = (
+      f'cd {config.combine_path}; '
+      f'cmssw-el7 --no-home --command-to-run \"cmsenv; '
+      f'cd {config.datacards_output_path};'
+  )
+  # Test cmssw-el7
+  test_command = f"{base_command} echo \"\""
+  if subprocess.run(test_command, shell=True).returncode != 0:
+      base_command = (
       f'cd {config.combine_path}; '
       f'cmssw-el9 --no-home --command-to-run \"cmsenv; '
       f'cd {config.datacards_output_path};'
