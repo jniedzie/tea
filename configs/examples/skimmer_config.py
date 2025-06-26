@@ -2,12 +2,7 @@ nEvents = -1
 printEveryNevents = 1000
 
 inputFilePath = "../tea/samples/background_dy.root"
-# or in case you run tea standalone, without specific analysis code:
-# inputFilePath = "../samples/background_dy.root"
-
-treeOutputFilePath = "./background_dy_skimmed.root"
-
-weightsBranchName = "genWeight"
+treeOutputFilePath = "../samples/skimmed/background_dy.root"
 
 triggerSelection = (
     "HLT_IsoMu24",
@@ -29,17 +24,20 @@ eventCuts = {
 
 
 # First, branches to keep will be marked to be kept (empty tuple would result in no branches being kept)
-branchesToKeep = (
-    "*",
-    # "Muon_*",
-)
+# branchesToKeep = (
+#     "*",
+#     # "Muon_*",
+# )
 
 # then, on top of that, branches to remove will be marked to be removed (can be an empty tuple)
-branchesToRemove = (
-    "L1*",
-    "HLT*",
-    "Flag*",
-    "SubJet",
-)
+# branchesToRemove = (
+#     "L1*",
+#     "HLT*",
+#     "Flag*",
+#     "SubJet",
+# )
+
+# Uncomment if you want to specify event weights (e.g. from MC generator):
+# weightsBranchName = "genWeight"
 
 # redirector = "xrootd-cms.infn.it"

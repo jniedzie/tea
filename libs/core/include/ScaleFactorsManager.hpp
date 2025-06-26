@@ -23,8 +23,8 @@ struct MuonIso;
 class ScaleFactorsManager {
  public:
   static ScaleFactorsManager &GetInstance() {
-    static ScaleFactorsManager instance;
-    return instance;
+    static ScaleFactorsManager* instance = new ScaleFactorsManager();
+    return *instance;
   }
 
   ScaleFactorsManager(ScaleFactorsManager const &) = delete;
@@ -59,21 +59,16 @@ class ScaleFactorsManager {
   }
   std::map<std::string, std::vector<bool>> applyScaleFactors;
 
-  CorrectionRef bTaggingCorrections;
-  CorrectionRef muonCorrections;
-
   std::map<std::string, CorrectionRef> corrections;
   std::map<std::string, CompoundCorrectionRef> compoundCorrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
-  std::map<std::string, TH2D *> muonSFvalues;
   TH1D *pileupSFvalues;
-  std::map<std::string, TF1 *> btaggingSFvalues;
 
   bool ShouldApplyScaleFactor(const std::string &name);
   bool ShouldApplyVariation(const std::string &name);
 
-  bool ReadScaleFactorFlags();
+  void ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
 

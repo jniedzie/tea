@@ -186,63 +186,10 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
   return true;
 }
 
-map<string,vector<float>> NanoEventProcessor::GetJetEnergyCorrections(shared_ptr<NanoEvent> event, string inputCollectionName) {
-  map<string,vector<float>> correctedJetPts;
-  
-  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  scaleFactorsManager.ReadJetEnergyCorrections();
-  if (!scaleFactorsManager.ShouldApplyJetEnergyCorrections())
-    return correctedJetPts;
-
-  shared_ptr<PhysicsObjects> jetCollection;
-  try{
-    jetCollection = event->GetCollection(inputCollectionName);
-  }
-  catch(Exception &e){
-    error() << "Couldn't find collection " << inputCollectionName << " for jet energy corrections." << endl;
-    return correctedJetPts;
-  }
-
-  auto &config = ConfigManager::GetInstance();
-  string rhoBranchName;
-  try {
-    config.GetValue("rhoBranchName", rhoBranchName);
-  } catch (const Exception &e) {
-    warn() << "Rho branch not specified -- will assume standard name fixedGridRhoFastjetAll" << endl;
-    rhoBranchName = "fixedGridRhoFastjetAll";
-  }
-  float rho = event->Get(rhoBranchName);  
-  map<string, float> inputs = {{"Rho", rho}};
-  map<string, vector<float>> jetPtVariations;
-  map<string,int> nPassingJets;
-  map<string, pair<float,float>> metVariations;
-  for (auto jet : *jetCollection) {
-
-    map<string,float> ptCorrections = asNanoJet(jet)->GetJetEnergyCorrectionPtVariations(rho);
-    for (auto &[name, ptCorrection] : ptCorrections) {
-      if (name == "systematic") continue;
-
-      if (correctedJetPts.find(name) == correctedJetPts.end()) {
-        correctedJetPts[name] = std::vector<float>{ptCorrection};
-      }
-      else {
-        correctedJetPts[name].push_back(ptCorrection);
-      }
-    }
-  }
-  return correctedJetPts;
-}
-
-pair<float,float> NanoEventProcessor::PropagateMET(float oldJet_pt, float newJet_pt, float jet_phi, float met_pt, float met_phi) {
-  // Calculate the change in MET due to the jet pt and phi change
-  float dMET_x = newJet_pt * cos(jet_phi) - oldJet_pt * cos(jet_phi);
-  float dMET_y = newJet_pt * sin(jet_phi) - oldJet_pt * sin(jet_phi);
-
-  // Update MET
-  float newMET_px = met_pt * cos(met_phi) - dMET_x;
-  float newMET_py = met_pt * sin(met_phi) - dMET_y;
-  float newMET_pt = sqrt(newMET_px * newMET_px + newMET_py * newMET_py); 
-  float newMET_phi = atan2(newMET_py, newMET_px);
-
-  return make_pair(newMET_pt, newMET_phi);
+float NanoEventProcessor::PropagateMET(const shared_ptr<NanoEvent> event, float totalDeltaPx, float totalDeltaPy) {
+  float metPt = event->Get("MET_pt");
+  float metPhi = event->Get("MET_phi");
+  float newMetPx = metPt * cos(metPhi) - totalDeltaPx;
+  float newMetPy = metPt * sin(metPhi) - totalDeltaPy;
+  return sqrt(newMetPx * newMetPx + newMetPy * newMetPy);
 }

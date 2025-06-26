@@ -22,7 +22,7 @@ map<string,float> NanoJet::GetPUJetIDScaleFactors(string name) {
   return scaleFactorsManager.GetPUJetIDScaleFactors(name, GetEta(), GetPt());
 }
 
-map<string,float> NanoJet::GetJetEnergyCorrectionPtVariations(float rho) {
+map<string,float> NanoJet::GetJetEnergyCorrections(float rho) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   float pt = GetPt();
@@ -35,12 +35,17 @@ map<string,float> NanoJet::GetJetEnergyCorrectionPtVariations(float rho) {
   inputs["JetMass"] = (float)physicsObject->Get("mass");
   inputs["JetPhi"] = (float)physicsObject->Get("phi");
   map<string,float> corrections = scaleFactorsManager.GetJetEnergyCorrections(inputs);
-
-  map<string,float> ptVariations;
-  for (auto &[name, correction] : corrections) {
-    if (name == "systematic") continue;
-    ptVariations[name] = pt*correction;
-  }
-  return ptVariations;
+  return corrections;
 }
 
+float NanoJet::GetDeltaPx(float newJetPt) {
+  float phi = GetPhi();
+  float oldJetPt = GetPt();
+  return newJetPt * cos(phi) - oldJetPt * cos(phi);
+}
+
+float NanoJet::GetDeltaPy(float newJetPt) {
+  float phi = GetPhi();
+  float oldJetPt = GetPt();
+  return newJetPt * sin(phi) - oldJetPt * sin(phi);
+}

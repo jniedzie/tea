@@ -25,8 +25,7 @@ class NanoEventProcessor {
 
   bool IsDataEvent(const std::shared_ptr<NanoEvent> event);
 
-  std::map<std::string,std::vector<float>> GetJetEnergyCorrections(std::shared_ptr<NanoEvent> event, std::string inputCollectionName);
-  std::pair<float,float> PropagateMET(float oldJet_pt, float newJet_pt, float jet_phi, float met_pt, float met_phi);
+  float PropagateMET(const std::shared_ptr<NanoEvent> event, float totalDeltaPx, float totalDeltaPy);
 
  private:
  std::unique_ptr<EventProcessor> eventProcessor;

@@ -10,11 +10,6 @@ using namespace std;
 
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
-namespace correction {
-  std::shared_ptr<CorrectionSet> from_file(const std::string &fname);
-}
-using correction::from_file;
-using correction::CorrectionSet;
 #else
 namespace {
 std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string &path) {
@@ -24,9 +19,16 @@ std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string &path) {
 #endif
 
 ScaleFactorsManager::ScaleFactorsManager() {
+#ifdef USE_CORRECTIONLIB
+  info() << "Using correctionlib for scale factors." << endl;
+#else
+  info() << "correctionlib not found, will assume all SFs = 1.0." << endl;
+#endif
+
   ReadScaleFactorFlags();
   ReadScaleFactors();
   if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
+  ReadJetEnergyCorrections();
 }
 
 bool ScaleFactorsManager::ShouldApplyScaleFactor(const std::string &name) {
@@ -40,7 +42,7 @@ bool ScaleFactorsManager::ShouldApplyVariation(const std::string &name) {
 void ScaleFactorsManager::ReadScaleFactors() {
 #ifndef USE_CORRECTIONLIB
   return;
-#endif
+#else
 
   auto &config = ConfigManager::GetInstance();
 
@@ -69,6 +71,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
     }
   }
 }
+#endif
 
 void ScaleFactorsManager::ReadJetEnergyCorrections() {
 #ifndef USE_CORRECTIONLIB
@@ -84,6 +87,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
   config.GetMap("scaleFactors", scaleFactors);
 
   for (auto &[name, values] : scaleFactors) {
+
     if (name.find("jec") == std::string::npos) continue;
     auto cset = correction::CorrectionSet::from_file(values["path"]);
 
@@ -117,7 +121,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
   }
 }
 
-bool ScaleFactorsManager::ReadScaleFactorFlags() {
+void ScaleFactorsManager::ReadScaleFactorFlags() {
   auto &config = ConfigManager::GetInstance();
 
   try {
@@ -132,8 +136,6 @@ bool ScaleFactorsManager::ReadScaleFactorFlags() {
     info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
   }
   info() << "------------------------------------\n" << endl;
-  
-  return true;
 }
 
 void ScaleFactorsManager::ReadPileupSFs() {
@@ -194,26 +196,26 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patname, string dsaname, float eta, float pt) {
+map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string patName, string dsaName, float eta, float pt) {
   bool applyDefault = ShouldApplyScaleFactor("muon");
   bool applyVariations = ShouldApplyVariation("muon");
 
-  if (corrections.find(dsaname) == corrections.end()) {
-    warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << dsaname << endl;
+  if (corrections.find(dsaName) == corrections.end()) {
+    warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << dsaName << endl;
     return {{"systematic", 1.0}};
   }
 
-  auto extraArgs = correctionsExtraArgs[dsaname];
+  auto extraArgs = correctionsExtraArgs[dsaName];
   map<string, float> scaleFactors;
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[dsaname], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[dsaName], {extraArgs["year"], fabs(eta), pt, extraArgs["systematic"]});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[patname + "_" + variation] = TryToEvaluate(corrections[dsaname], {extraArgs["year"], fabs(eta), pt, variation});
+    scaleFactors[patName + "_" + variation] = TryToEvaluate(corrections[dsaName], {extraArgs["year"], fabs(eta), pt, variation});
   }
   return scaleFactors;
 }
@@ -270,7 +272,7 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
 
 vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
   vector<string> variations;
-  if (!applyScaleFactors["bTagging"][1]) return variations;
+  if (!ShouldApplyVariation("bTagging")) return variations;
 
   auto extraArgs = correctionsExtraArgs[name];
   variations = GetScaleFactorVariations(extraArgs["variations"]);
@@ -278,7 +280,7 @@ vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
 }
 
 float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
-  if (!applyScaleFactors["pileup"][0]) return 1.0;
+  if (!ShouldApplyScaleFactor("pileup")) return 1.0;
 
   auto extraArgs = correctionsExtraArgs[name];
   return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
@@ -310,7 +312,7 @@ float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const 
 }
 
 float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
-  if (!ShouldApplyScaleFactor("PUjetID")) return 1.0;
+  if (!ShouldApplyScaleFactor("pileup")) return 1.0;
 
   if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
     warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
