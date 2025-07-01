@@ -85,6 +85,9 @@ class NanoDimuonVertex {
 
   bool HasMuonIndices(int muonIdx1, int muonIdx2);
 
+  std::string GetGenMotherCategory(std::shared_ptr<PhysicsObjects> genMuonCollection);
+  std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection);
+
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
   std::shared_ptr<NanoMuon> muon1;
