@@ -182,3 +182,45 @@ bool NanoDimuonVertex::HasMuonIndices(int muonIdx1, int muonIdx2) {
     return true;
   return false;
 }
+
+string NanoDimuonVertex::GetGenMotherCategory(shared_ptr<PhysicsObjects> genMuonCollection) {
+  auto genMothers = GetGenMothers(genMuonCollection);
+  if (!genMothers) return "NonResonant";
+  if (genMothers->size() != 2) return "NonResonant";
+
+  auto mother1 = genMothers->at(0);
+  auto mother2 = genMothers->at(1);
+  if (mother1 == mother2) {
+    int ALPpdgId = 54;
+    if (abs(asNanoGenParticle(mother1)->GetPdgId()) == ALPpdgId) {
+      return "FromALP";
+    }
+    return "Resonant";
+  }
+  return "NonResonant";
+}
+
+shared_ptr<PhysicsObjects> NanoDimuonVertex::GetGenMothers(shared_ptr<PhysicsObjects> genMuonCollection) {
+
+  auto genMothers = make_shared<PhysicsObjects>();
+
+  auto muon1 = Muon1();
+  auto muon2 = Muon2();
+  auto genMuon1 = muon1->GetGenMuon(genMuonCollection);
+  auto genMuon2 = muon2->GetGenMuon(genMuonCollection);
+  if (!genMuon1 || !genMuon2) return nullptr;
+
+  auto firstMuon1 = genMuon1->GetFirstCopy(genMuonCollection);
+  auto firstMuon2 = genMuon2->GetFirstCopy(genMuonCollection);
+  if (!firstMuon1 || !firstMuon2) return nullptr;
+
+  int motherIndex1 = firstMuon1->GetMotherIndex();
+  if (motherIndex1 < 0) return nullptr;
+  int motherIndex2 = firstMuon2->GetMotherIndex();
+  if (motherIndex2 < 0) return nullptr;
+
+  genMothers->push_back(genMuonCollection->at(motherIndex1));
+  genMothers->push_back(genMuonCollection->at(motherIndex2));
+
+  return genMothers;
+}
