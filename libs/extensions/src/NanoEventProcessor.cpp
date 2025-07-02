@@ -186,10 +186,10 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
   return true;
 }
 
-float NanoEventProcessor::PropagateMET(const shared_ptr<NanoEvent> event, float totalDeltaPx, float totalDeltaPy) {
+float NanoEventProcessor::PropagateMET(const shared_ptr<NanoEvent> event, float totalPxDifference, float totalPyDifference) {
   float metPt = event->Get("MET_pt");
   float metPhi = event->Get("MET_phi");
-  float newMetPx = metPt * cos(metPhi) - totalDeltaPx;
-  float newMetPy = metPt * sin(metPhi) - totalDeltaPy;
+  float newMetPx = metPt * cos(metPhi) - totalPxDifference;
+  float newMetPy = metPt * sin(metPhi) - totalPyDifference;
   return sqrt(newMetPx * newMetPx + newMetPy * newMetPy);
 }

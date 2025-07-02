@@ -32,7 +32,7 @@ class ScaleFactorsManager {
 
   std::map<std::string, float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string, float> GetDSAMuonScaleFactors(std::string patname, std::string dsaname, float eta, float pt);
+  std::map<std::string, float> GetDSAMuonScaleFactors(std::string patName, std::string dsaName, float eta, float pt);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
 

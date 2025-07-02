@@ -39,8 +39,8 @@ class NanoJet {
   std::map<std::string,float> GetPUJetIDScaleFactors(std::string name);
   std::map<std::string,float> GetJetEnergyCorrections(float rho);
 
-  float GetDeltaPx(float newJetPt);
-  float GetDeltaPy(float newJetPt);
+  float GetPxDifference(float newJetPt);
+  float GetPyDifference(float newJetPt);
 
   bool IsInCollection(const std::shared_ptr<PhysicsObjects> collection);
 

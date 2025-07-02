@@ -38,16 +38,18 @@ map<string,float> NanoJet::GetJetEnergyCorrections(float rho) {
   return corrections;
 }
 
-float NanoJet::GetDeltaPx(float newJetPt) {
+float NanoJet::GetPxDifference(float newJetPt) {
   float phi = GetPhi();
   float oldJetPt = GetPt();
-  return newJetPt * cos(phi) - oldJetPt * cos(phi);
+  float deltaPt = newJetPt - oldJetPt;
+  return deltaPt * cos(phi);
 }
 
-float NanoJet::GetDeltaPy(float newJetPt) {
+float NanoJet::GetPyDifference(float newJetPt) {
   float phi = GetPhi();
   float oldJetPt = GetPt();
-  return newJetPt * sin(phi) - oldJetPt * sin(phi);
+  float deltaPt = newJetPt - oldJetPt;
+  return deltaPt * sin(phi);
 }
 
 bool NanoJet::IsInCollection(const shared_ptr<PhysicsObjects> collection) {
