@@ -14,8 +14,6 @@ else
   cmake $(correction config --cmake) ..
 fi
 
-# cmake $(correction config --cmake --cflags) ..
-cmake $(correction config --cmake) ..
 make -j install 
 cd ..
 
