@@ -49,3 +49,12 @@ float NanoJet::GetDeltaPy(float newJetPt) {
   float oldJetPt = GetPt();
   return newJetPt * sin(phi) - oldJetPt * sin(phi);
 }
+
+bool NanoJet::IsInCollection(const shared_ptr<PhysicsObjects> collection) {
+  for (auto object : *collection) {
+    if (physicsObject == object) {
+      return true;
+    }
+  }
+  return false;
+}

@@ -42,6 +42,8 @@ class NanoJet {
   float GetDeltaPx(float newJetPt);
   float GetDeltaPy(float newJetPt);
 
+  bool IsInCollection(const std::shared_ptr<PhysicsObjects> collection);
+
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
 };
