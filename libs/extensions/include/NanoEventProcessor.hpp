@@ -25,6 +25,8 @@ class NanoEventProcessor {
 
   bool IsDataEvent(const std::shared_ptr<NanoEvent> event);
 
+  float PropagateMET(const std::shared_ptr<NanoEvent> event, float totalDeltaPx, float totalDeltaPy);
+
  private:
  std::unique_ptr<EventProcessor> eventProcessor;
  

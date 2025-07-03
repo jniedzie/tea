@@ -10,9 +10,11 @@
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
 using CorrectionRef = correction::Correction::Ref;
+using CompoundCorrectionRef = correction::CompoundCorrection::Ref;
 #else
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
+using CompoundCorrectionRef = DummyCorrectionRef;
 #endif
 
 struct MuonID;
@@ -41,6 +43,12 @@ class ScaleFactorsManager {
 
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
 
+  void ReadJetEnergyCorrections();
+  bool ShouldApplyJetEnergyCorrections() {
+    return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec");
+  }
+  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
+
  private:
   ScaleFactorsManager();
   ~ScaleFactorsManager() {}
@@ -52,6 +60,7 @@ class ScaleFactorsManager {
   std::map<std::string, std::vector<bool>> applyScaleFactors;
 
   std::map<std::string, CorrectionRef> corrections;
+  std::map<std::string, CompoundCorrectionRef> compoundCorrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
   TH1D *pileupSFvalues;
