@@ -23,11 +23,11 @@ class ABCDHelper:
     elif max_region == "B":
       warn("Signal in region B, flipping to A")
       for key in histograms:
-        histograms[key] = self.flip_hist_horizontally(histograms[key])
+        histograms[key] = self.flip_hist_vertically(histograms[key])
     elif max_region == "C":
       warn("Signal in region C, flipping to A")
       for key in histograms:
-        histograms[key] = self.flip_hist_vertically(histograms[key])
+        histograms[key] = self.flip_hist_horizontally(histograms[key])
     elif max_region == "D":
       warn("Signal in region D, flipping to A")
       for key in histograms:

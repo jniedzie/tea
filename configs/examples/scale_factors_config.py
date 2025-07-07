@@ -146,9 +146,10 @@ def get_scale_factors(year):
         "variations": "systup,systdown"
     }
     scaleFactors["dimuonEff"] = {
-      # "path": f"../data/dimuonEffSF2018.json",
-      # "path": f"../data/dimuonEffSF2018_newMatching.json",
-      "path": f"../tea/data/dimuonEffSF2018_newMatching_minBkg3.json",
+      # "path": f"../data/dimuonEffSF2018.json", # old matching
+      # "path": f"../data/dimuonEffSF2018_newMatching.json", # new matching
+      # "path": f"../tea/data/dimuonEffSF2018_newMatching_minBkg3.json", # min 3 events in bkg
+      "path": f"../tea/data/dimuonEffSFs2018_newMatching_JPsiDimuonsDSAChi2DCADPhi.json", # new DSA-DSA cuts
       "type": "dimuonEff",
       "systematic": "nominal",
       "variations": "up,down",
