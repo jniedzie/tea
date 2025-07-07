@@ -79,7 +79,7 @@ class ABCDPlotter:
     histograms["background"] = self.background_hist
 
     signal_bin = None
-    if self.config.optimization_param == None:
+    if self.config.optimization_param is None:
       signal_bin = self.config.signal_bin
 
     histograms = self.abcdHelper.flip_signal_to_region_a(histograms,signal_bin)
