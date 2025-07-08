@@ -135,17 +135,52 @@ float NanoDimuonVertex::GetOuterDeltaPhi() { return muon1->GetAs<float>("outerPh
 
 float NanoDimuonVertex::GetLeadingMuonPt() { return max((float)muon1->Get("pt"), (float)muon2->Get("pt")); }
 
+float NanoDimuonVertex::GetLogDisplacedTrackIso(string isolationVariable)
+{
+  double iso = GetAs<float>(isolationVariable);
+  if (iso == 0)
+    return -6.0;
+  return TMath::Log10(iso);
+}
 float NanoDimuonVertex::GetDeltaDisplacedTrackIso03()
 {
   double iso03_1 = GetAs<float>("displacedTrackIso03Dimuon1");
   double iso03_2 = GetAs<float>("displacedTrackIso03Dimuon2");
   return abs(iso03_1 - iso03_2);
 }
+float NanoDimuonVertex::GetLogDeltaDisplacedTrackIso03()
+{
+  double delta_iso = GetDeltaDisplacedTrackIso03();
+  if (delta_iso == 0)
+    return -6.0;
+  return TMath::Log10(delta_iso);
+}
 float NanoDimuonVertex::GetDeltaDisplacedTrackIso04()
 {
   double iso04_1 = GetAs<float>("displacedTrackIso04Dimuon1");
   double iso04_2 = GetAs<float>("displacedTrackIso04Dimuon2");
   return abs(iso04_1 - iso04_2);
+}
+float NanoDimuonVertex::GetLogDeltaDisplacedTrackIso04()
+{
+  double delta_iso = GetDeltaDisplacedTrackIso04();
+  if (delta_iso == 0)
+    return -6.0;
+  return TMath::Log10(delta_iso);
+}
+float NanoDimuonVertex::GetLogDeltaSquaredDisplacedTrackIso03()
+{
+  double delta_iso = GetDeltaDisplacedTrackIso03();
+  if (delta_iso == 0)
+    return -6.0;
+  return TMath::Log10(pow(delta_iso, 2));
+}
+float NanoDimuonVertex::GetLogDeltaSquaredDisplacedTrackIso04()
+{
+  double delta_iso = GetDeltaDisplacedTrackIso04();
+  if (delta_iso == 0)
+    return -6.0;
+  return TMath::Log10(pow(delta_iso, 2));
 }
 
 int NanoDimuonVertex::GetTotalNumberOfSegments() {

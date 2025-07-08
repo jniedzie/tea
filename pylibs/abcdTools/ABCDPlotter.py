@@ -78,7 +78,11 @@ class ABCDPlotter:
     histograms = self.signal_hists
     histograms["background"] = self.background_hist
 
-    histograms = self.abcdHelper.flip_signal_to_region_a(histograms)
+    signal_bin = None
+    if self.config.optimization_param is None:
+      signal_bin = self.config.signal_bin
+
+    histograms = self.abcdHelper.flip_signal_to_region_a(histograms, signal_bin)
 
     self.background_hist = histograms["background"]
     del histograms["background"]
@@ -213,7 +217,7 @@ class ABCDPlotter:
       min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
 
       info(f"Best point for all signals: {best_point}")
-      info(f"Closure: {closure:.2f}, Error: {error:.2f}, Min n events: {min_n_events:.1f}")
+      info(f"Closure: {closure:.3f}, Error: {error:.2f}, Min n events: {min_n_events:.1f}")
 
     else:
       for mass in self.config.masses:
