@@ -65,8 +65,15 @@ def main():
   output_trees_file_path = ""
   output_hists_file_path = ""
 
-  output_trees_file_path = f"{args.output_trees_dir}/{input_file_name}" if output_tree_path is None else output_tree_path
-  output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}" if output_hist_path is None else output_hist_path
+  if output_tree_path is not None:
+    output_trees_file_path = output_tree_path
+  elif args.output_trees_dir != "":
+    output_trees_file_path = f"{args.output_trees_dir}/{input_file_name}"
+
+  if output_hist_path is not None:
+    output_hists_file_path = output_hist_path
+  elif args.output_hists_dir != "":
+    output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}"
 
   if output_trees_file_path != "":
     output_trees_file_path = f"--output_trees_path {output_trees_file_path}"
