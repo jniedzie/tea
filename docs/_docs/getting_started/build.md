@@ -16,7 +16,7 @@ Once compiled, you can go to `bin` directory and execute any of the apps directl
 
 ```bash
 cd bin
-./skimmer skimmer_config.py
+./skimmer --config skimmer_config.py
 ```
 
 ## Repeated compilation
