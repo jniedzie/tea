@@ -48,7 +48,7 @@ If you prefer to use a Conda environemnt, make sure you have Miniconda or Anacon
 Then, create a new conda environment for `tea` (this may take a longer while):
 
 ```bash
-conda create -c conda-forge --name tea root python=3.8
+conda create -c conda-forge --name tea root python=3.9
 conda activate tea
 ```
 
