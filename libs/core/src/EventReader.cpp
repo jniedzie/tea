@@ -24,9 +24,7 @@ EventReader::EventReader() {
   }
 
   config.GetValue("nEvents", maxEvents);
-  config.GetValue("printEveryNevents", printEveryNevents);
-  if (printEveryNevents == 0) printEveryNevents = -1;
-
+  
   string inputFilePath;
   config.GetValue("inputFilePath", inputFilePath);
 
@@ -178,6 +176,16 @@ TLeaf *EventReader::GetLeaf(TBranch *branch) {
   return leaf;
 }
 
+bool EventReader::IsVectorBranch(TBranch *branch) {
+  auto leaf = GetLeaf(branch);
+  string branchType = leaf->GetTypeName();
+
+  if (branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr) {
+    return true;
+  }
+  return false;
+}
+
 void EventReader::SetupBranches() {
   branchesPerCollection.clear();
   for (string eventsTreeName : eventsTreeNames) {
@@ -194,7 +202,7 @@ void EventReader::SetupBranches() {
       auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
       branchesPerCollection[collectionName].push_back(branchName);
 
-      bool branchIsVector = branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
+      bool branchIsVector = IsVectorBranch(branch);
       if (branchIsVector) {
         SetupVectorBranch(branchName, branchType, eventsTreeName);
       } else {

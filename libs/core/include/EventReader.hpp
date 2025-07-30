@@ -17,9 +17,10 @@ class EventReader {
   long long GetNevents() const;
   std::shared_ptr<Event> GetEvent(int iEvent);
 
+  bool IsVectorBranch(TBranch *branch);
+
  private:
   int maxEvents;
-  int printEveryNevents;
 
   std::unordered_map<std::string, std::vector<std::string>> branchesPerCollection;
   std::unordered_map<std::string, std::function<int(const std::shared_ptr<Event>&)>> collectionSizeGetters;
