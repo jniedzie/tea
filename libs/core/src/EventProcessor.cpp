@@ -22,27 +22,24 @@ EventProcessor::EventProcessor() {
     warn() << "Couldn't read eventCuts from config file " << endl;
   }
 
-    try {
+  try {
     config.GetVector("requiredFlags", requiredFlags);
   } catch (const Exception &e) {
-    warn() << "Couldn't read requiredFlags from config file " << endl;
   }
 
   try {
     config.GetMap("goldenJson", goldenJson);
   } catch (const Exception &e) {
-    warn() << "Couldn't read goldenJson from file ";
-    warn() << "(which may be fine if you're not tyring to apply golden JSON)" << endl;
   }
 }
 
 bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
   bool passes = true;
-  
+
   uint run = event->Get("run");
   uint lumi = event->Get("luminosityBlock");
 
-  if(run == 1) return true; // MC
+  if (run == 1) return true;  // MC
 
   if (goldenJson.find(run) == goldenJson.end()) return false;
 
@@ -71,10 +68,10 @@ bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
   return passes;
 }
 
-bool EventProcessor::PassesMetFilters(const shared_ptr<Event> event){
-  for(string flag : requiredFlags){
+bool EventProcessor::PassesMetFilters(const shared_ptr<Event> event) {
+  for (string flag : requiredFlags) {
     bool flagValue = event->Get(flag);
-    if(!flagValue) return false;
+    if (!flagValue) return false;
   }
   return true;
 }
@@ -87,7 +84,6 @@ void EventProcessor::RegisterCuts(shared_ptr<CutFlowManager> cutFlowManager) {
 
 bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
   for (auto &[cutName, cutValues] : eventCuts) {
-
     // TODO: this should be more generic, not only for MET_pt
     if (cutName == "MET_pt") {
       float metPt = event->Get("MET_pt");
@@ -95,7 +91,7 @@ bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<C
     } else {
       if (!inRange(event->GetCollection(cutName.substr(1))->size(), cutValues)) return false;
     }
-    if(cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
+    if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
   }
 
   return true;
@@ -103,7 +99,7 @@ bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<C
 
 float EventProcessor::GetMaxPt(shared_ptr<Event> event, string collectionName) {
   auto maxPtObject = GetMaxPtObject(event, collectionName);
-  if(!maxPtObject) return -1;
+  if (!maxPtObject) return -1;
   float maxPt = maxPtObject->Get("pt");
   return maxPt;
 }

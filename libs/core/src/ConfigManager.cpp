@@ -12,14 +12,33 @@ using namespace std;
 
 static ConfigManager *instance = nullptr;
 
-ConfigManager& ConfigManager::getInstanceImpl(std::string *const _configPath) {
+ConfigManager &ConfigManager::getInstanceImpl(std::string *const _configPath) {
   if (!instance) {
     instance = new ConfigManager(_configPath);
   }
   return *instance;
 }
 
+void ConfigManager::PrintBanner() {
+  cout << "\n"
+       << "\033[1;31m"  // Bright red text
+       << "╔═══════════════════════════════════════╗\n"
+       << "║\033[41m  \033[1;37m          \033[41m  \033[1;37m           \033[41m  \033[1;37m            \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m   ░██    \033[41m  \033[1;37m           \033[41m  \033[1;37m            \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m   ░██    \033[41m  \033[1;37m           \033[41m  \033[1;37m            \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m░████████ \033[41m  \033[1;37m ░███████  \033[41m  \033[1;37m ░██████    \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m   ░██    \033[41m  \033[1;37m░██    ░██ \033[41m  \033[1;37m     ░██    \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m   ░██    \033[41m  \033[1;37m░█████████ \033[41m  \033[1;37m ░███████   \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m   ░██    \033[41m  \033[1;37m░██        \033[41m  \033[1;37m░██   ░██   \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m    ░████ \033[41m  \033[1;37m ░███████  \033[41m  \033[1;37m ░█████░██  \033[0m\033[1;31m║\n"
+       << "║\033[41m  \033[1;37m          \033[41m  \033[1;37m           \033[41m  \033[1;37m            \033[0m\033[1;31m║\n"
+       << "║\033[1;37m     toolkit for efficient analysis \033[0m\033[1;31m   ║\n"
+       << "╚═══════════════════════════════════════╝\033[0m\n\n";
+}
+
 ConfigManager::ConfigManager(std::string *const _configPath) {
+  PrintBanner();
+
   if (nullptr == _configPath) {
     fatal() << "ConfigManager not initialized" << endl;
     exit(0);
@@ -28,7 +47,7 @@ ConfigManager::ConfigManager(std::string *const _configPath) {
     fatal() << "Config path cannot be empty" << endl;
     exit(0);
   }
-  
+
   configPath = std::move(*_configPath);
   Py_Initialize();
 
@@ -399,7 +418,7 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
 
   PyObject *first = GetItem(pythonTuple, 0);
   PyObject *second = GetItem(pythonTuple, 1);
-  if (!first  || !PyUnicode_Check(first) || !second || !PyList_Check(second)) {
+  if (!first || !PyUnicode_Check(first) || !second || !PyList_Check(second)) {
     error() << "Failed retriving python pair (string, vector<string>)" << endl;
     return;
   }

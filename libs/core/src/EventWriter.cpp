@@ -16,13 +16,11 @@ EventWriter::EventWriter(const std::shared_ptr<EventReader> &eventReader_) : eve
   try {
     config.GetVector("branchesToKeep", branchesToKeep);
   } catch (const Exception &e) {
-    info() << "No branchesToKeep found in config file - will keep all branches" << endl;
     branchesToKeep = {"*"};  // Keep all branches by default
   }
   try {
     config.GetVector("branchesToRemove", branchesToRemove);
   } catch (const Exception &e) {
-    info() << "No branchesToRemove found in config file - will not remove any branches" << endl;
     branchesToRemove = {};  // Remove no branches by default
   }
 

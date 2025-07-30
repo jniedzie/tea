@@ -13,7 +13,6 @@ TemplateName::TemplateName(shared_ptr<HistogramsHandler> histogramsHandler_) : h
   try {
     config.GetValue("weightsBranchName", weightsBranchName);
   } catch (const Exception& e) {
-    info() << "Weights branch not specified -- will assume weight is 1 for all events" << endl;
   }
 
   // Create an event processor

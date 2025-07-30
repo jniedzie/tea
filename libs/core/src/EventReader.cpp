@@ -21,7 +21,6 @@ EventReader::EventReader() {
   try {
     config.GetMap("specialBranchSizes", specialBranchSizes);
   } catch (const Exception &e) {
-    info() << "No specialBranchSizes found in config file" << endl;
   }
 
   config.GetValue("nEvents", maxEvents);
@@ -53,7 +52,10 @@ EventReader::EventReader() {
     for (string redirector : redirectors) {
       info() << "Trying to read ROOT file with redirector:" << redirector << endl;
       tmpInputFilePath = "root://" + redirector + "/" + inputFilePath;
+
+      gSystem->RedirectOutput("/dev/null", "a");
       inputFile = TFile::Open(tmpInputFilePath.c_str());
+      gSystem->RedirectOutput(0);
 
       if (!inputFile || inputFile->IsZombie()) {
         warn() << "Failed to read ROOT file with redirector: " << redirector << endl;
@@ -67,7 +69,10 @@ EventReader::EventReader() {
     }
     inputFilePath = tmpInputFilePath;
   } else {
+    gSystem->RedirectOutput("/dev/null", "a");
     inputFile = TFile::Open(inputFilePath.c_str());
+    gSystem->RedirectOutput(0);
+
     if (!inputFile || inputFile->IsZombie()) {
       fatal() << "Local file corrupted: " << inputFilePath << endl;
       exit(1);
@@ -123,12 +128,20 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
 
 void EventReader::SetupTrees() {
   vector<string> treeNames = getListOfTrees(inputFile);
+
+  cout << "\033[1;92mLoading trees: ";
   for (string treeName : treeNames) {
     if (inputTrees.find(treeName) != inputTrees.end()) continue;
+    auto tree = (TTree *)inputFile->Get(treeName.c_str());
 
-    cout << "Loading tree: " << treeName << endl;
-    inputTrees[treeName] = (TTree *)inputFile->Get(treeName.c_str());
+    if (tree) {
+      inputTrees[treeName] = tree;
+      cout << treeName << " ✓  ";
+    } else {
+      cout << "\033[31m" << treeName << " ✗\033[1;92m  ";
+    }
   }
+  cout << "\033[0m" << endl;
 
   for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
@@ -319,8 +332,23 @@ int EventReader::tryGet(shared_ptr<Event> event, string branchName) {
 }
 
 shared_ptr<Event> EventReader::GetEvent(int iEvent) {
-  if (printEveryNevents > 0) {
-    if (iEvent % printEveryNevents == 0) info() << "Event: " << iEvent << endl;
+  static int lastPrinted = -1;
+  int nEvents = GetNevents();
+  int percentage = ((iEvent + 1) * 100) / nEvents;
+  if (percentage != lastPrinted) {
+    lastPrinted = percentage;
+    cerr << "\r\033[1;92m[";
+    int width = 50;
+    int pos = (percentage * width) / 100;
+    for (int i = 0; i < width; ++i) {
+      if (i < pos)
+        cerr << "=";
+      else if (i == pos)
+        cerr << ">";
+      else
+        cerr << " ";
+    }
+    cerr << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")" << flush;
   }
 
   currentEvent->Reset();
@@ -385,5 +413,9 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   }
 
   currentEvent->AddExtraCollections();
+
+  if (iEvent == nEvents - 1) {
+    cerr << "\033[0m\n" << endl;
+  }
   return currentEvent;
 }
