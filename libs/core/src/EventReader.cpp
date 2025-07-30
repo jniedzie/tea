@@ -102,7 +102,7 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
     if (pos != string::npos) {
       auto posEnd = pos + specialCollectionName.size();
       string collectionName = branchName.substr(0, specialCollectionName.size());
-      string variableName = branchName.substr(posEnd);
+      string variableName = branchName.substr(posEnd+1);
       return make_tuple(collectionName, variableName);
     }
   }
