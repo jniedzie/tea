@@ -27,13 +27,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(irregularHistParams, "irregularHistParams");
   } catch (const Exception &e) {
-    info() << "No irregularHistParams found in config file" << endl;
   }
 
   try {
     config.GetHistogramsParams(histParams2D, "histParams2D");
   } catch (const Exception &e) {
-    info() << "No histParams2D found in config file" << endl;
   }
 
   try {
@@ -44,7 +42,6 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetVector("SFvariationVariables", SFvariationVariables);
   } catch (const Exception &e) {
-    info() << "Couldn't read SFvariationVariables from config file - no up/down hists will be created" << endl;
   }
 
   eventWeights["default"] = 1.0; // Default weight
