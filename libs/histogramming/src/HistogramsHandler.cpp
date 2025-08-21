@@ -159,8 +159,6 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outpu
 }
 
 void HistogramsHandler::SaveHistograms() {
-  info() << "Output path: " << outputPath << endl;
-
   string path = outputPath.substr(0, outputPath.find_last_of("/"));
   string filename = outputPath.substr(outputPath.find_last_of("/"));
   if (path == "") path = "./";
@@ -179,6 +177,7 @@ void HistogramsHandler::SaveHistograms() {
   
   outputFile->Close();
 
-  info() << "Histograms saved to: " << path << "/" << filename << endl;
+  // print the output path and filename in nice green color:
+  info() << "\033[1;32m" << "Histograms saved to: " << path << "/" << filename << "\033[0m" << endl;
 
 }

@@ -20,7 +20,7 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
 
   RegisterPreExistingCutFlows();
 
-  if (!eventWriter_) info() << "No eventWriter given for CutFlowManager" << endl;
+  if (!eventWriter_) warn() << "No eventWriter given for CutFlowManager" << endl;
 }
 
 CutFlowManager::~CutFlowManager() {}
@@ -36,7 +36,6 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
 
   for (auto cutFlowName : existingCutFlows) {
     if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
-    info() << "Input file contains " << cutFlowName << " directory - will store existing cutflow in the output." << endl;
 
     bool rawEvents = cutFlowName.find("RawEvents") != string::npos;
     string collectionName = "";
