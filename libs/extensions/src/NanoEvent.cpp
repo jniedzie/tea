@@ -398,3 +398,27 @@ shared_ptr<NanoMuons> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<NanoM
   }
   return muonCollection;
 }
+
+shared_ptr<NanoDimuonVertex> NanoEvent::GetBestDimuonVertex(shared_ptr<NanoDimuonVertices> dimuonCollection) {
+  shared_ptr<NanoDimuonVertex> bestDimuonVertex = nullptr;
+  float minChi2 = 9999.;
+  for (auto dimuonVertex : *dimuonCollection) {
+    // opposite signed muons
+    if (dimuonVertex->GetDimuonChargeProduct() > -0.1) continue;
+    float invMass = dimuonVertex->GetInvariantMass();
+    // invariant mass selection - excluding SM J/Psi & psi resonances
+    if (invMass > 70 || (invMass > 2.9 && invMass < 3.3) || (invMass > 3.5 && invMass < 3.86)) continue;
+    if (dimuonVertex->IsPatDimuon()) {
+      // PAT-PAT requirement on number of hits in front of the vertex
+      float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"),(float)dimuonVertex->Get("hitsInFrontOfVert2"));
+      if(maxHits > 3.0) continue;
+    }
+    if((float)dimuonVertex->Get("dca") > 2.0) continue;
+    if(abs(dimuonVertex->GetCollinearityAngle()) > 2.0) continue;
+    if((float)dimuonVertex->Get("normChi2") > 3.0) continue;
+    if((float)dimuonVertex->Get("normChi2") < minChi2) {
+      bestDimuonVertex = dimuonVertex;
+    }
+  }
+  return bestDimuonVertex;
+}
