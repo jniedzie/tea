@@ -42,8 +42,7 @@ bool ScaleFactorsManager::ShouldApplyVariation(const std::string &name) {
 void ScaleFactorsManager::ReadScaleFactors() {
 #ifndef USE_CORRECTIONLIB
   return;
-#else
-
+#endif
   auto &config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
@@ -71,7 +70,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
     }
   }
 }
-#endif
+
 
 void ScaleFactorsManager::ReadJetEnergyCorrections() {
 #ifndef USE_CORRECTIONLIB
