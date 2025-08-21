@@ -3,8 +3,11 @@
 mkdir -p bin
 mkdir -p build
 
-rm -fr build/*
-rm -fr bin/*
+if [[ "$1" == "--clean" ]]; then
+  echo "Cleaning build and bin directories..."
+  rm -fr build/*
+  rm -fr bin/*
+fi
 
 cd build
 
