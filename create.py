@@ -8,7 +8,7 @@ args.add_argument(
         "--type",
         help=(
             "Type of the extension to add: PhysicsObject, Event, HistogramsFiller, "
-            "app, printer, histogrammer"
+            "app, printer, histogrammer, task4_histogrammer"
         ),
         required=True
     )
@@ -97,6 +97,10 @@ def main():
       "histogrammer": (
           ("tea/templates/histogrammer.template.cpp", f"apps/{class_name}.cpp"),
           ("tea/templates/histogrammer_config.template.py", f"configs/{class_name}_config.py"),
+      ),
+      "task4_histogrammer": (
+          ("tea/templates/task4_histogrammer.template.cpp", f"apps/{class_name}.cpp"),
+          ("tea/configs/das_exercises/task4_advanced_histograms.py", f"configs/{class_name}.py"),
       ),
   }
 
