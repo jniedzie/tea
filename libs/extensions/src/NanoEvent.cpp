@@ -399,20 +399,31 @@ shared_ptr<NanoMuons> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<NanoM
 shared_ptr<NanoDimuonVertex> NanoEvent::GetBestDimuonVertex() {
   auto dimuonCollection = asNanoDimuonVertices(event->GetCollection("PatMuonVertex"), event);
   shared_ptr<NanoDimuonVertex> bestDimuonVertex = nullptr;
-  
+
   float minChi2 = 9999.;
   for (auto dimuonVertex : *dimuonCollection) {
-    if (dimuonVertex->GetDimuonChargeProduct() > -0.1) continue;
-    
-    float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"), (float)dimuonVertex->Get("hitsInFrontOfVert2"));
-    if (maxHits > 3.0) continue;
-    
-    if ((float)dimuonVertex->Get("dca") > 2.0) continue;
-    if (abs(dimuonVertex->GetCollinearityAngle()) > 2.0) continue;
-    if ((float)dimuonVertex->Get("normChi2") > 3.0) continue;
-    
+    // if (dimuonVertex->GetDimuonChargeProduct() > -0.1) continue;
+    // float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"), (float)dimuonVertex->Get("hitsInFrontOfVert2"));
+    // if (maxHits > 3.0) {
+    //   warn() << "Skipping dimuon vertex with too many hits in front of vertex" << endl;
+    //   continue;
+    // }
+    // if ((float)dimuonVertex->Get("dca") > 2.0) {
+    //   warn() << "Skipping dimuon vertex with too large DCA" << endl;
+    //   continue;
+    // }
+    // if (abs(dimuonVertex->GetCollinearityAngle()) > 2.0) {
+    //   warn() << "Skipping dimuon vertex with too large collinearity angle" << endl;
+    //   continue;
+    // }
+    // if ((float)dimuonVertex->Get("normChi2") > 10.0) {
+    //   warn() << "Skipping dimuon vertex with too large normalized chi2" << endl;
+    //   continue;
+    // }
+
     if ((float)dimuonVertex->Get("normChi2") < minChi2) {
       bestDimuonVertex = dimuonVertex;
+      minChi2 = (float)dimuonVertex->Get("normChi2");
     }
   }
   return bestDimuonVertex;
