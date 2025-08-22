@@ -17,7 +17,15 @@ else
   cmake $(correction config --cmake) ..
 fi
 
-make -j install 
+make -j install
 cd ..
+
+# make links to all python files, even if not rebuilding. Include directories (if exist, and recursively):
+# configs, utils, tea/configs:
+
+cd bin
+find ../ -name "*.py" -type f -exec ln -sf {} . \;
+cd ..
+
 
 export PYTHONPATH="$PYTHONPATH:$(pwd)/bin/"
