@@ -17,9 +17,14 @@ void FillHistograms(const shared_ptr<Event> &event, shared_ptr<HistogramsHandler
   // For instance, NanoEvent can return the best dimuon candidate in the event.
   auto bestDimuon = nanoEvent->GetBestDimuonVertex();
 
+  // If there's no good dimuon in the event, we can't to fill the histograms.
+  if (!bestDimuon) return;
+
   // Then, we can simply fill the histograms with the properties of the best dimuon.
   // The histogram name must match the name defined in the config.
   histogramsHandler->Fill("Dimuon_minv", bestDimuon->GetInvariantMass());
+
+  // TODO: Fill in the displacement and apply a cut
 }
 
 int main(int argc, char **argv) {
