@@ -95,6 +95,8 @@ long long EventReader::GetNevents() const {
 tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
   // if collection name is specified in special collections, use that exact name as the collection name
   for (auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+    if (branchName == specialBranchSizeName) break;
+
     auto pos = branchName.find(specialCollectionName);
 
     if (pos != string::npos) {
