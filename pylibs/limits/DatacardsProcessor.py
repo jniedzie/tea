@@ -204,7 +204,11 @@ class DatacardsProcessor:
     # point to the root file for shapes
     if self.config.include_shapes:
       # get file name from the full path:
-      file_name = self.datacard_file_name.replace(".txt", ".root")
+      
+      if ".txt" not in self.datacard_file_name:
+        file_name = self.datacard_file_name + ".root"
+      else:
+        file_name = self.datacard_file_name.replace(".txt", ".root")
       self.datacard += f"shapes * * {file_name} $PROCESS $PROCESS_$SYSTEMATIC\n"
 
     # set observed

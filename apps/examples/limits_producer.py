@@ -6,6 +6,8 @@ import concurrent.futures
 import subprocess
 import time
 import re
+import shlex
+from pathlib import Path
 
 from HistogramsManager import HistogramsManager
 from Logger import fatal, info, error, logger_print
@@ -106,31 +108,58 @@ def run_commands_with_condor(commands):
       print("\rJob finished.                                                        ")
       break
 
+def find_combine(config):
+  combine_path = Path(config.combine_path)  # should be CMSSW_X_Y_Z/src
+
+  # Candidate environment setups (order matters). We verify that `combine` is available.
+  setup_cmds = [
+    f'cd {shlex.quote(str(combine_path))} && cmsenv',
+    f'cd {shlex.quote(str(combine_path))} && source env_lcg.sh',
+    f'cd {shlex.quote(str(combine_path))} && cmssw-el9 --no-home --command-to-run cmsenv',
+    f'cd {shlex.quote(str(combine_path))} && cmssw-el7 --no-home --command-to-run cmsenv',
+  ]
+
+  # Pick the first working environment
+  chosen_setup = None
+  for setup in setup_cmds:
+    test_cmd = f"set -e -o pipefail; {setup}; command -v combine >/dev/null 2>&1"
+    print(f"Testing setup: {setup}")
+    rc = subprocess.run(["bash", "-lc", test_cmd]).returncode
+    if rc == 0:
+      chosen_setup = setup
+      break
+
+  if not chosen_setup:
+    fatal(f"Could not set up a working environment for Combine.\n")
+    exit(1)
+    
+  return chosen_setup
+
 
 def run_combine(config, datacard_file_names):
-  base_command = (
-      f'cd {config.combine_path}; '
-      f'cmssw-el7 --no-home --command-to-run \"cmsenv; '
-      f'cd {config.datacards_output_path};'
-  )
-  # Test cmssw-el7
-  test_command = f"{base_command} echo \"\""
-  if subprocess.run(test_command, shell=True).returncode != 0:
-      base_command = (
-      f'cd {config.combine_path}; '
-      f'cmssw-el9 --no-home --command-to-run \"cmsenv; '
-      f'cd {config.datacards_output_path};'
-  )
+  original_dir = Path.cwd()
+  datacards_dir = original_dir / config.datacards_output_path
+
   commands = []
+  combine_setup = find_combine(config)
+  for name in datacard_file_names:
+    datacard_path = datacards_dir / f"{name}.txt"
+    combine_log = datacard_path.with_suffix(".log")
 
-  for datacard_file_name in datacard_file_names:
-    datacard_path = config.datacards_output_path + datacard_file_name + ".txt"
-    combine_output_path = datacard_path.replace('.txt', '.log')
+    cmd = (
+      "bash -lc "
+      + shlex.quote(
+        "set -e -o pipefail; "
+        f"{combine_setup}; "
+        f"cd {shlex.quote(str(datacards_dir))}; "
+        f"combine -M AsymptoticLimits {shlex.quote(str(datacard_path))} "
+        f"> {shlex.quote(str(combine_log))} 2>&1"
+      )
+    )
+    commands.append(cmd)
 
-    command = f'{base_command} combine -M AsymptoticLimits {datacard_path} > {combine_output_path} \"'
-    commands.append(command)
-
-  if args.condor:
+  # Dispatch (your helpers should execute shell strings and honor non-zero exits)
+  if getattr(config, "condor", False) or (globals().get("args") and getattr(args, "condor", False)):
     info("Running commands with condor...")
     run_commands_with_condor(commands)
   else:
