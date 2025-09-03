@@ -3,7 +3,6 @@ from Logger import error, logger_print
 
 import ROOT
 import importlib
-import sys
 import argparse
 
 parser = argparse.ArgumentParser()
