@@ -27,7 +27,7 @@ def get_file(sample):
 
 def get_datacard_file_name(config, signal_sample):
   datacard_path = f"datacard_{config.histogram.getName()}_{signal_sample.name}"
-  if config.do_abcd:
+  if hasattr(config, "do_abcd") and config.do_abcd:
     datacard_path += "_ABCD"
     if config.use_abcd_prediction:
       datacard_path += "pred"
@@ -160,7 +160,7 @@ def save_limits(config):
   limits_per_process = get_limits(config)
 
   file_path = f"limits_{config.histogram.getName()}"
-  if config.do_abcd:
+  if hasattr(config, "do_abcd") and config.do_abcd:
     file_path += "_ABCD"
     if config.use_abcd_prediction:
       file_path += "pred"
