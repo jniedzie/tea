@@ -4,20 +4,17 @@ from Logger import error, logger_print
 import ROOT
 import importlib
 import sys
+import argparse
 
-
-def getConfig():
-  configPath = sys.argv[1]
-  if (".py" in configPath):
-    configPath = configPath[:-3]
-  config = importlib.import_module(configPath)
-  return config
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", type=str, default="", help="Path to the config file.")
+args = parser.parse_args()
 
 
 def main():
   ROOT.gROOT.SetBatch(True)
 
-  config = getConfig()
+  config = importlib.import_module(args.config.replace(".py", "").replace("/", "."))
   plotter = HistogramPlotter(config)
 
   input_files = {}
