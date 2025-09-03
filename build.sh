@@ -14,7 +14,7 @@ cd build
 if ! command -v correction &> /dev/null; then
   cmake ..
 else
-  cmake $(correction config --cmake) ..
+  cmake $(PYTHONNOUSERSITE=1 correction config --cmake) ..
 fi
 
 make -j install
