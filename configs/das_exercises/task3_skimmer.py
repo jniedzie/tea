@@ -9,7 +9,7 @@
 
 nEvents = -1
 
-base_path = "/eos/home-j/jniedzie/tea_llp_das/samples/"
+base_path = "/eos/cms/store/group/committee_schools/2025-cmsdas-hamburg/llp/samples/"
 
 process = "tta_mAlp-12GeV_ctau-1e2mm"
 
