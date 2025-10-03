@@ -15,6 +15,7 @@ from Logger import fatal, info, error, logger_print
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="", help="Path to the config file.")
 parser.add_argument("--condor", action="store_true", help="Run in condor mode.")
+parser.add_argument("--method", type=str, default="AsymptoticLimits", help="Combine method to use.")
 args = parser.parse_args()
 
 
@@ -27,8 +28,8 @@ def get_file(sample):
   return file
 
 
-def get_datacard_file_name(config, signal_sample):
-  datacard_path = f"datacard_{config.histogram.getName()}_{signal_sample.name}"
+def get_datacard_file_name(config, sample):
+  datacard_path = f"datacard_{config.histogram.getName()}_{sample.name}"
   if hasattr(config, "do_abcd") and config.do_abcd:
     datacard_path += "_ABCD"
     if config.use_abcd_prediction:
@@ -152,7 +153,7 @@ def run_combine(config, datacard_file_names):
         "set -e -o pipefail; "
         f"{combine_setup}; "
         f"cd {shlex.quote(str(datacards_dir))}; "
-        f"combine -M AsymptoticLimits {shlex.quote(str(datacard_path))} "
+        f"combine -M {args.method} {shlex.quote(str(datacard_path))} "
         f"> {shlex.quote(str(combine_log))} 2>&1"
       )
     )
@@ -209,6 +210,23 @@ def save_limits(config):
       info(f"{signal_name}: {limits}")
 
 
+def print_significance(config):
+  for data_sample in config.data_samples:
+    combine_output_path = get_datacard_file_name(config, data_sample) + ".log"
+
+    try:
+      with open(f"{config.datacards_output_path}/{combine_output_path}", "r") as combine_output_file:
+        combine_output = combine_output_file.read()
+        significance_lines = [line for line in combine_output.split("\n") if "Significance:" in line]
+        if significance_lines:
+          significance = significance_lines[-1].split("Significance:")[1].strip()
+          info(f"Significance for {data_sample.name}: {significance}")
+        else:
+          error(f"No significance found in {combine_output_path}")
+    except FileNotFoundError:
+      error(f"File {combine_output_path} not found.")
+      continue
+
 def main():
   ROOT.gROOT.SetBatch(True)
 
@@ -217,20 +235,33 @@ def main():
   input_files = {}
   datacard_file_names = []
 
-  for signal_sample in config.signal_samples:
+  signal_samples = config.signal_samples if hasattr(config, "signal_samples") else []
+  data_samples = config.data_samples if hasattr(config, "data_samples") else []
+  background_samples = config.background_samples if hasattr(config, "background_samples") else []
+
+  for signal_sample in signal_samples:
     input_files[signal_sample.name] = get_file(signal_sample)
 
-  for background_sample in config.background_samples:
+  for background_sample in background_samples:
     input_files[background_sample.name] = get_file(background_sample)
 
-  for signal_sample in config.signal_samples:
-    datacard_file_name = get_datacard_file_name(config, signal_sample)
+  for data_sample in data_samples:
+    input_files[data_sample.name] = get_file(data_sample)
+
+  main_samples = signal_samples if args.method == "AsymptoticLimits" else data_samples
+  other_samples = background_samples + (data_samples if args.method == "AsymptoticLimits" else signal_samples)
+
+  for main_sample in main_samples:
+    datacard_file_name = get_datacard_file_name(config, main_sample)
+
+  
+    info(f"Creating HistogramsManager for {datacard_file_name}")
 
     manager = HistogramsManager(config, input_files, datacard_file_name)
-    manager.addHistosample(config.histogram, signal_sample)
+    manager.addHistosample(config.histogram, main_sample)
 
-    for background_sample in config.background_samples:
-      manager.addHistosample(config.histogram, background_sample)
+    for other_sample in other_samples:
+      manager.addHistosample(config.histogram, other_sample)
 
     manager.normalizeHistograms()
     manager.buildStacks()
@@ -240,7 +271,10 @@ def main():
   if not config.skip_combine:
     run_combine(config, datacard_file_names)
 
-  save_limits(config)
+  if args.method == "AsymptoticLimits":
+    save_limits(config)
+  elif args.method == "Significance":
+    print_significance(config)
 
   logger_print()
 
