@@ -30,8 +30,10 @@ EventReader::EventReader() {
 
   currentEvent = make_shared<Event>();
 
+  info() << "Input file path: " << inputFilePath << endl;
+
   // if inputFilePath is a DAS dataset name, insert a redirector into it
-  if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
+  if ((inputFilePath.find("root://") == string::npos) && (inputFilePath.rfind("/store/", 0) == 0)) {
     vector<string> redirectors = {
         "xrootd-cms.infn.it",
         "cms-xrd-global.cern.ch",
