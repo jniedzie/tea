@@ -1,12 +1,4 @@
-# Task 3
-#
-# Objectives:
-# - Pre-select events with at least 2 tight muons.
-# - Drop all branches except for Muon and PatMuonVertex collections
-#
-# Hints:
-# - Muon branches start with "Muon_*" and dimuon branches start with "PatMuonVertex_*".
-
+# The number of events to process. -1 means all events.
 nEvents = -1
 
 base_path = "/eos/cms/store/group/committee_schools/2025-cmsdas-hamburg/llp/samples/"

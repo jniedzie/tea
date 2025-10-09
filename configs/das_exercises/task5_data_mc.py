@@ -1,20 +1,4 @@
-# Task 5
-#
-# Objectives:
-# - Create background and data histograms in a tt̄ CR.
-# - Plot data/MC ratios.
-#
-# Hints:
-# - Not much to change here, just define default histograms for TightMuons and GoodJets.
-# - Most of the work is in the plotting script.
-#   - Set file_name correctly.
-#   - Comment out the Sample for the signal.
-#   - Add a Sample for data. Use SampleType.data and set cross_section to 1.0. Adjust plotting style.
-#   - Add Histograms for TightMuons and GoodJets pt and eta. Adjust y-axis ranges if needed.
-#   - Use NormalizationType.to_data for these plots.
-#   - Add plotting options/legends for data (use "pe").
-#   - Turn on ratio plotting.
-
+# The number of events to process. -1 means all events.
 nEvents = -1
 
 base_path = "/eos/cms/store/group/committee_schools/2025-cmsdas-hamburg/llp/samples/"
@@ -57,8 +41,7 @@ extraEventCollections = {
 # These event selections can be applied to standard nanoAOD branches and custom collections defined above.
 eventCuts = {
   "MET_pt": (50, 9999999),
-  "nTightMuons": (1, 1),
-  "nLooseElectrons": (0, 0),
+  # TODO: add tigher event cuts
 }
 
 weightsBranchName = "genWeight"

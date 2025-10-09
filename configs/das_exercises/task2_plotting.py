@@ -1,15 +1,3 @@
-# Task 2
-#
-# Objectives:
-# - Use the plotter to create nice plots of muon pT and η distributions in tt semileptonic and one of the signal samples.
-# - Understand different plotting options.
-#
-# Hints:
-# - There's not much to do here, you only need to specify your input paths.
-# - Try to understand everything in this script though, as we will use it a few times.
-# - You can play with different settings to see how the plots change.
-# - Try different normalization options: NormalizationType.to_lumi, NormalizationType.to_one, NormalizationType.none. If you do that, you'll have to adjust y-axis ranges.
-
 import ROOT
 from Sample import Sample, SampleType
 from Legend import Legend
@@ -49,8 +37,8 @@ output_path = "../plots/"
 
 histograms = (
   #         name      title logx   logy   norm_type                  rebin  xmin  xmax ymin   ymax xlabel         ylabel
-  Histogram("Muon_pt" , "", False, True , NormalizationType.to_lumi, 4,     0   , 200, 1    , 1e3, "p_{T}^{#mu} [GeV]", "# events"),
-  Histogram("Muon_eta", "", False, False, NormalizationType.to_lumi, 4,     -2.4, 2.4, 0    , 250, "#eta^{#mu}"       , "# events"),
+  Histogram("Muon_pt" , "", False, True , NormalizationType.to_lumi, 1,     0   , 200, 1    , 1e3, "x axis", "y axis"),
+  Histogram("Muon_eta", "", False, False, NormalizationType.to_lumi, 1,     -2.4, 2.4, 0    , 250, "x axis", "y axis"),
 )
 
 legends = {

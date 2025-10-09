@@ -1,14 +1,3 @@
-# Task 1
-#
-# Objectives:
-# - Produce a ROOT file with histograms of pT and η of all muons in all events using only one input file.
-# - Do it for tt semileptonic background sample and for 12 GeV, 100 mm ALP signal.
-#
-# Hints:
-# - The input files are called "output_0.root".
-# - The collection name for muons in nanoAOD is "Muon".
-# - Check the `base_path` to see where the input files are located.
-
 # The number of events to process. -1 means all events.
 nEvents = -1
 

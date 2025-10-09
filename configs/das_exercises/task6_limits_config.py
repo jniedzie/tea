@@ -1,14 +1,3 @@
-# Task 6
-#
-# Objectives:
-# - Produce histograms for more ALP masses.
-# - Calculate limit cross section for each ALP mass.
-# - Plot limits (a "brazil plot").
-#
-# Hints:
-# - Histograms production is very similar to Task 4 - you should reuse the configs and commands from there!
-# - You don't actually need to change anything in this config, but read it carefully to understand how it works.
-
 from Sample import Sample, SampleType
 from Histogram import Histogram
 from HistogramNormalizer import NormalizationType
@@ -64,7 +53,12 @@ background_samples = [
 samples = signal_samples + background_samples
 
 # Decide which histogram to use for the limit calculation.
-histogram = Histogram(name="Dimuon_minvAfterCut", norm_type=NormalizationType.to_lumi, x_max=100, rebin=1)
+histogram = Histogram(
+  name="", # TODO: pick the histogram to use
+  norm_type=NormalizationType.to_lumi, 
+  x_max=100, 
+  rebin=1
+)
 
 # List uncertainties (nuisance parameters) to be included in the datacard.
 nuisances = {
