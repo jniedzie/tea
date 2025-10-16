@@ -25,7 +25,7 @@ class CmsLabelsManager:
         if hasattr(self.config, "lumi_label_offset"):
             self.lumiTextOffset = self.config.lumi_label_offset
         else:
-            self.lumiTextOffset = -0.2
+            self.lumiTextOffset = -0.
 
         self.cmsTextSize = 0.75
         self.cmsTextOffset = 0.1
@@ -98,10 +98,10 @@ class CmsLabelsManager:
         latex.SetNDC()
         latex.SetTextAngle(0)
         latex.SetTextColor(ROOT.kBlack)
-        latex.SetTextFont(42)
+        latex.SetTextFont(43)
         latex.SetTextAlign(31)
 
-        latex.SetTextSize(self.lumiTextSize*self.top)
+        latex.SetTextSize(20)
         latex.DrawLatex(1-self.right, 1-self.top + self.lumiTextOffset * self.top, lumiText)
 
     def __drawLogo(self):

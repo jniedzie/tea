@@ -83,8 +83,8 @@ class Styler:
     
     gStyle.SetOptStat(0) # To display the mean and RMS:   SetOptStat("mr")
     gStyle.SetStatColor(ROOT.kWhite)
-    gStyle.SetStatFont(42)
-    gStyle.SetStatFontSize(0.025)
+    gStyle.SetStatFont(43)
+    gStyle.SetStatFontSize(20)
     gStyle.SetStatTextColor(1)
     gStyle.SetStatFormat("6.4g")
     gStyle.SetStatBorderSize(1)
@@ -92,22 +92,22 @@ class Styler:
     gStyle.SetStatW(0.15)
     
     gStyle.SetOptTitle(0)
-    gStyle.SetTitleFont(42)
+    gStyle.SetTitleFont(43)
     gStyle.SetTitleColor(1)
     gStyle.SetTitleTextColor(1)
     gStyle.SetTitleFillColor(10)
-    gStyle.SetTitleFontSize(0.05)
+    gStyle.SetTitleFontSize(20)
     
     gStyle.SetTitleColor(1, "XYZ")
-    gStyle.SetTitleFont(42, "XYZ")
-    gStyle.SetTitleSize(0.06, "XYZ")
+    gStyle.SetTitleFont(43, "XYZ")
+    gStyle.SetTitleSize(18, "XYZ")
     gStyle.SetTitleXOffset(0.9)
     gStyle.SetTitleYOffset(1.25)
     
     gStyle.SetLabelColor(1, "XYZ")
-    gStyle.SetLabelFont(42, "XYZ")
+    gStyle.SetLabelFont(43, "XYZ")
     gStyle.SetLabelOffset(0.007, "XYZ")
-    gStyle.SetLabelSize(0.05, "XYZ")
+    gStyle.SetLabelSize(18, "XYZ")
 
     gStyle.SetAxisColor(1, "XYZ")
     gStyle.SetStripDecimals(True)
@@ -143,18 +143,14 @@ class Styler:
       
       plot.GetXaxis().SetTitleOffset(1.0 if is_ratio else 1.7)
       
-      if self.config.show_ratio_plots:
-        plot.GetXaxis().SetTitleSize(0.12 if is_ratio else 0.06)
-        plot.GetXaxis().SetLabelSize(0.1 if is_ratio else 0.06)
-      else:
-        plot.GetXaxis().SetTitleSize(0.04)
-        plot.GetXaxis().SetLabelSize(0.04)
+      plot.GetXaxis().SetTitleSize(20)
+      plot.GetXaxis().SetLabelSize(20)
       
       plot.GetYaxis().SetTitle("Data/MC" if is_ratio else hist.y_label)
-      plot.GetYaxis().SetTitleSize(0.1 if is_ratio else 0.05)
-      plot.GetYaxis().SetTitleOffset(0.5 if is_ratio else 1.5)
+      plot.GetYaxis().SetTitleSize(20)
+      plot.GetYaxis().SetTitleOffset(1.5)
       
-      plot.GetYaxis().SetLabelSize(0.1 if is_ratio else 0.06)
+      plot.GetYaxis().SetLabelSize(20)
       
       plot.GetYaxis().CenterTitle()
       plot.GetYaxis().SetNdivisions(505)
@@ -181,23 +177,23 @@ class Styler:
       plot.SetTitle(hist.title)
       plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
       plot.GetXaxis().SetTitle(hist.x_label)
-      plot.GetXaxis().SetTitleSize(0.04)
+      plot.GetXaxis().SetTitleSize(20)
       plot.GetXaxis().SetTitleOffset(1.0)
-      plot.GetXaxis().SetLabelSize(0.04)
+      plot.GetXaxis().SetLabelSize(20)
       
       plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
       plot.GetYaxis().SetTitle(hist.y_label)
-      plot.GetYaxis().SetTitleSize(0.04)
+      plot.GetYaxis().SetTitleSize(20)
       plot.GetYaxis().SetTitleOffset(1.2)
       plot.GetYaxis().CenterTitle()
-      plot.GetYaxis().SetLabelSize(0.04)
+      plot.GetYaxis().SetLabelSize(20)
       plot.GetYaxis().SetNdivisions(505)
       
       plot.GetZaxis().SetTitle(hist.z_label)
-      plot.GetZaxis().SetTitleSize(0.04)
+      plot.GetZaxis().SetTitleSize(20)
       plot.GetZaxis().SetTitleOffset(1.3)
       plot.GetZaxis().CenterTitle()
-      plot.GetZaxis().SetLabelSize(0.04)
+      plot.GetZaxis().SetLabelSize(20)
       plot.GetZaxis().SetNdivisions(505)
 
     except Exception:
