@@ -553,7 +553,7 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histograms
 
     auto nParams = GetCollectionSize(params);
     if (nParams < 5 || nParams > 6){ 
-      std::cerr << "Invalid number of arguments in 1D histogram definition - expect either 5 or 6 "<<std::endl; 
+      error()<<"Invalid number of arguments in 1D histogram definition - expect either 5 or 6 "<<std::endl; 
       continue; 
     }
 
@@ -582,7 +582,7 @@ void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams> &h
     IrregularHistogramParams histParams;
     string title;
     if (nParams < 3 || nParams > 4){ 
-      std::cerr << "Invalid number of arguments in 1D variable bin histogram definition - expect either 3 or 4 "<<std::endl; 
+      error() << "Invalid number of arguments in 1D variable bin histogram definition - expect either 3 or 4 "<<std::endl; 
       continue; 
     }
     histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
@@ -610,7 +610,7 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogra
     PyObject *params = GetItem(pythonList, i);
     auto nParams = GetCollectionSize(params);
     if (nParams < 7 || nParams > 8){ 
-      std::cerr << "Invalid number of arguments in 2D histogram definition - expect either 7 or 8 "<<std::endl; 
+      error() << "Invalid number of arguments in 2D histogram definition - expect either 7 or 8 "<<std::endl; 
       continue; 
     }
 
