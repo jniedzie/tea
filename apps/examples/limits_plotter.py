@@ -159,6 +159,8 @@ def draw_brazil_plots():
   graph.draw_legend()
   draw_legend(legend_params)
 
+  # Redraw the axis to make sure they are on top of the bands
+  canvas.RedrawAxis()
   canvas.Update()
   input_file_name = input_path.split("/")[-1]
   canvas.SaveAs(f"{config.results_output_path}/{input_file_name.replace('.txt', '')}.pdf")

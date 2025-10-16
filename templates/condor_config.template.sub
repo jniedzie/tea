@@ -12,6 +12,7 @@ log                   = <log_path>
 # max_materialize       = <materialize_max>
 
 should_transfer_files   = YES
+transfer_output_files = YES
 when_to_transfer_output = ON_EXIT
 
 queue <n_jobs>
