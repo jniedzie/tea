@@ -70,7 +70,7 @@ class SubmissionManager:
     self.__set_condor_script_variables(len(input_files))
     self.__set_run_script_variables()
 
-    command = f"condor_submit {self.condor_config_name}"
+    command = f"condor_submit -spool {self.condor_config_name}"
     info(f"Submitting to condor: {command}")
 
     if not args.dry:
