@@ -562,11 +562,24 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histograms
       histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5));
       title = histParams.collection + "_" + histParams.variable;
     } else if (nParams == 5) {
-      histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
-      histParams.nBins = PyLong_AsLong(GetItem(params, 1));
-      histParams.min = PyFloat_AsDouble(GetItem(params, 2));
-      histParams.max = PyFloat_AsDouble(GetItem(params, 3));
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 4));
+      /// Case 1: user specifies a variable + binning + dir 
+      const char* dirAsChar = PyUnicode_AsUTF8(GetItem(params, 4)); 
+      if (dirAsChar){
+        histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
+        histParams.nBins = PyLong_AsLong(GetItem(params, 1));
+        histParams.min = PyFloat_AsDouble(GetItem(params, 2));
+        histParams.max = PyFloat_AsDouble(GetItem(params, 3));
+        histParams.directory = dirAsChar;
+      }
+      /// Case 2: User specifies collection + var + binning, leaves dir empty 
+      else {
+        histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
+        histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
+        histParams.nBins = PyLong_AsLong(GetItem(params, 2));
+        histParams.min = PyFloat_AsDouble(GetItem(params, 3));
+        histParams.max = PyFloat_AsDouble(GetItem(params, 4));
+        histParams.directory = "";
+      }
       title = histParams.variable;
     }
     histogramsParams[title] = histParams;
