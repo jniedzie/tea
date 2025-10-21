@@ -1,7 +1,7 @@
 from enum import Enum
 from ROOT import TFile, TObject
 from Sample import SampleType
-from Logger import warn, error
+from Logger import warn, error, info
 
 
 class NormalizationType(Enum):
@@ -28,6 +28,8 @@ class HistogramNormalizer:
 
     if normalize_hists:
       self.__setBackgroundEntries()
+      
+    self.to_data_scales = {}
 
   def normalize(self, hist, sample, data_integral=None, total_backgrounds_integral=None):
     if hist.norm_type == NormalizationType.none:
@@ -55,6 +57,10 @@ class HistogramNormalizer:
     scale /= self.background_initial_sum_weights[sample.name]
     hist_normalized.Scale(scale)
     return hist_normalized
+
+  def print_to_data_scales(self):
+    for sample_name, (n, s) in self.to_data_scales.items():
+      warn(f"{sample_name}: average scale: {s/n if n > 0 else 0}")
 
   def __normalizeToOne(self, hist, sample):
     if sample.type == SampleType.background:
@@ -101,6 +107,13 @@ class HistogramNormalizer:
     if sample.type == SampleType.background:
       self.__normalizeToLumi(hist, sample)
       scale = data_integral/total_backgrounds_integral
+      if hist.name != "cutFlow":
+        if sample.name not in self.to_data_scales:
+          self.to_data_scales[sample.name] = (1, scale)
+        else:
+            n = self.to_data_scales[sample.name][0] + 1
+            s = self.to_data_scales[sample.name][1] + scale
+            self.to_data_scales[sample.name] = (n, s)
     elif sample.type == SampleType.signal:
       scale = data_integral/hist.hist.Integral()
     elif sample.type == SampleType.data:

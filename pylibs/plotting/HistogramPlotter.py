@@ -231,6 +231,8 @@ class HistogramPlotter:
       self.normalizer.normalize(hist, sample, self.__getDataIntegral(
           hist), self.__getBackgroundIntegral(hist))
 
+    self.normalizer.print_to_data_scales()
+
     # normalize signal
     for hist, sample in self.histosamples:
       if sample.type != SampleType.signal:
