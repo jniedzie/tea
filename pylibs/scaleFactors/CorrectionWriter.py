@@ -79,16 +79,18 @@ class CorrectionWriter:
                 return self.__make_category(name, data, edges_)
             else :
                 return self.__make_binning(name, data, edges_, flow)
-        
+
         content = []
         if self.__is_category(edges_):
             n_edges = len(edges_)
         else:
             n_edges = len(edges_)-1
         for i in range(n_edges):
-            subnode = self.__build_nodes(inputs, edges, data[i], flow, idx+1)
+            it = edges_[i]
+            subnode = self.__build_nodes(inputs, edges, data[it], flow, idx+1)
             content.append(subnode)
         
+
         if self.__is_category(edges_):
             return self.__make_category(name, content, edges_)
         else:
@@ -133,7 +135,7 @@ class CorrectionWriter:
         self.corrections[name] = correction
 
 
-    def add_multibinned_correction_for_config(self, config, data):
+    def add_multibinned_correction_for_config(self, config, data):        
         self.add_multibinned_correction(
             config.correction_name,
             config.correction_description,

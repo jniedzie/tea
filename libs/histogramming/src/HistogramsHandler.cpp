@@ -37,6 +37,12 @@ HistogramsHandler::HistogramsHandler() {
   }
 
   try {
+    config.GetHistogramsParams(irregularHistParams2D, "irregularHistParams2D");
+  } catch (const Exception &e) {
+    info() << "No irregularHistParams2D found in config file" << endl;
+  }
+
+  try {
     config.GetValue("histogramsOutputFilePath", outputPath);
   } catch (const Exception &e) {
     info() << "No histogramsOutputFilePath found in config file" << endl;
@@ -68,6 +74,11 @@ void HistogramsHandler::SetupHistograms() {
     histograms2D[make_pair(title, "")] =
         new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
   }
+
+  for (auto &[title, params] : irregularHistParams2D) {
+    histograms2D[make_pair(title, "")] = 
+        new TH2D(title.c_str(), title.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0], params.binEdgesY.size() - 1, &params.binEdgesY[0]);
+  }
 }
 
 void HistogramsHandler::SetupSFvariationHistograms() {
@@ -96,6 +107,16 @@ void HistogramsHandler::SetupSFvariationHistograms() {
       string titlesf = title + "_" + sfName;
       histograms2D[make_pair(title, sfName)] = 
           new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+    }
+  }
+
+  for (auto &[title, params] : irregularHistParams2D) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) ==  SFvariationVariables.end()) continue;    
+    for (auto &[sfName, weight] : eventWeights) {
+      if (sfName == "default") continue;
+      string titlesf = title + "_" + sfName;
+      histograms2D[make_pair(title, sfName)] = 
+          new TH2D(titlesf.c_str(), titlesf.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0], params.binEdgesY.size() - 1, &params.binEdgesY[0]);
     }
   }
 }

@@ -32,22 +32,27 @@ class ScaleFactorsManager {
 
   std::map<std::string, float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string, float> GetDSAMuonScaleFactors(std::string patName, std::string dsaName, float eta, float pt);
+  std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
 
-  float GetPileupScaleFactorCustom(int nVertices);
-  float GetPileupScaleFactor(std::string name, float nVertices);
+  std::map<std::string, float> GetPileupScaleFactorCustom(int nVertices);
+  std::map<std::string, float> GetPileupScaleFactor(std::string name, float nVertices);
 
   std::vector<std::string> GetBTagVariationNames(std::string name);
 
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
+  std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
+
 
   void ReadJetEnergyCorrections();
   bool ShouldApplyJetEnergyCorrections() {
     return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec");
   }
   std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
+
+  bool ShouldApplyScaleFactor(const std::string &name);
+  bool ShouldApplyVariation(const std::string &name);
 
  private:
   ScaleFactorsManager();
@@ -64,9 +69,6 @@ class ScaleFactorsManager {
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
   TH1D *pileupSFvalues;
-
-  bool ShouldApplyScaleFactor(const std::string &name);
-  bool ShouldApplyVariation(const std::string &name);
 
   void ReadScaleFactorFlags();
   void ReadScaleFactors();

@@ -33,6 +33,7 @@ class ConfigManager {
   void GetHistogramsParams(std::map<std::string, HistogramParams> &histogramsParams, std::string collectionName);
   void GetHistogramsParams(std::map<std::string, HistogramParams2D> &histogramsParams, std::string collectionName);
   void GetHistogramsParams(std::map<std::string, IrregularHistogramParams> &histogramsParams, std::string collectionName);
+  void GetHistogramsParams(std::map<std::string, IrregularHistogramParams2D> &histogramsParams, std::string collectionName);
 
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsMap> &scaleFactors);
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsTuple> &scaleFactors);

@@ -172,6 +172,12 @@ struct HistogramParams2D {
   }
 };
 
+struct IrregularHistogramParams2D {
+  std::string collection, variable, directory;
+  std::vector<float> binEdgesX;
+  std::vector<float> binEdgesY;
+};
+
 template <class T>
 double duration(T t0, T t1) {
   auto elapsed_secs = t1 - t0;

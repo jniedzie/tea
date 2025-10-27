@@ -48,6 +48,8 @@ class NanoMuon {
   int GetMatchesForNthBestMatch(int N);
   std::vector<int> GetMatchedPATMuonIndices(float minMatchRatio);
 
+  float DeltaRtoParticle(std::shared_ptr<PhysicsObject> particle);
+
   /**
    * Retrieves the best-matching NanoGenParticle from the provided genMuonCollection.
    *
@@ -56,11 +58,16 @@ class NanoMuon {
    * @param allowNonMuons If true, allows matching to non-muon particles in the collection (default: false).
    * @return A shared pointer to the best-matching NanoGenParticle, or nullptr if no match is found.
    */
-  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false);
+  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false, std::shared_ptr<PhysicsObject> excludeGenParticle = nullptr);
+  /** same as above except it doesn't get the first copy, but returns the last copy gen muon */
+  std::shared_ptr<NanoGenParticle> GetLastCopyGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false);
 
   TLorentzVector GetFourVector();
 
+  std::map<std::string, float> GetEmptyScaleFactors(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
   std::map<std::string, float> GetScaleFactors(std::string nameID, std::string nameIso, std::string nameReco, std::string year);
+  std::map<std::string,float> GetEmptyDSAScaleFactors(std::string nameID, std::string nameReco_cosmic);
+  std::map<std::string,float> GetDSAScaleFactors(std::string nameID, std::string nameReco_cosmic);
 
   MuonID GetID();
   MuonIso GetIso();
