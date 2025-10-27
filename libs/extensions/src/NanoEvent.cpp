@@ -168,7 +168,7 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
       float ratio_tmp = dsaMuon->GetMatchesForNthBestMatch(i) / nSegments;
       if (!matchFound && ratio_tmp >= minMatchRatio) {
         matchFound = PATMuonIndexExist(loosePATMuons, dsaMuon->GetMatchIdxForNthBestMatch(i));
-        if(matchFound) break;
+        if (matchFound) break;
       }
     }
     if (matchFound == false) allMuons->push_back(dsaMuon);
@@ -204,7 +204,9 @@ NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> 
   return make_pair(matchedDSAMuons,matchedPATMuons);
 }
 
-shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared_ptr<NanoDimuonVertex> bestVertex, shared_ptr<NanoDimuonVertices> goodVerticesCollection, float minMatchRatio) {
+shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared_ptr<NanoDimuonVertex> bestVertex, 
+                                                                          shared_ptr<NanoDimuonVertices> goodVerticesCollection, 
+                                                                          float minMatchRatio) {
   // auto nanoVertex = asNanoDimuonVertex(bestVertex,event);
   // PAT-PAT dimuon vertex
   if (bestVertex->IsPatDimuon()) return bestVertex;
@@ -232,10 +234,9 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
     for (auto matchIndex1 : patMatchIndices1) {
       for (auto matchIndex2 : patMatchIndices2) {
         if (matchIndex1 == matchIndex2) continue;
-        for (int i=0; i<patVertexCollection->size(); i++) {
+        for (int i = 0; i < patVertexCollection->size(); i++) {
           auto patVertex = patVertexCollection->at(i);
-          if(patVertex->HasMuonIndices(matchIndex1, matchIndex2) || 
-             patVertex->HasMuonIndices(matchIndex2, matchIndex1)) { 
+          if (patVertex->HasMuonIndices(matchIndex1, matchIndex2) || patVertex->HasMuonIndices(matchIndex2, matchIndex1)) {
             if ((float)patVertex->Get("normChi2") < minChi2) {
               matchedVertexIdx = i;
               minChi2 = (float)patVertex->Get("normChi2");
@@ -252,7 +253,7 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
     matchedVertexIdx = -1;
     minChi2 = 9999.;
     for (auto matchIndex1 : patMatchIndices1) {
-      for (int i=0; i<patDSAVertexCollection->size(); i++) {
+      for (int i = 0; i < patDSAVertexCollection->size(); i++) {
         auto patDSAVertex = patDSAVertexCollection->at(i);
         auto patMuon = patDSAVertex->Muon1();
         auto dsaMuon = patDSAVertex->Muon2();
@@ -265,11 +266,11 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
       }
     }
     for (auto matchIndex2 : patMatchIndices2) {
-      for (int i=0; i<patDSAVertexCollection->size(); i++) {
+      for (int i = 0; i < patDSAVertexCollection->size(); i++) {
         auto patDSAVertex = patDSAVertexCollection->at(i);
         auto patMuon = patDSAVertex->Muon1();
         auto dsaMuon = patDSAVertex->Muon2();
-        if (patDSAVertex->HasMuonIndices(matchIndex2, dsaMuon1->GetIdx())) {        
+        if (patDSAVertex->HasMuonIndices(matchIndex2, dsaMuon1->GetIdx())) {
           if ((float)patDSAVertex->Get("normChi2") < minChi2) {
             matchedVertexIdx = i;
             minChi2 = (float)patDSAVertex->Get("normChi2");
@@ -294,10 +295,9 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
     float minChi2 = 9999.;
     for (auto matchIndex2 : patMatchIndices2) {
       if (patMatchIndex1 == matchIndex2) continue;
-      for (int i=0; i<patVertexCollection->size(); i++) {
+      for (int i = 0; i < patVertexCollection->size(); i++) {
         auto patVertex = patVertexCollection->at(i);
-        if(patVertex->HasMuonIndices(patMatchIndex1, matchIndex2) ||
-           patVertex->HasMuonIndices(matchIndex2, patMatchIndex1)) {
+        if (patVertex->HasMuonIndices(patMatchIndex1, matchIndex2) || patVertex->HasMuonIndices(matchIndex2, patMatchIndex1)) {
           if ((float)patVertex->Get("normChi2") < minChi2) {
             matchedVertexIdx = i;
             minChi2 = (float)patVertex->Get("normChi2");
@@ -314,13 +314,9 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
   return bestVertex;
 }
 
-bool NanoEvent::DSAMuonIndexExist(shared_ptr<NanoMuons> muons, float index) {
-  return MuonIndexExist(muons, index, true);
-}
+bool NanoEvent::DSAMuonIndexExist(shared_ptr<NanoMuons> muons, float index) { return MuonIndexExist(muons, index, true); }
 
-bool NanoEvent::PATMuonIndexExist(shared_ptr<NanoMuons> muons, float index) {
-  return MuonIndexExist(muons, index, false);
-}
+bool NanoEvent::PATMuonIndexExist(shared_ptr<NanoMuons> muons, float index) { return MuonIndexExist(muons, index, false); }
 
 bool NanoEvent::MuonIndexExist(shared_ptr<NanoMuons> muons, float index, bool isDSAMuon) {
   for (auto muon : *muons) {
@@ -385,7 +381,7 @@ shared_ptr<PhysicsObject> NanoEvent::GetVertexForDimuon(shared_ptr<NanoMuon> muo
   muons->push_back(muon1);
   muons->push_back(muon2);
   auto dimuonVertex = GetVerticesForMuons(muons);
-  if(dimuonVertex->size()<1) return nullptr;
+  if (dimuonVertex->size() < 1) return nullptr;
   return dimuonVertex->at(0);
 }
 
@@ -393,8 +389,8 @@ std::shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForDimuons(shared_ptr<Nano
   auto muonVertices = make_shared<PhysicsObjects>();
   for (auto dimuon : *dimuons) {
     auto vertex = GetVertexForDimuon(dimuon.first, dimuon.second);
-    if(vertex) muonVertices->push_back(vertex);
-  }  
+    if (vertex) muonVertices->push_back(vertex);
+  }
   return muonVertices;
 }
 
@@ -489,7 +485,8 @@ shared_ptr<NanoMuons> NanoEvent::GetPATMuonsFromCollection(shared_ptr<NanoMuons>
   return patMuons;
 }
 
-shared_ptr<NanoMuons> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<NanoMuons> muonCollection1, shared_ptr<NanoMuons> muonCollection2) {
+shared_ptr<NanoMuons> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<NanoMuons> muonCollection1,
+                                                                shared_ptr<NanoMuons> muonCollection2) {
   auto muonCollection = make_shared<NanoMuons>();
   for (auto muon : *muonCollection1) {
     if (MuonIndexExist(muonCollection2, muon->Get("idx"), muon->IsDSA())) {
@@ -499,25 +496,34 @@ shared_ptr<NanoMuons> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<NanoM
   return muonCollection;
 }
 
-shared_ptr<NanoDimuonVertex> NanoEvent::GetBestDimuonVertex(shared_ptr<NanoDimuonVertices> dimuonCollection) {
+shared_ptr<NanoDimuonVertex> NanoEvent::GetBestDimuonVertex() {
+  auto dimuonCollection = asNanoDimuonVertices(event->GetCollection("PatMuonVertex"), event);
   shared_ptr<NanoDimuonVertex> bestDimuonVertex = nullptr;
+
   float minChi2 = 9999.;
   for (auto dimuonVertex : *dimuonCollection) {
-    // opposite signed muons
-    if (dimuonVertex->GetDimuonChargeProduct() > -0.1) continue;
-    float invMass = dimuonVertex->GetInvariantMass();
-    // invariant mass selection - excluding SM J/Psi & psi resonances
-    if (invMass > 70 || (invMass > 2.9 && invMass < 3.3) || (invMass > 3.5 && invMass < 3.86)) continue;
-    if (dimuonVertex->IsPatDimuon()) {
-      // PAT-PAT requirement on number of hits in front of the vertex
-      float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"),(float)dimuonVertex->Get("hitsInFrontOfVert2"));
-      if(maxHits > 3.0) continue;
-    }
-    if((float)dimuonVertex->Get("dca") > 2.0) continue;
-    if(abs(dimuonVertex->GetCollinearityAngle()) > 2.0) continue;
-    if((float)dimuonVertex->Get("normChi2") > 3.0) continue;
-    if((float)dimuonVertex->Get("normChi2") < minChi2) {
+    // if (dimuonVertex->GetDimuonChargeProduct() > -0.1) continue;
+    // float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"), (float)dimuonVertex->Get("hitsInFrontOfVert2"));
+    // if (maxHits > 3.0) {
+    //   warn() << "Skipping dimuon vertex with too many hits in front of vertex" << endl;
+    //   continue;
+    // }
+    // if ((float)dimuonVertex->Get("dca") > 2.0) {
+    //   warn() << "Skipping dimuon vertex with too large DCA" << endl;
+    //   continue;
+    // }
+    // if (abs(dimuonVertex->GetCollinearityAngle()) > 2.0) {
+    //   warn() << "Skipping dimuon vertex with too large collinearity angle" << endl;
+    //   continue;
+    // }
+    // if ((float)dimuonVertex->Get("normChi2") > 10.0) {
+    //   warn() << "Skipping dimuon vertex with too large normalized chi2" << endl;
+    //   continue;
+    // }
+
+    if ((float)dimuonVertex->Get("normChi2") < minChi2) {
       bestDimuonVertex = dimuonVertex;
+      minChi2 = (float)dimuonVertex->Get("normChi2");
     }
   }
   return bestDimuonVertex;

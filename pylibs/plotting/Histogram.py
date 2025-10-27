@@ -34,6 +34,10 @@ class Histogram:
   def set_hist(self, hist):
     self.hist = hist
 
+  def set_hist_name(self, name):
+    self.hist.SetName(name)
+    self.name = name
+
   def getName(self):
     return self.name + self.suffix
 

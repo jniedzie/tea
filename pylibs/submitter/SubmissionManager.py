@@ -65,12 +65,12 @@ class SubmissionManager:
     self.__setup_temp_file_paths()
     self.__copy_templates()
 
-    input_files = self.__get_intput_file_list()
+    input_files = self.__get_input_file_list()
     self.__save_file_list_to_file(input_files)
     self.__set_condor_script_variables(len(input_files))
     self.__set_run_script_variables()
 
-    command = f"condor_submit {self.condor_config_name}"
+    command = f"condor_submit -spool {self.condor_config_name}"
     info(f"Submitting to condor: {command}")
 
     if not args.dry:
@@ -120,7 +120,7 @@ class SubmissionManager:
       files = [line.strip() for line in file if line.strip()]
     return files
 
-  def __get_intput_file_list(self):
+  def __get_input_file_list(self):
     if hasattr(self.files_config, "dataset"):
       max_files = getattr(self.files_config, "max_files", -1)
       files = self.__get_das_files_list(self.files_config.dataset)
@@ -141,13 +141,16 @@ class SubmissionManager:
     if hasattr(self.files_config, "input_directory"):
       return os.popen(f"find {self.files_config.input_directory} -maxdepth 1 -name '*.root'").read().splitlines()
 
+    if hasattr(self.files_config, "input_output_file_list"):
+      return self.files_config.input_output_file_list
+
     fatal("Unrecognized option")
     exit()
 
   # option 1 & 3, 4, 5
   def __run_local_with_output_dir(self):
 
-    input_file_list = self.__get_intput_file_list()
+    input_file_list = self.__get_input_file_list()
 
     if hasattr(self.files_config, "file_name"):
       file_name = self.files_config.file_name
@@ -175,7 +178,7 @@ class SubmissionManager:
 
   def __run_local_with_output_dirs(self):
 
-    input_file_list = self.__get_intput_file_list()
+    input_file_list = self.__get_input_file_list()
     if len(input_file_list) == 0:
       warn("No input files found")
       return

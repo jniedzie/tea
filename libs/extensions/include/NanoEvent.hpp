@@ -68,7 +68,7 @@ class NanoEvent {
 
   std::shared_ptr<NanoMuons> GetAllCommonMuonsInCollections(std::shared_ptr<NanoMuons> muonCollection1, std::shared_ptr<NanoMuons> muonCollection2);
 
-  std::shared_ptr<NanoDimuonVertex> GetBestDimuonVertex(std::shared_ptr<NanoDimuonVertices> dimuonCollection);
+  std::shared_ptr<NanoDimuonVertex> GetBestDimuonVertex();
 
  private:
   std::shared_ptr<Event> event;

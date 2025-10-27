@@ -48,8 +48,9 @@ class ConfigManager {
   std::string configPath;
   ConfigManager(std::string* const _configPath);
   ~ConfigManager();
-
   static ConfigManager& getInstanceImpl(std::string* const _configPath = nullptr);
+
+  void PrintBanner();
 
   FILE *pythonFile;
   PyObject *pythonModule;

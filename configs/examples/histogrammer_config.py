@@ -5,7 +5,6 @@
 # scaleFactors = get_scale_factors(year)
 
 nEvents = -1
-printEveryNevents = 1000
 
 inputFilePath = "../tea/samples/background_dy.root"
 histogramsOutputFilePath = "../samples/histograms/background_dy.root"

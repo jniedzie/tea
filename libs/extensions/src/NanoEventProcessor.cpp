@@ -13,12 +13,12 @@ NanoEventProcessor::NanoEventProcessor() {
   try {
     config.GetValue("weightsBranchName", weightsBranchName);
   } catch (const Exception &e) {
-    warn() << "Weights branch not specified -- will assume weight is 1 for all events" << endl;
+    warn() << "Weights branch not specified in the config file! Will assume 1.0 for all events." << endl;
   }
   try {
     config.GetValue("year", year);
   } catch (const Exception &e) {
-    info() << "Couldn't read year from config file - will assume year 2018" << endl;
+    warn() << "Year not found in the config file! Will assume 2018." << endl;
     year = "2018";
   }
 }

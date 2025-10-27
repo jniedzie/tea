@@ -16,6 +16,10 @@ public:
   ~EventWriter();
 
   void AddCurrentEvent(std::string treeName);
+  
+  // With HepMC events, you can specify which particles to keep.
+  void AddCurrentHepMCevent(std::string treeName, const std::vector<int> &keepIndices);
+
   void Save();
 
 private:

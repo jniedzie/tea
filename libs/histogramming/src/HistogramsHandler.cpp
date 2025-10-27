@@ -27,13 +27,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(irregularHistParams, "irregularHistParams");
   } catch (const Exception &e) {
-    info() << "No irregularHistParams found in config file" << endl;
   }
 
   try {
     config.GetHistogramsParams(histParams2D, "histParams2D");
   } catch (const Exception &e) {
-    info() << "No histParams2D found in config file" << endl;
   }
 
   try {
@@ -50,7 +48,6 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetVector("SFvariationVariables", SFvariationVariables);
   } catch (const Exception &e) {
-    info() << "Couldn't read SFvariationVariables from config file - no up/down hists will be created" << endl;
   }
 
   eventWeights["default"] = 1.0; // Default weight
@@ -183,8 +180,6 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outpu
 }
 
 void HistogramsHandler::SaveHistograms() {
-  info() << "Output path: " << outputPath << endl;
-
   string path = outputPath.substr(0, outputPath.find_last_of("/"));
   string filename = outputPath.substr(outputPath.find_last_of("/"));
   if (path == "") path = "./";
@@ -203,6 +198,7 @@ void HistogramsHandler::SaveHistograms() {
   
   outputFile->Close();
 
-  info() << "Histograms saved to: " << path << "/" << filename << endl;
+  // print the output path and filename in nice green color:
+  info() << "\033[1;32m" << "Histograms saved to: " << path << "/" << filename << "\033[0m" << endl;
 
 }

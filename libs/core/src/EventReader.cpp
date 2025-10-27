@@ -21,20 +21,19 @@ EventReader::EventReader() {
   try {
     config.GetMap("specialBranchSizes", specialBranchSizes);
   } catch (const Exception &e) {
-    info() << "No specialBranchSizes found in config file" << endl;
   }
 
   config.GetValue("nEvents", maxEvents);
-  config.GetValue("printEveryNevents", printEveryNevents);
-  if (printEveryNevents == 0) printEveryNevents = -1;
-
+  
   string inputFilePath;
   config.GetValue("inputFilePath", inputFilePath);
 
   currentEvent = make_shared<Event>();
 
+  info() << "Input file path: " << inputFilePath << endl;
+
   // if inputFilePath is a DAS dataset name, insert a redirector into it
-  if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
+  if ((inputFilePath.find("root://") == string::npos) && (inputFilePath.rfind("/store/", 0) == 0)) {
     vector<string> redirectors = {
         "xrootd-cms.infn.it",
         "cms-xrd-global.cern.ch",
@@ -53,7 +52,10 @@ EventReader::EventReader() {
     for (string redirector : redirectors) {
       info() << "Trying to read ROOT file with redirector:" << redirector << endl;
       tmpInputFilePath = "root://" + redirector + "/" + inputFilePath;
+
+      gSystem->RedirectOutput("/dev/null", "a");
       inputFile = TFile::Open(tmpInputFilePath.c_str());
+      gSystem->RedirectOutput(0);
 
       if (!inputFile || inputFile->IsZombie()) {
         warn() << "Failed to read ROOT file with redirector: " << redirector << endl;
@@ -67,7 +69,10 @@ EventReader::EventReader() {
     }
     inputFilePath = tmpInputFilePath;
   } else {
+    gSystem->RedirectOutput("/dev/null", "a");
     inputFile = TFile::Open(inputFilePath.c_str());
+    gSystem->RedirectOutput(0);
+
     if (!inputFile || inputFile->IsZombie()) {
       fatal() << "Local file corrupted: " << inputFilePath << endl;
       exit(1);
@@ -92,12 +97,14 @@ long long EventReader::GetNevents() const {
 tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
   // if collection name is specified in special collections, use that exact name as the collection name
   for (auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+    if (branchName == specialBranchSizeName) break;
+
     auto pos = branchName.find(specialCollectionName);
 
     if (pos != string::npos) {
       auto posEnd = pos + specialCollectionName.size();
       string collectionName = branchName.substr(0, specialCollectionName.size());
-      string variableName = branchName.substr(posEnd);
+      string variableName = branchName.substr(posEnd+1);
       return make_tuple(collectionName, variableName);
     }
   }
@@ -123,12 +130,20 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
 
 void EventReader::SetupTrees() {
   vector<string> treeNames = getListOfTrees(inputFile);
+
+  cout << "\033[1;92mLoading trees: ";
   for (string treeName : treeNames) {
     if (inputTrees.find(treeName) != inputTrees.end()) continue;
+    auto tree = (TTree *)inputFile->Get(treeName.c_str());
 
-    cout << "Loading tree: " << treeName << endl;
-    inputTrees[treeName] = (TTree *)inputFile->Get(treeName.c_str());
+    if (tree) {
+      inputTrees[treeName] = tree;
+      cout << treeName << " ✓  ";
+    } else {
+      cout << "\033[31m" << treeName << " ✗\033[1;92m  ";
+    }
   }
+  cout << "\033[0m" << endl;
 
   for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
@@ -165,6 +180,16 @@ TLeaf *EventReader::GetLeaf(TBranch *branch) {
   return leaf;
 }
 
+bool EventReader::IsVectorBranch(TBranch *branch) {
+  auto leaf = GetLeaf(branch);
+  string branchType = leaf->GetTypeName();
+
+  if (branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr) {
+    return true;
+  }
+  return false;
+}
+
 void EventReader::SetupBranches() {
   branchesPerCollection.clear();
   for (string eventsTreeName : eventsTreeNames) {
@@ -181,7 +206,7 @@ void EventReader::SetupBranches() {
       auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
       branchesPerCollection[collectionName].push_back(branchName);
 
-      bool branchIsVector = branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
+      bool branchIsVector = IsVectorBranch(branch);
       if (branchIsVector) {
         SetupVectorBranch(branchName, branchType, eventsTreeName);
       } else {
@@ -319,8 +344,23 @@ int EventReader::tryGet(shared_ptr<Event> event, string branchName) {
 }
 
 shared_ptr<Event> EventReader::GetEvent(int iEvent) {
-  if (printEveryNevents > 0) {
-    if (iEvent % printEveryNevents == 0) info() << "Event: " << iEvent << endl;
+  static int lastPrinted = -1;
+  int nEvents = GetNevents();
+  int percentage = ((iEvent + 1) * 100) / nEvents;
+  if (percentage != lastPrinted) {
+    lastPrinted = percentage;
+    cerr << "\r\033[1;92m[";
+    int width = 50;
+    int pos = (percentage * width) / 100;
+    for (int i = 0; i < width; ++i) {
+      if (i < pos)
+        cerr << "=";
+      else if (i == pos)
+        cerr << ">";
+      else
+        cerr << " ";
+    }
+    cerr << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")" << flush;
   }
 
   currentEvent->Reset();
@@ -385,5 +425,9 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   }
 
   currentEvent->AddExtraCollections();
+
+  if (iEvent == nEvents - 1) {
+    cerr << "\033[0m\n" << endl;
+  }
   return currentEvent;
 }

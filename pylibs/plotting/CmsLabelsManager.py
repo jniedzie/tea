@@ -39,6 +39,9 @@ class CmsLabelsManager:
             self.relPosY = 0.070
             self.relExtraDY = 1.2
 
+        if hasattr(self.config, "label_x"):
+            self.relPosX = self.config.label_x
+            
         if hasattr(self.config, "label_y"):
             self.relPosY = self.config.label_y
 

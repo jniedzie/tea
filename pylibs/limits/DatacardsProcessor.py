@@ -16,7 +16,7 @@ class DatacardsProcessor:
     self.datacard = None
     self.histosamples = {}
 
-    self.do_abcd = config.do_abcd
+    self.do_abcd = config.do_abcd if hasattr(config, "do_abcd") else False
 
     self.abcd_helper = ABCDHelper()
     self.normalizer = HistogramNormalizer(config)
@@ -306,7 +306,11 @@ class DatacardsProcessor:
     # point to the root file for shapes
     if self.config.include_shapes:
       # get file name from the full path:
-      file_name = self.datacard_file_name.replace(".txt", ".root")
+      
+      if ".txt" not in self.datacard_file_name:
+        file_name = self.datacard_file_name + ".root"
+      else:
+        file_name = self.datacard_file_name.replace(".txt", ".root")
       self.datacard += f"shapes * * {file_name} $PROCESS $PROCESS_$SYSTEMATIC\n"
 
     # set observed
@@ -327,7 +331,7 @@ class DatacardsProcessor:
       else:
         obs_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
     else:
-      obs_rate = self.histosamples["data_obs"].Integral()
+      obs_rate = self.histosamples["data_obs"][0].hist.Integral()
     self.datacard += "bin bin1\n"
     self.datacard += f"observation {round(obs_rate)}\n"
 
@@ -398,13 +402,13 @@ class DatacardsProcessor:
       statistical_errors["signal"] = signal_rate_err
       statistical_errors["bck"] = rate_err
     else:
-      for name, hist in self.histosamples.items():
+      for name, (hist, sample) in self.histosamples.items():
         if name == "data_obs":
           statistical_errors[name] = None
           continue
 
         rate_err = c_double(0)
-        rate = hist.IntegralAndError(1, hist.GetNbinsX(), rate_err)
+        rate = hist.hist.IntegralAndError(1, hist.hist.GetNbinsX(), rate_err)
 
         self.datacard += f" {rate}"
         statistical_errors[name] = 1 + rate_err.value/rate
@@ -414,6 +418,8 @@ class DatacardsProcessor:
     # add a row with statistical errors
     self.datacard += "stat_err lnN\t"
     for name, stat_error in statistical_errors.items():
+      if name == "data_obs":
+        continue
       if stat_error is None:
         self.datacard += " -"
       else:

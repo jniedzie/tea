@@ -114,7 +114,7 @@ class HistogramsManager:
       backgrounds_sum_hist = ROOT.TH1D()
       backgrounds_sum_hist.Fill(0.0, 1e-99)
 
-    if self.config.do_abcd:
+    if hasattr(self.config, "do_abcd") and self.config.do_abcd:
       hist = Histogram2D(
           name="data_obs",
           norm_type=NormalizationType.to_lumi,
@@ -125,7 +125,7 @@ class HistogramsManager:
       hist = Histogram(
           name="data_obs",
           norm_type=NormalizationType.to_lumi,
-          rebin=self.config.rebin,
+          rebin=self.config.rebin if hasattr(self.config, "rebin") else 1,
       )
 
     sample = Sample(name="bkg", type=SampleType.background)

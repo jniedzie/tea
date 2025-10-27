@@ -126,6 +126,15 @@ class Event {
 
   const std::map<std::string, ExtraCollection>& GetExtraCollectionsDescriptions() const { return extraCollectionsDescriptions; }
  
+  Int_t* GetIntVector(std::string branchName) { return valuesIntVector.at(branchName); }
+  Bool_t* GetBoolVector(std::string branchName) { return valuesBoolVector.at(branchName); }
+  Float_t* GetFloatVector(std::string branchName) { return valuesFloatVector.at(branchName); }
+  UChar_t* GetUcharVector(std::string branchName) { return valuesUcharVector.at(branchName); }
+  Char_t* GetCharVector(std::string branchName) { return valuesCharVector.at(branchName); }
+  UInt_t* GetUintVector(std::string branchName) { return valuesUintVector.at(branchName); }
+  UShort_t* GetUshortVector(std::string branchName) { return valuesUshortVector.at(branchName); }
+  Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
+
   private:
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
