@@ -161,7 +161,7 @@ class DatacardsProcessor:
 
   def __fill_abcd_nuisance(self, nuisances):
     if "abcd_unc" not in nuisances:
-      print(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
+      info(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
       return
     
     max_rel_unc = -1
@@ -193,13 +193,13 @@ class DatacardsProcessor:
     nom_prediction, nom_prediction_err = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
     rel_unc_nom = nom_prediction_err / nom_prediction
 
-    print(f"---- predicted A: {nom_prediction:.3f} +/- {nom_prediction_err:.3f}")
+    info(f"---- predicted A: {nom_prediction:.3f} +/- {nom_prediction_err:.3f}")
 
     abcd_unc = 1.0
     if rel_unc_nom < max_rel_unc:
       abcd_unc = (max_rel_unc - rel_unc_nom)
 
-    print(f"---- abcd_unc: {abcd_unc:.3f}")
+    info(f"---- abcd_unc: {abcd_unc:.3f}")
     
     for key, value in nuisances.items():
       if value == "abcd":
@@ -248,13 +248,13 @@ class DatacardsProcessor:
 
     a_unc = a_unc2**0.5
     d_unc = d_unc2**0.5
-    print(f"---- histosample_name: {histosample_name}")
-    print(f"---- raw_sum_a: {raw_sum_a:.3f}")
-    print(f"---- raw_sum_d: {raw_sum_d:.3f}")
-    print(f"---- background_sum_a: {background_sum_a:.3f} +/- {a_unc:.3f}")
-    print(f"---- a_unc2: {a_unc2:.3f}")
-    print(f"---- background_sum_d: {background_sum_d:.3f} +/- {d_unc:.3f}")
-    print(f"---- d_unc2: {d_unc2:.3f}")
+    info(f"---- histosample_name: {histosample_name}")
+    info(f"---- raw_sum_a: {raw_sum_a:.3f}")
+    info(f"---- raw_sum_d: {raw_sum_d:.3f}")
+    info(f"---- background_sum_a: {background_sum_a:.3f} +/- {a_unc:.3f}")
+    info(f"---- a_unc2: {a_unc2:.3f}")
+    info(f"---- background_sum_d: {background_sum_d:.3f} +/- {d_unc:.3f}")
+    info(f"---- d_unc2: {d_unc2:.3f}")
 
     abcd_values_sum = self.abcd_helper.get_abcd(hist_sum, abcd_point)
 

@@ -158,26 +158,18 @@ def main():
 
     # One 1D Histogram defined
     if config.histogram1D:
-        print("1")
         background_histogram = sfProducer.getBackgroundHistogram1D(config.histogram1D)
-        print("2")
         data_histogram = sfProducer.getDataHistogram1D(config.histogram1D)
-        print("3")
         data_hist = data_histogram.hist
-        print("4")
         background_hist = background_histogram.hist
-        print("5")
 
         scale_factors = sfProducer.getDataMCRatios1D(data_histogram, background_histogram)
         ratio_hist,ratio_unc_hist_up,ratio_unc_hist_down  = sfProducer.getDataMCRatioHists1D(data_histogram, background_histogram)
 
         x_title = nice_names_with_unit[config.correction_inputs[0]["name"]]
 
-        print(f"scale_factors: {scale_factors}")
         edges = list(scale_factors.keys())
-        print(f"edges before: {edges}")
         edges.append(600.0)
-        print(f"edges after: {edges}")
         if not config.correction_edges[0]:
             config.correction_edges[0] = edges
 
