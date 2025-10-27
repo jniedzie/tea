@@ -1,5 +1,6 @@
 import ROOT
 import os
+import math
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
@@ -217,7 +218,10 @@ class ABCDPlotter:
       min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
 
       info(f"Best point for all signals: {best_point}")
-      info(f"Closure: {closure:.3f}, Error: {error:.2f}, Min n events: {min_n_events:.1f}")
+      y = self.optimization_hists["closure"].GetYaxis().GetBinCenter(j)
+      x = self.optimization_hists["closure"].GetXaxis().GetBinCenter(i)
+      info(f"x = {x:.2f}, y = {y:.2f}")
+      info(f"Closure: {closure:.4f}, Error: {error:.4f}, Min n events: {min_n_events:.1f}")
 
     else:
       for mass in self.config.masses:
@@ -486,20 +490,37 @@ class ABCDPlotter:
       )
 
   def print_params_for_selected_point(self):
-    a, b, c, d, a_err, b_err, c_err, d_err = self.abcdHelper.get_abcd(self.background_hist, self.config.abcd_point)
+    a, b, c, d, a_err_, b_err_, c_err_, d_err_ = self.abcdHelper.get_abcd(self.background_hist, self.config.abcd_point)
+
+    self.background_hist.SaveAs("ABCDPlotter_background_hist.root")
 
     info(f"\n\nSelected point: {self.config.abcd_point[0]:.2f}, {self.config.abcd_point[1]:.2f}")
     i, j = self.config.abcd_point
+    y = self.background_hist.GetYaxis().GetBinCenter(i)
+    x = self.background_hist.GetXaxis().GetBinCenter(j)
     info(f"{i=}, {j=}")
+    info(f"{y=:.2f}, {x=:.2f}")
+
+    a_err = a**0.5
+    b_err = b**0.5
+    c_err = c**0.5
+    d_err = d**0.5
 
     info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
+    info(f"True background in B: {b:.2f} +/- {b_err:.2f}")
+    info(f"True background in C: {c:.2f} +/- {c_err:.2f}")
+    info(f"True background in D: {d:.2f} +/- {d_err:.2f}")
+    info(f"True background in ABCD: {a+b+c+d:.2f} +/- {math.sqrt(a_err**2 + b_err**2 + c_err**2 + d_err**2):.2f}")
 
-    if a != 0 and b != 0 and c != 0 and d != 0:
+    if b != 0 and c != 0 and d != 0:
       prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
       closure = self.abcdHelper.get_closure(a, prediction)
       error = self.abcdHelper.get_error(a, a_err, prediction, prediction_err)
       min_n_events = min(a, b, c, d)
       info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
+      if prediction != 0:
+        rel_unc = prediction_err/prediction
+        info(f"Relative predicted uncertainty in A: {rel_unc:.2f})
       info("\n\nOptimization values (re-calculated):")
       info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
 
@@ -530,6 +551,47 @@ class ABCDPlotter:
         info(f"Signal {mass} GeV, {ctau} mm: Significance: {significance:.2e} Contamination: {contamination:.2e}")
 
     info("\n\n")
+
+  def print_params_for_varied_points(self):
+
+    max_rel_unc = -1
+    max_rel_unc_err = -1
+    for point in (0,1):
+      for variation in (-1,1):
+        abcd_point = self.config.abcd_point
+        abcd_point_list = list(abcd_point)
+        abcd_point_list[point] = abcd_point_list[point] + variation
+        abcd_point = tuple(abcd_point_list) 
+        a, b, c, d, a_err_, b_err_, c_err_, d_err_ = self.abcdHelper.get_abcd(self.background_hist, abcd_point)
+
+        info(f"\n\Varying abcd points to: {abcd_point[0]:.2f}, {abcd_point[1]:.2f}")
+        i = abcd_point[0]
+        j = abcd_point[1]
+        y = self.background_hist.GetYaxis().GetBinCenter(i)
+        x = self.background_hist.GetXaxis().GetBinCenter(j)
+        info(f"{y=:.2f}, {x=:.2f}")
+
+        a_err = a**0.5
+        b_err = b**0.5
+        c_err = c**0.5
+        d_err = d**0.5
+
+        info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
+
+        if b != 0 and c != 0 and d != 0:
+          prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
+          closure = self.abcdHelper.get_closure(a, prediction)
+          error = self.abcdHelper.get_error(a, a_err, prediction, prediction_err)
+          min_n_events = min(a, b, c, d)
+          info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
+          info("\n\nOptimization values (re-calculated):")
+          info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
+          if prediction != 0:
+            info(f"Relative predicted uncertainty in A: {prediction_err/prediction:.2f}")
+            if (prediction_err/prediction) > max_rel_unc:
+              max_rel_unc = prediction_err/prediction
+    info(f"---- Max relative predicted uncertainty: {max_rel_unc:.2f}")
+
 
   def __load_background_histograms(self):
 
@@ -562,10 +624,10 @@ class ABCDPlotter:
 
       n_entries = hist.hist.GetEntries()
 
-      if n_entries < self.config.exclude_backgrounds_with_less_than:
+      if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
         warn(
             (f"Histogram {sample.name} has less than "
-             f"{self.config.exclude_backgrounds_with_less_than} entries and will be excluded.")
+             f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded.")
         )
         continue
 
@@ -573,31 +635,41 @@ class ABCDPlotter:
 
   def __setup_backgrounds_sum_histogram(self):
     if self.config.do_data:
-      path = f"{self.config.base_path}/{self.config.data_path}"
-      
-      hist = Histogram2D(
-          name=(
-              f"{self.config.background_collection}_{self.config.variable_1}_vs_"
-              f"{self.config.variable_2}{self.config.category}"
-          ),
-          norm_type=NormalizationType.to_lumi,
-          x_rebin=self.config.rebin_2D,
-          y_rebin=self.config.rebin_2D,
-      )
+      for year in self.config.years:
+        data_path = self.config.data_paths[year]
+        path = f"{self.config.base_path}/{data_path}"
+        
+        hist = Histogram2D(
+            name=(
+                f"{self.config.background_collection}_{self.config.variable_1}_vs_"
+                f"{self.config.variable_2}{self.config.category}"
+            ),
+            norm_type=NormalizationType.to_lumi,
+            x_rebin=self.config.rebin_2D,
+            y_rebin=self.config.rebin_2D,
+        )
 
-      self.data_file = ROOT.TFile.Open(path)
+        self.data_file = ROOT.TFile.Open(path)
 
-      if not self.data_file:
-        warn(f"Could not open file {path}")
-        return
+        if not self.data_file:
+          warn(f"Could not open file {path}")
+          return
 
-      hist.load(self.data_file)
-      hist.setup()
-      self.background_hist = hist.hist
+        hist.load(self.data_file)
+        hist.setup()
 
-      if not self.background_hist:
-        warn(f"Could not open histogram {self.background_hist_name} in file {path}")
-        return
+        if not hist.hist:
+          warn(f"Could not open histogram {self.background_hist_name} in file {path}")
+          continue
+
+        cloned_hist = hist.hist.Clone()
+        cloned_hist.SetDirectory(0) 
+
+        if self.background_hist is None:
+          self.background_hist = cloned_hist
+        else:
+          self.background_hist.Add(cloned_hist)
+        
     else:
       for path, hist in self.background_hists.items():
         if hist is None or hist.Integral() == 0:
@@ -619,23 +691,27 @@ class ABCDPlotter:
   def __load_signal_hists(self):
     for mass in self.config.masses:
       for ctau in self.config.ctaus:
-        input_path = self.config.signal_path_pattern.format(
-            mass, ctau, self.config.signal_skim[0], self.config.signal_hist_path)
+        for year in self.config.years:
+          input_path = self.config.signal_path_pattern.format(
+              year, mass, ctau, self.config.signal_skim[0], self.config.signal_hist_path)
 
-        try:
-          self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
-        except OSError:
-          continue
+          try:
+            self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
+          except OSError:
+            continue
 
-        self.signal_hists[(mass, ctau)] = self.signal_files[input_path].Get(self.signal_hist_name)
-        if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
-          info(f"Could not open histogram {self.signal_hist_name} in file {input_path}")
-          continue
+          signal_hist = self.signal_files[input_path].Get(self.signal_hist_name)
+          if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
+            info(f"Could not open histogram {self.signal_hist_name} in file {input_path}")
+            continue
 
-        self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
-        self.signal_hists[(mass, ctau)].SetFillColorAlpha(self.config.signal_color, 0.5)
-
-        self.signal_hists[(mass, ctau)].Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+          signal_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+          if (mass, ctau) not in self.signal_hists:
+            self.signal_hists[(mass, ctau)] = signal_hist
+            self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
+            self.signal_hists[(mass, ctau)].SetFillColorAlpha(self.config.signal_color, 0.5)
+          else:
+            self.signal_hists[(mass, ctau)].Add(signal_hist)
 
   def __setup_canvases(self):
     self.canvases = {

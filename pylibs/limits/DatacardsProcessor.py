@@ -63,8 +63,11 @@ class DatacardsProcessor:
       self.__fill_in_variation_nuisances(
           hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
 
-      if self.config.use_abcd_prediction:
+      if self.config.use_abcd_prediction and nuisances_for_sample:
         self.__fill_closure_nuisance(nuisances_for_sample)
+        if "abcd_unc" in nuisances:
+          self.__insert_background_sum_hist_for_shifted_points()
+          self.__fill_abcd_nuisance(nuisances_for_sample)
 
     self.__add_header(n_backgrounds)
     self.__add_rates()
@@ -137,6 +140,8 @@ class DatacardsProcessor:
     return nuisances
 
   def __fill_closure_nuisance(self, nuisances):
+    if "abcd_nonClosure" not in nuisances:
+      return
 
     bkg_hist = self.histosamples["bkg"][0].hist
     a = bkg_hist.GetBinContent(1, 2)
@@ -144,29 +149,116 @@ class DatacardsProcessor:
     c = bkg_hist.GetBinContent(2, 2)
     d = bkg_hist.GetBinContent(2, 1)
     prediction = self.abcd_helper.get_prediction(b, c, d, 0, 0, 0)[0]
-    closure = abs(prediction - a) / a
+    closure = -1
+    if a == 0:
+      warn(f"region a is equal to 0! TODO: fix!")
+    else:
+      closure = abs(prediction - a) / a
 
     for key, value in nuisances.items():
       if value == "closure":
         nuisances[key] = {"bkg": 1+closure}
 
-  def __insert_background_sum_hist(self):
+  def __fill_abcd_nuisance(self, nuisances):
+    if "abcd_unc" not in nuisances:
+      print(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
+      return
+    
+    max_rel_unc = -1
+    for bkg_name in ("bkg_xup", "bkg_xdown", "bkg_yup", "bkg_ydown"):
+      bkg_hist = self.histosamples[bkg_name][0].hist
+      a = bkg_hist.GetBinContent(1, 2)
+      b = bkg_hist.GetBinContent(1, 1)
+      c = bkg_hist.GetBinContent(2, 2)
+      d = bkg_hist.GetBinContent(2, 1)
+      a_err = bkg_hist.GetBinError(1, 2)
+      b_err = bkg_hist.GetBinError(1, 1)
+      c_err = bkg_hist.GetBinError(2, 2)
+      d_err = bkg_hist.GetBinError(2, 1)
+      prediction, prediction_err = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+      rel_unc = prediction_err / prediction
+      if rel_unc > max_rel_unc:
+        max_rel_unc = rel_unc
+    
+    # nominal value
+    bkg_hist = self.histosamples["bkg"][0].hist
+    a = bkg_hist.GetBinContent(1, 2)
+    b = bkg_hist.GetBinContent(1, 1)
+    c = bkg_hist.GetBinContent(2, 2)
+    d = bkg_hist.GetBinContent(2, 1)
+    a_err = bkg_hist.GetBinError(1, 2)
+    b_err = bkg_hist.GetBinError(1, 1)
+    c_err = bkg_hist.GetBinError(2, 2)
+    d_err = bkg_hist.GetBinError(2, 1)
+    nom_prediction, nom_prediction_err = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+    rel_unc_nom = nom_prediction_err / nom_prediction
+
+    print(f"---- predicted A: {nom_prediction:.3f} +/- {nom_prediction_err:.3f}")
+
+    abcd_unc = 1.0
+    if rel_unc_nom < max_rel_unc:
+      abcd_unc = (max_rel_unc - rel_unc_nom)
+
+    print(f"---- abcd_unc: {abcd_unc:.3f}")
+    
+    for key, value in nuisances.items():
+      if value == "abcd":
+        nuisances[key] = {"bkg": 1+abcd_unc}
+
+  def __insert_background_sum_hist(self, abcd_point = None, histosample_name = "bkg"):
     background_sum_a = 0
     background_sum_b = 0
     background_sum_c = 0
     background_sum_d = 0
+    raw_sum_a = 0
+    raw_sum_d = 0
+    a_unc2 = 0
+    d_unc2 = 0
+
+    if not abcd_point:
+      abcd_point = self.config.abcd_point
+
+    hist_sum = None
 
     for name, (hist, sample) in self.histosamples.items():
       if name == "data_obs" or "signal" in name:
         continue
+      if name.startswith("bkg"):
+        continue
 
-      abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)
+      abcd_values = self.abcd_helper.get_abcd(hist.hist, abcd_point)
+      if hist_sum is None:
+        hist_sum = hist.hist.Clone()
+      else:
+        hist_sum.Add(hist.hist)
+      
+      a = abcd_values[0]
+      d = abcd_values[3]
+      a_raw = a / hist.norm_scale if hist.norm_scale != 0 else 0
+      d_raw = d / hist.norm_scale if hist.norm_scale != 0 else 0
+
       background_sum_a += abcd_values[0]
       background_sum_b += abcd_values[1]
       background_sum_c += abcd_values[2]
       background_sum_d += abcd_values[3]
+      raw_sum_a += a_raw
+      raw_sum_d += d_raw
+      a_unc2 += hist.norm_scale**2 * a_raw if hist.norm_scale != 0 else 0
+      d_unc2 += hist.norm_scale**2 * d_raw if hist.norm_scale != 0 else 0
 
-    hist = ROOT.TH2D("bkg", "bkg", 2, 0, 2, 2, 0, 2)
+    a_unc = a_unc2**0.5
+    d_unc = d_unc2**0.5
+    print(f"---- histosample_name: {histosample_name}")
+    print(f"---- raw_sum_a: {raw_sum_a:.3f}")
+    print(f"---- raw_sum_d: {raw_sum_d:.3f}")
+    print(f"---- background_sum_a: {background_sum_a:.3f} +/- {a_unc:.3f}")
+    print(f"---- a_unc2: {a_unc2:.3f}")
+    print(f"---- background_sum_d: {background_sum_d:.3f} +/- {d_unc:.3f}")
+    print(f"---- d_unc2: {d_unc2:.3f}")
+
+    abcd_values_sum = self.abcd_helper.get_abcd(hist_sum, abcd_point)
+
+    hist = ROOT.TH2D(histosample_name, histosample_name, 2, 0, 2, 2, 0, 2)
     hist.SetBinContent(1, 2, background_sum_a)
     hist.SetBinContent(1, 1, background_sum_b)
     hist.SetBinContent(2, 2, background_sum_c)
@@ -178,13 +270,23 @@ class DatacardsProcessor:
     hist.SetBinError(2, 1, background_sum_d**0.5)
 
     histogram = Histogram2D(
-        name="bkg",
+        name=histosample_name,
         norm_type=None,
         x_rebin=self.config.rebin_2D,
         y_rebin=self.config.rebin_2D,
     )
     histogram.set_hist(hist)
-    self.histosamples["bkg"] = (histogram, sample)
+    self.histosamples[histosample_name] = (histogram, sample)
+
+  def __insert_background_sum_hist_for_shifted_points(self):
+    abcd_point_xup = (self.config.abcd_point[0] + 1, self.config.abcd_point[1])
+    abcd_point_xdown = (self.config.abcd_point[0] - 1, self.config.abcd_point[1])
+    abcd_point_yup = (self.config.abcd_point[0], self.config.abcd_point[1] + 1)
+    abcd_point_ydown = (self.config.abcd_point[0], self.config.abcd_point[1] - 1)
+    self.__insert_background_sum_hist(abcd_point_xup, "bkg_xup")
+    self.__insert_background_sum_hist(abcd_point_xdown, "bkg_xdown")
+    self.__insert_background_sum_hist(abcd_point_yup, "bkg_yup")
+    self.__insert_background_sum_hist(abcd_point_ydown, "bkg_ydown")
 
   def __get_dummy_histogram(self):
     hist = list(self.histosamples.values())[0].Clone()
@@ -221,7 +323,7 @@ class DatacardsProcessor:
         c_err = bkg_hist.GetBinError(2, 2)
         d_err = bkg_hist.GetBinError(2, 1)
 
-        obs_rate, _ = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+        obs_rate, _= self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
       else:
         obs_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
     else:

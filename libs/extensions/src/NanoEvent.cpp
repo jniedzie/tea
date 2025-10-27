@@ -36,6 +36,31 @@ shared_ptr<NanoMuons> NanoEvent::GetDRMatchedMuons(shared_ptr<NanoMuons> muonCol
   return allMuons;
 }
 
+NanoMuonMatches NanoEvent::GetRevertedDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
+
+  auto matchedDSAMuons = make_shared<NanoMuons>();
+  auto matchedPATMuons = make_shared<NanoMuons>();
+  for (auto dsaMuon : *looseDSAMuons) {
+    auto dsaMuonP4 = dsaMuon->GetFourVector();
+    bool matchFound = false;
+    shared_ptr<NanoMuon> patMuon = nullptr;
+    for (auto muon : *loosePATMuons) {
+      auto muonP4 = muon->GetFourVector();
+      if (muonP4.DeltaR(dsaMuonP4) < matchingDeltaR) {
+        matchFound = true;
+        patMuon = muon;
+        break;
+      }
+    }
+    if (matchFound && patMuon) {
+      matchedDSAMuons->push_back(dsaMuon);
+      matchedPATMuons->push_back(patMuon);
+    }
+  }
+
+  return make_pair(matchedDSAMuons,matchedPATMuons);
+}
+
 shared_ptr<NanoMuons> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<NanoMuons> muonCollection, float matchingDeltaR) {
   auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
@@ -56,6 +81,29 @@ shared_ptr<NanoMuons> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<NanoMuons> mu
   }
 
   return allMuons;
+}
+
+NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
+
+  auto matchedDSAMuons = make_shared<NanoMuons>();
+  auto matchedPATMuons = make_shared<NanoMuons>();
+  for (auto dsaMuon : *looseDSAMuons) {
+    bool matchFound = false;
+    shared_ptr<NanoMuon> patMuon = nullptr;
+    for (auto muon : *loosePATMuons) {
+      if (dsaMuon->OuterDeltaRtoMuon(muon) < matchingDeltaR) {
+        matchFound = true;
+        patMuon = muon;
+        break;
+      }
+    }
+    if (matchFound && patMuon) {
+      matchedDSAMuons->push_back(dsaMuon);
+      matchedPATMuons->push_back(patMuon);
+    }
+  }
+
+  return make_pair(matchedDSAMuons,matchedPATMuons);
 }
 
 shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons> muonCollection, float matchingDeltaR) {
@@ -81,6 +129,29 @@ shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons
   return allMuons;
 }
 
+NanoMuonMatches NanoEvent::GetRevertedProximityDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
+
+  auto matchedDSAMuons = make_shared<NanoMuons>();
+  auto matchedPATMuons = make_shared<NanoMuons>();
+  for (auto dsaMuon : *looseDSAMuons) {
+    bool matchFound = false;
+    shared_ptr<NanoMuon> patMuon = nullptr;
+    for (auto muon : *loosePATMuons) {
+      auto vertex = GetVertexForDimuon(dsaMuon, muon);
+      if (float(vertex->Get("dRprox")) < matchingDeltaR) {
+        matchFound = true;
+        patMuon = muon;
+        break;
+      }
+    }
+    if (matchFound && patMuon) {
+      matchedDSAMuons->push_back(dsaMuon);
+      matchedPATMuons->push_back(patMuon);
+    }
+  }
+  return make_pair(matchedDSAMuons,matchedPATMuons);
+}
+
 shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> muonCollection, float minMatchRatio) {
   auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
@@ -104,6 +175,33 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
   }
 
   return allMuons;
+}
+
+NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float minMatchRatio) {
+
+  auto matchedDSAMuons = make_shared<NanoMuons>();
+  auto matchedPATMuons = make_shared<NanoMuons>();
+  for (auto dsaMuon : *looseDSAMuons) {
+    float nSegments = float(dsaMuon->Get("nSegments"));
+
+    bool matchFound = false;
+    int patIdx = -1;
+    for (int i = 1; i <= 5; i++) {
+      float ratio_tmp = dsaMuon->GetMatchesForNthBestMatch(i) / nSegments;
+      if (!matchFound && ratio_tmp >= minMatchRatio) {
+        matchFound = PATMuonIndexExist(loosePATMuons, dsaMuon->GetMatchIdxForNthBestMatch(i));
+        if(matchFound) {
+          patIdx = dsaMuon->GetMatchIdxForNthBestMatch(i);
+          break;
+        }
+      }
+    }
+    if (matchFound && patIdx > 0) {
+      matchedDSAMuons->push_back(dsaMuon);
+      matchedPATMuons->push_back(GetPATMuonWithIndex(patIdx, loosePATMuons));
+    }
+  }
+  return make_pair(matchedDSAMuons,matchedPATMuons);
 }
 
 shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared_ptr<NanoDimuonVertex> bestVertex, shared_ptr<NanoDimuonVertices> goodVerticesCollection, float minMatchRatio) {
@@ -321,19 +419,21 @@ float NanoEvent::GetNMuon(string collectionName) {
 }
 
 shared_ptr<NanoMuon> NanoEvent::GetDSAMuonWithIndex(int muon_idx, string collectionName) {
-  return GetPATorDSAMuonWithIndex(muon_idx, collectionName, true);
+  auto collection = asNanoMuons(GetCollection(collectionName));
+  return GetPATorDSAMuonWithIndex(muon_idx, collection, true);
 }
 
 shared_ptr<NanoMuon> NanoEvent::GetPATMuonWithIndex(int muon_idx, string collectionName) {
-  return GetPATorDSAMuonWithIndex(muon_idx, collectionName, false);
+  auto collection = asNanoMuons(GetCollection(collectionName));
+  return GetPATorDSAMuonWithIndex(muon_idx, collection, false);
 }
 
-shared_ptr<NanoMuon> NanoEvent::GetPATorDSAMuonWithIndex(int muon_idx, string collectionName, bool doDSAMuons) {
-  auto collection = GetCollection(collectionName);
+shared_ptr<NanoMuon> NanoEvent::GetPATMuonWithIndex(int muon_idx, shared_ptr<NanoMuons> collection) {
+  return GetPATorDSAMuonWithIndex(muon_idx, collection, false);
+}
 
-  for (auto object : *collection) {
-    auto muon = asNanoMuon(object);
-
+shared_ptr<NanoMuon> NanoEvent::GetPATorDSAMuonWithIndex(int muon_idx, shared_ptr<NanoMuons> collection, bool doDSAMuons) {
+  for (auto muon : *collection) {
     float idx = muon->Get("idx");
     bool isDSAmuon = muon->IsDSA();
     if (idx != muon_idx) continue;

@@ -26,13 +26,22 @@ def get_file(sample):
 
 
 def get_datacard_file_name(config, signal_sample):
-  datacard_path = f"datacard_{config.histogram.getName()}_{signal_sample.name}"
-  if config.do_abcd:
-    datacard_path += "_ABCD"
-    if config.use_abcd_prediction:
-      datacard_path += "pred"
-    else:
-      datacard_path += "real"
+  if config.use_combined_limits:
+    match = re.search(r"mAlp-([0-9p.]+)GeV_ctau-([0-9eE.+-]+)mm", signal_sample.name)
+    mass = 0
+    ctau = 0
+    if match:
+      mass = match.group(1)
+      ctau = match.group(2)
+    datacard_path = f"combined_datacard_{mass}_{ctau}{config.category}"
+  else:
+    datacard_path = f"datacard_{config.histogram.getName()}_{signal_sample.name}"
+    if config.do_abcd:
+      datacard_path += "_ABCD"
+      if config.use_abcd_prediction:
+        datacard_path += "pred"
+      else:
+        datacard_path += "real"
   return datacard_path
 
 

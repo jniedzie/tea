@@ -51,8 +51,9 @@ class HistogramNormalizer:
     if sample.type != SampleType.background:
       warn(f"Trying to normalize background to lumi, but sample is not background: {sample.name}")
       return hist_normalized
-    scale = self.config.luminosity*sample.cross_section
-    scale /= self.background_initial_sum_weights[sample.name]
+    luminosity = sample.luminosity if sample.luminosity > 0 else self.config.luminosity
+    scale = luminosity*sample.cross_section
+    scale /= self.background_initial_sum_weights[(sample.name,sample.year)]
     hist_normalized.Scale(scale)
     return hist_normalized
 
@@ -65,7 +66,8 @@ class HistogramNormalizer:
 
   def __normalizeToBackground(self, hist, sample, total_backgrounds_integral):
     if sample.type == SampleType.background:
-      hist.hist.Scale(self.config.luminosity*sample.cross_section/self.background_initial_sum_weights[sample.name])
+      luminosity = sample.luminosity if sample.luminosity > 0 else self.config.luminosity
+      hist.hist.Scale(luminosity*sample.cross_section/self.background_initial_sum_weights[(sample.name,sample.year)])
       return
     if total_backgrounds_integral is None:
       error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
@@ -78,16 +80,18 @@ class HistogramNormalizer:
       hist.hist.Scale(total_backgrounds_integral/self.data_final_entries[sample.name])
 
   def __normalizeToLumi(self, hist, sample):
-    scale = self.config.luminosity*sample.cross_section
+    luminosity = sample.luminosity if sample.luminosity > 0 else self.config.luminosity
+    scale = luminosity*sample.cross_section
 
     if sample.type == SampleType.background:
-      scale /= self.background_initial_sum_weights[sample.name]
+      scale /= self.background_initial_sum_weights[(sample.name,sample.year)]
     elif sample.type == SampleType.signal:
       if self.signal_initial_sum_weights[sample.name] != 0:
         scale /= self.signal_initial_sum_weights[sample.name]
     elif sample.type == SampleType.data:
       scale = 1
 
+    hist.norm_scale = scale
     hist.hist.Scale(scale)
 
   def __normalizeToData(self, hist, sample, data_integral, total_backgrounds_integral):
@@ -140,8 +144,9 @@ class HistogramNormalizer:
         efficiency = final_weight_sum/initial_weight_sum
 
       if sample.type == SampleType.background:
-        self.total_background += sample.cross_section * self.config.luminosity * efficiency
-        self.background_initial_sum_weights[sample.name] = initial_weight_sum
+        luminosity = sample.luminosity if sample.luminosity > 0 else self.config.luminosity
+        self.total_background += sample.cross_section * luminosity * efficiency
+        self.background_initial_sum_weights[(sample.name,sample.year)] = initial_weight_sum
         self.background_final_sum_weights[sample.name] = final_weight_sum
 
         if final_weight_sum != 0:

@@ -100,7 +100,7 @@ class Histogram:
     self.hist.SetFillColorAlpha(sample.fill_color, sample.fill_alpha)
     self.hist.SetFillStyle(sample.fill_style)
     self.hist.Rebin(self.rebin)
-    self.hist.Scale(1./self.rebin)
+    # self.hist.Scale(1./self.rebin)
     self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
 
   def setupRatio(self, sample):
@@ -132,6 +132,12 @@ class Histogram2D:
   y_label: str = ""
   z_label: str = ""
   suffix: str = ""
+  norm_scale = float = 1.0
+
+  def __post_init__(self):
+    self.hist = None
+    self.rand = ROOT.TRandom3()
+    self.rand.SetSeed(0)
 
   def set_hist(self, hist):
     self.hist = hist
@@ -142,6 +148,8 @@ class Histogram2D:
     if self.hist is None or type(self.hist) is ROOT.TObject:
       error(f"Could not find histogram: {self.name} in file {input_file.GetName()}")
       return
+
+    self.entries = self.hist.GetEntries()
 
   def set_hist_name(self, name):
     self.hist.SetName(name)
