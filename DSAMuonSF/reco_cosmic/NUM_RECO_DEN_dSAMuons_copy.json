@@ -1,0 +1,39 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "NUM_RECO_DEN_dSAMuons",
+            "description": "NUM_RECO_DEN_dSAMuons",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "scale_factors",
+                    "type": "string",
+                    "description": "Choose nominal scale factor or one of the uncertainties"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real"
+            },
+            "data": {
+                "nodetype": "category",
+                "input": "scale_factors",
+                "content": [
+                    {
+                        "key": "nominal",
+                        "value": 1.0
+                    },
+                    {
+                        "key": "up",
+                        "value": 0.98
+                    },
+                    {
+                        "key": "down",
+                        "value": 1.02
+                    }
+                ]
+            }
+        }
+    ]
+}

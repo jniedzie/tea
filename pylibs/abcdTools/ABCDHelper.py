@@ -504,13 +504,17 @@ class ABCDHelper:
       for j in range(1, optimization_hist.GetNbinsY() + 1):
 
         values = self.get_abcd(background_hist, (i, j))
-        a, b, c, d, a_err, b_err, c_err, d_err = values
+        a, b, c, d, a_err_, b_err_, c_err_, d_err_ = values
+        a_err = a**0.5
+        b_err = b**0.5
+        c_err = c**0.5
+        d_err = d**0.5
 
         closure = -1
         error = -1
         min_n_events = -1
 
-        if a != 0 and b != 0 and c != 0 and d != 0:
+        if a > 0 and b > 0 and c > 0 and d > 0:
           prediction, prediction_err = self.get_prediction(b, c, d, b_err, c_err, d_err)
           closure = self.get_closure(a, prediction)
           error = self.get_error(a, a_err, prediction, prediction_err)

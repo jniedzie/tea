@@ -112,3 +112,7 @@ void NanoGenParticle::Print() {
 
   info() << reset;
 }
+
+bool NanoGenParticle::IsSamePhysicsObjects(shared_ptr<NanoGenParticle> otherGenParticle) {
+  return GetPhysicsObject() == otherGenParticle->GetPhysicsObject();
+}

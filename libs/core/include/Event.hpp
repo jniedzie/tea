@@ -123,6 +123,7 @@ class Event {
 
   void AddExtraCollections();
   void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
+  void ReplaceCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) {extraCollections[name] = collection;}
 
   const std::map<std::string, ExtraCollection>& GetExtraCollectionsDescriptions() const { return extraCollectionsDescriptions; }
  

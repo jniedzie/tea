@@ -90,8 +90,10 @@ class NanoDimuonVertex {
 
   bool HasMuonIndices(int muonIdx1, int muonIdx2);
 
+  std::string GetGenMotherResonanceCategory(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.3);
+  std::string GetGenMotherBackgroundCategory(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.3);
   std::string GetGenMotherCategory(std::shared_ptr<PhysicsObjects> genMuonCollection);
-  std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection);
+  std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.3);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
