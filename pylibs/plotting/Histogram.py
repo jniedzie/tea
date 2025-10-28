@@ -25,7 +25,7 @@ class Histogram:
   suffix: str = ""
   error: float = -1.0
   entries: int = 0
-  scale_bin = bool = False
+  scale_bin: bool = False
 
   def __post_init__(self):
     self.hist = None
