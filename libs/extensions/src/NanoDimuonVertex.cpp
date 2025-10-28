@@ -220,8 +220,8 @@ bool NanoDimuonVertex::HasMuonIndices(int muonIdx1, int muonIdx2) {
 
 string NanoDimuonVertex::GetGenMotherResonanceCategory(shared_ptr<PhysicsObjects> genMuonCollection, const shared_ptr<Event> event, float maxDeltaR) {
   auto genMothers = GetGenMothers(genMuonCollection, event, maxDeltaR);
-  if (!genMothers->at(0) || !genMothers->at(1)) return "NonResonant";
   if (genMothers->size() != 2) return "NonResonant";
+  if (!genMothers->at(0) || !genMothers->at(1)) return "NonResonant";
 
   auto mother1 = genMothers->at(0);
   auto mother2 = genMothers->at(1);
@@ -241,7 +241,7 @@ string NanoDimuonVertex::GetGenMotherResonanceCategory(shared_ptr<PhysicsObjects
 string NanoDimuonVertex::GetGenMotherBackgroundCategory(shared_ptr<PhysicsObjects> genMuonCollection, const shared_ptr<Event> event, float maxDeltaR) {
   auto genMothers = GetGenMothers(genMuonCollection, event, maxDeltaR);
   int pileup_pid = 90; // we define pileup as 90
-  int noMother_pid = 80; // we define pileup as 90
+  int noMother_pid = 80; // we define muons without a mother match as 80
   int mother1_pid = pileup_pid, mother2_pid = pileup_pid;
   if (genMothers->at(0)) {
     mother1_pid = asNanoGenParticle(genMothers->at(0))->GetPdgId();
@@ -329,7 +329,7 @@ shared_ptr<PhysicsObjects> NanoDimuonVertex::GetGenMothers(shared_ptr<PhysicsObj
     genMuon2 = muon2->GetGenMuon(genMuonCollection, noMaxDeltaR, false, genMuon1LastCopy->GetPhysicsObject());
   }
   if (genMuon1 && genMuon2) {
-    if (genMuon1->IsSamePhysicsObjects(genMuon2)) {
+    if (genMuon1==genMuon2) {
       cout << " NanoDimuonVertex::GetGenMothers: genMuon1 == genMuon2 " << endl;
     }
 
@@ -349,7 +349,7 @@ shared_ptr<PhysicsObjects> NanoDimuonVertex::GetGenMothers(shared_ptr<PhysicsObj
       genMuon2 = nullptr;
     }
     // Check if genMuon1 == genMuon2 or 2 same sign gen muons
-    else if (genMuon1->IsSamePhysicsObjects(genMuon2)) {
+    else if (genMuon1==genMuon2) {
       genMuon1 = nullptr;
       genMother1 = nullptr;
     } 

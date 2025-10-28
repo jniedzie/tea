@@ -169,6 +169,22 @@ vector<int> NanoMuon::GetMatchedPATMuonIndices(float minMatchRatio) {
   return patIndices;
 }
 
+bool NanoMuon::HasPATSegmentMatch(shared_ptr<NanoMuons> patMuonCollection, shared_ptr<Event> event, float minMatchRatio) {
+  // Implemented for DSA muons
+  if (!IsDSA()) return false;
+
+  float nSegments = Get("nSegments");
+  bool matchFound = false;
+  for (int i = 1; i <= 5; i++) {
+    float ratio_tmp = GetMatchesForNthBestMatch(i) / nSegments;
+    if (ratio_tmp >= minMatchRatio) {
+      bool matchFound = asNanoEvent(event)->PATMuonIndexExist(patMuonCollection, GetMatchIdxForNthBestMatch(i));
+      if (matchFound) return true;
+    }
+  }
+  return false;
+}
+
 float NanoMuon::DeltaRtoParticle(shared_ptr<PhysicsObject> particle) {
   float dEta = GetEta() - float(particle->Get("eta"));
   float dPhi = TVector2::Phi_mpi_pi(GetPhi() - float(particle->Get("phi")));

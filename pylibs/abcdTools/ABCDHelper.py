@@ -504,7 +504,7 @@ class ABCDHelper:
       for j in range(1, optimization_hist.GetNbinsY() + 1):
 
         values = self.get_abcd(background_hist, (i, j))
-        a, b, c, d, a_err_, b_err_, c_err_, d_err_ = values
+        a, b, c, d, _, _, _, _ = values
         a_err = a**0.5
         b_err = b**0.5
         c_err = c**0.5

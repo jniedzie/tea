@@ -9,6 +9,7 @@
 #include "NanoGenParticle.hpp"
 #include "PhysicsObject.hpp"
 #include "ScaleFactorsManager.hpp"
+#include "Event.hpp"
 
 class NanoMuon;
 typedef Collection<std::shared_ptr<NanoMuon>> NanoMuons;
@@ -47,6 +48,7 @@ class NanoMuon {
   int GetMatchIdxForNthBestMatch(int N);
   int GetMatchesForNthBestMatch(int N);
   std::vector<int> GetMatchedPATMuonIndices(float minMatchRatio);
+  bool HasPATSegmentMatch(std::shared_ptr<NanoMuons> patMuonCollection, std::shared_ptr<Event> event, float minMatchRatio);
 
   float DeltaRtoParticle(std::shared_ptr<PhysicsObject> particle);
 

@@ -161,16 +161,7 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
     allMuons->push_back(muon);
   }
   for (auto dsaMuon : *looseDSAMuons) {
-    float nSegments = float(dsaMuon->Get("nSegments"));
-
-    bool matchFound = false;
-    for (int i = 1; i <= 5; i++) {
-      float ratio_tmp = dsaMuon->GetMatchesForNthBestMatch(i) / nSegments;
-      if (!matchFound && ratio_tmp >= minMatchRatio) {
-        matchFound = PATMuonIndexExist(loosePATMuons, dsaMuon->GetMatchIdxForNthBestMatch(i));
-        if (matchFound) break;
-      }
-    }
+    bool matchFound = dsaMuon->HasPATSegmentMatch(loosePATMuons, event, minMatchRatio);
     if (matchFound == false) allMuons->push_back(dsaMuon);
   }
 

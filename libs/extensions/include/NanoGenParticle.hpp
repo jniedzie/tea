@@ -27,6 +27,10 @@ class NanoGenParticle {
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
+  bool operator==(const std::shared_ptr<NanoGenParticle> otherGenParticle) {
+    return GetPhysicsObject() == otherGenParticle->GetPhysicsObject();
+  }
+
   TLorentzVector GetFourVector(float mass);
   float GetMass() { return physicsObject->Get("mass"); }
   float GetPt() { return physicsObject->Get("pt"); }
@@ -55,8 +59,6 @@ class NanoGenParticle {
   bool IsMuon();
 
   std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
-
-  bool IsSamePhysicsObjects(std::shared_ptr<NanoGenParticle> otherGenParticle);
 
   void Print();
 
