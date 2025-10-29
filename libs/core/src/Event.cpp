@@ -15,11 +15,11 @@ using namespace std;
 using namespace std;
 
 Event::Event() {
-  auto &config = ConfigManager::GetInstance();
+  auto& config = ConfigManager::GetInstance();
 
   try {
-    config.GetExtraEventCollections(extraCollectionsDescriptions, extraCollectionsOrder);
-  } catch (const Exception &e) {
+    config.GetExtraEventCollections(extraCollectionsDescriptions);
+  } catch (const Exception& e) {
     hasExtraCollections = false;
   }
 }
@@ -33,7 +33,7 @@ bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, p
   try {
     First value = physicsObject->Get(branchName);
     return value >= cuts.first && value <= cuts.second;
-  } catch (BadTypeException &e) {
+  } catch (BadTypeException& e) {
     if constexpr (sizeof...(Rest) > 0) {
       return tryGet<Rest...>(physicsObject, branchName, cuts);
     } else {
@@ -52,17 +52,13 @@ bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName
 void Event::AddExtraCollections() {
   if (!hasExtraCollections) return;
 
-  // Use extraCollectionsOrder to use already defined extraCollections as input
-  for (auto name : extraCollectionsOrder) {
-    auto extraCollection = extraCollectionsDescriptions[name];
-
+  for (auto& [name, extraCollection] : extraCollectionsDescriptions) {
     auto newCollection = make_shared<PhysicsObjects>();
 
     for (auto inputCollectionName : extraCollection.inputCollections) {
-      
-      shared_ptr<PhysicsObjects> inputCollection; 
-      
-      try{
+      shared_ptr<PhysicsObjects> inputCollection;
+
+      try {
         inputCollection = GetCollection(inputCollectionName);
       }
       catch(const Exception &e){
@@ -73,13 +69,13 @@ void Event::AddExtraCollections() {
       for (auto physicsObject : *inputCollection) {
         bool passes = true;
 
-        for (auto &[branchName, flag] : extraCollection.flags) {
+        for (auto& [branchName, flag] : extraCollection.flags) {
           passes = checkCuts(physicsObject, branchName, {flag, flag});
           if (!passes) break;
         }
         if (!passes) continue;
 
-        for (auto &[branchName, cuts] : extraCollection.allCuts) {
+        for (auto& [branchName, cuts] : extraCollection.allCuts) {
           passes = checkCuts(physicsObject, branchName, cuts);
           if (!passes) break;
         }

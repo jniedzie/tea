@@ -435,7 +435,7 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
 // Other methods
 //-------------------------------------------------------------------------------------------------
 
-void ConfigManager::GetExtraEventCollections(map<string, ExtraCollection> &extraEventCollections, vector<string> &extraEventCollectionsOrder) {
+void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, ExtraCollection> &extraEventCollections) {
   PyObject *pythonDict = GetPythonDict("extraEventCollections");
 
   PyObject *collectionName, *collectionSettings;
@@ -468,7 +468,6 @@ void ConfigManager::GetExtraEventCollections(map<string, ExtraCollection> &extra
     }
 
     extraEventCollections[PyUnicode_AsUTF8(collectionName)] = extraCollection;
-    extraEventCollectionsOrder.push_back(PyUnicode_AsUTF8(collectionName));
   }
 }
 
