@@ -520,7 +520,7 @@ class ABCDPlotter:
       info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
       if prediction != 0:
         rel_unc = prediction_err/prediction
-        info(f"Relative predicted uncertainty in A: {rel_unc:.2f})
+        info(f"Relative predicted uncertainty in A: {rel_unc:.2f}")
       info("\n\nOptimization values (re-calculated):")
       info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
 
