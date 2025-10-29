@@ -66,13 +66,8 @@ void Event::AddExtraCollections() {
         inputCollection = GetCollection(inputCollectionName);
       }
       catch(const Exception &e){
-        auto it = extraCollections.find(inputCollectionName);
-        if (it != extraCollections.end()) {
-          inputCollection = it->second;
-        } else {
-          error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
-          continue;
-        }
+        error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
+        continue;
       }
 
       for (auto physicsObject : *inputCollection) {
