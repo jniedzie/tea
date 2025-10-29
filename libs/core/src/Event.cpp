@@ -18,7 +18,7 @@ Event::Event() {
   auto &config = ConfigManager::GetInstance();
 
   try {
-    config.GetExtraEventCollections(extraCollectionsDescriptions);
+    config.GetExtraEventCollections(extraCollectionsDescriptions, extraCollectionsOrder);
   } catch (const Exception &e) {
     hasExtraCollections = false;
   }
@@ -52,7 +52,10 @@ bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName
 void Event::AddExtraCollections() {
   if (!hasExtraCollections) return;
 
-  for (auto &[name, extraCollection] : extraCollectionsDescriptions) {
+  // Use extraCollectionsOrder to use already defined extraCollections as input
+  for (auto name : extraCollectionsOrder) {
+    auto extraCollection = extraCollectionsDescriptions[name];
+
     auto newCollection = make_shared<PhysicsObjects>();
 
     for (auto inputCollectionName : extraCollection.inputCollections) {
@@ -62,9 +65,14 @@ void Event::AddExtraCollections() {
       try{
         inputCollection = GetCollection(inputCollectionName);
       }
-      catch(Exception &e){
-        error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
-        continue;
+      catch(const Exception &e){
+        auto it = extraCollections.find(inputCollectionName);
+        if (it != extraCollections.end()) {
+          inputCollection = it->second;
+        } else {
+          error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
+          continue;
+        }
       }
 
       for (auto physicsObject : *inputCollection) {

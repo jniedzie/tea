@@ -29,7 +29,7 @@ class ConfigManager {
   template <typename T, typename U>
   void GetPair(std::string name, std::pair<T, U> &outputPair);
 
-  void GetExtraEventCollections(std::map<std::string, ExtraCollection> &extraEventCollections);
+  void GetExtraEventCollections(std::map<std::string, ExtraCollection> &extraEventCollections, std::vector<std::string> &extraEventCollectionsOrder);
   void GetHistogramsParams(std::map<std::string, HistogramParams> &histogramsParams, std::string collectionName);
   void GetHistogramsParams(std::map<std::string, HistogramParams2D> &histogramsParams, std::string collectionName);
   void GetHistogramsParams(std::map<std::string, IrregularHistogramParams> &histogramsParams, std::string collectionName);

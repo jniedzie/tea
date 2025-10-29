@@ -176,6 +176,7 @@ class Event {
 
   bool hasExtraCollections = true;
   std::map<std::string, ExtraCollection> extraCollectionsDescriptions;
+  std::vector<std::string> extraCollectionsOrder;
   std::map<std::string, std::string> defaultCollectionsTypes;
 
   friend class EventReader;

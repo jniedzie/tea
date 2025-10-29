@@ -181,12 +181,12 @@ def main():
         plot_hist1D(ratio_unc_hist_up, "Data / MC Scale Factor Uncertainty up", f"sf_ratio_uncertainty1D_up{config.year}", config.correction_inputs[0]["name"])
         plot_hist1D(ratio_unc_hist_down, "Data / MC Scale Factor Uncertainty down", f"sf_ratio_uncertainty1D_down{config.year}", config.correction_inputs[0]["name"])
 
-    # List of 2D Histograms defined
+    # List of 1D Histograms defined
     if config.histograms1D:
         scale_factors = {}
         for sfBin, histogram in config.histograms1D.items():
-            background_histogram = sfProducer.getBackgroundHistogram1D(histogram)
             data_histogram = sfProducer.getDataHistogram1D(histogram)
+            background_histogram = sfProducer.getBackgroundHistogram1D(histogram)
             data_hist = data_histogram.hist
             background_hist = background_histogram.hist
 

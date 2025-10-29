@@ -12,17 +12,18 @@ class ScaleFactorProducer:
     def __init__(self, config = None):
         self.config = None
         self.backgroundSamples = []
-        self.dataSample = None
+        self.dataSamples = []
         self.luminosity = None
         self.histogram = None
         self.histogram2D = None
+        self.years_without_data = {}
 
         if config != None:
             self.config = config
             self.luminosity = self.config.luminosity
             self.setSamples(config.samples)
-            if config.histogram:
-                self.histogram = config.histogram
+            if config.histogram1D:
+                self.histogram1D = config.histogram1D
             if config.histogram2D:
                 self.histogram2D = config.histogram2D
 
@@ -43,7 +44,7 @@ class ScaleFactorProducer:
             if sample.type == SampleType.background:
                 self.backgroundSamples.append(sample)
             if sample.type == SampleType.data:
-                self.dataSample = sample
+                self.dataSamples.append(sample)
 
 
     def __getRootFile(self, file_path):
@@ -132,13 +133,17 @@ class ScaleFactorProducer:
         if self.luminosity == None:
             warn("Luminosity is not defined - histograms are not normalized.")
             return histogram
-        histogram.Scale(sample.cross_section * self.luminosity / sample.initial_weight_sum)
+        histogram.Scale(sample.cross_section * sample.luminosity / sample.initial_weight_sum)
         return histogram
 
     def getBackgroundHistogram1D(self, histogram):
         hist_name = histogram.name
+        years_without_data = self.years_without_data[hist_name]
         stack = THStack(hist_name, hist_name)
         for sample in self.backgroundSamples:
+            if sample.year in years_without_data:
+                print(f"Skipping sample {sample.name} from year {sample.year}")
+                continue
             root_file = ROOT.TFile.Open(sample.file_path, "READ")
             histogram.load(root_file)
 
@@ -169,19 +174,27 @@ class ScaleFactorProducer:
             normalized_hist = self.__getNormalizedHist(histogram.hist, sample)
             
             stack.Add(deepcopy(normalized_hist))
-        
+            root_file.Close()
 
-        background_stack_combined = stack.GetStack().Last()
+        stack_items = stack.GetStack()
+        if stack_items:
+            background_stack_combined = stack_items.Last()
+        else:
+            background_stack_combined = ROOT.TH1F("empty_hist", "empty_hist", 1, 0, 1)
+            background_stack_combined.SetDirectory(0)
         histogram.hist = background_stack_combined
         background_histogram = deepcopy(histogram)
-        root_file.Close()
         return background_histogram
 
 
     def getBackgroundHistogram2D(self, histogram2D):
         hist_name = histogram2D.name
+        years_without_data = self.years_without_data[hist_name]
         stack = THStack(hist_name, hist_name)
         for sample in self.backgroundSamples:
+            if sample.year in years_without_data:
+                print(f"Skipping sample {sample.name} from year {sample.year}")
+                continue
             root_file = ROOT.TFile.Open(sample.file_path, "READ")
             histogram2D.load(root_file)
 
@@ -200,46 +213,54 @@ class ScaleFactorProducer:
             normalized_hist.SetBinErrorOption(TH2.kPoisson)
             
             stack.Add(deepcopy(normalized_hist))
-
-        background_stack_combined = stack.GetStack().Last()
+            root_file.Close()
+        
+        stack_items = stack.GetStack()
+        if stack_items:
+            background_stack_combined = stack_items.Last()
+        else:
+            background_stack_combined = ROOT.TH1F("empty_hist", "empty_hist", 1, 0, 1)
+            background_stack_combined.SetDirectory(0)
         histogram2D.hist = background_stack_combined
         background_histogram = deepcopy(histogram2D)
-        root_file.Close()
         return background_histogram
 
 
     def getDataHistogram1D(self, histogram1D):
-        data_histogram = histogram1D
         hist_name = histogram1D.name
+        if hist_name not in self.years_without_data:
+            self.years_without_data[hist_name] = []
 
-        root_file = self.__getRootFile(self.dataSample.file_path)
-        histogram1D.load(root_file)
-        if "Event" in hist_name:
-            # only get bin content of bin 2:    
-            bin_content = histogram1D.hist.GetBinContent(2)
-            bin_error = histogram1D.hist.GetBinError(2)
-            new_hist = ROOT.TH1F(
-                histogram1D.hist.GetName() + "_onebin",
-                histogram1D.hist.GetTitle() + " (one bin)",
-                1, 0, 1  # 1 bin between 0.5 and 1.5
-            )
-            new_hist.SetBinContent(1, bin_content)
-            new_hist.SetBinError(1, bin_error)
-            histogram1D.set_hist(new_hist)
-        histogram1D.setup(self.dataSample)
+        stack = THStack(hist_name, hist_name)
+        for dataSample in self.dataSamples:
+            root_file = self.__getRootFile(dataSample.file_path)
+            histogram1D.load(root_file)
+            histogram1D.setup(dataSample)
+            if (histogram1D.hist.Integral() == 0):
+                warn(f"Data sample {dataSample.name} has no events for {hist_name}!")
+                self.years_without_data[hist_name].append(dataSample.year)
+            stack.Add(deepcopy(histogram1D.hist))
+            root_file.Close()
+        data_stack_combined = stack.GetStack().Last()
+        histogram1D.hist = data_stack_combined
         data_histogram1D = deepcopy(histogram1D)
-        root_file.Close()
         return data_histogram1D
     
 
     def getDataHistogram2D(self, histogram2D):
-        data_histogram = histogram2D
-
-        root_file = self.__getRootFile(self.dataSample.file_path)
-        histogram2D.load(root_file)
-        histogram2D.setup()
-        data_histogram2D = deepcopy(histogram2D)
-        root_file.Close()
+        stack = THStack(hist_name, hist_name)
+        for dataSample in self.dataSamples:
+            root_file = self.__getRootFile(self.dataSample.file_path)
+            histogram2D.load(root_file)
+            histogram2D.setup()
+            stack.Add(deepcopy(histogram1D.hist))
+            if (histogram1D.hist.Integral() == 0):
+                warn(f"Data sample {dataSample.name} has no events for {hist_name}!")
+                self.years_without_data[hist_name].append(dataSample.year)
+            root_file.Close()
+        data_stack_combined = stack.GetStack().Last()
+        histogram2D.hist = data_stack_combined
+        data_histogram1D = deepcopy(histogram2D)
         return data_histogram2D
     
 

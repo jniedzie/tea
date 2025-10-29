@@ -34,6 +34,10 @@ class NanoMuon {
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
+  bool operator==(const std::shared_ptr<NanoMuon> otherMuon) {
+    return GetPhysicsObject() == otherMuon->GetPhysicsObject();
+  }
+
   bool IsDSA() { return GetOriginalCollection() == "DSAMuon"; };
   bool IsTight();
 
