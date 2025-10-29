@@ -167,11 +167,9 @@ class DatacardsProcessor:
     max_rel_unc = -1
     for bkg_name in ("bkg_xup", "bkg_xdown", "bkg_yup", "bkg_ydown"):
       bkg_hist = self.histosamples[bkg_name][0].hist
-      a = bkg_hist.GetBinContent(1, 2)
       b = bkg_hist.GetBinContent(1, 1)
       c = bkg_hist.GetBinContent(2, 2)
       d = bkg_hist.GetBinContent(2, 1)
-      a_err = bkg_hist.GetBinError(1, 2)
       b_err = bkg_hist.GetBinError(1, 1)
       c_err = bkg_hist.GetBinError(2, 2)
       d_err = bkg_hist.GetBinError(2, 1)
@@ -182,11 +180,9 @@ class DatacardsProcessor:
     
     # nominal value
     bkg_hist = self.histosamples["bkg"][0].hist
-    a = bkg_hist.GetBinContent(1, 2)
     b = bkg_hist.GetBinContent(1, 1)
     c = bkg_hist.GetBinContent(2, 2)
     d = bkg_hist.GetBinContent(2, 1)
-    a_err = bkg_hist.GetBinError(1, 2)
     b_err = bkg_hist.GetBinError(1, 1)
     c_err = bkg_hist.GetBinError(2, 2)
     d_err = bkg_hist.GetBinError(2, 1)
