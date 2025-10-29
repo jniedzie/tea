@@ -60,6 +60,8 @@ def main():
 
   abcdPlotter.save_canvases()
   abcdPlotter.print_params_for_selected_point()
+  if config.do_binning_uncertainty:
+    abcdPlotter.print_params_for_varied_points()
   abcdPlotter.plot_optimal_points()
 
   abcdPlotter.print_params_for_best_point()

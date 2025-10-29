@@ -124,7 +124,7 @@ class Event {
   void AddExtraCollections();
   void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
 
-  const std::map<std::string, ExtraCollection>& GetExtraCollectionsDescriptions() const { return extraCollectionsDescriptions; }
+  const insertion_ordered_map<std::string, ExtraCollection>& GetExtraCollectionsDescriptions() const { return extraCollectionsDescriptions; }
  
   Int_t* GetIntVector(std::string branchName) { return valuesIntVector.at(branchName); }
   Bool_t* GetBoolVector(std::string branchName) { return valuesBoolVector.at(branchName); }
@@ -175,7 +175,7 @@ class Event {
   std::map<std::string, std::shared_ptr<PhysicsObjects>> extraCollections;
 
   bool hasExtraCollections = true;
-  std::map<std::string, ExtraCollection> extraCollectionsDescriptions;
+  insertion_ordered_map<std::string, ExtraCollection> extraCollectionsDescriptions;
   std::map<std::string, std::string> defaultCollectionsTypes;
 
   friend class EventReader;

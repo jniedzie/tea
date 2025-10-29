@@ -435,7 +435,7 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
 // Other methods
 //-------------------------------------------------------------------------------------------------
 
-void ConfigManager::GetExtraEventCollections(map<string, ExtraCollection> &extraEventCollections) {
+void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, ExtraCollection> &extraEventCollections) {
   PyObject *pythonDict = GetPythonDict("extraEventCollections");
 
   PyObject *collectionName, *collectionSettings;
@@ -628,6 +628,35 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogra
       histParams.directory = PyUnicode_AsUTF8(GetItem(params, 7));
     }
 
+    histogramsParams[histParams.variable] = histParams;
+  }
+}
+
+void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams2D> &histogramsParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject *params = GetItem(pythonList, i);
+
+    IrregularHistogramParams2D histParams;
+    string title;    
+    
+    histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
+
+    PyObject *binEdgesX = GetItem(params, 1);
+    PyObject *binEdgesY = GetItem(params, 2);
+    
+    for (Py_ssize_t i = 0; i < GetCollectionSize(binEdgesX); ++i) {
+      PyObject *item = GetItem(binEdgesX, i);
+      histParams.binEdgesX.push_back(PyFloat_AsDouble(item));
+    }
+    for (Py_ssize_t i = 0; i < GetCollectionSize(binEdgesY); ++i) {
+      PyObject *item = GetItem(binEdgesY, i);
+      histParams.binEdgesY.push_back(PyFloat_AsDouble(item));
+    }
+
+    histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3));
+    
     histogramsParams[histParams.variable] = histParams;
   }
 }

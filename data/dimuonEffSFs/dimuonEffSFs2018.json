@@ -3,7 +3,7 @@
     "corrections": [
         {
             "name": "dimuonEff",
-            "description": "Scale factors for dimuon efficiency from J/Psi invariant mass, using PAT-DSA matching before dimuon selection",
+            "description": "Scale factors for dimuon efficiency given from J/Psi invariant mass distribution",
             "version": 1,
             "inputs": [
                 {
@@ -34,15 +34,15 @@
                             "content": [
                                 {
                                     "key": "nominal",
-                                    "value": 0.9049391031115105
+                                    "value": 0.9176983068420831
                                 },
                                 {
                                     "key": "up",
-                                    "value": 0.9516068797040048
+                                    "value": 0.9521510473180739
                                 },
                                 {
                                     "key": "down",
-                                    "value": 0.8607839361926599
+                                    "value": 0.884189660397555
                                 }
                             ]
                         }
@@ -55,15 +55,15 @@
                             "content": [
                                 {
                                     "key": "nominal",
-                                    "value": 1.1731336145413565
+                                    "value": 1.153020798056833
                                 },
                                 {
                                     "key": "up",
-                                    "value": 1.6439252690710084
+                                    "value": 1.454442478835189
                                 },
                                 {
                                     "key": "down",
-                                    "value": 0.8423641286093955
+                                    "value": 0.8980036743671627
                                 }
                             ]
                         }
@@ -76,15 +76,15 @@
                             "content": [
                                 {
                                     "key": "nominal",
-                                    "value": 1.7860719721816853
+                                    "value": 4.781809817647212
                                 },
                                 {
                                     "key": "up",
-                                    "value": 3.491278231679081
+                                    "value": 7.376309683721322
                                 },
                                 {
                                     "key": "down",
-                                    "value": 0.9295280202536268
+                                    "value": 2.804721129979029
                                 }
                             ]
                         }

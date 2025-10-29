@@ -34,15 +34,16 @@ float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
   return weight;
 }
 
-float NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event, string name) {
+map<string, float> NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event, string name) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  if (name == "custom") {
+  // TODO: implement custom pileup scale factor for other years?
+  if (year == "2018" && name == "custom") {
     int nVertices = event->GetAs<int>("PV_npvsGood");
     return scaleFactorsManager.GetPileupScaleFactorCustom(nVertices);
   } else {
     float nVertices = event->Get("Pileup_nTrueInt");
-    return scaleFactorsManager.GetPileupScaleFactor(name, nVertices);
+    return scaleFactorsManager.GetPileupScaleFactor("pileup", nVertices);
   }
 }
 
@@ -110,20 +111,58 @@ map<string,float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr<
   map<string,float> weights;
   bool firstIteration = true;
   for (auto muon : *muonCollection) {
-    auto weights_loose = muon->GetScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
-    auto weights_tight = muon->GetScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
     if (firstIteration) {
-      for (auto &[name, weight] : weights_loose) weights[name] = 1.0;
-      for (auto &[name, weight] : weights_tight) weights[name] = 1.0;
+      auto weights_loose = muon->GetEmptyScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
+      auto weights_tight = muon->GetEmptyScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
+      auto weights_dsa = muon->GetEmptyDSAScaleFactors("dsamuonID", "dsamuonReco_cosmic");
+      for (auto &[name, weight] : weights_loose) {
+        weights[name] = 1.0;
+      }
+      for (auto &[name, weight] : weights_tight) {
+        weights[name] = 1.0;
+      }
+      for (auto &[name, weight] : weights_dsa) {
+        weights[name] = 1.0;
+      }
       firstIteration = false;
     }
 
-    if (muon->IsTight()) {
-      for (auto &[name, weight] : weights_tight) weights[name] *= weight;
+    if (muon->IsDSA()) {
+      auto weights_dsa = muon->GetDSAScaleFactors("dsamuonID", "dsamuonReco_cosmic");
+      for (auto &[name, weight] : weights_dsa) weights[name] *= weight;
     }
     else {
-      for (auto &[name, weight] : weights_loose) weights[name] *= weight;
+      if (muon->IsTight()) {
+        auto weights_tight = muon->GetScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
+        for (auto &[name, weight] : weights_tight) weights[name] *= weight;
+      }
+      else {
+        auto weights_loose = muon->GetScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
+        for (auto &[name, weight] : weights_loose) weights[name] *= weight;
+      }
     }
+  }
+  return weights;
+}
+
+map<string,float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const shared_ptr<NanoMuons> muonCollection) {
+  map<string,float> weights;
+  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  bool firstIteration = true;
+  for (auto muon : *muonCollection) {
+    vector<variant<int, double, string>> args = {double(muon->Get("pt"))};
+    // vector<variant<int, double, string>> args = {double(muon->Get("pt")), double(fabs(muon->GetAs<float>("dxyPVTraj")))};
+    if (firstIteration) {
+      auto weights_setup = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
+      for (auto &[name, weight] : weights_setup) weights[name] = 1.0;
+      firstIteration = false;
+    }
+
+    if (!muon->IsDSA()) {
+      continue;
+    }
+    auto weights_ = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
+    for (auto &[name, weight] : weights_) weights[name] *= weight;
   }
   return weights;
 }

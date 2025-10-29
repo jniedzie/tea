@@ -36,7 +36,8 @@ class HistogramsManager:
       os.makedirs(os.path.dirname(self.config.plots_output_path))
 
   def addHistosample(self, hist, sample):
-    hist.load(self.input_files[sample.name])
+    file = self.__get_file(sample)
+    hist.load(file)
     hist.setup(sample)
 
     if not hist.isGood():
@@ -72,6 +73,13 @@ class HistogramsManager:
       elif sample.type == SampleType.signal:
         signal_histosample = (hist, sample)
       elif sample.type == SampleType.background:
+        n_entries = hist.hist.GetEntries()
+        if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
+          warn(
+              (f"Histogram {sample.name} has less than "
+              f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded.")
+          )
+          continue
         background_histosamples[sample.name] = (hist, sample)
 
       hist_name = hist.getName()
@@ -133,3 +141,11 @@ class HistogramsManager:
     hists_dict[self.config.histogram.getName()] = ROOT.THStack(title, title)
 
     return hists_dict
+
+  def __get_file(self,sample):
+    try:
+        file = ROOT.TFile.Open(sample.file_path, "READ")
+    except OSError:
+      fatal(f"Couldn't open file {sample.file_path}")
+      exit(0)
+    return file

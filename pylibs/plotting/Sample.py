@@ -21,6 +21,7 @@ class Sample:
   type: SampleType = SampleType.background
   cross_section: float = -1
   cross_sections: dict = None
+  luminosity: float = -1
   initial_weight_sum: float = -1
   line_color: int = ROOT.kBlack
   line_style: int = ROOT.kSolid
@@ -35,6 +36,7 @@ class Sample:
   legend_description: str = ""
   plotting_options: str = ""
   custom_legend: Legend = None
+  year: int = -1
 
   def __post_init__(self):
     if self.cross_sections is not None and self.cross_section < 0:

@@ -32,6 +32,7 @@ class HistogramsHandler {
   std::map<std::string, HistogramParams> histParams;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
+  std::map<std::string, IrregularHistogramParams2D> irregularHistParams2D;
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
   std::map<std::string,float> eventWeights;

@@ -218,44 +218,174 @@ bool NanoDimuonVertex::HasMuonIndices(int muonIdx1, int muonIdx2) {
   return false;
 }
 
-string NanoDimuonVertex::GetGenMotherCategory(shared_ptr<PhysicsObjects> genMuonCollection) {
-  auto genMothers = GetGenMothers(genMuonCollection);
-  if (!genMothers) return "NonResonant";
+string NanoDimuonVertex::GetGenMotherResonanceCategory(shared_ptr<PhysicsObjects> genMuonCollection, const shared_ptr<Event> event, float maxDeltaR) {
+  auto genMothers = GetGenMothers(genMuonCollection, event, maxDeltaR);
   if (genMothers->size() != 2) return "NonResonant";
+  if (!genMothers->at(0) || !genMothers->at(1)) return "NonResonant";
 
   auto mother1 = genMothers->at(0);
   auto mother2 = genMothers->at(1);
   if (mother1 == mother2) {
     int ALPpdgId = 54;
-    if (abs(asNanoGenParticle(mother1)->GetPdgId()) == ALPpdgId) {
+    if (fabs(asNanoGenParticle(mother1)->GetPdgId()) == ALPpdgId) {
       return "FromALP";
     }
-    return "Resonant";
+    if (asNanoGenParticle(mother1)->GetPdgId() == asNanoGenParticle(mother2)->GetPdgId()) {
+      return "Resonant";
+    }
+    return "FalseResonant";
   }
   return "NonResonant";
 }
 
-shared_ptr<PhysicsObjects> NanoDimuonVertex::GetGenMothers(shared_ptr<PhysicsObjects> genMuonCollection) {
+string NanoDimuonVertex::GetGenMotherBackgroundCategory(shared_ptr<PhysicsObjects> genMuonCollection, const shared_ptr<Event> event, float maxDeltaR) {
+  auto genMothers = GetGenMothers(genMuonCollection, event, maxDeltaR);
+  int pileup_pid = 90; // we define pileup as 90
+  int noMother_pid = 80; // we define muons without a mother match as 80
+  int mother1_pid = pileup_pid, mother2_pid = pileup_pid;
+  if (genMothers->at(0)) {
+    mother1_pid = asNanoGenParticle(genMothers->at(0))->GetPdgId();
+  } else {
+    auto genMuon1 = Muon1()->GetLastCopyGenMuon(genMuonCollection, maxDeltaR);
+    if (genMuon1)
+      mother1_pid = noMother_pid;
+  }
+  if (genMothers->at(1)) {
+    mother2_pid = asNanoGenParticle(genMothers->at(1))->GetPdgId();
+  } else {
+    auto genMuon2 = Muon2()->GetLastCopyGenMuon(genMuonCollection, maxDeltaR);
+    if (genMuon2)
+      mother2_pid = noMother_pid;
+  }
+
+  map<string, vector<int>> motherCategories = {
+    {"X", {90}},
+    {"Y", {80}},
+    {"ALP", {54}},
+    {"D", {-411, 411, -421, 421, -431, 431}},
+    {"B", {-541, 541, -521, 521, -511, 511, -531, 531}},
+    {"d", {-1,1}},
+    {"u", {-2,2}},
+    {"s", {-3,3}},
+    {"c", {-4,4}},
+    {"b", {-5,5}},
+    {"t", {-6,6}},
+    {"e", {-11,11}},
+    {"mu", {-13,13}},
+    {"tau", {-15, 15}},
+    {"g", {-21,21}},
+    {"gamma", {-22,22}},
+    {"Z", {-23,23}},
+    {"W", {24, -24}},
+    {"rho", {113}},
+    {"pi0", {221}},
+    {"omega", {223}},
+    {"K0", {331}},
+    {"phi", {333}},
+    {"upsilon", {553}},
+    {"JPsi", {-443, 443}},
+  };
+  
+  string mother1_category;
+  string mother2_category;
+  for (const auto &[category, pids] : motherCategories) {
+    if (find(pids.begin(), pids.end(), mother1_pid) != pids.end()) {
+      mother1_category = category;
+      break;
+    }
+  }
+  for (const auto &[category, pids] : motherCategories) {
+    if (find(pids.begin(), pids.end(), mother2_pid) != pids.end()) {
+      mother2_category = category;
+      break;
+    }
+  }
+  if (mother1_category.empty()) {
+    mother1_category = "other";
+  }
+  if (mother2_category.empty()) {
+    mother2_category = "other";
+  }
+  if (mother1_category < mother2_category) {
+    return mother1_category + mother2_category;
+  }
+  return mother2_category + mother1_category;
+}
+
+
+shared_ptr<PhysicsObjects> NanoDimuonVertex::GetGenMothers(shared_ptr<PhysicsObjects> genMuonCollection, const shared_ptr<Event> event, float maxDeltaR) {
 
   auto genMothers = make_shared<PhysicsObjects>();
+  auto genMother1 = make_shared<PhysicsObject>();
+  auto genMother2 = make_shared<PhysicsObject>();
 
   auto muon1 = Muon1();
   auto muon2 = Muon2();
-  auto genMuon1 = muon1->GetGenMuon(genMuonCollection);
-  auto genMuon2 = muon2->GetGenMuon(genMuonCollection);
-  if (!genMuon1 || !genMuon2) return nullptr;
+  float noMaxDeltaR = 10000.0;
+  auto genMuon1 = muon1->GetGenMuon(genMuonCollection, noMaxDeltaR);
+  auto genMuon1LastCopy = muon1->GetLastCopyGenMuon(genMuonCollection, noMaxDeltaR);
+  std::shared_ptr<NanoGenParticle> genMuon2;
+  if (genMuon1 && genMuon1LastCopy) {
+    genMuon2 = muon2->GetGenMuon(genMuonCollection, noMaxDeltaR, false, genMuon1LastCopy->GetPhysicsObject());
+  }
+  if (genMuon1 && genMuon2) {
+    if (genMuon1==genMuon2) {
+      cout << " NanoDimuonVertex::GetGenMothers: genMuon1 == genMuon2 " << endl;
+    }
 
-  auto firstMuon1 = genMuon1->GetFirstCopy(genMuonCollection);
-  auto firstMuon2 = genMuon2->GetFirstCopy(genMuonCollection);
-  if (!firstMuon1 || !firstMuon2) return nullptr;
+    float deltaRsum1 = muon1->DeltaRtoParticle(genMuon1->GetPhysicsObject()) + muon2->DeltaRtoParticle(genMuon2->GetPhysicsObject());
+    float deltaRsum2 = muon1->DeltaRtoParticle(genMuon2->GetPhysicsObject()) + muon2->DeltaRtoParticle(genMuon1->GetPhysicsObject());
+    if (deltaRsum2 < deltaRsum1) {
+      auto temp = genMuon1;
+      genMuon1 = genMuon2;
+      genMuon2 = temp;
+    }
+    float deltaR1 = muon1->DeltaRtoParticle(genMuon1->GetPhysicsObject());
+    float deltaR2 = muon2->DeltaRtoParticle(genMuon2->GetPhysicsObject());
+    if (deltaR1 > maxDeltaR) {
+      genMuon1 = nullptr;
+    }
+    else if (deltaR2 > maxDeltaR) {
+      genMuon2 = nullptr;
+    }
+    // Check if genMuon1 == genMuon2 or 2 same sign gen muons
+    else if (genMuon1==genMuon2) {
+      genMuon1 = nullptr;
+      genMother1 = nullptr;
+    } 
+    else if (genMuon1->GetPdgId() == genMuon2->GetPdgId()) {
+      genMuon1 = nullptr;
+      genMother1 = nullptr;
+    }
+  }
+    
+  if (!genMuon1) genMother1 = nullptr;
+  else {
+    auto firstMuon1 = genMuon1->GetFirstCopy(genMuonCollection);
+    if (!firstMuon1) genMother1 = nullptr;
+    else {
+      int motherIndex1 = firstMuon1->GetMotherIndex();
+      if (motherIndex1 < 0) genMother1 = nullptr;
+      else {
+        genMother1 = genMuonCollection->at(motherIndex1);
+      }
+    }
+  }
+  if (!genMuon2) genMother2 = nullptr;
+  else {
+    auto firstMuon2 = genMuon2->GetFirstCopy(genMuonCollection);
+    if (!firstMuon2) genMother2 = nullptr;
+    else {
+      int motherIndex2 = firstMuon2->GetMotherIndex();
+      if (motherIndex2 < 0) genMother2 = nullptr;
+      else {
+        genMother2 = genMuonCollection->at(motherIndex2);
+      }
+    }
+  }
 
-  int motherIndex1 = firstMuon1->GetMotherIndex();
-  if (motherIndex1 < 0) return nullptr;
-  int motherIndex2 = firstMuon2->GetMotherIndex();
-  if (motherIndex2 < 0) return nullptr;
-
-  genMothers->push_back(genMuonCollection->at(motherIndex1));
-  genMothers->push_back(genMuonCollection->at(motherIndex2));
+  genMothers->push_back(genMother1);
+  genMothers->push_back(genMother2);
 
   return genMothers;
 }

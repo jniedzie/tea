@@ -25,6 +25,12 @@ class NanoGenParticle {
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
+  std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
+
+  bool operator==(const std::shared_ptr<NanoGenParticle> otherGenParticle) {
+    return GetPhysicsObject() == otherGenParticle->GetPhysicsObject();
+  }
+
   TLorentzVector GetFourVector(float mass);
   float GetMass() { return physicsObject->Get("mass"); }
   float GetPt() { return physicsObject->Get("pt"); }
