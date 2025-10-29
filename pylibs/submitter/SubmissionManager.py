@@ -220,8 +220,8 @@ class SubmissionManager:
     info("Running locally with input_output_file_list")
     for input_file_path, output_tree_file_path, output_hist_file_path in self.files_config.input_output_file_list:
       command_for_file = f"{self.command} --input_path {input_file_path}"
-      command_for_file += f" --output_trees_path {output_tree_file_path}"
-      command_for_file += f" --output_hists_path {output_hist_file_path}"
+      command_for_file += f" --output_trees_path {output_tree_file_path}" if output_tree_file_path else ""
+      command_for_file += f" --output_hists_path {output_hist_file_path}" if output_hist_file_path else ""
       if self.extra_args is not None:
         for key, value in self.extra_args.items():
           command_for_file += f" --{key} {value}"

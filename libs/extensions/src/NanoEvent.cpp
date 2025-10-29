@@ -36,8 +36,8 @@ shared_ptr<NanoMuons> NanoEvent::GetDRMatchedMuons(shared_ptr<NanoMuons> muonCol
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
-
+NanoMuonMatches NanoEvent::GetRevertedDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
+                                                     float matchingDeltaR) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -58,7 +58,7 @@ NanoMuonMatches NanoEvent::GetRevertedDRMatchedMuons(shared_ptr<NanoMuons> loose
     }
   }
 
-  return make_pair(matchedDSAMuons,matchedPATMuons);
+  return make_pair(matchedDSAMuons, matchedPATMuons);
 }
 
 shared_ptr<NanoMuons> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<NanoMuons> muonCollection, float matchingDeltaR) {
@@ -83,8 +83,8 @@ shared_ptr<NanoMuons> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<NanoMuons> mu
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
-
+NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
+                                                          float matchingDeltaR) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -103,7 +103,7 @@ NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> 
     }
   }
 
-  return make_pair(matchedDSAMuons,matchedPATMuons);
+  return make_pair(matchedDSAMuons, matchedPATMuons);
 }
 
 shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons> muonCollection, float matchingDeltaR) {
@@ -129,8 +129,8 @@ shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedProximityDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
-
+NanoMuonMatches NanoEvent::GetRevertedProximityDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
+                                                              float matchingDeltaR) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -149,7 +149,7 @@ NanoMuonMatches NanoEvent::GetRevertedProximityDRMatchedMuons(shared_ptr<NanoMuo
       matchedPATMuons->push_back(patMuon);
     }
   }
-  return make_pair(matchedDSAMuons,matchedPATMuons);
+  return make_pair(matchedDSAMuons, matchedPATMuons);
 }
 
 shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> muonCollection, float minMatchRatio) {
@@ -168,8 +168,8 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons, float minMatchRatio) {
-
+NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
+                                                          float minMatchRatio) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -181,7 +181,7 @@ NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> 
       float ratio_tmp = dsaMuon->GetMatchesForNthBestMatch(i) / nSegments;
       if (!matchFound && ratio_tmp >= minMatchRatio) {
         matchFound = PATMuonIndexExist(loosePATMuons, dsaMuon->GetMatchIdxForNthBestMatch(i));
-        if(matchFound) {
+        if (matchFound) {
           patIdx = dsaMuon->GetMatchIdxForNthBestMatch(i);
           break;
         }
@@ -192,11 +192,11 @@ NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> 
       matchedPATMuons->push_back(GetPATMuonWithIndex(patIdx, loosePATMuons));
     }
   }
-  return make_pair(matchedDSAMuons,matchedPATMuons);
+  return make_pair(matchedDSAMuons, matchedPATMuons);
 }
 
-shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared_ptr<NanoDimuonVertex> bestVertex, 
-                                                                          shared_ptr<NanoDimuonVertices> goodVerticesCollection, 
+shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared_ptr<NanoDimuonVertex> bestVertex,
+                                                                          shared_ptr<NanoDimuonVertices> goodVerticesCollection,
                                                                           float minMatchRatio) {
   // auto nanoVertex = asNanoDimuonVertex(bestVertex,event);
   // PAT-PAT dimuon vertex
