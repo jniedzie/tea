@@ -135,7 +135,11 @@ class Event {
   UShort_t* GetUshortVector(std::string branchName) { return valuesUshortVector.at(branchName); }
   Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
 
+  bool PassesHEMveto();
+
   private:
+  ConfigManager& config = ConfigManager::GetInstance();
+
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
   inline Bool_t GetBool(std::string branchName) { return valuesBool[branchName]; }
