@@ -256,8 +256,6 @@ class DatacardsProcessor:
     info(f"---- background_sum_d: {background_sum_d:.3f} +/- {d_unc:.3f}")
     info(f"---- d_unc2: {d_unc2:.3f}")
 
-    abcd_values_sum = self.abcd_helper.get_abcd(hist_sum, abcd_point)
-
     hist = ROOT.TH2D(histosample_name, histosample_name, 2, 0, 2, 2, 0, 2)
     hist.SetBinContent(1, 2, background_sum_a)
     hist.SetBinContent(1, 1, background_sum_b)

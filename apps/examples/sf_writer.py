@@ -166,8 +166,6 @@ def main():
         scale_factors = sfProducer.getDataMCRatios1D(data_histogram, background_histogram)
         ratio_hist,ratio_unc_hist_up,ratio_unc_hist_down  = sfProducer.getDataMCRatioHists1D(data_histogram, background_histogram)
 
-        x_title = nice_names_with_unit[config.correction_inputs[0]["name"]]
-
         edges = list(scale_factors.keys())
         edges.append(600.0)
         if not config.correction_edges[0]:

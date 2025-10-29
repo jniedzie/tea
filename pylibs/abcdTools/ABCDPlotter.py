@@ -555,7 +555,6 @@ class ABCDPlotter:
   def print_params_for_varied_points(self):
 
     max_rel_unc = -1
-    max_rel_unc_err = -1
     for point in (0,1):
       for variation in (-1,1):
         abcd_point = self.config.abcd_point
@@ -564,7 +563,7 @@ class ABCDPlotter:
         abcd_point = tuple(abcd_point_list) 
         a, b, c, d, a_err_, b_err_, c_err_, d_err_ = self.abcdHelper.get_abcd(self.background_hist, abcd_point)
 
-        info(f"\n\Varying abcd points to: {abcd_point[0]:.2f}, {abcd_point[1]:.2f}")
+        info(f"\n\nVarying abcd points to: {abcd_point[0]:.2f}, {abcd_point[1]:.2f}")
         i = abcd_point[0]
         j = abcd_point[1]
         y = self.background_hist.GetYaxis().GetBinCenter(i)

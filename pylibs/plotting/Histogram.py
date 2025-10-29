@@ -138,7 +138,7 @@ class Histogram2D:
   y_label: str = ""
   z_label: str = ""
   suffix: str = ""
-  norm_scale = float = 1.0
+  norm_scale: float = 1.0
 
   def __post_init__(self):
     self.hist = None

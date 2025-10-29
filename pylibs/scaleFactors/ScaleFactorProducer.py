@@ -50,7 +50,7 @@ class ScaleFactorProducer:
     def __getRootFile(self, file_path):
         root_file = TFile.Open(file_path)
         if not root_file or root_file.IsZombie():
-            print("Error: Unable to open the ROOT file: " + file_path)
+            error("Error: Unable to open the ROOT file: " + file_path)
         return root_file
     
 
@@ -142,7 +142,6 @@ class ScaleFactorProducer:
         stack = THStack(hist_name, hist_name)
         for sample in self.backgroundSamples:
             if sample.year in years_without_data:
-                print(f"Skipping sample {sample.name} from year {sample.year}")
                 continue
             root_file = ROOT.TFile.Open(sample.file_path, "READ")
             histogram.load(root_file)
@@ -193,7 +192,6 @@ class ScaleFactorProducer:
         stack = THStack(hist_name, hist_name)
         for sample in self.backgroundSamples:
             if sample.year in years_without_data:
-                print(f"Skipping sample {sample.name} from year {sample.year}")
                 continue
             root_file = ROOT.TFile.Open(sample.file_path, "READ")
             histogram2D.load(root_file)
@@ -253,14 +251,14 @@ class ScaleFactorProducer:
             root_file = self.__getRootFile(self.dataSample.file_path)
             histogram2D.load(root_file)
             histogram2D.setup()
-            stack.Add(deepcopy(histogram1D.hist))
-            if (histogram1D.hist.Integral() == 0):
+            stack.Add(deepcopy(histogram2D.hist))
+            if (histogram2D.hist.Integral() == 0):
                 warn(f"Data sample {dataSample.name} has no events for {hist_name}!")
                 self.years_without_data[hist_name].append(dataSample.year)
             root_file.Close()
         data_stack_combined = stack.GetStack().Last()
         histogram2D.hist = data_stack_combined
-        data_histogram1D = deepcopy(histogram2D)
+        data_histogram2D = deepcopy(histogram2D)
         return data_histogram2D
     
 
@@ -375,15 +373,10 @@ class ScaleFactorProducer:
 
         for ix in range(1, nbinsX + 1):
             for iy in range(1, nbinsY + 1):
-                ratio = ratio_hist2D.GetBinContent(ix,iy)
                 error_up = ratio_hist2D_up.GetBinError(ix,iy)
                 error_down = ratio_hist2D_down.GetBinError(ix,iy)
                 ratio_hist2D_up.SetBinContent(ix,iy,error_up)
                 ratio_hist2D_down.SetBinContent(ix,iy,error_down)
-                # if ratio == 0:
-                #     ratio_hist2D.SetBinContent(ix,iy, 1.0)
-                #     ratio_hist2D_up.SetBinContent(ix,iy, 1.0)
-                #     ratio_hist2D_down.SetBinContent(ix,iy, 1.0)
 
         return ratio_hist2D, ratio_hist2D_up, ratio_hist2D_down
 
@@ -402,7 +395,6 @@ class ScaleFactorProducer:
         background_hist1D_down.SetBinErrorOption(TH2.kPoisson)
 
         nbinsX = background_hist1D.GetNbinsX()
-        print(f"nbinsX: {nbinsX}")
 
         for ix in range(1, nbinsX + 1):
             data_hist1D_up.SetBinError(ix, data_hist1D.GetBinErrorUp(ix))
@@ -420,7 +412,7 @@ class ScaleFactorProducer:
 
         ratios = {}
         for ix in range(1, nbinsX + 1):
-            x_bin = round(ratio_hist1D_up.GetXaxis().GetBinLowEdge(ix),2)
+            # x_bin = round(ratio_hist1D_up.GetXaxis().GetBinLowEdge(ix),2)
             ratio = ratio_hist1D_up.GetBinContent(ix)
             uncertainty_up = ratio_hist1D_up.GetBinError(ix)
             uncertainty_down = ratio_hist1D_down.GetBinError(ix)
@@ -469,7 +461,7 @@ class ScaleFactorProducer:
         ratios = {}
         for ix in range(1, nbinsX + 1):
             x_bin = round(ratio_hist1D_up.GetXaxis().GetBinLowEdge(ix),2)
-            ratio = ratio_hist1D_up.GetBinContent(ix)
+            ratio = ratio_hist1D.GetBinContent(ix)
             uncertainty_up = ratio_hist1D_up.GetBinError(ix)
             uncertainty_down = ratio_hist1D_down.GetBinError(ix)
             ratios[x_bin] = [ratio, uncertainty_up, uncertainty_down]
@@ -478,15 +470,10 @@ class ScaleFactorProducer:
 
 
         for ix in range(1, nbinsX + 1):
-            ratio = ratio_hist1D.GetBinContent(ix)
             error_up = ratio_hist1D_up.GetBinError(ix)
             error_down = ratio_hist1D_down.GetBinError(ix)
             ratio_hist1D_up.SetBinContent(ix,error_up)
             ratio_hist1D_down.SetBinContent(ix,error_down)
-            # if ratio == 0:
-            #     ratio_hist1D.SetBinContent(ix, 1.0)
-            #     ratio_hist1D_up.SetBinContent(ix, 1.0)
-            #     ratio_hist1D_down.SetBinContent(ix, 1.0)
 
         return ratio_hist1D, ratio_hist1D_up, ratio_hist1D_down
 
@@ -502,10 +489,6 @@ class ScaleFactorProducer:
         rel_data_up = data_uncertainty_up / data_yield if data_yield > 0 else 0
         rel_bkg_low = background_uncertainty_down / background_yield
         rel_bkg_up = background_uncertainty_up / background_yield
-
-        # Error propagation: (ΔR/R)^2 = (ΔA/A)^2 + (ΔB/B)^2
-        rel_ratio_low = (rel_data_low**2 + rel_bkg_up**2)**0.5
-        rel_ratio_up = (rel_data_up**2 + rel_bkg_low**2)**0.5
 
         ratio_uncertainty_down = ratio * rel_ratio_low
         ratio_uncertainty_up = ratio * rel_ratio_up
@@ -544,18 +527,18 @@ class ScaleFactorProducer:
             self.set_missing_sfs_to_one(sfs)
 
     def extrapolate_missing_scale_factors(self, scale_factors, bin_edges, func, in_x, in_y):
+        result = []
         if not in_x and not in_y:
-            warn(f"Extrapolation set to false for both x and y - will just set missinf scale factors to 1.0.")
+            warn(f"Extrapolation set to false for both x and y - will just set missing scale factors to 1.0.")
             self.set_missing_sfs_to_one(scale_factors)
-            return
+            return result
         if in_x and in_y:
             info(f"Extrapolation set to true for both x and y - will just do extrapolation in x.")
-            in_y = false
         
         if isinstance(scale_factors, list):
             warn(f"extrapolation does not work for only one scale factor.")
             self.set_missing_sfs_to_one(scale_factors)
-            return
+            return result
 
         if func not in self.extrapolation_functions:
             warn(f"Requested extrapolation function {func} is not implemented. Trying just a constant function.")
@@ -568,15 +551,12 @@ class ScaleFactorProducer:
 
         # dict with depth 2
         if in_x:
-            result = []
             sub_bin_edges = bin_edges[0]
             for key, subdict in scale_factors.items():
                 if isinstance(subdict, dict):
                     result_ = self.extrapolate_scale_factors(subdict, sub_bin_edges, func)
                     scale_factors[key] = subdict
                     result.append(result_)
-            print(f"result size: {len(result)}")
-            print(f"result: {result}")
             return result
 
         result = []
@@ -592,17 +572,18 @@ class ScaleFactorProducer:
         return result
             
     def extrapolate_scale_factors(self, scale_factors, bin_edges, func):
+        hist_before = {}
+        hist_after = {}
+        extrapolate_func = {}
+        
         bins = sorted(scale_factors.keys())
         available_bins = [b for b in bins if scale_factors[b][0] is not None]
         if not available_bins:
             self.set_missing_sfs_to_one(scale_factors)
-            return
+            return hist_before, hist_after, extrapolate_func
         bin_centers = [(bin_edges[i] + bin_edges[i+1])/2 for i in range(len(bins))]
-        print(f"bin_edges: {bin_edges}")
-        print(f"scale_factors: {scale_factors}")
         y_before = {}
         # coeffs = {}
-        extrapolate_func = {}
         fit_values = {}
         y_after = {}
         for idx,category in enumerate(["nom","up","down"]):
@@ -612,7 +593,6 @@ class ScaleFactorProducer:
             valid_indices = ~np.isnan(y_before[category])
             x_fit = np.array([bin_centers[i] for i, valid in enumerate(valid_indices) if valid])
             y_fit = y_before[category][valid_indices]
-            print(f"y_before[{category}]: {y_before[category]}")
             graph = ROOT.TGraph(len(x_fit), array('d', x_fit), array('d', y_fit))
             fit_func = ROOT.TF1(f"fit_{category}", self.extrapolation_functions[func] , min(bin_centers), max(bin_centers))
             graph.Fit(fit_func, "Q")
@@ -620,7 +600,6 @@ class ScaleFactorProducer:
             fit_values[category] = np.array([fit_func.Eval(xc) for xc in bin_centers])
             y_after[category] = np.empty(len(bins))
         
-        print(f"extrapolate_func: {extrapolate_func}")
         for i, b in enumerate(bins):
             if scale_factors[b][0] is None:
                 for category in ["nom","up","down"]:
@@ -630,9 +609,7 @@ class ScaleFactorProducer:
                 for category in ["nom","up","down"]:
                     y_after[category][i] = y_before[category][i]
         
-        hist_before = {}
         hist_fit = {}
-        hist_after = {}
         nbins = len(bins)
         edges = np.array(bin_edges, dtype=float)
         for category in ["nom", "up", "down"]:
