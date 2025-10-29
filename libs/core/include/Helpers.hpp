@@ -69,6 +69,9 @@
 #include <set>
 #include <optional>
 #include <variant>
+#include <list>
+#include <unordered_map>
+#include <utility>
 
 #include "Logger.hpp"
 
@@ -188,5 +191,45 @@ double duration(T t0, T t1) {
 
 /// Returns current time
 inline std::chrono::time_point<std::chrono::steady_clock> now() { return std::chrono::steady_clock::now(); }
+
+template <class K, class V>
+class insertion_ordered_map {
+    using Node = std::pair<K, V>;
+    std::list<Node> order_;  // preserves insertion order
+    std::unordered_map<K, typename std::list<Node>::iterator> index_;
+
+public:
+    bool insert(const K& k, const V& v) {
+        if (index_.count(k)) return false;                  // no overwrite; adjust as needed
+        order_.emplace_back(k, v);
+        index_[k] = std::prev(order_.end());
+        return true;
+    }
+
+    V& operator[](const K& k) {                             // inserts default if missing
+        if (!index_.count(k)) {
+            order_.emplace_back(k, V{});
+            index_[k] = std::prev(order_.end());
+        }
+        return index_[k]->second;
+    }
+
+    typename std::list<Node>::iterator find(const K& k) {
+        auto it = index_.find(k);
+        return it == index_.end() ? order_.end() : it->second;
+    }
+
+    bool erase(const K& k) {
+        auto it = index_.find(k);
+        if (it == index_.end()) return false;
+        order_.erase(it->second);
+        index_.erase(it);
+        return true;
+    }
+
+    auto begin() { return order_.begin(); }
+    auto end()   { return order_.end();   }
+    auto size() const { return order_.size(); }
+};
 
 #endif /* Helpers_hpp */
