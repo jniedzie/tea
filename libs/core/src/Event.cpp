@@ -153,7 +153,7 @@ bool Event::IsData() {
   string weightsBranchName;
   config.GetValue("weightsBranchName", weightsBranchName);
   try {
-    float genWeight = Get(weightsBranchName);
+    Get(weightsBranchName);
   } catch (const Exception& e) {
     isData = true;
   }
