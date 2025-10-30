@@ -7,29 +7,29 @@
 using namespace std;
 
 EventProcessor::EventProcessor() {
-  auto &config = ConfigManager::GetInstance();
+  auto& config = ConfigManager::GetInstance();
 
   try {
     config.GetVector("triggerSelection", triggerNames);
-  } catch (const Exception &e) {
+  } catch (const Exception& e) {
     warn() << "Couldn't read triggerSelection from file ";
     warn() << "(which may be fine if you're not tyring to apply trigger selection)" << endl;
   }
 
   try {
     config.GetCuts(eventCuts);
-  } catch (const Exception &e) {
+  } catch (const Exception& e) {
     warn() << "Couldn't read eventCuts from config file " << endl;
   }
 
   try {
     config.GetVector("requiredFlags", requiredFlags);
-  } catch (const Exception &e) {
+  } catch (const Exception& e) {
   }
 
   try {
     config.GetMap("goldenJson", goldenJson);
-  } catch (const Exception &e) {
+  } catch (const Exception& e) {
   }
 }
 
@@ -43,7 +43,7 @@ bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
 
   if (goldenJson.find(run) == goldenJson.end()) return false;
 
-  for (auto &lumiRange : goldenJson[run]) {
+  for (auto& lumiRange : goldenJson[run]) {
     if (lumi >= lumiRange[0] && lumi <= lumiRange[1]) {
       return true;
     }
@@ -53,11 +53,11 @@ bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
 
 bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
   bool passes = true;
-  for (auto &triggerName : triggerNames) {
+  for (auto& triggerName : triggerNames) {
     passes = false;
     try {
       passes = event->Get(triggerName);
-    } catch (Exception &) {
+    } catch (Exception&) {
       if (find(triggerWarningsPrinted.begin(), triggerWarningsPrinted.end(), triggerName) == triggerWarningsPrinted.end()) {
         warn() << "Trigger not present: " << triggerName << endl;
         triggerWarningsPrinted.push_back(triggerName);
@@ -77,17 +77,19 @@ bool EventProcessor::PassesMetFilters(const shared_ptr<Event> event) {
 }
 
 void EventProcessor::RegisterCuts(shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto &[cutName, cutValues] : eventCuts) {
+  for (auto& [cutName, cutValues] : eventCuts) {
     cutFlowManager->RegisterCut(cutName);
   }
 }
 
 bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto &[cutName, cutValues] : eventCuts) {
+  for (auto& [cutName, cutValues] : eventCuts) {
     // TODO: this should be more generic, not only for MET_pt
     if (cutName == "MET_pt") {
       float metPt = event->Get("MET_pt");
       if (!inRange(metPt, cutValues)) return false;
+    } else if (cutName == "applyHEMveto") {
+      if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
     } else {
       if (!inRange(event->GetCollection(cutName.substr(1))->size(), cutValues)) return false;
     }

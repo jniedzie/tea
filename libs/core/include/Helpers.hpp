@@ -9,11 +9,28 @@
 
 #include "Math/GenVector/LorentzVector.h"
 #include "Math/GenVector/PxPyPzE4D.h"
+#include "TApplication.h"
+#include "TBox.h"
 #include "TBranchElement.h"
 #include "TCanvas.h"
+#include "TEllipse.h"
 #include "TEnv.h"
+#include "TEveGeoNode.h"
+#include "TEveLine.h"
+#include "TEveManager.h"
+#include "TEveProjectionAxes.h"
+#include "TEveProjectionManager.h"
+#include "TEveViewer.h"
 #include "TF1.h"
 #include "TFile.h"
+#include "TGLViewer.h"
+#include "TGeoManager.h"
+#include "TGeoMaterial.h"
+#include "TGeoMedium.h"
+#include "TGeoSphere.h"
+#include "TGeoTorus.h"
+#include "TGeoTube.h"
+#include "TGeoVolume.h"
 #include "TGraph.h"
 #include "TGraphAsymmErrors.h"
 #include "TGraphPolar.h"
@@ -24,54 +41,37 @@
 #include "TLegend.h"
 #include "TLine.h"
 #include "TLorentzVector.h"
-#include "TStyle.h"
-#include "TTree.h"
-#include "TEllipse.h"
-#include "TBox.h"
 #include "TMath.h"
-#include "TPolyLine.h"
-#include "TROOT.h"
-#include "TSystem.h"
-#include "TVector2.h"
-#include "TRandom.h"
 #include "TMatrixD.h"
-#include "TVectorD.h"
-#include "TRotation.h"
-#include "TView3D.h"
-#include "TView.h"
+#include "TPolyLine.h"
 #include "TPolyLine3D.h"
-#include "TApplication.h"
-#include "TGeoManager.h"
-#include "TGeoMaterial.h"
-#include "TGeoMedium.h"
-#include "TGeoVolume.h"
-#include "TGeoTube.h"
-#include "TGeoSphere.h"
-#include "TEveManager.h"
-#include "TEveGeoNode.h"
-#include "TEveLine.h"
-#include "TEveViewer.h"
-#include "TEveProjectionManager.h"
-#include "TEveProjectionAxes.h"
-#include "TGLViewer.h"
-#include "TGeoTorus.h"
+#include "TROOT.h"
+#include "TRandom.h"
+#include "TRotation.h"
+#include "TStyle.h"
+#include "TSystem.h"
+#include "TTree.h"
+#include "TVector2.h"
+#include "TVectorD.h"
+#include "TView.h"
+#include "TView3D.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 
 #include <any>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <list>
+#include <optional>
 #include <random>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <string>
-#include <fstream>
-#include <set>
-#include <optional>
-#include <variant>
-#include <list>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 
 #include "Logger.hpp"
 
@@ -79,12 +79,12 @@ const int maxCollectionElements = 9999;
 const int maxNdaughters = 5;  // Number of daughters that will be considered for HEP MC particles.
                               // Heavily affects computing time. Max is 100.
 
-inline std::vector<std::string> getListOfTrees(TFile *file) {
+inline std::vector<std::string> getListOfTrees(TFile* file) {
   auto keys = file->GetListOfKeys();
   std::vector<std::string> trees;
 
   for (auto i : *keys) {
-    auto key = (TKey *)i;
+    auto key = (TKey*)i;
     if (strcmp(key->GetClassName(), "TTree") == 0) trees.push_back(key->GetName());
   }
   return trees;
@@ -104,6 +104,13 @@ inline int randInt(int min, int max) {
   std::random_device rd;   // Seed generator
   std::mt19937 gen(rd());  // Mersenne Twister engine
   std::uniform_int_distribution<int> dist(min, max);
+  return dist(gen);
+}
+
+inline float randFloat(float min = 0.0, float max = 1.0) {
+  std::random_device rd;   // Seed generator
+  std::mt19937 gen(rd());  // Mersenne Twister engine
+  std::uniform_real_distribution<float> dist(min, max);
   return dist(gen);
 }
 
@@ -130,17 +137,17 @@ struct ExtraCollection {
   std::vector<std::string> inputCollections;
   std::map<std::string, std::pair<float, float>> allCuts;
   std::map<std::string, int> flags;
-  
+
   void Print() {
     info() << "Input collections: " << std::endl;
     for (std::string name : inputCollections) info() << name << std::endl;
 
     info() << "All cuts: " << std::endl;
-    for (auto &[name, cuts] : allCuts) {
+    for (auto& [name, cuts] : allCuts) {
       info() << "\t" << name << ": " << cuts.first << ", " << cuts.second << std::endl;
     }
     info() << "Flags: " << std::endl;
-    for (auto &[name, flag] : flags) {
+    for (auto& [name, flag] : flags) {
       info() << "\t" << name << ": " << flag << std::endl;
     }
   }
@@ -153,9 +160,9 @@ struct HistogramParams {
   std::string collection, variable, directory;
   int nBins;
   float min, max;
-  void Print() { 
+  void Print() {
     info() << "Histogram: " << directory << "/" << collection << "/" << variable;
-    info() << "(" << nBins << ", " << min << ", " << max << ")" << std::endl; 
+    info() << "(" << nBins << ", " << min << ", " << max << ")" << std::endl;
   }
 };
 
@@ -168,8 +175,8 @@ struct HistogramParams2D {
   std::string variable, directory;
   int nBinsX, nBinsY;
   float minX, maxX, minY, maxY;
-  void Print() { 
-    info() << "Histogram: " << directory << "/" << variable; 
+  void Print() {
+    info() << "Histogram: " << directory << "/" << variable;
     info() << "(" << nBinsX << ", " << minX << ", " << maxX;
     info() << "," << nBinsY << ", " << minY << ", " << maxY << ")" << std::endl;
   }
@@ -194,42 +201,42 @@ inline std::chrono::time_point<std::chrono::steady_clock> now() { return std::ch
 
 template <class K, class V>
 class insertion_ordered_map {
-    using Node = std::pair<K, V>;
-    std::list<Node> order_;  // preserves insertion order
-    std::unordered_map<K, typename std::list<Node>::iterator> index_;
+  using Node = std::pair<K, V>;
+  std::list<Node> order_;  // preserves insertion order
+  std::unordered_map<K, typename std::list<Node>::iterator> index_;
 
-public:
-    bool insert(const K& k, const V& v) {
-        if (index_.count(k)) return false;                  // no overwrite; adjust as needed
-        order_.emplace_back(k, v);
-        index_[k] = std::prev(order_.end());
-        return true;
+ public:
+  bool insert(const K& k, const V& v) {
+    if (index_.count(k)) return false;  // no overwrite; adjust as needed
+    order_.emplace_back(k, v);
+    index_[k] = std::prev(order_.end());
+    return true;
+  }
+
+  V& operator[](const K& k) {  // inserts default if missing
+    if (!index_.count(k)) {
+      order_.emplace_back(k, V{});
+      index_[k] = std::prev(order_.end());
     }
+    return index_[k]->second;
+  }
 
-    V& operator[](const K& k) {                             // inserts default if missing
-        if (!index_.count(k)) {
-            order_.emplace_back(k, V{});
-            index_[k] = std::prev(order_.end());
-        }
-        return index_[k]->second;
-    }
+  typename std::list<Node>::iterator find(const K& k) {
+    auto it = index_.find(k);
+    return it == index_.end() ? order_.end() : it->second;
+  }
 
-    typename std::list<Node>::iterator find(const K& k) {
-        auto it = index_.find(k);
-        return it == index_.end() ? order_.end() : it->second;
-    }
+  bool erase(const K& k) {
+    auto it = index_.find(k);
+    if (it == index_.end()) return false;
+    order_.erase(it->second);
+    index_.erase(it);
+    return true;
+  }
 
-    bool erase(const K& k) {
-        auto it = index_.find(k);
-        if (it == index_.end()) return false;
-        order_.erase(it->second);
-        index_.erase(it);
-        return true;
-    }
-
-    auto begin() { return order_.begin(); }
-    auto end()   { return order_.end();   }
-    auto size() const { return order_.size(); }
+  auto begin() { return order_.begin(); }
+  auto end() { return order_.end(); }
+  auto size() const { return order_.size(); }
 };
 
 #endif /* Helpers_hpp */

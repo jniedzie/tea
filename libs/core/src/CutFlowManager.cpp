@@ -223,24 +223,24 @@ void CutFlowManager::Print(string collectionName) {
   }
 
   cout << "\n\033[1;36m"  // Bright cyan
-       << "╔══════════════════════════════════════════════════════════╗\n"
-       << "║                       Cut Flow Table                     ║\n"
-       << "╠════════════════════════╤══════════════════╤══════════════╣\n"
-       << "║ " << setw(22) << left << "Cut name"
-       << " │ " << setw(16) << right << "Gen-weights sum"
-       << " │ " << setw(12) << right << "Raw events" << " ║\n";
-  cout << "╠════════════════════════╪══════════════════╪══════════════╣\n";
+       << "╔═════════════════════════════════════════════════════════════════════════╗\n"
+       << "║                               Cut Flow Table                            ║\n"
+       << "╠═════════════════════════════╤═══════════════════════╤═══════════════════╣\n"
+       << "║ " << setw(27) << left << "Cut name"
+       << " │ " << setw(21) << right << "Gen-weights sum"
+       << " │ " << setw(17) << right << "Raw events" << " ║\n";
+  cout << "╠═════════════════════════════╪═══════════════════════╪═══════════════════╣\n";
 
   for (auto &[index, values] : sortedWeightsAfterCuts) {
     string cutName = get<0>(values);
     float genWeight = get<1>(values);
     float rawEvents = get<1>(sortedRawEventsAfterCuts[index]);
-    cout << "║ " << setw(22) << left << cutName
-         << " │ " << setw(16) << right << genWeight
-         << " │ " << setw(12) << right << rawEvents << " ║\n";
+    cout << "║ " << setw(27) << left << cutName
+         << " │ " << setw(21) << right << genWeight
+         << " │ " << setw(17) << right << rawEvents << " ║\n";
   }
 
-  cout << "╚════════════════════════╧══════════════════╧══════════════╝\033[0m\n\n";
+  cout << "╚═════════════════════════════╧═══════════════════════╧═══════════════════╝\033[0m\n\n";
 }
 
 bool CutFlowManager::isEmpty(string collectionName) {

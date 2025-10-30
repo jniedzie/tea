@@ -37,6 +37,12 @@ class PhysicsObject {
     return Multitype(this, branchName);
   }
 
+  inline TLorentzVector GetFourVector() {
+    TLorentzVector vec;
+    vec.SetPtEtaPhiM(GetAs<float>("pt"), GetAs<float>("eta"), GetAs<float>("phi"), GetAs<float>("mass"));
+    return vec;
+  }
+
   template <typename T>
   T GetAs(std::string branchName) {
     if (defaultCollectionsTypes.count(branchName)) {

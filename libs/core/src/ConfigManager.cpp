@@ -677,3 +677,9 @@ void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
     cuts.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
   }
 }
+
+string ConfigManager::GetYear() {
+  string year;
+  GetValue<string>("year", year);
+  return year;
+}
