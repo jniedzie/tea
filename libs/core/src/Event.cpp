@@ -148,7 +148,7 @@ bool Event::PassesHEMveto(float affectedFraction) {
 }
 
 bool Event::IsData() {
-  // Test 1: gen wights branch only for MC
+  // Test 1: gen weights branch only for MC
   bool isData = false;
   string weightsBranchName;
   config.GetValue("weightsBranchName", weightsBranchName);
