@@ -107,6 +107,13 @@ inline int randInt(int min, int max) {
   return dist(gen);
 }
 
+inline float randFloat(float min=0.0, float max=1.0) {
+  std::random_device rd;   // Seed generator
+  std::mt19937 gen(rd());  // Mersenne Twister engine
+  std::uniform_real_distribution<float> dist(min, max);
+  return dist(gen);
+}
+
 inline bool inRange(float value, std::pair<float, float> range) { return value >= range.first && value <= range.second; }
 
 inline void makeParentDirectories(std::string filePath) {

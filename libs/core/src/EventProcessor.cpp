@@ -89,7 +89,7 @@ bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<C
       float metPt = event->Get("MET_pt");
       if (!inRange(metPt, cutValues)) return false;
     } else if (cutName == "applyHEMveto") {
-      if (cutValues.first > 0.5 && !event->PassesHEMveto()) return false;
+      if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
     } else {
       if (!inRange(event->GetCollection(cutName.substr(1))->size(), cutValues)) return false;
     }

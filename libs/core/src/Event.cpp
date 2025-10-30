@@ -58,8 +58,7 @@ void Event::AddExtraCollections() {
 
       try {
         inputCollection = GetCollection(inputCollectionName);
-      }
-      catch(const Exception &e){
+      } catch (const Exception& e) {
         error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
         continue;
       }
@@ -86,15 +85,23 @@ void Event::AddExtraCollections() {
   }
 }
 
-bool Event::PassesHEMveto() {
+bool Event::PassesHEMveto(float affectedFraction) {
+  // Implemented based on the recommendations from:
   // https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654?u=gagarwal
 
   if (config.GetYear() != "2018") return true;  // HEM veto only applies to 2018 data/MC
 
-  unsigned runNumber = Get("run");
-  if (runNumber < 319077) {
-    warn() << "Run number less than 319077 found in 2018 data/MC. HEM veto will not be applied for this event." << endl;
-    return true;  // HEM veto only applies to runs >= 319077
+  if (!IsData()) {
+    float randNum = randFloat();
+    if (randNum > affectedFraction) {
+      return true;
+    }
+  } else {
+    unsigned runNumber = Get("run");
+    if (runNumber < 319077) {
+      warn() << "Run number less than 319077 found in 2018 data/MC. HEM veto will not be applied for this event." << endl;
+      return true;  // HEM veto only applies to runs >= 319077
+    }
   }
 
   auto jets = GetCollection("Jet");
@@ -136,6 +143,33 @@ bool Event::PassesHEMveto() {
     if (jetVector.Eta() >= -3.0 && jetVector.Eta() <= -1.3 && jetVector.Phi() >= -1.57 && jetVector.Phi() <= -0.87) {
       return false;
     }
+  }
+  return true;
+}
+
+bool Event::IsData() {
+  // Test 1: gen wights branch only for MC
+  bool isData = false;
+  string weightsBranchName;
+  config.GetValue("weightsBranchName", weightsBranchName);
+  try {
+    float genWeight = Get(weightsBranchName);
+  } catch (const Exception& e) {
+    isData = true;
+  }
+
+  // Test 2: run run = 1 for MC
+  unsigned run = Get("run");
+  if (run == 1) {
+    if (isData) {
+      fatal() << "Conflicting Event::IsData results.";
+      exit(0);
+    }
+    return false;
+  }
+  if (!isData) {
+    fatal() << "Conflicting Event::IsData results.";
+    exit(0);
   }
   return true;
 }

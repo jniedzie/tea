@@ -204,13 +204,13 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
   bool isData = false;
   if (!weightsBranchName.empty()) {
     try {
-      float genWeight = event->Get(weightsBranchName);
+      event->Get(weightsBranchName);
     } catch (const Exception &e) {
       isData = true;
     }
   }
   // Test 2: run run = 1 for MC
-  int run = event->GetAs<int>("run");
+  unsigned run = event->Get("run");
   if (run == 1) {
     if (isData) {
       fatal() << "Conflicting NanoEventProcessor::IsDataEvent results.";

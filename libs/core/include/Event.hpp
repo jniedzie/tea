@@ -135,7 +135,7 @@ class Event {
   UShort_t* GetUshortVector(std::string branchName) { return valuesUshortVector.at(branchName); }
   Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
 
-  bool PassesHEMveto();
+  bool PassesHEMveto(float affectedFraction);
 
   private:
   ConfigManager& config = ConfigManager::GetInstance();
@@ -190,6 +190,7 @@ class Event {
   bool tryGet(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
 
   bool checkCuts(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
+  bool IsData();
 };
 
 #endif /* Event_hpp */
