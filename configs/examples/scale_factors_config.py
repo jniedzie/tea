@@ -130,7 +130,7 @@ def get_scale_factors(year):
 
       # Dimuon Eff. SFs from tt+JPsi CR - WIP
       # "dimuonEff": {
-      #     # "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}.json", 
+      #     # "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}.json",
       #     "type": "dimuonEff",
       #     "systematic": "nominal",
       #     "variations": "up,down",
@@ -152,16 +152,22 @@ def get_scale_factors(year):
           "variations": "up_syst,down_syst",
       },
       "dsamuonID_cosmic": {
-          "path": f"../tea/DSAMuonSF/id_cosmic/NUM_DisplacedID_DEN_dSAMuons_absdxy.json.gz",
+          "path": "../tea/DSAMuonSF/id_cosmic/NUM_DisplacedID_DEN_dSAMuons_absdxy.json.gz",
           "type": "NUM_DisplacedID_DEN_dSAMuons_absdxy",
           "systematic": "nominal",
           "variations": "up_syst,down_syst",
       },
       "dsamuonReco_cosmic": {
-          "path": f"../tea/DSAMuonSF/reco_cosmic/NUM_RECO_DEN_dSAMuons.json.gz",
+          "path": "../tea/DSAMuonSF/reco_cosmic/NUM_RECO_DEN_dSAMuons.json.gz",
           "type": "NUM_RECO_DEN_dSAMuons",
           "systematic": "nominal",
           "variations": "up,down",
+      },
+
+      # L1 Pre-firing weights
+      "L1PreFiringWeight": {
+          "systematic": "Nom",
+          "variations": "Up,Dn",
       },
   }
   if run2:  # No Run3 PUjetID SF yet
@@ -193,6 +199,6 @@ def get_scale_factors(year):
         "type": f"{jecType}",
         "level": "L1L2L3Res",
         "algo": f"{jecAlgo}",
-        "uncertainties": f"AbsoluteMPFBias,AbsoluteScale,AbsoluteStat,FlavorQCD,Fragmentation,PileUpDataMC,PileUpPtBB,PileUpPtEC1,PileUpPtEC2,PileUpPtHF,PileUpPtRef,RelativeFSR,RelativeJEREC1,RelativeJEREC2,RelativeJERHF,RelativePtBB,RelativePtEC1,RelativePtEC2,RelativePtHF,RelativeBal,RelativeSample,RelativeStatEC,RelativeStatFSR,RelativeStatHF,SinglePionECAL,SinglePionHCAL,TimePtEta",
+        "uncertainties": "AbsoluteMPFBias,AbsoluteScale,AbsoluteStat,FlavorQCD,Fragmentation,PileUpDataMC,PileUpPtBB,PileUpPtEC1,PileUpPtEC2,PileUpPtHF,PileUpPtRef,RelativeFSR,RelativeJEREC1,RelativeJEREC2,RelativeJERHF,RelativePtBB,RelativePtEC1,RelativePtEC2,RelativePtHF,RelativeBal,RelativeSample,RelativeStatEC,RelativeStatFSR,RelativeStatHF,SinglePionECAL,SinglePionHCAL,TimePtEta",
     }
   return scaleFactors
