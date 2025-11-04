@@ -49,6 +49,8 @@ void ScaleFactorsManager::ReadScaleFactors() {
   config.GetMap("scaleFactors", scaleFactors);
 
   for (auto &[name, values] : scaleFactors) {
+    if (!values.count("path") || !values.count("type")) continue;
+
     auto cset = correction::CorrectionSet::from_file(values["path"]);
     map<string, string> extraArgs;
 
