@@ -27,13 +27,13 @@ Event::Event() {
                        1.305,  1.392,  1.479,  1.566,  1.653,  1.74,   1.83,   1.93,   2.043,  2.172,  2.322,  2.5,    2.65,   2.853,
                        2.964,  3.139,  3.314,  3.489,  3.664,  3.839,  4.013,  4.191,  4.363,  4.538,  4.716,  4.889,  5.191};
 
-  jetMapNoVeto = make_unique<TH2D>("jetMapNoVeto", "jetMapNoVeto", 82, xedges, 72, -3.1415927, 3.1415927);
-  jetMapWithVeto = make_unique<TH2D>("jetMapWithVeto", "jetMapWithVeto", 82, xedges, 72, -3.1415927, 3.1415927);
+  jetMapNoVeto = make_unique<TH2D>("jetMapNoVeto", "jetMapNoVeto", 82, xedges, 72, -TMath::Pi(), TMath::Pi());
+  jetMapWithVeto = make_unique<TH2D>("jetMapWithVeto", "jetMapWithVeto", 82, xedges, 72, -TMath::Pi(), TMath::Pi());
 }
 
 Event::~Event() {
-  if (jetMapNoVeto->GetEntries() != 0) jetMapNoVeto->SaveAs("../jetMapNoVeto.root");
-  if (jetMapWithVeto->GetEntries() != 0) jetMapWithVeto->SaveAs("../jetMapWithVeto.root");
+  if (jetMapNoVeto->GetEntries() != 0) jetMapNoVeto->SaveAs("jetMapNoVeto.root");
+  if (jetMapWithVeto->GetEntries() != 0) jetMapWithVeto->SaveAs("jetMapWithVeto.root");
 }
 
 void Event::Reset() { extraCollections.clear(); }
@@ -167,7 +167,6 @@ bool Event::PassesJetVetoMaps(bool saveHistograms) {
   if (!scaleFactorsManager.IsJetVetoMapDefined("jetVetoMaps_" + year)) return true;
 
   auto jets = GetCollection("Jet");
-  auto muons = GetCollection("Muon");
 
   for (auto& jet : *jets) {
     // jet pT > 15 GeV
