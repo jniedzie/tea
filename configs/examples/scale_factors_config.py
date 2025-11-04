@@ -129,12 +129,12 @@ def get_scale_factors(year):
       },
 
       # Dimuon Eff. SFs from tt+JPsi CR - WIP
-      # "dimuonEff": {
-      #     # "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}.json", 
-      #     "type": "dimuonEff",
-      #     "systematic": "nominal",
-      #     "variations": "up,down",
-      # },
+      "dimuonEff": {
+          "path": f"../tea/data/dimuonEffSFs/DSAChi2DCA1p5/dimuonEffSFs{year}_invMassJPsiBin_DSAChi2DCA1p5.json", 
+          "type": "dimuonEff",
+          "systematic": "nominal",
+          "variations": "up,down",
+      },
 
       # Muon trigger
       "muonTrigger": {

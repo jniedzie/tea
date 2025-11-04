@@ -197,6 +197,11 @@ def main():
             plot_hist1D(ratio_unc_hist_up, f"Data / MC Scale Factor Uncertainty up {sfBin}", f"sf_ratio_uncertainty_up_{sfBin}_{config.year}", config.correction_inputs[0]["name"])
             plot_hist1D(ratio_unc_hist_down, f"Data / MC Scale Factor Uncertainty down {sfBin}", f"sf_ratio_uncertainty_down_{sfBin}_{config.year}", config.correction_inputs[0]["name"])
         print(f"scale_factors: {scale_factors}")
+        print(f"ratios and uncertainties:")
+        for category, sfs in scale_factors.items():
+            unc_up = sfs[1] - sfs[0]
+            unc_down = sfs[0] - sfs[2]
+            print(f"{category}: {sfs[0]:.2f} + {unc_up:.2f} - {unc_down:.2f}")
 
     # One 2D Histogram defined
     if config.histogram2D:
