@@ -169,6 +169,24 @@ def get_scale_factors(year):
           "systematic": "Nom",
           "variations": "Up,Dn",
       },
+
+      # Jet veto maps (only apply to Run 3)
+      "jetVetoMaps_2022preEE": {
+          "path": "../tea/jsonPOG/POG/JME/2022_Summer22/jetvetomaps.json.gz",
+          "type": "Summer22_23Sep2023_RunCD_V1",
+      },
+      "jetVetoMaps_2022postEE": {
+          "path": "../tea/jsonPOG/POG/JME/2022_Summer22EE/jetvetomaps.json.gz",
+          "type": "Summer22EE_23Sep2023_RunEFG_V1",
+      },
+      "jetVetoMaps_2023preBPix": {
+          "path": "../tea/jsonPOG/POG/JME/2023_Summer23/jetvetomaps.json.gz",
+          "type": "Summer23Prompt23_RunC_V1",
+      },
+      "jetVetoMaps_2023postBPix": {
+          "path": "../tea/jsonPOG/POG/JME/2023_Summer23BPix/jetvetomaps.json.gz",
+          "type": "Summer23BPixPrompt23_RunD_V1",
+      },
   }
   if run2:  # No Run3 PUjetID SF yet
     scaleFactors["PUjetIDtight"] = {

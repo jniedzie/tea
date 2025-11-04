@@ -10,6 +10,7 @@
 #include "Logger.hpp"
 #include "Multitype.hpp"
 #include "PhysicsObject.hpp"
+#include "ScaleFactorsManager.hpp"
 
 class Event {
  public:
@@ -18,7 +19,7 @@ class Event {
 
   void Reset();
 
-  inline auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
+  inline auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
                   int line = __builtin_LINE()) {
     if (valuesTypes.count(branchName) == 0) {
       std::string message = "\nTrying to access incorrect event-level branch: " + branchName;
@@ -72,37 +73,37 @@ class Event {
       Float_t value = Get(branchName);
       defaultCollectionsTypes[branchName] = "Float_t";
       return value;
-    } catch (BadTypeException &e) {
+    } catch (BadTypeException& e) {
       try {
         Int_t value = Get(branchName);
         defaultCollectionsTypes[branchName] = "Int_t";
         return value;
-      } catch (BadTypeException &e) {
+      } catch (BadTypeException& e) {
         try {
           UChar_t value = Get(branchName);
           defaultCollectionsTypes[branchName] = "UChar_t";
           return value;
-        } catch (BadTypeException &e) {
+        } catch (BadTypeException& e) {
           try {
             UShort_t value = Get(branchName);
             defaultCollectionsTypes[branchName] = "UShort_t";
             return value;
-          } catch (BadTypeException &e) {
+          } catch (BadTypeException& e) {
             try {
               Short_t value = Get(branchName);
               defaultCollectionsTypes[branchName] = "Short_t";
               return value;
-            } catch (BadTypeException &e) {
+            } catch (BadTypeException& e) {
               try {
                 UInt_t value = Get(branchName);
                 defaultCollectionsTypes[branchName] = "UInt_t";
                 return value;
-              } catch (BadTypeException &e) {
+              } catch (BadTypeException& e) {
                 try {
                   Bool_t value = Get(branchName);
                   defaultCollectionsTypes[branchName] = "Bool_t";
                   return value;
-                } catch (BadTypeException &e) {
+                } catch (BadTypeException& e) {
                   error() << "Couldn't get value for branch " << branchName << std::endl;
                 }
               }
@@ -124,8 +125,10 @@ class Event {
   void AddExtraCollections();
   void AddCollection(std::string name, std::shared_ptr<PhysicsObjects> collection) { extraCollections.insert({name, collection}); }
 
-  const insertion_ordered_map<std::string, ExtraCollection>& GetExtraCollectionsDescriptions() const { return extraCollectionsDescriptions; }
- 
+  const insertion_ordered_map<std::string, ExtraCollection>& GetExtraCollectionsDescriptions() const {
+    return extraCollectionsDescriptions;
+  }
+
   Int_t* GetIntVector(std::string branchName) { return valuesIntVector.at(branchName); }
   Bool_t* GetBoolVector(std::string branchName) { return valuesBoolVector.at(branchName); }
   Float_t* GetFloatVector(std::string branchName) { return valuesFloatVector.at(branchName); }
@@ -136,9 +139,11 @@ class Event {
   Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
 
   bool PassesHEMveto(float affectedFraction);
+  bool PassesJetVetoMaps(bool saveHistograms);
 
-  private:
+ private:
   ConfigManager& config = ConfigManager::GetInstance();
+  ScaleFactorsManager& scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
@@ -171,9 +176,9 @@ class Event {
   std::map<std::string, UShort_t[maxCollectionElements]> valuesUshortVector;
   std::map<std::string, Short_t[maxCollectionElements]> valuesShortVector;
 
-  std::map<std::string, std::vector<float> *> valuesStdFloatVector;
-  std::map<std::string, std::vector<int> *> valuesStdIntVector;
-  std::map<std::string, std::vector<unsigned int> *> valuesStdUintVector;
+  std::map<std::string, std::vector<float>*> valuesStdFloatVector;
+  std::map<std::string, std::vector<int>*> valuesStdIntVector;
+  std::map<std::string, std::vector<unsigned int>*> valuesStdUintVector;
 
   std::map<std::string, std::shared_ptr<PhysicsObjects>> collections;
   std::map<std::string, std::shared_ptr<PhysicsObjects>> extraCollections;
@@ -181,6 +186,7 @@ class Event {
   bool hasExtraCollections = true;
   insertion_ordered_map<std::string, ExtraCollection> extraCollectionsDescriptions;
   std::map<std::string, std::string> defaultCollectionsTypes;
+  std::map<std::string, std::pair<unsigned, unsigned>> runRangesPerEra;
 
   friend class EventReader;
   template <typename T>
@@ -191,6 +197,8 @@ class Event {
 
   bool checkCuts(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
   bool IsData();
+
+  std::unique_ptr<TH2D> jetMapNoVeto, jetMapWithVeto;
 };
 
 #endif /* Event_hpp */

@@ -43,7 +43,9 @@ class ScaleFactorsManager {
 
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
   std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
-
+  
+  bool IsJetVetoMapDefined(std::string name);
+  bool IsJetInBadRegion(std::string name, float eta, float phi);
 
   void ReadJetEnergyCorrections();
   bool ShouldApplyJetEnergyCorrections() {
