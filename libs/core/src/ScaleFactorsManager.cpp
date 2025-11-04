@@ -452,3 +452,17 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
 
   return scaleFactors;
 }
+
+bool ScaleFactorsManager::IsJetVetoMapDefined(string name){
+  return (corrections.find(name) != corrections.end());
+}
+
+bool ScaleFactorsManager::IsJetInBadRegion(string name, float eta, float phi) {
+  if (!IsJetVetoMapDefined(name)) {
+    error() << "Requested jet veto maps which was not defined in the scale_factors_config: " << name << endl;
+    return false;
+  }
+
+  float value = TryToEvaluate(corrections[name], {"jetvetomap", eta, phi});
+  return (value != 0.0);
+}

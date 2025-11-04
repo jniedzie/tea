@@ -6,7 +6,6 @@
 
 #include "EventProcessor.hpp"
 #include "Helpers.hpp"
-#include "ScaleFactorsManager.hpp"
 
 using namespace std;
 
@@ -20,9 +19,22 @@ Event::Event() {
   } catch (const Exception& e) {
     hasExtraCollections = false;
   }
+
+  double xedges[83] = {-5.191, -4.889, -4.716, -4.538, -4.363, -4.191, -4.013, -3.839, -3.664, -3.489, -3.314, -3.139, -2.964, -2.853,
+                       -2.65,  -2.5,   -2.322, -2.172, -2.043, -1.93,  -1.83,  -1.74,  -1.653, -1.566, -1.479, -1.392, -1.305, -1.218,
+                       -1.131, -1.044, -0.957, -0.879, -0.783, -0.696, -0.609, -0.522, -0.435, -0.348, -0.261, -0.174, -0.087, 0,
+                       0.087,  0.174,  0.261,  0.348,  0.435,  0.522,  0.609,  0.696,  0.783,  0.879,  0.957,  1.044,  1.131,  1.218,
+                       1.305,  1.392,  1.479,  1.566,  1.653,  1.74,   1.83,   1.93,   2.043,  2.172,  2.322,  2.5,    2.65,   2.853,
+                       2.964,  3.139,  3.314,  3.489,  3.664,  3.839,  4.013,  4.191,  4.363,  4.538,  4.716,  4.889,  5.191};
+
+  jetMapNoVeto = make_unique<TH2D>("jetMapNoVeto", "jetMapNoVeto", 82, xedges, 72, -TMath::Pi(), TMath::Pi());
+  jetMapWithVeto = make_unique<TH2D>("jetMapWithVeto", "jetMapWithVeto", 82, xedges, 72, -TMath::Pi(), TMath::Pi());
 }
 
-Event::~Event() {}
+Event::~Event() {
+  if (jetMapNoVeto->GetEntries() != 0) jetMapNoVeto->SaveAs("jetMapNoVeto.root");
+  if (jetMapWithVeto->GetEntries() != 0) jetMapWithVeto->SaveAs("jetMapWithVeto.root");
+}
 
 void Event::Reset() { extraCollections.clear(); }
 
@@ -143,6 +155,39 @@ bool Event::PassesHEMveto(float affectedFraction) {
     if (jetVector.Eta() >= -3.0 && jetVector.Eta() <= -1.3 && jetVector.Phi() >= -1.57 && jetVector.Phi() <= -0.87) {
       return false;
     }
+  }
+  return true;
+}
+
+bool Event::PassesJetVetoMaps(bool saveHistograms) {
+  // Implemented based on the recommendations from:
+  // https://cms-jerc.web.cern.ch/Recommendations/#jet-veto-maps
+
+  string year = config.GetYear();
+  if (!scaleFactorsManager.IsJetVetoMapDefined("jetVetoMaps_" + year)) return true;
+
+  auto jets = GetCollection("Jet");
+
+  for (auto& jet : *jets) {
+    // jet pT > 15 GeV
+    float jetPt = jet->Get("pt");
+    if (jetPt < 15) continue;
+
+    // tightLepVeto jet ID
+    unsigned char jetID = jet->Get("jetId");
+    bool passesID = (jetID & 0b100);
+    if (!passesID) continue;
+
+    // (jet charged EM fraction + jet neutral EM fraction) < 0.9
+    float jetEmEF = jet->GetAs<float>("chEmEF") + jet->GetAs<float>("neEmEF");
+    if (jetEmEF >= 0.9) continue;
+
+    float jetEta = jet->Get("eta");
+    float jetPhi = jet->Get("phi");
+
+    if (saveHistograms) jetMapNoVeto->Fill(jetEta, jetPhi);
+    if (scaleFactorsManager.IsJetInBadRegion("jetVetoMaps_" + year, jetEta, jetPhi)) return false;
+    if (saveHistograms) jetMapWithVeto->Fill(jetEta, jetPhi);
   }
   return true;
 }
