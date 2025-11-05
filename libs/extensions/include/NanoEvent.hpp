@@ -83,7 +83,7 @@ class NanoEvent {
   std::shared_ptr<NanoDimuonVertex> GetBestDimuonVertex();
 
   bool PassesHEMveto(float affectedFraction);
-  bool PassesJetVetoMaps(bool saveHistograms);
+  bool PassesJetVetoMaps();
 
  private:
   ConfigManager& config = ConfigManager::GetInstance();
@@ -91,8 +91,6 @@ class NanoEvent {
 
   std::shared_ptr<Event> event;
   std::map<std::string, float> muonTriggerSF;
-
-  std::unique_ptr<TH2D> jetMapNoVeto, jetMapWithVeto;
 
   bool IsData();
 };
