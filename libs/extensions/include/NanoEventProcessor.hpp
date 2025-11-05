@@ -9,10 +9,13 @@
 #include "ExtensionsHelpers.hpp"
 #include "EventProcessor.hpp"
 #include "NanoMuon.hpp" 
+#include "CutFlowManager.hpp"
 
 class NanoEventProcessor {
  public:
   NanoEventProcessor();
+
+  bool PassesEventCuts(const std::shared_ptr<NanoEvent> event, std::shared_ptr<CutFlowManager> cutFlowManager);
 
   float GetGenWeight(const std::shared_ptr<NanoEvent> event);
   std::map<std::string, float> GetL1PreFiringWeight(const std::shared_ptr<NanoEvent> event, std::string name);
@@ -31,6 +34,7 @@ class NanoEventProcessor {
 
  private:
  std::unique_ptr<EventProcessor> eventProcessor;
+ std::vector<std::pair<std::string, std::pair<float, float>>> eventCuts;
  
  std::string weightsBranchName;
  std::string year;
