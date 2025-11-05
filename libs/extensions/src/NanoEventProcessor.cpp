@@ -21,6 +21,11 @@ NanoEventProcessor::NanoEventProcessor() {
     warn() << "Year not found in the config file! Will assume 2018." << endl;
     year = "2018";
   }
+  try {
+    config.GetCuts(eventCuts);
+  } catch (const Exception& e) {
+    warn() << "Couldn't read eventCuts from config file " << endl;
+  }
 }
 
 float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
@@ -263,4 +268,25 @@ float NanoEventProcessor::PropagateMET(const shared_ptr<NanoEvent> event, float 
   float newMetPx = metPt * cos(metPhi) - totalPxDifference;
   float newMetPy = metPt * sin(metPhi) - totalPyDifference;
   return sqrt(newMetPx * newMetPx + newMetPy * newMetPy);
+}
+
+bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shared_ptr<CutFlowManager> cutFlowManager) {
+  if (!eventProcessor->PassesEventCuts(event->GetEvent(), cutFlowManager)) return false;
+
+  for (auto& [cutName, cutValues] : eventCuts) {
+    if (cutName.substr(0, 5) != "nano_") continue;
+
+    if (cutName == "nano_applyHEMveto") {
+      if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
+    } else if (cutName == "nano_applyJetVetoMaps") {
+      if (cutValues.first > 0.5 && !event->PassesJetVetoMaps()) return false;
+    } else {
+      error() << "Unknown nano event cut: " << cutName << endl;
+      continue;
+    }
+
+    if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
+  }
+
+  return true;
 }

@@ -10,7 +10,6 @@
 #include "Logger.hpp"
 #include "Multitype.hpp"
 #include "PhysicsObject.hpp"
-#include "ScaleFactorsManager.hpp"
 
 class Event {
  public:
@@ -137,13 +136,8 @@ class Event {
   UInt_t* GetUintVector(std::string branchName) { return valuesUintVector.at(branchName); }
   UShort_t* GetUshortVector(std::string branchName) { return valuesUshortVector.at(branchName); }
   Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
-
-  bool PassesHEMveto(float affectedFraction);
-  bool PassesJetVetoMaps(bool saveHistograms);
-
  private:
   ConfigManager& config = ConfigManager::GetInstance();
-  ScaleFactorsManager& scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
@@ -196,9 +190,6 @@ class Event {
   bool tryGet(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
 
   bool checkCuts(std::shared_ptr<PhysicsObject> physicsObject, std::string branchName, std::pair<float, float> cuts);
-  bool IsData();
-
-  std::unique_ptr<TH2D> jetMapNoVeto, jetMapWithVeto;
 };
 
 #endif /* Event_hpp */

@@ -84,16 +84,15 @@ void EventProcessor::RegisterCuts(shared_ptr<CutFlowManager> cutFlowManager) {
 
 bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
   for (auto& [cutName, cutValues] : eventCuts) {
-    // TODO: this should be more generic, not only for MET_pt
-    if (cutName == "MET_pt") {
-      float metPt = event->Get("MET_pt");
-      if (!inRange(metPt, cutValues)) return false;
-    } else if (cutName == "applyHEMveto") {
-      if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
-    } else if (cutName == "applyJetVetoMaps") {
-      if (cutValues.first > 0.5 && !event->PassesJetVetoMaps(cutValues.second)) return false;
-    } else {
-      if (!inRange(event->GetCollection(cutName.substr(1))->size(), cutValues)) return false;
+    if (cutName.substr(0, 5) == "nano_") continue;
+
+    try {
+      auto collection = event->GetCollection(cutName.substr(1));
+      if (!inRange(collection->size(), cutValues)) return false;
+    }
+    catch (Exception&) {
+      float variable = event->Get(cutName);
+      if (!inRange(variable, cutValues)) return false;
     }
     if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
   }
