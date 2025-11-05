@@ -643,7 +643,7 @@ bool NanoEvent::IsData() {
     isData = true;
   }
 
-  // Test 2: run run = 1 for MC
+  // Test 2: run = 1 for MC
   unsigned run = Get("run");
   if (run == 1) {
     if (isData) {
