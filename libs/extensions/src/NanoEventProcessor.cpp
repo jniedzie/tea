@@ -280,6 +280,9 @@ bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shar
       if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
     } else if (cutName == "nano_applyJetVetoMaps") {
       if (cutValues.first > 0.5 && !event->PassesJetVetoMaps(cutValues.second)) return false;
+    } else {
+      error() << "Unknown nano event cut: " << cutName << endl;
+      continue;
     }
 
     if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
