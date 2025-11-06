@@ -91,9 +91,6 @@ def plot_hist1D(hist, title, output_name, xaxis_title="X axis"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     output_path = os.path.join(output_dir, output_name)
-    print(f"Hist bins: {hist.GetNbinsX()}")
-    print(f"Hist entries: {hist.GetEntries()}")
-    print("Hist integral: {:.2f}".format(hist.Integral()))
     canvas.SaveAs(f"{output_path}.png")
 
 def plot_extrapolated_histograms(extrapolation_results, edges, output_name, axis_title, title_variable):
@@ -129,8 +126,8 @@ def plot_extrapolated_histograms(extrapolation_results, edges, output_name, axis
             legend.AddEntry(hist_before, "Before fit", "lep")
             legend.AddEntry(hist_after, "After fit", "lep")
             legend.AddEntry(extrapolation_func, f"Fit function, #chi2/ndf = {normChi2:.2f}, p = {p:.2f}", "l")
-            print(f"--- Fit function for bin {edges[i]}, category {category}:")
-            print(f"\t#chi2={extrapolation_func.GetChisquare():.2f}, ndf={extrapolation_func.GetNDF():.2f}, #chi2/ndf={normChi2:.2f}, p-value={p:.2f}")
+            info(f"--- Fit function for bin {edges[i]}, category {category}:")
+            info(f"\t#chi2={extrapolation_func.GetChisquare():.2f}, ndf={extrapolation_func.GetNDF():.2f}, #chi2/ndf={normChi2:.2f}, p-value={p:.2f}")
             hist_before.Draw("E")
             hist_after.Draw("E SAME")
             extrapolation_func.Draw("SAME")
@@ -196,12 +193,12 @@ def main():
             plot_hist1D(ratio_hist, f"Data / MC Scale Factor {sfBin}", f"sf_ratio_{sfBin}_{config.year}", config.correction_inputs[0]["name"])
             plot_hist1D(ratio_unc_hist_up, f"Data / MC Scale Factor Uncertainty up {sfBin}", f"sf_ratio_uncertainty_up_{sfBin}_{config.year}", config.correction_inputs[0]["name"])
             plot_hist1D(ratio_unc_hist_down, f"Data / MC Scale Factor Uncertainty down {sfBin}", f"sf_ratio_uncertainty_down_{sfBin}_{config.year}", config.correction_inputs[0]["name"])
-        print(f"scale_factors: {scale_factors}")
-        print(f"ratios and uncertainties:")
+        info(f"scale_factors: {scale_factors}")
+        info(f"ratios and uncertainties:")
         for category, sfs in scale_factors.items():
             unc_up = sfs[1] - sfs[0]
             unc_down = sfs[0] - sfs[2]
-            print(f"{category}: {sfs[0]:.2f} + {unc_up:.2f} - {unc_down:.2f}")
+            info(f"{category}: {sfs[0]:.2f} + {unc_up:.2f} - {unc_down:.2f}")
 
     # One 2D Histogram defined
     if config.histogram2D:

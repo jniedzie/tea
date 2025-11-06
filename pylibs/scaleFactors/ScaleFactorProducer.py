@@ -130,6 +130,9 @@ class ScaleFactorProducer:
 
 
     def __getNormalizedHist(self, histogram, sample):
+        if sample.luminosity == None:
+            warn("Luminosity is not defined - histograms are not normalized.")
+            return histogram
         histogram.Scale(sample.cross_section * sample.luminosity / sample.initial_weight_sum)
         return histogram
 
