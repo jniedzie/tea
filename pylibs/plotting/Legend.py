@@ -20,8 +20,8 @@ class Legend:
         legend.SetBorderSize(0)
         # legend.SetFillColor(0)
         # legend.SetFillStyle(0)
-        legend.SetTextFont(42)
-        legend.SetTextSize(0.035)
+        legend.SetTextFont(43)
+        legend.SetTextSize(20)
 
         # set legend title
         if self.title != "":
