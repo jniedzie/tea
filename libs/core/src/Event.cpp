@@ -42,6 +42,11 @@ bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, p
 }
 
 bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {
+  // avoiding undefined cuts
+  if (cuts.first == 0.0 && cuts.second == 0.0) {
+    warn() << "Undefined cuts for branch " << branchName << endl;
+    return true;
+  }
   // important: checking float first makes things much faster, since most branches are floats
   return tryGet<Float_t, Bool_t, UChar_t, UInt_t, Int_t, UShort_t, Short_t>(physicsObject, branchName, cuts);
 }
