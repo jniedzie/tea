@@ -80,7 +80,7 @@ def run_commands_with_condor(commands):
     f.write("error = error/$(Cluster).$(Process).err\n")
     f.write("log = log/$(Cluster).log\n")
     f.write("RequestCpus = 1\n")
-    f.write("RequestMemory = 4000MB\n")
+    f.write("RequestMemory = 1000MB\n")
     f.write("Initialdir = .\n")
     f.write("GetEnv = True\n")
     f.write("+JobFlavour = \"espresso\"\n")

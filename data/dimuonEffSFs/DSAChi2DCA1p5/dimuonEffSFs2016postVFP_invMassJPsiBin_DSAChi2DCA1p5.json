@@ -1,0 +1,96 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "dimuonEff",
+            "description": "Scale factors for dimuon efficiency given from J/Psi invariant mass distribution",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "dimuon_category",
+                    "type": "string",
+                    "description": "Dimuon categories Pat, PatDSA or DSA"
+                },
+                {
+                    "name": "scale_factors",
+                    "type": "string",
+                    "description": "Choose nominal scale factor or one of the uncertainties"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real",
+                "description": "Output scale factor (nominal) or uncertainty"
+            },
+            "data": {
+                "nodetype": "category",
+                "input": "dimuon_category",
+                "content": [
+                    {
+                        "key": "Pat",
+                        "value": {
+                            "nodetype": "category",
+                            "input": "scale_factors",
+                            "content": [
+                                {
+                                    "key": "nominal",
+                                    "value": 0.8879003263968003
+                                },
+                                {
+                                    "key": "up",
+                                    "value": 0.955108463997535
+                                },
+                                {
+                                    "key": "down",
+                                    "value": 0.8246233728892338
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": "PatDSA",
+                        "value": {
+                            "nodetype": "category",
+                            "input": "scale_factors",
+                            "content": [
+                                {
+                                    "key": "nominal",
+                                    "value": 0.9027372026268503
+                                },
+                                {
+                                    "key": "up",
+                                    "value": 1.0473087074430012
+                                },
+                                {
+                                    "key": "down",
+                                    "value": 0.7715395650533053
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": "DSA",
+                        "value": {
+                            "nodetype": "category",
+                            "input": "scale_factors",
+                            "content": [
+                                {
+                                    "key": "nominal",
+                                    "value": 2.3467961112539455
+                                },
+                                {
+                                    "key": "up",
+                                    "value": 3.1671384253960593
+                                },
+                                {
+                                    "key": "down",
+                                    "value": 1.6579610707774064
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

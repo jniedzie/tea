@@ -3,8 +3,8 @@ error_messages = {}
 fatal_messages = {}
 
 
-def info(message):
-  print(message)
+def info(message, end="\n"):
+  print(message, end=end)
 
 
 def warn(message):

@@ -55,6 +55,12 @@ map<string, float> NanoEventProcessor::GetPileupScaleFactor(const std::shared_pt
 map<string, float> NanoEventProcessor::GetL1PreFiringWeight(const std::shared_ptr<NanoEvent> event, string name) {
   map<string, float> weights;
 
+  // L1PreFiringWeight only implemented for Run2 right now
+  if (year != "2016preVFP" && year != "2016postVFP" && year != "2017" && year != "2018") {
+    warn() << "L1PreFiringWeight only given for Run 2 -- will assume SF=1.0" << endl;
+    return {{"systematic", 1.0}};
+  }
+
   auto& config = ConfigManager::GetInstance();
 
   map<string, vector<bool>> applyScaleFactors;
