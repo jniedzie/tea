@@ -268,13 +268,13 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
     scaleFactors["systematic"] = 1.0;
   else
     scaleFactors["systematic"] =
-        TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+        TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["flavour"]), eta, pt});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] =
-        TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+        TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["flavour"]), eta, pt});
   }
   return scaleFactors;
 }
