@@ -29,6 +29,12 @@ EventProcessor::EventProcessor() {
 
   try {
     config.GetMap("goldenJson", goldenJson);
+    // check if the map is valid and has some entries
+    if (goldenJson.empty()) {
+      fatal() << "Golden JSON is empty" << endl;
+      exit(0);
+    }
+
   } catch (const Exception& e) {
   }
 }
