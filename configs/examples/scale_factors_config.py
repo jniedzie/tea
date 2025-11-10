@@ -75,7 +75,7 @@ def get_scale_factors(year):
           "systematic": "central",
           "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
           "workingPoint": "M",
-          "jetID": "5",
+          "flavour": "5", # 5 = b
       },
       "bTaggingTight": {
           "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
@@ -83,7 +83,7 @@ def get_scale_factors(year):
           "systematic": "central",
           "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
           "workingPoint": "T",
-          "jetID": "5",
+          "flavour": "5", # 5 = b
       },
 
       # Muon ID
