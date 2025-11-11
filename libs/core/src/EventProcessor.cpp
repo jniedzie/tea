@@ -32,7 +32,7 @@ EventProcessor::EventProcessor() {
     // check if the map is valid and has some entries
     if (goldenJson.empty()) {
       fatal() << "Golden JSON is empty" << endl;
-      exit(0);
+      exit(1);
     }
 
   } catch (const Exception& e) {
