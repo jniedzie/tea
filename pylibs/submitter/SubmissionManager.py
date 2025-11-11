@@ -20,6 +20,8 @@ class SubmissionManager:
     self.files_config = None
     self.extra_args = None
 
+    self.input_output_file_lists = None
+
     # detect if it's macos or not
     if os.name == 'posix' and os.uname().sysname == 'Darwin':
       info("Detected macOS")
@@ -47,7 +49,9 @@ class SubmissionManager:
     if hasattr(self.files_config, "output_dir"):  # option 1 & 3, 4, 5
       self.__run_local_with_output_dir()
     elif hasattr(self.files_config, "input_output_file_list"):  # option 2
-      self.__run_local_input_output_list()
+      self.__run_local_input_output_list(self.files_config.input_output_file_list)
+    elif hasattr(self.files_config, "get_input_output_file_lists"):  # option 2 with several lists
+      self.__run_local_input_output_lists()
     elif hasattr(self.files_config, "output_hists_dir") or hasattr(self.files_config, "output_trees_dir"):
       self.__run_local_with_output_dirs()
     else:
@@ -62,21 +66,33 @@ class SubmissionManager:
     self.resubmit_job = args.resubmit_job
     self.save_logs = args.save_logs
 
-    self.__setup_temp_file_paths()
-    self.__copy_templates()
-
     input_files = self.__get_input_file_list()
-    self.__save_file_list_to_file(input_files)
-    self.__set_condor_script_variables(len(input_files))
-    self.__set_run_script_variables()
 
-    command = f"condor_submit {self.condor_config_name}"
-    # TODO: recognize automatically if we're on NAF or lxplus and choose the correct template/command
-    # command = f"condor_submit -spool {self.condor_config_name}"
-    info(f"Submitting to condor: {command}")
+    def submit(input_files):
+      self.__setup_temp_file_paths()
+      self.__copy_templates()
+      self.__save_file_list_to_file(input_files)
+      self.__set_condor_script_variables(len(input_files))
+      self.__set_run_script_variables()
 
-    if not args.dry:
-      os.system(command)
+      command = f"condor_submit {self.condor_config_name}"
+      # TODO: recognize automatically if we're on NAF or lxplus and choose the correct template/command
+      # command = f"condor_submit -spool {self.condor_config_name}"
+      info(f"Submitting to condor: {command}")
+
+      if not args.dry:
+        os.system(command)
+
+    if input_files is None and hasattr(self.files_config, "get_input_output_file_lists"):
+      info("Getting input files from input_output_file_lists")
+      if self.input_output_file_lists is None:
+        self.input_output_file_lists = self.files_config.get_input_output_file_lists()
+
+      for input_files in self.input_output_file_lists:
+        submit(input_files)
+
+    else:
+      submit(input_files)
 
   def __create_dir_if_not_exists(self, dir_path):
     if not os.path.exists(dir_path):
@@ -146,7 +162,13 @@ class SubmissionManager:
     if hasattr(self.files_config, "input_output_file_list"):
       return self.files_config.input_output_file_list
 
-    fatal("Unrecognized option")
+    if hasattr(self.files_config, "get_input_output_file_lists"):
+      info("Getting input_output_file_lists from files_config")
+      if self.input_output_file_lists is None:
+        self.input_output_file_lists = self.files_config.get_input_output_file_lists()
+      return None
+
+    fatal("SubmissionManager -- Unrecognized option")
     exit()
 
   # option 1 & 3, 4, 5
@@ -218,9 +240,10 @@ class SubmissionManager:
       self.__run_command(command_for_file)
 
   # option 2
-  def __run_local_input_output_list(self):
+  def __run_local_input_output_list(self, input_output_file_list):
     info("Running locally with input_output_file_list")
-    for input_file_path, output_tree_file_path, output_hist_file_path in self.files_config.input_output_file_list:
+
+    for input_file_path, output_tree_file_path, output_hist_file_path in input_output_file_list:
       command_for_file = f"{self.command} --input_path {input_file_path}"
       command_for_file += f" --output_trees_path {output_tree_file_path}" if output_tree_file_path else ""
       command_for_file += f" --output_hists_path {output_hist_file_path}" if output_hist_file_path else ""
@@ -228,6 +251,15 @@ class SubmissionManager:
         for key, value in self.extra_args.items():
           command_for_file += f" --{key} {value}"
       self.__run_command(command_for_file)
+
+  # option 2 with several lists
+  def __run_local_input_output_lists(self):
+    info("Running locally with input_output_file_lists")
+    if self.input_output_file_lists is None and hasattr(self.files_config, "get_input_output_file_lists"):
+      self.input_output_file_lists = self.files_config.get_input_output_file_lists()
+
+    for input_output_file_list in self.input_output_file_lists:
+      self.__run_local_input_output_list(input_output_file_list)
 
   def __setup_temp_file_paths(self):
     hash_string = str(uuid.uuid4().hex[:6])
@@ -322,8 +354,10 @@ class SubmissionManager:
       os.system(f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}")
     else:
       os.system(f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
+      os.system(
+          f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
+      os.system(
+          f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
 
     if self.resubmit_job is not None:
       os.system(f"{self.sed_command} 's{self.sed_char}$(ProcId){self.sed_char}{self.resubmit_job}{self.sed_char}g' {self.condor_config_name}")
