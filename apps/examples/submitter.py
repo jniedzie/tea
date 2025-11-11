@@ -1,7 +1,8 @@
 import argparse
 import importlib.util
 import uuid
-import os, re
+import os
+import re
 from SubmissionManager import SubmissionManager, SubmissionSystem
 
 from Logger import info, fatal, logger_print
@@ -62,8 +63,8 @@ def update_config(path, key, value):
         line = f"{key} {value}"
       f.write(line)
 
-def replace_files_config_path(path, value):
 
+def replace_files_config_path(path, value):
   new_module = value.replace("/", ".").replace(".py", "")
 
   file_config_str = "files_config"
@@ -118,11 +119,12 @@ def main():
       tmp_config_path, tmp_files_config_path = prepare_tmp_files(args)
 
       replace_files_config_path(tmp_config_path, tmp_files_config_path)
-      
+
       for name, applyPair in applyScaleFactors.items():
         applyDefault = applyPair[0]
         applyVariation = applyPair[1]
-        update_config(tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n")
+        update_config(
+            tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n")
       update_config(tmp_files_config_path, "sample_path = ", f"\"{sample}\"\n")
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
@@ -146,7 +148,8 @@ def main():
       for name, applyPair in applyScaleFactors.items():
         applyDefault = applyPair[0]
         applyVariation = applyPair[1]
-        update_config(tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in dataset else f"({applyDefault}, {applyVariation}),\n")
+        update_config(
+            tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in dataset else f"({applyDefault}, {applyVariation}),\n")
 
       update_config(tmp_files_config_path, "dataset = ", f"\"{dataset}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
@@ -164,7 +167,8 @@ def main():
       for name, applyPair in applyScaleFactors.items():
         applyDefault = applyPair[0]
         applyVariation = applyPair[1]
-        update_config(tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in input_dasfiles else f"({applyDefault}, {applyVariation}),\n")
+        update_config(
+            tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in input_dasfiles else f"({applyDefault}, {applyVariation}),\n")
 
       update_config(tmp_files_config_path, "input_dasfiles = ", f"\"{input_dasfiles}\"\n")
       update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")

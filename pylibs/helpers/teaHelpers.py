@@ -1,5 +1,6 @@
 import re
 import inspect
+from Logger import error
 
 
 def get_year_from_samples(samples):
@@ -14,6 +15,7 @@ def get_year_from_samples(samples):
       break
 
   if not source_name:
+    error("Could not find the year in the sample variable.")
     return None
 
   m = re.search(r'(\d{4}[A-Za-z]*)', source_name)
