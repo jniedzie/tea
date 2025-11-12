@@ -12,6 +12,8 @@ class Styler:
     self.bottomMargin = 0.3
     self.leftMargin = 0.16
     self.rightMargin = 0.15
+
+    self.labelFontSize = 26
     
     self.__setStyle()
   
@@ -84,7 +86,7 @@ class Styler:
     gStyle.SetOptStat(0) # To display the mean and RMS:   SetOptStat("mr")
     gStyle.SetStatColor(ROOT.kWhite)
     gStyle.SetStatFont(43)
-    gStyle.SetStatFontSize(20)
+    gStyle.SetStatFontSize(self.labelFontSize)
     gStyle.SetStatTextColor(1)
     gStyle.SetStatFormat("6.4g")
     gStyle.SetStatBorderSize(1)
@@ -96,7 +98,7 @@ class Styler:
     gStyle.SetTitleColor(1)
     gStyle.SetTitleTextColor(1)
     gStyle.SetTitleFillColor(10)
-    gStyle.SetTitleFontSize(20)
+    gStyle.SetTitleFontSize(self.labelFontSize)
     
     gStyle.SetTitleColor(1, "XYZ")
     gStyle.SetTitleFont(43, "XYZ")
@@ -143,14 +145,14 @@ class Styler:
       
       plot.GetXaxis().SetTitleOffset(1.0 if is_ratio else 1.7)
       
-      plot.GetXaxis().SetTitleSize(20)
-      plot.GetXaxis().SetLabelSize(20)
+      plot.GetXaxis().SetTitleSize(self.labelFontSize)
+      plot.GetXaxis().SetLabelSize(self.labelFontSize)
       
       plot.GetYaxis().SetTitle("Data/MC" if is_ratio else hist.y_label)
-      plot.GetYaxis().SetTitleSize(20)
+      plot.GetYaxis().SetTitleSize(self.labelFontSize)
       plot.GetYaxis().SetTitleOffset(1.5)
       
-      plot.GetYaxis().SetLabelSize(20)
+      plot.GetYaxis().SetLabelSize(self.labelFontSize)
       
       plot.GetYaxis().CenterTitle()
       plot.GetYaxis().SetNdivisions(505)
@@ -177,23 +179,23 @@ class Styler:
       plot.SetTitle(hist.title)
       plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
       plot.GetXaxis().SetTitle(hist.x_label)
-      plot.GetXaxis().SetTitleSize(20)
+      plot.GetXaxis().SetTitleSize(self.labelFontSize)
       plot.GetXaxis().SetTitleOffset(1.0)
-      plot.GetXaxis().SetLabelSize(20)
+      plot.GetXaxis().SetLabelSize(self.labelFontSize)
       
       plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
       plot.GetYaxis().SetTitle(hist.y_label)
-      plot.GetYaxis().SetTitleSize(20)
+      plot.GetYaxis().SetTitleSize(self.labelFontSize)
       plot.GetYaxis().SetTitleOffset(1.2)
       plot.GetYaxis().CenterTitle()
-      plot.GetYaxis().SetLabelSize(20)
+      plot.GetYaxis().SetLabelSize(self.labelFontSize)
       plot.GetYaxis().SetNdivisions(505)
       
       plot.GetZaxis().SetTitle(hist.z_label)
-      plot.GetZaxis().SetTitleSize(20)
+      plot.GetZaxis().SetTitleSize(self.labelFontSize)
       plot.GetZaxis().SetTitleOffset(1.3)
       plot.GetZaxis().CenterTitle()
-      plot.GetZaxis().SetLabelSize(20)
+      plot.GetZaxis().SetLabelSize(self.labelFontSize)
       plot.GetZaxis().SetNdivisions(505)
 
     except Exception:
