@@ -60,13 +60,13 @@ class NanoMuon {
    * Retrieves the best-matching NanoGenParticle from the provided genMuonCollection.
    *
    * @param genMuonCollection A collection of PhysicsObjects representing generated muons.
-   * @param maxDeltaR The maximum allowed deltaR for matching (default: 0.3).
+   * @param maxDeltaR The maximum allowed deltaR for matching (default: 0.1).
    * @param allowNonMuons If true, allows matching to non-muon particles in the collection (default: false).
    * @return A shared pointer to the best-matching NanoGenParticle, or nullptr if no match is found.
    */
-  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false, std::shared_ptr<PhysicsObject> excludeGenParticle = nullptr);
+  std::shared_ptr<NanoGenParticle> GetGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.1, bool allowNonMuons=false, std::shared_ptr<PhysicsObject> excludeGenParticle = nullptr);
   /** same as above except it doesn't get the first copy, but returns the last copy gen muon */
-  std::shared_ptr<NanoGenParticle> GetLastCopyGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.3, bool allowNonMuons=false);
+  std::shared_ptr<NanoGenParticle> GetLastCopyGenMuon(std::shared_ptr<PhysicsObjects> genMuonCollection, float maxDeltaR = 0.1, bool allowNonMuons=false);
 
   TLorentzVector GetFourVector();
 

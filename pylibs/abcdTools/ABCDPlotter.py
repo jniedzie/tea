@@ -17,8 +17,8 @@ class ABCDPlotter:
     self.histogramsHelper = ABCDHistogramsHelper(config)
     self.normalizer = HistogramNormalizer(config)
 
-    self.signal_hist_name = f"{config.signal_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
-    self.background_hist_name = f"{config.background_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+    self.signal_hist_name = config.signal_hist_name
+    self.background_hist_name = config.background_hist_name
 
     self.best_points_path = f"{config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
     self.background_files = {}
@@ -596,10 +596,7 @@ class ABCDPlotter:
 
     for sample in self.config.background_samples:
       hist = Histogram2D(
-          name=(
-              f"{self.config.background_collection}_{self.config.variable_1}_vs_"
-              f"{self.config.variable_2}{self.config.category}"
-          ),
+          name=self.background_hist_name,
           norm_type=NormalizationType.to_lumi,
           x_rebin=self.config.rebin_2D,
           y_rebin=self.config.rebin_2D,
@@ -639,10 +636,7 @@ class ABCDPlotter:
         path = f"{self.config.base_path}/{data_path}"
         
         hist = Histogram2D(
-            name=(
-                f"{self.config.background_collection}_{self.config.variable_1}_vs_"
-                f"{self.config.variable_2}{self.config.category}"
-            ),
+            name=self.background_hist_name,
             norm_type=NormalizationType.to_lumi,
             x_rebin=self.config.rebin_2D,
             y_rebin=self.config.rebin_2D,

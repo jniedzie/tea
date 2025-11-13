@@ -195,7 +195,8 @@ def main():
             plot_hist1D(ratio_unc_hist_down, f"Data / MC Scale Factor Uncertainty down {sfBin}", f"sf_ratio_uncertainty_down_{sfBin}_{config.year}", config.correction_inputs[0]["name"])
         info(f"scale_factors: {scale_factors}")
         info(f"ratios and uncertainties:")
-        if isinstance(sfs, (list, tuple)) and len(sfs) >= 3:
+        for category, sfs in scale_factors.items():
+            if isinstance(sfs, (list, tuple)) and len(sfs) >= 3:
                 unc_up = sfs[1] - sfs[0]
                 unc_down = sfs[0] - sfs[2]
                 info(f"{category}: {sfs[0]:.2f} + {unc_up:.2f} - {unc_down:.2f}")
