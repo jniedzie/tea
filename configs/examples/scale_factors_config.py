@@ -38,7 +38,7 @@ def get_scale_factors(year):
       pu_type = "Collisions2022_359022_362760_eraEFG_GoldenJson"
       jecType = "Summer22EE_22Sep2023_V2_MC"
       jecAlgo = "AK4PFPuppi"
-      jecYear = "2022"
+      jecYear = "2022EE"
   elif year == "2023preBPix" or year == "2023postBPix":
     run2 = False
     muon_trigger_type = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
