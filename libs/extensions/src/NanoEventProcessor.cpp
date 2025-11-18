@@ -257,13 +257,13 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
   if (run == 1) {
     if (isData) {
       fatal() << "Conflicting NanoEventProcessor::IsDataEvent results.";
-      exit(0);
+      exit(1);
     }
     return false;
   }
   if (!isData) {
     fatal() << "Conflicting NanoEventProcessor::IsDataEvent results.";
-    exit(0);
+    exit(1);
   }
   return true;
 }
