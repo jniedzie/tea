@@ -48,5 +48,5 @@ class Sample:
           self.cross_section = cross_section
           break
       else:
-        error(f"Sample {name} not found in cross sections dict")
-        exit(0)
+        fatal(f"Sample {name} not found in cross sections dict")
+        exit(1)

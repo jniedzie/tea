@@ -24,7 +24,7 @@ def get_file(sample):
     file = ROOT.TFile.Open(sample.file_path, "READ")
   except OSError:
     fatal(f"Couldn't open file {sample.file_path}")
-    exit(0)
+    exit(1)
   return file
 
 

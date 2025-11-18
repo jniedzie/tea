@@ -41,11 +41,11 @@ ConfigManager::ConfigManager(std::string *const _configPath) {
 
   if (nullptr == _configPath) {
     fatal() << "ConfigManager not initialized" << endl;
-    exit(0);
+    exit(1);
   }
   if (_configPath->empty()) {
     fatal() << "Config path cannot be empty" << endl;
-    exit(0);
+    exit(1);
   }
 
   configPath = std::move(*_configPath);

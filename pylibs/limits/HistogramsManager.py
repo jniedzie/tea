@@ -66,7 +66,7 @@ class HistogramsManager:
     for hist, sample in self.histosamples:
       if hist_name is not None and hist_name != hist.getName():
         fatal(f"Histogram name {hist.getName()} does not match previous histogram name {hist_name}")
-        exit(0)
+        exit(1)
 
       if sample.type == SampleType.data:
         obs_histosample = (hist, sample)
@@ -147,5 +147,6 @@ class HistogramsManager:
         file = ROOT.TFile.Open(sample.file_path, "READ")
     except OSError:
       fatal(f"Couldn't open file {sample.file_path}")
-      exit(0)
+      exit(1)
     return file
+  

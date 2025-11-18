@@ -19,7 +19,7 @@ class HepMCProcessor {
 
       if(physicsObject->GetIndex() < 0) {
         fatal() << "HepMCProcessor -- IsLastCopy: some particles don't have the index set!" << std::endl;
-        exit(0);
+        exit(1);
       }
 
       auto daughter = asHepMCParticle(physicsObject);
@@ -43,7 +43,7 @@ class HepMCProcessor {
 
       if(physicsObject->GetIndex() < 0) {
         fatal() << "HepMCProcessor -- GetCommonMother: some particles don't have the index set!" << std::endl;
-        exit(0);
+        exit(1);
       }
 
       auto daughter = asHepMCParticle(physicsObject);

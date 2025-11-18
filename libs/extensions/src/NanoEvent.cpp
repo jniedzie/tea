@@ -538,7 +538,6 @@ bool NanoEvent::PassesHEMveto(float affectedFraction) {
   } else {
     unsigned runNumber = Get("run");
     if (runNumber < 319077) {
-      warn() << "Run number less than 319077 found in 2018 data/MC. HEM veto will not be applied for this event." << endl;
       return true;  // HEM veto only applies to runs >= 319077
     }
   }
@@ -619,27 +618,23 @@ bool NanoEvent::PassesJetVetoMaps() {
 
 bool NanoEvent::IsData() {
   // Test 1: gen weights branch only for MC
-  bool isData = false;
+  bool isData_weights = false;
   string weightsBranchName;
   config.GetValue("weightsBranchName", weightsBranchName);
   try {
     Get(weightsBranchName);
   } catch (const Exception& e) {
-    isData = true;
+    isData_weights = true;
   }
 
   // Test 2: run = 1 for MC
   unsigned run = Get("run");
-  if (run == 1) {
-    if (isData) {
-      fatal() << "Conflicting Event::IsData results.";
-      exit(0);
-    }
-    return false;
+  bool isData_run = (run != 1);
+
+  if (isData_weights != isData_run) {
+    fatal() << "Conflicting Event::IsData results." << endl;
+    exit(1);
   }
-  if (!isData) {
-    fatal() << "Conflicting Event::IsData results.";
-    exit(0);
-  }
-  return true;
+
+  return isData_run;
 }

@@ -78,7 +78,7 @@ inline std::shared_ptr<HepMCParticle> asHepMCParticle(const std::shared_ptr<Phys
   int index = physicsObject->GetIndex();
   if (index < 0) {
     fatal() << "Error in asHepMCParticle(...). Make sure to set index of the physics object using SetIndex()." << std::endl;
-    exit(0);
+    exit(1);
   }
   return std::make_shared<HepMCParticle>(physicsObject, physicsObject->GetIndex());
 }

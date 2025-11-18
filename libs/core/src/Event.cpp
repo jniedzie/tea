@@ -36,7 +36,7 @@ bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, p
     } else {
       fatal() << e.what() << endl;
       gErrorIgnoreLevel = kFatal;
-      exit(0);
+      exit(1);
     }
   }
 }
