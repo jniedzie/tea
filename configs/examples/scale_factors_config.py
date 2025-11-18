@@ -45,13 +45,13 @@ def get_scale_factors(year):
     if year == "2023preBPix":
       year_path = "2023_Summer23"
       pu_type = "Collisions2023_366403_369802_eraBC_GoldenJson"
-      jecType = "Summer23Prompt23_V1_MC"
+      jecType = "Summer23Prompt23_V2_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2023"
     if year == "2023postBPix":
       year_path = "2023_Summer23BPix"
       pu_type = "Collisions2023_369803_370790_eraD_GoldenJson"
-      jecType = "Summer23BPixPrompt23_V1_MC"
+      jecType = "Summer23BPixPrompt23_V3_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2023"
   else:
@@ -130,7 +130,7 @@ def get_scale_factors(year):
 
       # Dimuon Eff. SFs from tt+JPsi CR - WIP
       "dimuonEff": {
-          "path": f"../tea/data/dimuonEffSFs/DSAChi2DCA1p5/dimuonEffSFs{year}_invMassJPsiBin_DSAChi2DCA1p5.json", 
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_invMassJPsiBin_v3.json", 
           "type": "dimuonEff",
           "systematic": "nominal",
           "variations": "up,down",
@@ -187,6 +187,15 @@ def get_scale_factors(year):
           "path": "../tea/jsonPOG/POG/JME/2023_Summer23BPix/jetvetomaps.json.gz",
           "type": "Summer23BPixPrompt23_RunD_V1",
       },
+
+      # Jet Energy Correction uncertainties
+      "jecMC": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecType}",
+        "level": "L1L2L3Res",
+        "algo": f"{jecAlgo}",
+        "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{jecYear},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{jecYear},Regrouped_EC2,Regrouped_EC2_{jecYear},Regrouped_HF,Regrouped_HF_{jecYear},Regrouped_RelativeBal,Regrouped_RelativeSample_{jecYear}",
+      },
   }
   if run2:  # No Run3 PUjetID SF yet
     scaleFactors["PUjetIDtight"] = {
@@ -202,21 +211,5 @@ def get_scale_factors(year):
         "type": "NUM_TrackerMuons_DEN_genTracks",
         "systematic": "nominal",
         "variations": "systup,systdown",
-    }
-    scaleFactors["jecMC"] = {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": f"{jecType}",
-        "level": "L1L2L3Res",
-        "algo": f"{jecAlgo}",
-        "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{jecYear},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{jecYear},Regrouped_EC2,Regrouped_EC2_{jecYear},Regrouped_HF,Regrouped_HF_{jecYear},Regrouped_RelativeBal,Regrouped_RelativeSample_{jecYear}",
-    }
-  else:
-    # No regrouped JEC uncertainties in jsonPOG for Run 3
-    scaleFactors["jecMC"] = {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": f"{jecType}",
-        "level": "L1L2L3Res",
-        "algo": f"{jecAlgo}",
-        "uncertainties": "AbsoluteMPFBias,AbsoluteScale,AbsoluteStat,FlavorQCD,Fragmentation,PileUpDataMC,PileUpPtBB,PileUpPtEC1,PileUpPtEC2,PileUpPtHF,PileUpPtRef,RelativeFSR,RelativeJEREC1,RelativeJEREC2,RelativeJERHF,RelativePtBB,RelativePtEC1,RelativePtEC2,RelativePtHF,RelativeBal,RelativeSample,RelativeStatEC,RelativeStatFSR,RelativeStatHF,SinglePionECAL,SinglePionHCAL,TimePtEta",
     }
   return scaleFactors
