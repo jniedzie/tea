@@ -68,7 +68,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
       fatal() << "Incorrect correction type: " << values["type"] << endl;
       fatal() << "Available corrections: " << endl;
       for (auto &[name, corr] : *cset) fatal() << name << endl;
-      exit(0);
+      exit(1);
     }
   }
 }
@@ -102,7 +102,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
       fatal() << "Incorrect correction type: " << type << endl;
       fatal() << "Available corrections: " << endl;
       for (auto &[name, corr] : *cset) fatal() << name << endl;
-      exit(0);
+      exit(1);
     }
     vector<string> uncertainties = GetScaleFactorVariations(values["uncertainties"]);
     for (auto uncertainty : uncertainties) {
@@ -116,7 +116,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
         fatal() << "Incorrect correction type: " << unc_type << endl;
         fatal() << "Available corrections: " << endl;
         for (auto &[name, corr] : *cset) fatal() << name << endl;
-        exit(0);
+        exit(1);
       }
     }
   }
@@ -323,13 +323,13 @@ float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const 
     if (errorMessage.find("inputs") != string::npos) {
       fatal() << "Expected inputs: " << endl;
       for (auto corr : correction->inputs()) fatal() << corr.name() << "\t" << corr.description() << endl;
-      exit(0);
+      exit(1);
     } else if (errorMessage.find("bounds") != string::npos) {
       warn() << "Encountered a value out of SF bounds. Will assume SF = 1.0 " << endl;
       return 1.0;
     } else {
       fatal() << "Unhandled error while evaluating SF: " << errorMessage << endl;
-      exit(0);
+      exit(1);
     }
   }
 #endif

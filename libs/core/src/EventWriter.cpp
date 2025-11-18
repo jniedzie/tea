@@ -91,7 +91,7 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
       writeIndex = FilterBranch(event->GetFloatVector(branchName), keepIndices);
     } else {
       fatal() << "Unsupported branch type in AddCurrentEvent: " << branchPtr->GetName() << "\ttype: " << leaf->GetTypeName() << endl;
-      exit(0);
+      exit(1);
     }
   }
   // Set the filtered number of particles for the branch before filling

@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
 {
   if(argc <= 1){
     cout<<"Usage: ./hepmc2root.py <HepMC-file> [output root file = <name>.root]"<<endl;
-    exit(0);
+    exit(1);
   }
   
   string file_name = argv[1];
