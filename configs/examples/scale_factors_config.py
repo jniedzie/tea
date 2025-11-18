@@ -10,6 +10,7 @@ def get_scale_factors(year):
     jecType = "Summer19UL16_V7_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2016"
+    dsaYear = "2016"
     if year == "2016preVFP":
       jecType = "Summer19UL16APV_V7_MC"
   elif year == "2017":
@@ -17,16 +18,19 @@ def get_scale_factors(year):
     jecType = "Summer19UL17_V5_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2017"
+    dsaYear = "2017"
     muon_trigger_type = "NUM_IsoMu27_DEN_CutBasedIdTight_and_PFIsoTight"
   elif year == "2018":
     pu_type = "Collisions18_UltraLegacy_goldenJSON"
     jecType = "Summer19UL18_V5_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2018"
+    dsaYear = "2018"
     muon_trigger_type = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
   elif year == "2022preEE" or year == "2022postEE":
     run2 = False
     muon_trigger_type = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
+    dsaYear = "2022"
     if year == "2022preEE":
       year_path = "2022_Summer22"
       pu_type = "Collisions2022_355100_357900_eraBCD_GoldenJson"
@@ -42,6 +46,7 @@ def get_scale_factors(year):
   elif year == "2023preBPix" or year == "2023postBPix":
     run2 = False
     muon_trigger_type = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
+    dsaYear = "2023"
     if year == "2023preBPix":
       year_path = "2023_Summer23"
       pu_type = "Collisions2023_366403_369802_eraBC_GoldenJson"
@@ -53,7 +58,7 @@ def get_scale_factors(year):
       pu_type = "Collisions2023_369803_370790_eraD_GoldenJson"
       jecType = "Summer23BPixPrompt23_V3_MC"
       jecAlgo = "AK4PFPuppi"
-      jecYear = "2023"
+      jecYear = "2023BPix"
   else:
     error(f"Year {year} not supported.")
 
@@ -146,7 +151,7 @@ def get_scale_factors(year):
 
       # DSA Muon SFs
       "dsamuonID": {
-          "path": f"../tea/DSAMuonSF/{jecYear}_Jpsi/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
+          "path": f"../tea/DSAMuonSF/{dsaYear}_Jpsi/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
           "type": "NUM_DisplacedID_DEN_dSAMuons",
           "systematic": "nominal",
           "variations": "up_syst,down_syst",
