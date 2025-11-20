@@ -45,13 +45,13 @@ def get_scale_factors(year):
     if year == "2023preBPix":
       year_path = "2023_Summer23"
       pu_type = "Collisions2023_366403_369802_eraBC_GoldenJson"
-      jecType = "Summer23Prompt23_V1_MC"
+      jecType = "Summer23Prompt23_V2_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2023"
     if year == "2023postBPix":
       year_path = "2023_Summer23BPix"
       pu_type = "Collisions2023_369803_370790_eraD_GoldenJson"
-      jecType = "Summer23BPixPrompt23_V1_MC"
+      jecType = "Summer23BPixPrompt23_V3_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2023"
   else:
