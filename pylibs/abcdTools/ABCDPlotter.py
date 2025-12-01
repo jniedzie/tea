@@ -7,6 +7,7 @@ from ABCDHistogramsHelper import ABCDHistogramsHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
 from Logger import fatal, warn, info
+from ttalps_luminosities import get_luminosity
 
 
 class ABCDPlotter:
@@ -17,8 +18,8 @@ class ABCDPlotter:
     self.histogramsHelper = ABCDHistogramsHelper(config)
     self.normalizer = HistogramNormalizer(config)
 
-    self.signal_hist_name = config.signal_hist_name
-    self.background_hist_name = config.background_hist_name
+    self.signal_hist_name = f"{config.signal_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+    self.background_hist_name = f"{config.background_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
 
     self.best_points_path = f"{config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
     self.background_files = {}
@@ -28,6 +29,7 @@ class ABCDPlotter:
     self.data_file = None
     self.signal_files = {}
     self.signal_hists = {}
+    self.signal_scales = {}
     self.canvases = None
     self.projections_pads = {}
     self.significance_hists = {}
@@ -510,7 +512,11 @@ class ABCDPlotter:
     info(f"True background in B: {b:.2f} +/- {b_err:.2f}")
     info(f"True background in C: {c:.2f} +/- {c_err:.2f}")
     info(f"True background in D: {d:.2f} +/- {d_err:.2f}")
-    info(f"True background in ABCD: {a+b+c+d:.2f} +/- {math.sqrt(a_err**2 + b_err**2 + c_err**2 + d_err**2):.2f}")
+    abcd_err2 = 0
+    for val, err in [(a, a_err), (b, b_err), (c, c_err), (d, d_err)]:
+      if val != 0 and val > 0:
+        abcd_err2 += err**2
+    info(f"True background in ABCD: {a+b+c+d:.2f} +/- {math.sqrt(abcd_err2):.2f}")
 
     if b != 0 and c != 0 and d != 0:
       prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
@@ -699,6 +705,13 @@ class ABCDPlotter:
             continue
 
           signal_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
+          if self.config.signal_cross_section:
+            luminosity = get_luminosity(year)
+            cutflow_histogram = self.signal_files[input_path].Get("cutFlow")
+            initial_weight_sum = cutflow_histogram.GetBinContent(1)
+            scale = luminosity*self.config.signal_cross_section/initial_weight_sum
+            self.signal_scales[(mass, ctau, year)] = scale
+
           if (mass, ctau) not in self.signal_hists:
             self.signal_hists[(mass, ctau)] = signal_hist
             self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
