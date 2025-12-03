@@ -712,6 +712,9 @@ class ABCDPlotter:
               warn(f"Could not open cutFlow histogram in file {input_path}")
               continue
             initial_weight_sum = cutflow_histogram.GetBinContent(1)
+            if initial_weight_sum == 0:
+              warn(f"Initial weight sum is zero for file {input_path}")
+              continue
             scale = luminosity*self.config.signal_cross_section/initial_weight_sum
             self.signal_scales[(mass, ctau, year)] = scale
 
