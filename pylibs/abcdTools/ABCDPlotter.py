@@ -514,7 +514,7 @@ class ABCDPlotter:
     info(f"True background in D: {d:.2f} +/- {d_err:.2f}")
     abcd_err2 = 0
     for val, err in [(a, a_err), (b, b_err), (c, c_err), (d, d_err)]:
-      if val != 0 and val > 0:
+      if val > 0:
         abcd_err2 += err**2
     info(f"True background in ABCD: {a+b+c+d:.2f} +/- {math.sqrt(abcd_err2):.2f}")
 
