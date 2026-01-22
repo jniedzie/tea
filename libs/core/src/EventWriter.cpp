@@ -23,7 +23,6 @@ int FilterBranch(T* vec, const std::vector<int>& keepIndices) {
 
 EventWriter::EventWriter(const shared_ptr<EventReader> &eventReader_) : eventReader(eventReader_) {
   auto &config = ConfigManager::GetInstance();
-  string outputFilePath;
   config.GetValue("treeOutputFilePath", outputFilePath);
 
   try {
@@ -37,15 +36,15 @@ EventWriter::EventWriter(const shared_ptr<EventReader> &eventReader_) : eventRea
     branchesToRemove = {};  // Remove no branches by default
   }
 
-  SetupOutputTree(outputFilePath);
+  SetupOutputTree();
 }
 
 EventWriter::~EventWriter() {}
 
-void EventWriter::SetupOutputTree(string outFileName) {
-  makeParentDirectories(outFileName);
+void EventWriter::SetupOutputTree() {
+  makeParentDirectories(outputFilePath);
 
-  outFile = new TFile(outFileName.c_str(), "recreate");
+  outFile = new TFile(outputFilePath.c_str(), "recreate");
   outFile->cd();
 
   for (auto &[name, tree] : eventReader->inputTrees) {
@@ -104,5 +103,6 @@ void EventWriter::Save() {
   for (auto &[name, tree] : outputTrees) {
     tree->Write();
   }
+  info() << "Saved output trees to " << outputFilePath << endl;
   outFile->Close();
 }

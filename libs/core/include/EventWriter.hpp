@@ -24,6 +24,7 @@ public:
 
 private:
   TFile *outFile;
+  std::string outputFilePath;
   std::map<std::string, TTree *> outputTrees;
 
   std::shared_ptr<EventReader> eventReader;
@@ -31,7 +32,7 @@ private:
   std::vector<std::string> branchesToKeep;
   std::vector<std::string> branchesToRemove;
 
-  void SetupOutputTree(std::string outFileName);
+  void SetupOutputTree();
 
   friend class CutFlowManager;
 };

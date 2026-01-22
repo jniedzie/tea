@@ -15,22 +15,11 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-  auto args = make_unique<ArgsManager>(argc, argv);
-  if (!args->GetString("config").has_value()) {
-    fatal() << "No config file provided" << endl;
-    exit(1);
-  }
-
-  ConfigManager::Initialize(args->GetString("config").value());
-  auto &config = ConfigManager::GetInstance();
+  vector<string> requiredArgs = {"config"};
+  vector<string> optionalArgs = {"input_path", "output_trees_path"};
+  auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
+  ConfigManager::Initialize(args);
   
-  if (args->GetString("input_path").has_value()) {
-    config.SetInputPath(args->GetString("input_path").value());
-  }
-  if (args->GetString("output_trees_path").has_value()) {
-    config.SetTreesOutputPath(args->GetString("output_trees_path").value());
-  }
-
   auto eventReader = make_shared<EventReader>();
   auto eventWriter = make_shared<EventWriter>(eventReader);
   auto cutFlowManager = make_shared<CutFlowManager>(eventReader, eventWriter);
