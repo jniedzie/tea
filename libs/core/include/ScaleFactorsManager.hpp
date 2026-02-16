@@ -44,6 +44,9 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
   std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
   
+  std::map<std::string, float> GetDimuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
+
+  
   bool IsJetVetoMapDefined(std::string name);
   bool IsJetInBadRegion(std::string name, float eta, float phi);
 
@@ -76,9 +79,17 @@ class ScaleFactorsManager {
   void ReadScaleFactors();
   void ReadPileupSFs();
 
-  float TryToEvaluate(const CorrectionRef &correction, const std::vector<std::variant<int, double, std::string>> &args);
+  float TryToEvaluate(const CorrectionRef &correction, 
+                      const std::vector<std::variant<int, double, std::string>> &args, 
+                      std::map<std::string, std::pair<double,double>> inputBounds = {});
 
   std::vector<std::string> GetScaleFactorVariations(std::string variations_str);
+  std::map<std::string, std::pair<double,double>> GetInputBounds(std::map<std::string,std::string> extraArgs);
+
+  std::vector<std::variant<int, double, std::string>> ClampArgsToBounds(
+    const CorrectionRef& correction,
+    const std::vector<std::variant<int, double, std::string>>& args,
+    std::map<std::string, std::pair<double,double>> inputBounds);
 };
 
 struct MuonID {

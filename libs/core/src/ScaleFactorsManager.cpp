@@ -158,18 +158,18 @@ map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, floa
       warn() << "Requested PUJetID SF, which was not defined in the scale_factors_config: " << name << endl;
     return {{"systematic", 1.0}};
   }
-
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]}, inputBounds);
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {eta, pt, variation, extraArgs["workingPoint"]});
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {eta, pt, variation, extraArgs["workingPoint"]}, inputBounds);
   }
   return scaleFactors;
 }
@@ -186,15 +186,16 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]}, inputBounds);
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation});
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation}, inputBounds);
   }
   return scaleFactors;
 }
@@ -211,18 +212,19 @@ map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, cons
   auto extraArgs = correctionsExtraArgs[name];
   auto systematic_args = args;
   systematic_args.push_back(extraArgs["systematic"]);
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   map<string, float> scaleFactors;
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], systematic_args);
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], systematic_args, inputBounds);
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     auto variation_args = args;
     variation_args.push_back(variation);
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], variation_args);
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], variation_args, inputBounds);
   }
   return scaleFactors;
 }
@@ -239,15 +241,17 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
 
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
+  
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["systematic"]}, inputBounds);
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation});
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {fabs(eta), pt, variation}, inputBounds);
   }
   return scaleFactors;
 }
@@ -264,17 +268,18 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
     scaleFactors["systematic"] =
-        TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["flavour"]), eta, pt});
+        TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["flavour"]), eta, pt}, inputBounds);
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] =
-        TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["flavour"]), eta, pt});
+        TryToEvaluate(corrections[name], {variation, extraArgs["workingPoint"], stoi(extraArgs["flavour"]), eta, pt}, inputBounds);
   }
   return scaleFactors;
 }
@@ -294,23 +299,24 @@ map<string, float> ScaleFactorsManager::GetPileupScaleFactor(string name, float 
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else
     scaleFactors["systematic"] =
-        TryToEvaluate(corrections[name], {nVertices, extraArgs["systematic"]});
+        TryToEvaluate(corrections[name], {nVertices, extraArgs["systematic"]}, inputBounds);
   
   if (!applyVariations) return scaleFactors;
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] =
-        TryToEvaluate(corrections[name], {nVertices, variation});
+        TryToEvaluate(corrections[name], {nVertices, variation}, inputBounds);
   }
   return scaleFactors;
   
 }
 
-float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const vector<std::variant<int, double, std::string>> &args) {
+float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const vector<std::variant<int, double, std::string>> &args, map<string, pair<double,double>> inputBounds) {
 #ifndef USE_CORRECTIONLIB
   return 1.0;
 #else
@@ -325,8 +331,18 @@ float ScaleFactorsManager::TryToEvaluate(const CorrectionRef &correction, const 
       for (auto corr : correction->inputs()) fatal() << corr.name() << "\t" << corr.description() << endl;
       exit(1);
     } else if (errorMessage.find("bounds") != string::npos) {
-      warn() << "Encountered a value out of SF bounds. Will assume SF = 1.0 " << endl;
-      return 1.0;
+      if (inputBounds.empty()) {
+        warn() << "Encountered a value out of SF bounds. Will assume SF = 1.0" << endl;
+        return 1.0;
+      }
+      auto clampedArgs = ClampArgsToBounds(correction, args, inputBounds);
+      try {
+        return correction->evaluate(clampedArgs);
+      } catch (...) {
+        warn() << "Clamped evaluation failed, returning SF = 1.0" << std::endl;       
+        return 1.0;
+      }
+      
     } else {
       fatal() << "Unhandled error while evaluating SF: " << errorMessage << endl;
       exit(1);
@@ -371,18 +387,49 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
   return variations;
 }
 
+map<string, pair<double,double>> ScaleFactorsManager::GetInputBounds(map<string,string> extraArgs) {
+  map<string, pair<double,double>> inputBounds = {};
+  if (!extraArgs.contains("inputBounds")) return inputBounds;
+  string bounds_str = extraArgs["inputBounds"];
+  istringstream ss(bounds_str);
+  string item;
+
+  while (getline(ss, item, ',')) {
+    auto sep = item.find(':');
+    if (sep == string::npos) continue;
+    string key = item.substr(0, sep);
+    string rangeStr = item.substr(sep + 1);
+    size_t valSep = rangeStr.find(';');
+    double minVal = -numeric_limits<double>::infinity();
+    double maxVal = numeric_limits<double>::infinity();
+    if (valSep != string::npos) {
+      string minStr = rangeStr.substr(0, valSep);
+      string maxStr = rangeStr.substr(valSep + 1);
+      if (!minStr.empty()) minVal = std::stod(minStr);
+      if (!maxStr.empty()) maxVal = std::stod(maxStr);
+    } else {
+      // Only one value provided → treat as max, min=-inf
+      maxVal = std::stod(rangeStr);
+    }
+
+    inputBounds[key] = {minVal, maxVal};
+  }
+  return inputBounds;
+}
+
 map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string name, string category) {
   bool applyDefault = ShouldApplyScaleFactor(name);
   bool applyVariations = ShouldApplyVariation(name);
-  
+
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
   // handle empty category - needed to setup the scale factor names for the first event
   else if (category == "")
     scaleFactors["systematic"] = 1.0;
   else
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {category, extraArgs["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], {category, extraArgs["systematic"]}, inputBounds);
 
   if (!applyVariations) return scaleFactors;
 
@@ -392,7 +439,7 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string 
       scaleFactors[name + "_" + variation] = 1.0;
       continue;
     }
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {category, variation});
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], {category, variation}, inputBounds);
   }
   return scaleFactors;
 }
@@ -400,14 +447,15 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string 
 map<string, float> ScaleFactorsManager::GetCustomScaleFactors(string name, const vector<variant<int, double, string>> &args) {
   bool applyDefault = ShouldApplyScaleFactor(name);
   bool applyVariations = ShouldApplyVariation(name);
-  
+
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
   else {
     auto systematic_args = args;
     systematic_args.push_back(extraArgs["systematic"]);
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name], systematic_args);
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], systematic_args, inputBounds);
   }
 
   if (!applyVariations) return scaleFactors;
@@ -416,7 +464,32 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactors(string name, const
   for (auto variation : variations) {
     auto variation_args = args;
     variation_args.push_back(variation);
-    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], variation_args);
+    scaleFactors[name + "_" + variation] = TryToEvaluate(corrections[name], variation_args, inputBounds);
+  }
+  return scaleFactors;
+}
+
+map<string, float> ScaleFactorsManager::GetDimuonScaleFactors(string name, const vector<variant<int, double, string>> &args) {
+  bool applyDefault = ShouldApplyScaleFactor(name);
+  bool applyVariations = ShouldApplyVariation(name);
+
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  else {
+    auto systematic_args = args;
+    systematic_args.push_back(extraArgs["systematic"]);
+    scaleFactors["systematic"] = TryToEvaluate(corrections[name], systematic_args, inputBounds);
+  }
+
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    auto variation_args = args;
+    variation_args.push_back(variation);
+    scaleFactors[name + variation] = TryToEvaluate(corrections[name], variation_args, inputBounds);
   }
   return scaleFactors;
 }
@@ -428,6 +501,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
   map<string, float> scaleFactors;
+  map<string, pair<double,double>> inputBounds = GetInputBounds(extraArgs);
   if (!applyDefault) scaleFactors["systematic"] = 1.0;
   else {
     vector<correction::Variable::Type> inputs;
@@ -445,7 +519,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
     for (const correction::Variable& input: corrections[unc_name]->inputs()) {
       unc_inputs.push_back(inputArguments.at(input.name()));
     }
-    float unc = TryToEvaluate(corrections[unc_name], unc_inputs);
+    float unc = TryToEvaluate(corrections[unc_name], unc_inputs, inputBounds);
     scaleFactors[unc_name + "_up"] = 1 + unc;
     scaleFactors[unc_name + "_down"] = 1 - unc;
   }
@@ -465,4 +539,33 @@ bool ScaleFactorsManager::IsJetInBadRegion(string name, float eta, float phi) {
 
   float value = TryToEvaluate(corrections[name], {"jetvetomap", eta, phi});
   return (value != 0.0);
+}
+
+vector<variant<int, double, string>> ScaleFactorsManager::ClampArgsToBounds(
+    const CorrectionRef& correction,
+    const vector<variant<int, double, string>>& args,
+    map<string, pair<double,double>> inputBounds)
+{
+  auto clamped = args;
+  const auto& inputs = correction->inputs();
+
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    if (!holds_alternative<double>(clamped[i])) continue;
+
+    const string& name = inputs[i].name();
+    double val = get<double>(clamped[i]);
+
+    auto it = inputBounds.find(name);
+    if (it == inputBounds.end()) continue;
+
+    double minVal = it->second.first;
+    double maxVal = it->second.second;
+
+    if (val < minVal) val = minVal;
+    if (val > maxVal) val = maxVal;
+
+    clamped[i] = val;
+  }
+
+  return clamped;
 }

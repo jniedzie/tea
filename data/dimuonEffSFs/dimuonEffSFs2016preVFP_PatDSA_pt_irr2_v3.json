@@ -1,0 +1,178 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "dimuonEff_PatDSA",
+            "description": "Scale factors for PAT-DSA dimuon efficiency",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "resonance",
+                    "type": "real",
+                    "description": "Resonant (1) or nonresonant (0) dimuon"
+                },
+                {
+                    "name": "pt",
+                    "type": "real",
+                    "description": "Dimuon pt of the PAT-DSA dimuon candidate"
+                },
+                {
+                    "name": "scale_factors",
+                    "type": "string",
+                    "description": "Choose nominal scale factor or one of the uncertainties"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real",
+                "description": "Output scale factor (nominal) or uncertainty"
+            },
+            "data": {
+                "nodetype": "binning",
+                "input": "resonance",
+                "edges": [
+                    0.0,
+                    1.0,
+                    2.0
+                ],
+                "content": [
+                    {
+                        "nodetype": "binning",
+                        "input": "pt",
+                        "edges": [
+                            3.0,
+                            30.0,
+                            60.0,
+                            "inf"
+                        ],
+                        "content": [
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 1.11
+                                    },
+                                    {
+                                        "key": "up",
+                                        "value": 1.25
+                                    },
+                                    {
+                                        "key": "down",
+                                        "value": 0.9700000000000001
+                                    }
+                                ]
+                            },
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 1.26
+                                    },
+                                    {
+                                        "key": "up",
+                                        "value": 1.3900000000000001
+                                    },
+                                    {
+                                        "key": "down",
+                                        "value": 1.13
+                                    }
+                                ]
+                            },
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 1.16
+                                    },
+                                    {
+                                        "key": "up",
+                                        "value": 1.3099999999999998
+                                    },
+                                    {
+                                        "key": "down",
+                                        "value": 1.01
+                                    }
+                                ]
+                            }
+                        ],
+                        "flow": "error"
+                    },
+                    {
+                        "nodetype": "binning",
+                        "input": "pt",
+                        "edges": [
+                            3.0,
+                            30.0,
+                            60.0,
+                            "inf"
+                        ],
+                        "content": [
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 0.24
+                                    },
+                                    {
+                                        "key": "up",
+                                        "value": 0.33999999999999997
+                                    },
+                                    {
+                                        "key": "down",
+                                        "value": 0.13999999999999999
+                                    }
+                                ]
+                            },
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 0.4
+                                    },
+                                    {
+                                        "key": "up",
+                                        "value": 0.48000000000000004
+                                    },
+                                    {
+                                        "key": "down",
+                                        "value": 0.32
+                                    }
+                                ]
+                            },
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 0.29
+                                    },
+                                    {
+                                        "key": "up",
+                                        "value": 0.39999999999999997
+                                    },
+                                    {
+                                        "key": "down",
+                                        "value": 0.18
+                                    }
+                                ]
+                            }
+                        ],
+                        "flow": "error"
+                    }
+                ],
+                "flow": "error"
+            }
+        }
+    ]
+}

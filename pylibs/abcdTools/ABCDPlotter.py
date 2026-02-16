@@ -8,7 +8,7 @@ from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
 from Logger import fatal, warn, info
 from ttalps_luminosities import get_luminosity
-
+from ttalps_cross_sections import get_cross_sections, get_theory_cross_section
 
 class ABCDPlotter:
   def __init__(self, config, args):
@@ -48,7 +48,8 @@ class ABCDPlotter:
     os.makedirs(config.output_path, exist_ok=True)
 
     self.__setup_canvases()
-    self.__load_background_histograms()
+    if not config.do_data:
+      self.__load_background_histograms()
     self.__setup_backgrounds_sum_histogram()
     self.__load_signal_hists()
 
@@ -119,6 +120,10 @@ class ABCDPlotter:
     label = ROOT.TLatex()
     label.SetTextSize(0.07)
 
+    line = ROOT.TLine()
+    line.SetLineWidth(1)
+    line.SetLineColor(ROOT.kGreen+2)
+
     for i_mass, mass in enumerate(self.config.masses):
       for i_ctau, ctau in enumerate(self.config.ctaus):
         if (mass, ctau) not in self.signal_hists:
@@ -139,11 +144,21 @@ class ABCDPlotter:
                                                  self.abcdHelper.get_nice_name(self.config.variable_1))
         clones["background"].GetXaxis().SetTitle(clones["background"].GetXaxis().GetTitle() +
                                                  self.abcdHelper.get_nice_name(self.config.variable_2))
-        clones["background"].GetYaxis().SetTitleOffset(1.0)
-        clones["background"].GetXaxis().SetTitleOffset(1.0)
+        clones["background"].GetYaxis().SetTitleOffset(0.9)
+        clones["background"].GetXaxis().SetTitleOffset(0.9)
+        clones["background"].GetXaxis().SetTitleSize(0.05)
+        clones["background"].GetYaxis().SetTitleSize(0.05)
+
         clones["background"].DrawNormalized("BOX")
 
         clones[(mass, ctau)].DrawNormalized("BOX SAME")
+        if self.config.grid_line:
+          x_min = self.config.grid_line[0]
+          y_min = self.config.grid_line[2]
+          x_max = self.config.grid_line[1]
+          y_max = self.config.grid_line[3]
+          line.DrawLine(x_min, y_min, x_max, y_max)
+        
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
 
         overlap = self.abcdHelper.get_overlap_coefficient(
@@ -715,7 +730,11 @@ class ABCDPlotter:
             if initial_weight_sum == 0:
               warn(f"Initial weight sum is zero for file {input_path}")
               continue
-            scale = luminosity*self.config.signal_cross_section/initial_weight_sum
+            cross_section = self.config.signal_cross_section
+            if self.config.signal_cross_section == -1:
+              mass_ = float(mass.replace("p", "."))
+              cross_section = get_theory_cross_section(mass_, year)
+            scale = luminosity*cross_section/initial_weight_sum
             self.signal_scales[(mass, ctau, year)] = scale
 
           if (mass, ctau) not in self.signal_hists:
@@ -767,10 +786,10 @@ class ABCDPlotter:
     self.projections_pads["ratio"].Draw()
 
   def set_pad_style(self):
-    ROOT.gPad.SetLeftMargin(0.08)
-    ROOT.gPad.SetRightMargin(0.0)
-    ROOT.gPad.SetTopMargin(0.0)
-    ROOT.gPad.SetBottomMargin(0.08)
+    ROOT.gPad.SetLeftMargin(0.11)
+    ROOT.gPad.SetRightMargin(0.01)
+    ROOT.gPad.SetTopMargin(0.01)
+    ROOT.gPad.SetBottomMargin(0.12)
 
   def __setup_signal_hists(self):
     for mass in self.config.masses:

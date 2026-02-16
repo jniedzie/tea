@@ -14,7 +14,7 @@ TLorentzVector NanoJet::GetFourVector() {
 
 map<string,float> NanoJet::GetBtaggingScaleFactors(string workingPoint) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  return scaleFactorsManager.GetBTagScaleFactors(workingPoint, GetEta(), GetPt());
+  return scaleFactorsManager.GetBTagScaleFactors(workingPoint, GetAbsEta(), GetPt());
 }
 
 map<string,float> NanoJet::GetPUJetIDScaleFactors(string name) {
