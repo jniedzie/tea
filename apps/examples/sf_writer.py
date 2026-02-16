@@ -259,9 +259,9 @@ def main():
             inner_edges.update(inner_dict.keys())
         inner_edges = sorted(inner_edges)
         if config.outer_edge:
-            outer_edges.append(120.0)
+            outer_edges.append(config.outer_edge)
         if config.inner_edge:
-            inner_edges.append(3.0)
+            inner_edges.append(config.inner_edge)
         if not config.correction_edges[0]:
             config.correction_edges[0] = outer_edges
         if not config.correction_edges[1]:

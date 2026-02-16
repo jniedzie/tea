@@ -7,7 +7,6 @@ using namespace std;
 
 NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, const shared_ptr<Event> event)
     : physicsObject(physicsObject_) {
-  string originalCollection_ = physicsObject_->GetOriginalCollection();
   string originalCollection = physicsObject_->GetOriginalCollection();
   if (IsDSAMuon1() || IsDSAMuon2()) hasDSAMuon = true;
   if (!IsDSAMuon1() || !IsDSAMuon2()) hasPatMuon = true;
