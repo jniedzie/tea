@@ -62,12 +62,9 @@ bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
   for (auto& triggerName : triggerNames) {
     passes = false;
     try {
-      passes = event->Get(triggerName);
+      passes = event->GetAs<bool>(triggerName);
     } catch (Exception&) {
-      if (find(triggerWarningsPrinted.begin(), triggerWarningsPrinted.end(), triggerName) == triggerWarningsPrinted.end()) {
-        warn() << "Trigger not present: " << triggerName << endl;
-        triggerWarningsPrinted.push_back(triggerName);
-      }
+      warn() << "Trigger not present: " << triggerName << endl;
     }
     if (passes) return true;
   }

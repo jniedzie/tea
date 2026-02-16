@@ -12,7 +12,7 @@ class Styler:
     self.topMargin = 0.06
     self.bottomMargin = 0.4
     self.leftMargin = 0.16
-    self.rightMargin = 0.15
+    self.rightMargin = 0.17
 
     self.labelFontSize = 26
     
@@ -167,6 +167,13 @@ class Styler:
     if plot is None or type(plot) is TObject:
       return
 
+    # Avoid TTF pixel fonts for 2D plots; use relative sizes to prevent FT_Set_Char_Size errors.
+    label_size = 0.04
+    pad = ROOT.gPad
+    if pad is not None and pad.GetWh() > 0:
+      label_size = self.labelFontSize / float(pad.GetWh())
+    label_font = 42
+
     if (hist.y_min > 0):
       plot.SetMinimum(hist.y_min)
     if (hist.y_max > 0):
@@ -181,23 +188,29 @@ class Styler:
       plot.SetTitle(hist.title)
       plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
       plot.GetXaxis().SetTitle(hist.x_label)
-      plot.GetXaxis().SetTitleSize(self.labelFontSize)
+      plot.GetXaxis().SetTitleFont(label_font)
+      plot.GetXaxis().SetTitleSize(label_size)
       plot.GetXaxis().SetTitleOffset(1.0)
-      plot.GetXaxis().SetLabelSize(self.labelFontSize)
+      plot.GetXaxis().SetLabelFont(label_font)
+      plot.GetXaxis().SetLabelSize(label_size)
 
       plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
       plot.GetYaxis().SetTitle(hist.y_label)
-      plot.GetYaxis().SetTitleSize(self.labelFontSize)
+      plot.GetYaxis().SetTitleFont(label_font)
+      plot.GetYaxis().SetTitleSize(label_size)
       plot.GetYaxis().SetTitleOffset(1.2)
       plot.GetYaxis().CenterTitle()
-      plot.GetYaxis().SetLabelSize(self.labelFontSize)
+      plot.GetYaxis().SetLabelFont(label_font)
+      plot.GetYaxis().SetLabelSize(label_size)
       plot.GetYaxis().SetNdivisions(505)
 
       plot.GetZaxis().SetTitle(hist.z_label)
-      plot.GetZaxis().SetTitleSize(self.labelFontSize)
+      plot.GetZaxis().SetTitleFont(label_font)
+      plot.GetZaxis().SetTitleSize(label_size)
       plot.GetZaxis().SetTitleOffset(1.3)
       plot.GetZaxis().CenterTitle()
-      plot.GetZaxis().SetLabelSize(self.labelFontSize)
+      plot.GetZaxis().SetLabelFont(label_font)
+      plot.GetZaxis().SetLabelSize(label_size)
       plot.GetZaxis().SetNdivisions(505)
 
     except Exception:

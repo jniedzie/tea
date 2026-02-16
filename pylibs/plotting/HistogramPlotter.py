@@ -9,7 +9,7 @@ from Sample import SampleType
 from Styler import Styler
 from HistogramNormalizer import HistogramNormalizer
 from CmsLabelsManager import CmsLabelsManager
-from Logger import *
+from Logger import info, warn, error, fatal
 
 
 class HistogramPlotter:
@@ -469,6 +469,10 @@ class HistogramPlotter:
       return
 
     for hist, sample in self.histosamples2D:
+      if hist.hist is None or type(hist.hist) == ROOT.TObject:
+        error(f"2D histogram {hist.getName()} for sample {sample.name} is not valid.")
+        continue
+      
       self.normalizer.normalize(hist, sample)
 
       hist_rebinned = hist.hist.Rebin2D(hist.x_rebin, hist.y_rebin)
