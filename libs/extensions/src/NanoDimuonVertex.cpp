@@ -141,7 +141,7 @@ float NanoDimuonVertex::GetLogDisplacedTrackIso(string isolationVariable)
   double iso = GetAs<float>(isolationVariable);
   if (iso == 0)
     return -3.0;
-  return TMath::Log10(fabs(iso));
+  return TMath::Log10(iso);
 }
 float NanoDimuonVertex::GetDeltaDisplacedTrackIso03()
 {
