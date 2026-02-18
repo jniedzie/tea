@@ -9,43 +9,63 @@
 
 #include "Helpers.hpp"
 
+#include "ArgsManager.hpp"
+
 class ConfigManager {
  public:
-  static ConfigManager& GetInstance(){ return getInstanceImpl(); }
+  static ConfigManager& GetInstance() { return getInstanceImpl(); }
   static void Initialize(std::string _configPath) { getInstanceImpl(&_configPath); }
+  static void Initialize(const std::unique_ptr<ArgsManager> &args) {
+    std::string _configPath = args->GetString("config").value();
+    getInstanceImpl(&_configPath);
+
+    auto &config = GetInstance();
+
+    if (args->GetString("input_path").has_value()) {
+      config.SetInputPath(args->GetString("input_path").value());
+    }
+
+    if (args->GetString("output_hists_path").has_value()) {
+      config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
+    }
+
+    if (args->GetString("output_trees_path").has_value()) {
+      config.SetTreesOutputPath(args->GetString("output_trees_path").value());
+    }
+  }
 
   ConfigManager(ConfigManager const&) = delete;
   void operator=(ConfigManager const&) = delete;
 
   template <typename T>
-  void GetValue(std::string name, T &outputValue);
+  void GetValue(std::string name, T& outputValue);
 
   template <typename T>
-  void GetVector(std::string name, std::vector<T> &outputVector);
+  void GetVector(std::string name, std::vector<T>& outputVector);
 
   template <typename T, typename U>
-  void GetMap(std::string name, std::map<T, U> &outputMap);
+  void GetMap(std::string name, std::map<T, U>& outputMap);
 
   template <typename T, typename U>
-  void GetPair(std::string name, std::pair<T, U> &outputPair);
+  void GetPair(std::string name, std::pair<T, U>& outputPair);
 
-  void GetExtraEventCollections(insertion_ordered_map<std::string, ExtraCollection> &extraEventCollections);
-  void GetHistogramsParams(std::map<std::string, HistogramParams> &histogramsParams, std::string collectionName);
-  void GetHistogramsParams(std::map<std::string, HistogramParams2D> &histogramsParams, std::string collectionName);
-  void GetHistogramsParams(std::map<std::string, IrregularHistogramParams> &histogramsParams, std::string collectionName);
-  void GetHistogramsParams(std::map<std::string, IrregularHistogramParams2D> &histogramsParams, std::string collectionName);
+  void GetExtraEventCollections(insertion_ordered_map<std::string, ExtraCollection>& extraEventCollections);
+  void GetHistogramsParams(std::map<std::string, HistogramParams>& histogramsParams, std::string collectionName);
+  void GetHistogramsParams(std::map<std::string, HistogramParams2D>& histogramsParams, std::string collectionName);
+  void GetHistogramsParams(std::map<std::string, IrregularHistogramParams>& histogramsParams, std::string collectionName);
+  void GetHistogramsParams(std::map<std::string, IrregularHistogramParams2D>& histogramsParams, std::string collectionName);
 
-  void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsMap> &scaleFactors);
-  void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsTuple> &scaleFactors);
+  void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsMap>& scaleFactors);
+  void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsTuple>& scaleFactors);
 
-  void GetCuts(std::vector<std::pair<std::string, std::pair<float, float>>> &cuts);
+  void GetCuts(std::vector<std::pair<std::string, std::pair<float, float>>>& cuts);
 
   void SetInputPath(std::string path) { inputPath = path; }
   void SetTreesOutputPath(std::string path) { treesOutputPath = path; }
   void SetHistogramsOutputPath(std::string path) { histogramsOutputPath = path; }
 
   std::string GetYear();
-  
+
  private:
   std::string configPath;
   ConfigManager(std::string* const _configPath);
@@ -54,16 +74,16 @@ class ConfigManager {
 
   void PrintBanner();
 
-  FILE *pythonFile;
-  PyObject *pythonModule;
-  PyObject *config;
+  FILE* pythonFile;
+  PyObject* pythonModule;
+  PyObject* config;
 
-  PyObject *GetPythonValue(std::string name);
-  PyObject *GetPythonList(std::string name);
-  PyObject *GetPythonDict(std::string name);
+  PyObject* GetPythonValue(std::string name);
+  PyObject* GetPythonList(std::string name);
+  PyObject* GetPythonDict(std::string name);
 
-  int GetCollectionSize(PyObject *collection);
-  PyObject *GetItem(PyObject *collection, int index);
+  int GetCollectionSize(PyObject* collection);
+  PyObject* GetItem(PyObject* collection, int index);
 
   std::string inputPath = "";
   std::string treesOutputPath = "";
