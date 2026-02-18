@@ -7,6 +7,7 @@ using namespace std;
 
 NanoDimuonVertex::NanoDimuonVertex(shared_ptr<PhysicsObject> physicsObject_, const shared_ptr<Event> event)
     : physicsObject(physicsObject_) {
+  string originalCollection = physicsObject_->GetOriginalCollection();
   if (IsDSAMuon1() || IsDSAMuon2()) hasDSAMuon = true;
   if (!IsDSAMuon1() || !IsDSAMuon2()) hasPatMuon = true;
   auto muons = GetMuons(event);
@@ -139,7 +140,7 @@ float NanoDimuonVertex::GetLogDisplacedTrackIso(string isolationVariable)
 {
   double iso = GetAs<float>(isolationVariable);
   if (iso == 0)
-    return -6.0;
+    return -3.0;
   return TMath::Log10(iso);
 }
 float NanoDimuonVertex::GetDeltaDisplacedTrackIso03()

@@ -17,6 +17,7 @@ class ScaleFactorProducer:
         self.histogram = None
         self.histogram2D = None
         self.years_without_data = {}
+        self.exclude_backgrounds_with_less_than = 0
 
         if config != None:
             self.config = config
@@ -26,6 +27,7 @@ class ScaleFactorProducer:
                 self.histogram1D = config.histogram1D
             if config.histogram2D:
                 self.histogram2D = config.histogram2D
+            self.exclude_backgrounds_with_less_than = self.config.exclude_backgrounds_with_less_than
 
         self.extrapolation_functions = {
             "const": "[0]",
@@ -138,6 +140,8 @@ class ScaleFactorProducer:
 
     def getBackgroundHistogram1D(self, histogram):
         hist_name = histogram.name
+        if hist_name not in self.years_without_data:
+            self.years_without_data[hist_name] = []
         years_without_data = self.years_without_data[hist_name]
         stack = THStack(hist_name, hist_name)
         for sample in self.backgroundSamples:
@@ -147,10 +151,10 @@ class ScaleFactorProducer:
             histogram.load(root_file)
 
             n_entries = histogram.hist.GetEntries()
-            if n_entries < self.config.exclude_backgrounds_with_less_than:
+            if n_entries < self.exclude_backgrounds_with_less_than:
                 warn(
                     (f"Histogram {sample.name} has less than "
-                    f"{self.config.exclude_backgrounds_with_less_than} entries and will be excluded.")
+                    f"{self.exclude_backgrounds_with_less_than} entries and will be excluded.")
                 )
                 root_file.Close()
                 continue
@@ -188,6 +192,8 @@ class ScaleFactorProducer:
 
     def getBackgroundHistogram2D(self, histogram2D):
         hist_name = histogram2D.name
+        if hist_name not in self.years_without_data:
+            self.years_without_data[hist_name] = []
         years_without_data = self.years_without_data[hist_name]
         stack = THStack(hist_name, hist_name)
         for sample in self.backgroundSamples:
@@ -197,10 +203,10 @@ class ScaleFactorProducer:
             histogram2D.load(root_file)
 
             n_entries = histogram2D.hist.GetEntries()
-            if n_entries < self.config.exclude_backgrounds_with_less_than:
+            if n_entries < self.exclude_backgrounds_with_less_than:
                 warn(
                     (f"Histogram {sample.name} has less than "
-                    f"{self.config.exclude_backgrounds_with_less_than} entries and will be excluded.")
+                    f"{self.exclude_backgrounds_with_less_than} entries and will be excluded.")
                 )
                 root_file.Close()
                 continue
@@ -212,6 +218,7 @@ class ScaleFactorProducer:
             
             stack.Add(deepcopy(normalized_hist))
             root_file.Close()
+            histogram2D.name = hist_name
         
         stack_items = stack.GetStack()
         if stack_items:
@@ -246,9 +253,13 @@ class ScaleFactorProducer:
     
 
     def getDataHistogram2D(self, histogram2D):
+        hist_name = histogram2D.name
+        if hist_name not in self.years_without_data:
+            self.years_without_data[hist_name] = []
+        
         stack = THStack(hist_name, hist_name)
         for dataSample in self.dataSamples:
-            root_file = self.__getRootFile(self.dataSample.file_path)
+            root_file = self.__getRootFile(dataSample.file_path)
             histogram2D.load(root_file)
             histogram2D.setup()
             stack.Add(deepcopy(histogram2D.hist))
@@ -256,6 +267,7 @@ class ScaleFactorProducer:
                 warn(f"Data sample {dataSample.name} has no events for {hist_name}!")
                 self.years_without_data[hist_name].append(dataSample.year)
             root_file.Close()
+            histogram2D.name = hist_name
         data_stack_combined = stack.GetStack().Last()
         histogram2D.hist = data_stack_combined
         data_histogram2D = deepcopy(histogram2D)
@@ -412,15 +424,13 @@ class ScaleFactorProducer:
 
         ratios = {}
         for ix in range(1, nbinsX + 1):
-            # x_bin = round(ratio_hist1D_up.GetXaxis().GetBinLowEdge(ix),2)
+            x_bin = round(ratio_hist1D_up.GetXaxis().GetBinLowEdge(ix),2)
             ratio = ratio_hist1D_up.GetBinContent(ix)
             uncertainty_up = ratio_hist1D_up.GetBinError(ix)
             uncertainty_down = ratio_hist1D_down.GetBinError(ix)
-            # ratios[x_bin] = [ratio, ratio+uncertainty_up, ratio-uncertainty_down]
-            ratios = [ratio, ratio+uncertainty_up, ratio-uncertainty_down]
+            ratios[x_bin] = [ratio, ratio+uncertainty_up, ratio-uncertainty_down]
             if ratio == 0:
-                # ratios[x_bin] = [1.0, 1.0, 1.0]
-                ratios = [1.0, 1.0, 1.0]
+                ratios[x_bin] = [1.0, 1.0, 1.0]
 
         return ratios
 

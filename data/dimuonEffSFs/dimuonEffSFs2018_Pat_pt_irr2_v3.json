@@ -1,0 +1,94 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "dimuonEff_Pat",
+            "description": "Scale factors for PAT-PAT dimuon efficiency given from ttbar + J/Psi CR dimuon pt distribution",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "pt",
+                    "type": "real",
+                    "description": "Dimuon pt of the PAT-PAT dimuon candidate"
+                },
+                {
+                    "name": "scale_factors",
+                    "type": "string",
+                    "description": "Choose nominal scale factor or one of the uncertainties"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real",
+                "description": "Output scale factor (nominal) or uncertainty"
+            },
+            "data": {
+                "nodetype": "binning",
+                "input": "pt",
+                "edges": [
+                    3.0,
+                    30.0,
+                    60.0,
+                    "inf"
+                ],
+                "content": [
+                    {
+                        "nodetype": "category",
+                        "input": "scale_factors",
+                        "content": [
+                            {
+                                "key": "nominal",
+                                "value": 1.0287635759967064
+                            },
+                            {
+                                "key": "up",
+                                "value": 1.0877541863617561
+                            },
+                            {
+                                "key": "down",
+                                "value": 0.9724670121052502
+                            }
+                        ]
+                    },
+                    {
+                        "nodetype": "category",
+                        "input": "scale_factors",
+                        "content": [
+                            {
+                                "key": "nominal",
+                                "value": 0.9263647848228466
+                            },
+                            {
+                                "key": "up",
+                                "value": 0.9820557413605021
+                            },
+                            {
+                                "key": "down",
+                                "value": 0.873406020458531
+                            }
+                        ]
+                    },
+                    {
+                        "nodetype": "category",
+                        "input": "scale_factors",
+                        "content": [
+                            {
+                                "key": "nominal",
+                                "value": 0.8459956295061628
+                            },
+                            {
+                                "key": "up",
+                                "value": 0.9360806467991242
+                            },
+                            {
+                                "key": "down",
+                                "value": 0.7618124252158414
+                            }
+                        ]
+                    }
+                ],
+                "flow": "error"
+            }
+        }
+    ]
+}

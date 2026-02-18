@@ -146,3 +146,39 @@ class CmsLabelsManager:
         latex.SetTextSize(extraTextSize*self.top)
         latex.DrawLatex(posX_, posY_ - self.relExtraDY *
                         self.cmsTextSize*self.top, self.extraText)
+
+    def drawLabels2D(self, canvas):
+        latex = ROOT.TLatex()
+        latex.SetTextFont(self.cmsTextFont)
+        latex.SetTextSize(self.cmsTextSize*self.top)
+
+        latex.SetTextAlign(13)
+        latex.SetNDC()
+        latex.DrawLatex(0.1, 0.99, self.cmsText)
+
+        canvas.Update()
+        cms_width = latex.GetTextSize()
+        print(f"cms width: {cms_width}")
+
+        if self.extraText is not None:
+
+            latex = ROOT.TLatex()
+            latex.SetTextFont(self.extraTextFont)
+            latex.SetTextAlign(13)
+            extraTextSize = self.extraOverCmsTextSize * self.cmsTextSize
+            latex.SetTextSize(extraTextSize*self.top)
+            latex.SetNDC()
+            posX_ = 0.1 + 2*cms_width + 0.01
+            posY_ = 0.99 - 0.01
+            latex.DrawLatex(posX_, posY_, self.extraText)
+            
+
+        lumiText = self.lumi + self.collision_energy
+        latex = ROOT.TLatex()
+        latex.SetNDC()
+        latex.SetTextAngle(0)
+        latex.SetTextColor(ROOT.kBlack)
+        latex.SetTextFont(43)
+        latex.SetTextAlign(31)
+        latex.SetTextSize(20)
+        latex.DrawLatex(1-self.right, 1-self.top + 2*self.lumiTextOffset * self.top + 0.01, lumiText)

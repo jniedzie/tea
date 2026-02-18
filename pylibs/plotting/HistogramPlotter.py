@@ -338,7 +338,7 @@ class HistogramPlotter:
     if ratio_hist:
 
       canvas.cd(2)
-      ratio_hist.Draw("p")
+      ratio_hist.Draw("p e0")
       self.styler.setupFigure(ratio_hist, hist, is_ratio=True)
 
   def __drawUncertainties(self, canvas, hist):
