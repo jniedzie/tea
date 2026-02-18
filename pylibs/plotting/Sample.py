@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from Legend import Legend
-from Logger import error
+from Logger import fatal
 
 # enum class with signal, background, data
 
