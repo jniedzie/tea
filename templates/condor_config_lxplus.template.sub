@@ -1,0 +1,14 @@
+Universe              = vanilla
+executable            = <executable>
+arguments             = $(ProcId)
+GetEnv                = True
+output                = <output_path>
+error                 = <error_path>
+log                   = <log_path>
+request_memory        = <memory_request> GB
++JobFlavour           = "<job_flavour>"
+
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+
+queue <n_jobs>

@@ -2,6 +2,7 @@ import os
 import importlib.util
 import uuid
 from enum import Enum
+import socket
 
 from Logger import info, warn, error, fatal
 
@@ -268,7 +269,16 @@ class SubmissionManager:
     self.input_files_list_file_name = f"tmp/input_files_{hash_string}.txt"
 
   def __copy_templates(self):
-    os.system(f"cp ../tea/templates/condor_config.template.sub {self.condor_config_name}")
+    hostname = socket.gethostname()
+    if "lxplus" in hostname:
+      condor_config_template_name = "condor_config_lxplus.template.sub"
+    elif "naf" in hostname:
+      condor_config_template_name = "condor_config_naf.template.sub"
+    else:
+      fatal(f"Unknown facility for hostname {hostname}")
+      exit(1)
+    
+    os.system(f"cp ../tea/templates/{condor_config_template_name} {self.condor_config_name}")
     os.system(f"cp ../tea/templates/condor_run.template.sh {self.condor_run_script_name}")
     os.system(f"chmod 700 {self.condor_run_script_name}")
     info(f"Stored condor config at: {self.condor_config_name}")
