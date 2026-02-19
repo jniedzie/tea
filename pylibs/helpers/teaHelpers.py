@@ -1,6 +1,8 @@
 import re
 import inspect
-from Logger import error
+import socket
+import sys
+from Logger import error, fatal
 
 
 def get_year_from_samples(samples):
@@ -20,3 +22,17 @@ def get_year_from_samples(samples):
 
   m = re.search(r'(\d{4}[A-Za-z]*)', source_name)
   return m.group(1) if m else None
+
+
+def get_facility():
+  hostname = socket.gethostname()
+  if "lxplus" in hostname:
+    facility = "lxplus"
+  elif "naf" in hostname:
+    facility = "NAF"
+  else:
+    fatal(f"Unknown facility for hostname: {hostname}")
+    sys.exit(1)
+    exit(1)
+
+  return facility
