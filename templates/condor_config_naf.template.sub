@@ -2,17 +2,11 @@ Universe              = vanilla
 executable            = <executable>
 arguments             = $(ProcId)
 GetEnv                = True
-# +Remote_Schedd = "bird-htc-sched11.desy.de"
 output                = <output_path>
 error                 = <error_path>
 log                   = <log_path>
-# requirements 	        = (OpSysAndVer == "CentOS7" || OpSysAndVer == "RedHat9")
 request_memory        = <memory_request> GB
 +JobFlavour           = "<job_flavour>"
 max_materialize       = <materialize_max>
-
-# should_transfer_files   = YES
-# transfer_output_files = YES
-# when_to_transfer_output = ON_EXIT
 
 queue <n_jobs>
