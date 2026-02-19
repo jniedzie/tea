@@ -200,6 +200,22 @@ void ConfigManager::GetVector<std::string>(std::string name, std::vector<std::st
   }
 }
 
+template <>
+void ConfigManager::GetVector<int>(std::string name, std::vector<int> &outputVector) {
+  PyObject *pythonList = GetPythonList(name);
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject *item = GetItem(pythonList, i);
+
+    if (!item || !PyLong_Check(item)) {
+      error() << "Failed retriving python vector<int>" << endl;
+      continue;
+    }
+    int value = PyLong_AsLong(item);
+    outputVector.push_back(value);
+  }
+}
+
 //-------------------------------------------------------------------------------------------------
 // Template specializations to extract a map from the python file
 //-------------------------------------------------------------------------------------------------
