@@ -70,7 +70,7 @@ def plot_hist2D(hist, title, output_name, xbins = [], ybins = [], xaxis_title="X
     hist.GetXaxis().SetTitle(xaxis_title)
     hist.GetYaxis().SetTitle(yaxis_title)
     hist.SetStats(0)  # hide stats box
-    ROOT.gStyle.SetPaintTextFormat(".2f");
+    ROOT.gStyle.SetPaintTextFormat(".2f")
     hist.SetMinimum(0)
     hist.Draw("COLZ TEXT")
     output_dir = "../sf/"
@@ -78,6 +78,38 @@ def plot_hist2D(hist, title, output_name, xbins = [], ybins = [], xaxis_title="X
         os.makedirs(output_dir)
     output_path = os.path.join(output_dir, output_name)
     canvas.SaveAs(f"{output_path}.pdf")
+
+def plot_hist2D_with_unc(hist, hist_unc_up, hist_unc_down, title, output_name, xbins = [], ybins = [], xaxis_title="X axis", yaxis_title="Y axis"):
+    canvas = ROOT.TCanvas("canvas", "", 800, 600)
+    hist.SetTitle(title)
+    hist.GetXaxis().SetTitle(xaxis_title)
+    hist.GetYaxis().SetTitle(yaxis_title)
+    hist.SetStats(0)  # hide stats box
+    ROOT.gStyle.SetPaintTextFormat(".2f")
+    hist.SetMinimum(0)
+    hist.GetZaxis().SetRangeUser(0,2)
+    hist.Draw("COLZ")
+    latex = ROOT.TLatex()
+    latex.SetTextAlign(22)
+    latex.SetTextSize(0.025)
+    latex.SetTextFont(42)
+    for i in range(1, hist.GetNbinsX() + 1):
+        for j in range(1, hist.GetNbinsY() + 1):
+            ratio = hist.GetBinContent(i,j)
+            if ratio == 0.0:
+                continue
+            unc_up = hist_unc_up.GetBinContent(i,j) - ratio
+            unc_down = ratio - hist_unc_down.GetBinContent(i,j)
+            x = hist.GetXaxis().GetBinCenter(i)
+            y = hist.GetYaxis().GetBinCenter(j)
+            text = f"{ratio:.2f}^{{+{unc_up:.2f}}}_{{-{unc_down:.2f}}}"
+            latex.DrawLatex(x, y, text)
+
+    output_dir = "../sf/"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    output_path = os.path.join(output_dir, output_name)
+    canvas.SaveAs(f"{output_path}_uncertainties.pdf")
 
 
 def plot_hist1D(hist, title, output_name, xaxis_title="X axis"):
@@ -155,8 +187,8 @@ def main():
 
     # One 1D Histogram defined
     if config.histogram1D:
-        background_histogram = sfProducer.getBackgroundHistogram1D(config.histogram1D)
         data_histogram = sfProducer.getDataHistogram1D(config.histogram1D)
+        background_histogram = sfProducer.getBackgroundHistogram1D(config.histogram1D)
         data_hist = data_histogram.hist
         background_hist = background_histogram.hist
 
@@ -164,7 +196,8 @@ def main():
         ratio_hist,ratio_unc_hist_up,ratio_unc_hist_down  = sfProducer.getDataMCRatioHists1D(data_histogram, background_histogram)
 
         edges = list(scale_factors.keys())
-        edges.append(600.0)
+        if config.edge:
+            edges.append(config.edge)
         if not config.correction_edges[0]:
             config.correction_edges[0] = edges
 
@@ -205,24 +238,30 @@ def main():
 
     # One 2D Histogram defined
     if config.histogram2D:
-        background_histogram = sfProducer.getBackgroundHistogram2D(config.histogram2D)
         data_histogram = sfProducer.getDataHistogram2D(config.histogram2D)
+        background_histogram = sfProducer.getBackgroundHistogram2D(config.histogram2D)
         data_hist = data_histogram.hist
         background_hist = background_histogram.hist
 
         scale_factors = sfProducer.getDataMCRatios2D(data_histogram, background_histogram)
         ratio_hist,ratio_unc_hist_up,ratio_unc_hist_down  = sfProducer.getDataMCRatioHists2D(data_histogram, background_histogram)
 
-        x_title = nice_names_with_unit[config.correction_inputs[0]["name"]]
-        y_title = nice_names_with_unit[config.correction_inputs[1]["name"]]
+        x_title = config.correction_inputs[0]["name"]
+        y_title = config.correction_inputs[1]["name"]
+        if config.correction_inputs[0]["name"] in nice_names_with_unit:
+            x_title = nice_names_with_unit[config.correction_inputs[0]["name"]]
+        if config.correction_inputs[1]["name"] in nice_names_with_unit:
+            y_title = nice_names_with_unit[config.correction_inputs[1]["name"]]
 
         outer_edges = list(scale_factors.keys())
         inner_edges = set()
         for inner_dict in scale_factors.values():
             inner_edges.update(inner_dict.keys())
         inner_edges = sorted(inner_edges)
-        outer_edges.append(2000.0)
-        inner_edges.append(700.0)
+        if config.outer_edge:
+            outer_edges.append(config.outer_edge)
+        if config.inner_edge:
+            inner_edges.append(config.inner_edge)
         if not config.correction_edges[0]:
             config.correction_edges[0] = outer_edges
         if not config.correction_edges[1]:
@@ -244,6 +283,7 @@ def main():
         plot_hist2D(data_hist, "Data Histogram", f"sf_{config.year}/data_hist_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(background_hist, "MC Background Histogram", f"sf_{config.year}/mc_hist_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(ratio_hist, "Data / MC Corrections", f"sf_{config.year}/sf_ratio_{config.year}", outer_edges, inner_edges, x_title, y_title)
+        plot_hist2D_with_unc(ratio_hist, ratio_unc_hist_up, ratio_unc_hist_down, "Data / MC Corrections", f"sf_{config.year}/sf_ratio_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(ratio_unc_hist_up, "Data / MC Corrections Uncertainty up", f"sf_{config.year}/sf_ratio_uncertainty_up_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(ratio_unc_hist_down, "Data / MC Corrections Uncertainty down", f"sf_{config.year}/sf_ratio_uncertainty_down_{config.year}", outer_edges, inner_edges, x_title, y_title)
         # get relative ratio_unc_hist_up devided by ratio_hist
@@ -264,7 +304,7 @@ def main():
                 scale_factors_uncertainty[xbin][ybin] = [nom, up-nom, nom-down]
         final_hist_unc_up = sfProducer.getHistsFromScaleFactors2D(scale_factors_uncertainty, outer_edges, inner_edges, 1)
         final_hist_unc_down = sfProducer.getHistsFromScaleFactors2D(scale_factors_uncertainty, outer_edges, inner_edges, 2)
-        plot_hist2D(final_hist_nominal, "Data / MC Corrections", f"sf_{config.year}/sf_ratio_final_{config.year}", outer_edges, inner_edges, x_title, y_title)
+        plot_hist2D_with_unc(final_hist_nominal, final_hist_up, final_hist_down, "Data / MC Corrections", f"sf_{config.year}/sf_ratio_final_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(final_hist_up, "Data / MC Corrections Up Variation", f"sf_{config.year}/sf_ratio_variation_up_final_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(final_hist_down, "Data / MC Corrections Down Variation", f"sf_{config.year}/sf_ratio_variation_down_final_{config.year}", outer_edges, inner_edges, x_title, y_title)
         plot_hist2D(final_hist_unc_up, "Data / MC Corrections Up Uncertainty", f"sf_{config.year}/sf_ratio_uncertainty_up_final_{config.year}", outer_edges, inner_edges, x_title, y_title)

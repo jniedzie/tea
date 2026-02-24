@@ -102,13 +102,13 @@ def get_scale_factors(year):
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": "NUM_MediumID_DEN_TrackerMuons",
           "systematic": "nominal",
-          "variations": "systup,systdown"
+          "variations": "systup,systdown",
       },
       "muonIDTight": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": "NUM_TightID_DEN_TrackerMuons",
           "systematic": "nominal",
-          "variations": "systup,systdown"
+          "variations": "systup,systdown",
       },
 
       # Muon Iso
@@ -116,13 +116,13 @@ def get_scale_factors(year):
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": loose_muon_iso_type,
           "systematic": "nominal",
-          "variations": "systup,systdown"
+          "variations": "systup,systdown",
       },
       "muonIsoTight": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": tight_muon_iso_type,
           "systematic": "nominal",
-          "variations": "systup,systdown"
+          "variations": "systup,systdown",
       },
 
       # Pileup
@@ -133,10 +133,21 @@ def get_scale_factors(year):
           "variations": "up,down",
       },
 
-      # Dimuon Eff. SFs from tt+JPsi CR - WIP
-      "dimuonEff": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_invMassJPsiBin_v3.json", 
-          "type": "dimuonEff",
+      "dimuonEff_Pat": {
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_Pat_pt_irr2_v3.json", 
+          "type": "dimuonEff_Pat",
+          "systematic": "nominal",
+          "variations": "up,down",
+      },
+      "dimuonEff_PatDSA": {
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_PatDSA_pt_irr2_v3.json", 
+          "type": "dimuonEff_PatDSA",
+          "systematic": "nominal",
+          "variations": "up,down",
+      },
+      "dimuonEff_DSA": {
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_DSA_pt_irr2_v3.json", 
+          "type": "dimuonEff_DSA",
           "systematic": "nominal",
           "variations": "up,down",
       },
@@ -146,7 +157,7 @@ def get_scale_factors(year):
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": muon_trigger_type,
           "systematic": "nominal",
-          "variations": "systup,systdown"
+          "variations": "systup,systdown",
       },
 
       # DSA Muon SFs

@@ -174,6 +174,8 @@ class DatacardsProcessor:
       c_err = bkg_hist.GetBinError(2, 2)
       d_err = bkg_hist.GetBinError(2, 1)
       prediction, prediction_err = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+      if prediction == 0:
+        continue
       rel_unc = prediction_err / prediction
       if rel_unc > max_rel_unc:
         max_rel_unc = rel_unc
@@ -249,6 +251,8 @@ class DatacardsProcessor:
     info(f"---- raw_sum_d: {raw_sum_d:.3f}")
     info(f"---- background_sum_a: {background_sum_a:.3f} +/- {a_unc:.3f}")
     info(f"---- a_unc2: {a_unc2:.3f}")
+    info(f"---- background_sum_b: {background_sum_b:.3f}")
+    info(f"---- background_sum_c: {background_sum_c:.3f}")
     info(f"---- background_sum_d: {background_sum_d:.3f} +/- {d_unc:.3f}")
     info(f"---- d_unc2: {d_unc2:.3f}")
 
@@ -258,10 +262,15 @@ class DatacardsProcessor:
     hist.SetBinContent(2, 2, background_sum_c)
     hist.SetBinContent(2, 1, background_sum_d)
 
-    hist.SetBinError(1, 2, background_sum_a**0.5)
-    hist.SetBinError(1, 1, background_sum_b**0.5)
-    hist.SetBinError(2, 2, background_sum_c**0.5)
-    hist.SetBinError(2, 1, background_sum_d**0.5)
+    a_err = background_sum_a**0.5 if background_sum_a > 0 else 0
+    b_err = background_sum_b**0.5 if background_sum_b > 0 else 0
+    c_err = background_sum_c**0.5 if background_sum_c > 0 else 0
+    d_err = background_sum_d**0.5 if background_sum_d > 0 else 0
+
+    hist.SetBinError(1, 2, a_err)
+    hist.SetBinError(1, 1, b_err)
+    hist.SetBinError(2, 2, c_err)
+    hist.SetBinError(2, 1, d_err)
 
     histogram = Histogram2D(
         name=histosample_name,

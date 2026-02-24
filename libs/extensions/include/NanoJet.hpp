@@ -27,6 +27,7 @@ class NanoJet {
 
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }
+  inline float GetAbsEta() { return fabs(float(physicsObject->Get("eta"))); }
   inline float GetPhi() { return physicsObject->Get("phi"); }
   inline float GetMass() { return physicsObject->Get("mass"); }
   inline float GetArea() { return physicsObject->Get("area"); }
