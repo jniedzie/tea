@@ -234,12 +234,6 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
     auto weights_ = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
     for (auto& [name, weight] : weights_) weights[name] *= weight;
   }
-  float systematic = weights["systematic"];
-  for (auto& [name, weight] : weights) {
-    if (weight == 1.0) {
-      weights[name] = systematic;
-    }
-  }
   return weights;
 }
 
