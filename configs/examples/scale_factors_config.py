@@ -105,21 +105,18 @@ def get_scale_factors(year):
           "type": "NUM_LooseID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "inputBounds": "pt:15.1;inf",
       },
       "muonIDMedium": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": "NUM_MediumID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "inputBounds": "pt:15.1;inf",
       },
       "muonIDTight": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": "NUM_TightID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "inputBounds": "pt:15.1;inf",
       },
 
       # Muon Iso
@@ -128,14 +125,12 @@ def get_scale_factors(year):
           "type": loose_muon_iso_type,
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "inputBounds": "pt:15.1;inf",
       },
       "muonIsoTight": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": tight_muon_iso_type,
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "inputBounds": "pt:15.1;inf",
       },
 
       # Pileup
@@ -171,7 +166,6 @@ def get_scale_factors(year):
           "type": muon_trigger_type,
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "inputBounds": "pt:25.9;inf,eta:0.0;2.3",
       },
 
       # DSA Muon SFs
@@ -180,7 +174,6 @@ def get_scale_factors(year):
           "type": "NUM_DisplacedID_DEN_dSAMuons",
           "systematic": "nominal",
           "variations": "up_syst,down_syst",
-          "inputBounds": "pt:15.1;29.9",
       },
       "dsamuonID_cosmic": {
           "path": "../tea/DSAMuonSF/id_cosmic/NUM_DisplacedID_DEN_dSAMuons_absdxy.json.gz",
@@ -253,7 +246,6 @@ def get_scale_factors(year):
         "systematic": "nom",
         "variations": "up,down",
         "workingPoint": "T",
-        "inputBounds": "pt:12.5;57.4",
     }
     #  Muon Reco no medium pt RECO SF for Run 3
     scaleFactors["muonReco"] = {
@@ -261,6 +253,5 @@ def get_scale_factors(year):
         "type": "NUM_TrackerMuons_DEN_genTracks",
         "systematic": "nominal",
         "variations": "systup,systdown",
-        "inputBounds": "pt:40.1;inf",
     }
   return scaleFactors

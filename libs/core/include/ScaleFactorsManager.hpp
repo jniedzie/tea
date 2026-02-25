@@ -5,6 +5,8 @@
 #ifndef ScaleFactorsManager_hpp
 #define ScaleFactorsManager_hpp
 
+#include <nlohmann/json.hpp>
+
 #include "Helpers.hpp"
 
 #ifdef USE_CORRECTIONLIB
@@ -22,17 +24,17 @@ struct MuonIso;
 
 class ScaleFactorsManager {
  public:
-  static ScaleFactorsManager &GetInstance() {
+  static ScaleFactorsManager& GetInstance() {
     static ScaleFactorsManager* instance = new ScaleFactorsManager();
     return *instance;
   }
 
-  ScaleFactorsManager(ScaleFactorsManager const &) = delete;
-  void operator=(ScaleFactorsManager const &) = delete;
+  ScaleFactorsManager(ScaleFactorsManager const&) = delete;
+  void operator=(ScaleFactorsManager const&) = delete;
 
   std::map<std::string, float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
+  std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
 
@@ -42,30 +44,27 @@ class ScaleFactorsManager {
   std::vector<std::string> GetBTagVariationNames(std::string name);
 
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
-  std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
-  
-  std::map<std::string, float> GetDimuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>> &args);
+  std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
 
-  
+  std::map<std::string, float> GetDimuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
+
   bool IsJetVetoMapDefined(std::string name);
   bool IsJetInBadRegion(std::string name, float eta, float phi);
 
   void ReadJetEnergyCorrections();
-  bool ShouldApplyJetEnergyCorrections() {
-    return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec");
-  }
+  bool ShouldApplyJetEnergyCorrections() { return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec"); }
   std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
   std::map<std::string, float> GetJetEnergyResolutionVariables(float jetEta, float jetPt, float rho);
   float GetJetEnergyResolutionPt(std::map<std::string, std::variant<int,double,std::string>> inputArguments);
 
-  bool ShouldApplyScaleFactor(const std::string &name);
-  bool ShouldApplyVariation(const std::string &name);
+  bool ShouldApplyScaleFactor(const std::string& name);
+  bool ShouldApplyVariation(const std::string& name);
 
  private:
   ScaleFactorsManager();
   ~ScaleFactorsManager() {}
 
-  static ScaleFactorsManager &getInstanceImpl() {
+  static ScaleFactorsManager& getInstanceImpl() {
     static ScaleFactorsManager instance;
     return instance;
   }
@@ -75,23 +74,20 @@ class ScaleFactorsManager {
   std::map<std::string, CompoundCorrectionRef> compoundCorrections;
   std::map<std::string, std::map<std::string, std::string>> correctionsExtraArgs;
 
-  TH1D *pileupSFvalues;
+  std::map<std::string, std::map<std::string, std::pair<double, double>>> boundsPerInput;
+
+  TH1D* pileupSFvalues;
+
+  void ExtractBounds(const nlohmann::json& node, std::map<std::string, std::pair<double, double>>& bounds);
 
   void ReadScaleFactorFlags();
   void ReadScaleFactors();
   void ReadPileupSFs();
 
-  float TryToEvaluate(const CorrectionRef &correction, 
-                      const std::vector<std::variant<int, double, std::string>> &args, 
-                      std::map<std::string, std::pair<double,double>> inputBounds = {});
+  float TryToEvaluate(const std::string& name, const std::vector<std::variant<int, double, std::string>>& args);
 
   std::vector<std::string> GetScaleFactorVariations(std::string variations_str);
-  std::map<std::string, std::pair<double,double>> GetInputBounds(std::map<std::string,std::string> extraArgs);
-
-  std::vector<std::variant<int, double, std::string>> ClampArgsToBounds(
-    const CorrectionRef& correction,
-    const std::vector<std::variant<int, double, std::string>>& args,
-    std::map<std::string, std::pair<double,double>> inputBounds);
+  std::map<std::string, std::pair<double, double>> GetInputBounds(std::map<std::string, std::string> extraArgs);
 };
 
 struct MuonID {
