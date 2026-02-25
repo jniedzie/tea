@@ -354,7 +354,7 @@ tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergy
   }
   if (goodBJetsPtCutsIt != extraCollectionsDescriptions[goodBJetsCollectionName].allCuts.end()) {
     goodBJetPtCuts = goodBJetsPtCutsIt->second;
-  } else{
+  } else {
     goodBJetPtCuts = goodJetPtCuts;
   }
 
