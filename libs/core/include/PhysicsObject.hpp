@@ -130,6 +130,10 @@ class PhysicsObject {
   }
 
   void SetFloat(std::string branchName, float value) {
+    auto it = customValuesFloat.find(branchName);
+    if (it != customValuesFloat.end()) {
+      delete it->second;
+    }
     customValuesFloat[branchName] = new Float_t(value);
     customValuesTypes[branchName] = "Float_t";
   }
