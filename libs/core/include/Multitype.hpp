@@ -66,6 +66,10 @@ class Multitype {
       branchType = object->valuesTypes.at(branchName);
     else if (object->customValuesTypes.find(branchName) != object->customValuesTypes.end()) 
       branchType = object->customValuesTypes.at(branchName);
+    else {
+      std::string message = "Branch not found: " + branchName + "\n";
+      throw BadTypeException(message.c_str());
+    }
     if (branchType != typeName) {
       std::string message = "Casting a physics object-level branch " + branchName + " (" + branchType + ") to " + typeName + "\n";
       throw BadTypeException(message.c_str());
