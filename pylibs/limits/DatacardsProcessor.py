@@ -469,7 +469,7 @@ class DatacardsProcessor:
     for name, stat_error in statistical_errors.items():
       self.datacard += f"stat_err_{name} lnN\t"
       for name_, stat_error_ in statistical_errors.items():
-        if name == "data_obs":
+        if name_ == "data_obs":
           continue
         if name_ == name:
           self.datacard += f" {stat_error_}"
