@@ -152,7 +152,7 @@ class DatacardsProcessor:
         print(f"{variation_name}: n_base = {n_base}, n_variation = {n_variation}")
 
       if n_base != 0:
-        variation = n_variation/ n_base
+        variation = n_variation / n_base
         for symmetric_variation in self.config.symmetric_variations:
           if symmetric_variation in cms_variation_name:
             variation = abs(variation - 1) + 1
