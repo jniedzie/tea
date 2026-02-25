@@ -151,6 +151,7 @@ class Event {
   inline Short_t GetShort(std::string branchName) { return valuesShort[branchName]; }
 
   std::map<std::string, std::string> valuesTypes;  /// contains all branch names and corresponding types
+  std::map<std::string, std::string> customValuesTypes;
 
   std::map<std::string, UInt_t> valuesUint;
   std::map<std::string, Int_t> valuesInt;

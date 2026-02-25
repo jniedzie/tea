@@ -7,6 +7,7 @@
 
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
+#include "NanoEvent.hpp"
 
 class NanoJet;
 typedef Collection<std::shared_ptr<NanoJet>> NanoJets;
@@ -39,14 +40,18 @@ class NanoJet {
   std::map<std::string,float> GetBtaggingScaleFactors(std::string workingPoint);
   std::map<std::string,float> GetPUJetIDScaleFactors(std::string name);
   std::map<std::string,float> GetJetEnergyCorrections(float rho);
+  void AddJetResolutionPt(float rho, int eventID, std::shared_ptr<NanoEvent> event);
 
-  float GetPxDifference(float newJetPt);
-  float GetPyDifference(float newJetPt);
+  float GetPxDifference(float newJetPt, float oldJetPt = -1);
+  float GetPyDifference(float newJetPt, float oldJetPt = -1);
 
   bool IsInCollection(const std::shared_ptr<PhysicsObjects> collection);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
+
+  std::shared_ptr<PhysicsObject> GetJERGenJet(std::shared_ptr<NanoEvent> event, float sigma_JER, float R_cone = 0.4);
+
 };
 
 #endif /* Jet_hpp */

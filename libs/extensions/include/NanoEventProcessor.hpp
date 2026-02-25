@@ -32,6 +32,15 @@ class NanoEventProcessor {
 
   float PropagateMET(const std::shared_ptr<NanoEvent> event, float totalDeltaPx, float totalDeltaPy);
 
+  std::tuple<std::map<std::string, float>,std::map<std::string, float>> GetJetMETEnergyScaleUncertainties(const std::shared_ptr<NanoEvent> event, 
+    std::string allJetsCollectionName, std::string goodJetsCollectionName, std::string goodBJetsCollectionName,
+    std::pair<float,float> goodJetCuts, std::pair<float,float> goodBJetCuts, std::pair<float,float> metPtCuts);
+
+  void ApplyJetEnergyResolution(const std::shared_ptr<NanoEvent> event);
+  std::tuple<std::map<std::string, float>,std::map<std::string, float>> GetJetMETEnergyResolutionUncertainties(const std::shared_ptr<NanoEvent> event, 
+    std::string allJetsCollectionName, std::string goodJetsCollectionName, std::string goodBJetsCollectionName,
+    std::pair<float,float> goodJetCuts, std::pair<float,float> goodBJetCuts, std::pair<float,float> metPtCuts);
+
  private:
  std::unique_ptr<EventProcessor> eventProcessor;
  std::vector<std::pair<std::string, std::pair<float, float>>> eventCuts;

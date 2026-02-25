@@ -16,7 +16,13 @@ class PhysicsObject {
  public:
   PhysicsObject(std::string originalCollection_, int index_ = -1);
   PhysicsObject() = default;
-  virtual ~PhysicsObject() = default;
+  // virtual ~PhysicsObject() = default;
+  virtual ~PhysicsObject() {
+    for (auto& [name, ptr] : customValuesFloat) {
+      delete ptr;
+    }
+    customValuesFloat.clear();
+  }
 
   void Reset();
 
@@ -27,7 +33,7 @@ class PhysicsObject {
 
   inline auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
                   const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
-    if (valuesTypes.count(branchName) == 0) {
+    if (valuesTypes.count(branchName) == 0 && customValuesTypes.count(branchName) == 0 ) {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
 
@@ -123,11 +129,20 @@ class PhysicsObject {
     return 0;
   }
 
+  void SetFloat(std::string branchName, float value) {
+    customValuesFloat[branchName] = new Float_t(value);
+    customValuesTypes[branchName] = "Float_t";
+  }
+
  private:
   inline UInt_t GetUint(std::string branchName) { return *valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return *valuesInt[branchName]; }
   inline Bool_t GetBool(std::string branchName) { return *valuesBool[branchName]; }
-  inline Float_t GetFloat(std::string branchName) { return *valuesFloat[branchName]; }
+  inline Float_t GetFloat(std::string branchName) { 
+    if (valuesTypes.find(branchName) != valuesTypes.end())
+      return *valuesFloat[branchName]; 
+    return *customValuesFloat[branchName]; 
+  }
   inline ULong64_t GetULong(std::string branchName) { return *valuesUlong[branchName]; }
   inline UChar_t GetUChar(std::string branchName) { return *valuesUchar[branchName]; }
   inline UChar_t GetChar(std::string branchName) { return *valuesChar[branchName]; }
@@ -136,6 +151,7 @@ class PhysicsObject {
 
   // contains all branch names and corresponding types
   std::map<std::string, std::string> valuesTypes;
+  std::map<std::string, std::string> customValuesTypes;
 
   std::map<std::string, UInt_t *> valuesUint;
   std::map<std::string, Int_t *> valuesInt;
@@ -146,6 +162,8 @@ class PhysicsObject {
   std::map<std::string, Char_t *> valuesChar;
   std::map<std::string, UShort_t *> valuesUshort;
   std::map<std::string, Short_t *> valuesShort;
+
+  std::map<std::string, Float_t*> customValuesFloat;
 
   std::string originalCollection;
   int index;

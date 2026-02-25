@@ -55,23 +55,34 @@ class DatacardsProcessor:
     self.histosamples = dict(sorted(self.histosamples.items(), key=lambda x: not x[0].startswith("signal")))
 
     nuisances_for_sample = deepcopy(nuisances)
+    nuisances_updated = {}
+    for k, v in nuisances_for_sample.items():
+      if isinstance(v, dict):
+        nuisances_updated[k] = v
 
     if self.do_abcd:
       self.__flip_signal_to_region_a()
 
       self.__insert_background_sum_hist()
-      self.__fill_in_variation_nuisances(
+      nuisances_varations = self.__fill_in_variation_nuisances(
           hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
+      for k, v in nuisances_varations.items():
+        nuisances_updated[k] = v
 
       if self.config.use_abcd_prediction and nuisances_for_sample:
-        self.__fill_closure_nuisance(nuisances_for_sample)
+        nuisances_closure = self.__fill_closure_nuisance(nuisances_for_sample)
+        for k, v in nuisances_closure.items():
+          nuisances_updated[k] = v
+
         if "abcd_unc" in nuisances:
           self.__insert_background_sum_hist_for_shifted_points()
-          self.__fill_abcd_nuisance(nuisances_for_sample)
+          nuisances_abcd = self.__fill_abcd_nuisance(nuisances_for_sample)
+          for k, v in nuisances_abcd.items():
+            nuisances_updated[k] = v
 
     self.__add_header(n_backgrounds)
     self.__add_rates()
-    self.__add_nuisances(nuisances_for_sample)
+    self.__add_nuisances(nuisances_updated)
 
     datacards_path = self.config.datacards_output_path + self.datacard_file_name + ".txt"
     info(f"Storing datacard in {datacards_path}")
@@ -102,12 +113,20 @@ class DatacardsProcessor:
     return n_backgrounds
 
   def __fill_in_variation_nuisances(self, hist_name, sample_name, nuisances, input_files):
-    for variation_name, value in nuisances.items():
-      if not isinstance(value, str):
+    nuisances_updated = {}
+    for variation_name, value_tuple in nuisances.items():
+      if not isinstance(value_tuple, tuple):
         continue
 
-      if value != "variation":
+      if value_tuple[0] != "variation":
         continue
+
+      cms_variation_name = value_tuple[1]
+
+      # If we run over a specific dimuon category we don't want to apply variations from other categories
+      if "dimuon" in variation_name:
+        if not cms_variation_name.endswith(self.config.category):
+          continue
 
       hist, sample = self.histosamples["signal"]
 
@@ -129,19 +148,35 @@ class DatacardsProcessor:
       n_base = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)[0]
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
 
+      if cms_variation_name == "CMS_eff_m_id_syst_loose":
+        print(f"{variation_name}: n_base = {n_base}, n_variation = {n_variation}")
+
       if n_base != 0:
-        variation = abs(n_variation - n_base) / n_base
+        variation = n_variation/ n_base
+        for symmetric_variation in self.config.symmetric_variations:
+          if symmetric_variation in cms_variation_name:
+            variation = abs(variation - 1) + 1
       else:
         variation = 0
         warn(f"Histogram {hist_name} has no events in the signal bin. Setting variation to 0.")
 
-      nuisances[variation_name] = {"signal": 1+variation}
+      if cms_variation_name not in nuisances_updated:
+        nuisances_updated[cms_variation_name] = {"signal": [0.0,0.0]}
+      
+      idx = 1
+      if "down" in variation_name or "Dn" in variation_name:
+        idx = 0
+      if nuisances_updated[cms_variation_name]["signal"][idx] != 0.0:
+        warn(f"Overwriting existing variation value for {cms_variation_name} and signal bin")
+      nuisances_updated[cms_variation_name]["signal"][idx] = variation
 
-    return nuisances
+    return nuisances_updated
 
   def __fill_closure_nuisance(self, nuisances):
+    nuisances_updated = {}
+    
     if "abcd_nonClosure" not in nuisances:
-      return
+      return nuisances_updated
 
     bkg_hist = self.histosamples["bkg"][0].hist
     a = bkg_hist.GetBinContent(1, 2)
@@ -155,14 +190,19 @@ class DatacardsProcessor:
     else:
       closure = abs(prediction - a) / a
 
-    for key, value in nuisances.items():
-      if value == "closure":
-        nuisances[key] = {"bkg": 1+closure}
+    for key, value_tuple in nuisances.items():
+      if value_tuple[0] == "closure":
+        cms_variation_name = value_tuple[1]
+        nuisances_updated[cms_variation_name] = {"bkg": [1+closure]}
+    
+    return nuisances_updated
 
   def __fill_abcd_nuisance(self, nuisances):
+    nuisances_updated = {}
+    
     if "abcd_unc" not in nuisances:
       info(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
-      return
+      return nuisances_updated
     
     max_rel_unc = -1
     for bkg_name in ("bkg_xup", "bkg_xdown", "bkg_yup", "bkg_ydown"):
@@ -175,6 +215,7 @@ class DatacardsProcessor:
       d_err = bkg_hist.GetBinError(2, 1)
       prediction, prediction_err = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
       if prediction == 0:
+        warn(f"Prediction is 0 for variation {bkg_name}, skipping ABCD uncertainty calculation for this variation.")
         continue
       rel_unc = prediction_err / prediction
       if rel_unc > max_rel_unc:
@@ -199,9 +240,14 @@ class DatacardsProcessor:
 
     info(f"---- abcd_unc: {abcd_unc:.3f}")
     
-    for key, value in nuisances.items():
-      if value == "abcd":
-        nuisances[key] = {"bkg": 1+abcd_unc}
+    for key, value_tuple in nuisances.items():
+      if not isinstance(value_tuple, tuple):
+        continue
+      if value_tuple[0] == "abcd":
+        cms_variation_name = value_tuple[1]
+        nuisances_updated[cms_variation_name] = {"bkg": [1+abcd_unc]}
+    
+    return nuisances_updated
 
   def __insert_background_sum_hist(self, abcd_point = None, histosample_name = "bkg"):
     background_sum_a = 0
@@ -262,6 +308,7 @@ class DatacardsProcessor:
     hist.SetBinContent(2, 2, background_sum_c)
     hist.SetBinContent(2, 1, background_sum_d)
 
+    # setting bin errors to zero in cases where we get negative MC weights
     a_err = background_sum_a**0.5 if background_sum_a > 0 else 0
     b_err = background_sum_b**0.5 if background_sum_b > 0 else 0
     c_err = background_sum_c**0.5 if background_sum_c > 0 else 0
@@ -419,16 +466,16 @@ class DatacardsProcessor:
     self.datacard += "\n"
 
     # add a row with statistical errors
-    self.datacard += "stat_err lnN\t"
     for name, stat_error in statistical_errors.items():
-      if name == "data_obs":
-        continue
-      if stat_error is None:
-        self.datacard += " -"
-      else:
-        self.datacard += f" {stat_error}"
-
-    self.datacard += "\n"
+      self.datacard += f"stat_err_{name} lnN\t"
+      for name_, stat_error_ in statistical_errors.items():
+        if name == "data_obs":
+          continue
+        if name_ == name:
+          self.datacard += f" {stat_error_}"
+        else:
+          self.datacard += " -"
+      self.datacard += "\n"
 
   def __get_first_background_name(self):
     first_background_name = None
@@ -448,19 +495,65 @@ class DatacardsProcessor:
     first_background_name = self.__get_first_background_name()
 
     for param_name, values in nuisances.items():
-      self.datacard += f"{param_name} lnN"
+
+      get_max_variation = False
+      for symmetric_variation in self.config.symmetric_variations:
+          if symmetric_variation in param_name:
+            get_max_variation = True
+
+      self.datacard += f"{param_name} lnN"    
 
       if self.do_abcd:
         signal_unc = "-"
         bkg_unc = "-"
 
         if "signal" in values:
-          signal_unc = values["signal"]
+          signal_unc_ = values["signal"]
+          if isinstance(signal_unc_, list):
+            if len(signal_unc_) == 1:
+              signal_unc = signal_unc_[0]
+            elif isinstance(signal_unc_[0], float) and isinstance(signal_unc_[1], float):
+              if get_max_variation:
+                signal_unc = f"{max(signal_unc_[0], signal_unc_[1]):.3f}"
+              else:
+                signal_unc = f"{signal_unc_[0]:.3f}/{signal_unc_[1]:.3f}"
+            elif isinstance(signal_unc_[0], float) and isinstance(signal_unc_[1], str):
+              signal_unc = f"{signal_unc_[0]:.3f}"
+            else:
+              error(f"Unexpected format for signal uncertainty {param_name}: {signal_unc_}")
+          else:
+            signal_unc = signal_unc_
 
         if "bkg" in values:
-          bkg_unc = values["bkg"]
+          bkg_unc_ = values["bkg"]
+          if isinstance(bkg_unc_, list):
+            if len(bkg_unc_) == 1:
+              bkg_unc = bkg_unc_[0]
+            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], float):
+              if get_max_variation:
+                bkg_unc = f"{max(bkg_unc_[0], bkg_unc_[1]):.3f}"
+              else:
+                bkg_unc = f"{bkg_unc_[0]:.3f}/{bkg_unc_[1]:.3f}"
+            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], str):
+              bkg_unc = f"{bkg_unc_[0]:.3f}"
+            else:
+              error(f"Unexpected format for background uncertainty {param_name}: {bkg_unc_}")
+          else:
+            bkg_unc = bkg_unc_
+
         elif first_background_name in values:
-          bkg_unc = values[first_background_name]
+          bkg_unc_ = values[first_background_name]
+          if isinstance(bkg_unc_, list):
+            if len(bkg_unc_) == 1:
+              bkg_unc = bkg_unc_[0]
+            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], float):
+              bkg_unc = f"{bkg_unc_[0]:.3f}/{bkg_unc_[1]:.3f}"
+            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], str):
+              bkg_unc = f"{bkg_unc_[0]:.3f}"
+            else:
+              error(f"Unexpected format for background uncertainty {param_name}: {bkg_unc_}")
+          else:
+            bkg_unc = bkg_unc_
 
         self.datacard += f" {signal_unc} {bkg_unc}"
 
@@ -470,9 +563,9 @@ class DatacardsProcessor:
             continue
 
           if name in values:
-            self.datacard += f" {values[name]}"
+            self.datacard += f" {values[name][0]}"
           elif "signal" in values and "signal" in name:
-            self.datacard += f" {values['signal']}"
+            self.datacard += f" {values['signal'][0]}"
           else:
             self.datacard += " -"
       self.datacard += "\n"

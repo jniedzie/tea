@@ -175,13 +175,40 @@ map<string, float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr
     if (muon->IsDSA()) {
       auto weights_dsa = muon->GetDSAScaleFactors("dsamuonID", "dsamuonReco_cosmic");
       for (auto& [name, weight] : weights_dsa) weights[name] *= weight;
+      // update all other variations with new systematic
+      for (auto& [name, weight] : weights) {
+        if (name == "systematic") {
+          continue;
+        }
+        if (weights_dsa.find(name) != weights_dsa.end())
+          continue;
+        weights[name] *= weights_dsa["systematic"];
+      }
     } else {
       if (muon->IsTight()) {
         auto weights_tight = muon->GetScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
         for (auto& [name, weight] : weights_tight) weights[name] *= weight;
+        // update all other variations with new systematic
+        for (auto& [name, weight] : weights) {
+          if (name == "systematic") {
+            continue;
+          }
+          if (weights_tight.find(name) != weights_tight.end())
+            continue;
+          weights[name] *= weights_tight["systematic"];
+        }
       } else {
         auto weights_loose = muon->GetScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
         for (auto& [name, weight] : weights_loose) weights[name] *= weight;
+        // update all other variations with new systematic
+        for (auto& [name, weight] : weights) {
+          if (name == "systematic") {
+            continue;
+          }
+          if (weights_loose.find(name) != weights_loose.end())
+            continue;
+          weights[name] *= weights_loose["systematic"];
+        }
       }
     }
   }
@@ -206,6 +233,12 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
     }
     auto weights_ = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
     for (auto& [name, weight] : weights_) weights[name] *= weight;
+  }
+  float systematic = weights["systematic"];
+  for (auto& [name, weight] : weights) {
+    if (weight == 1.0) {
+      weights[name] = systematic;
+    }
   }
   return weights;
 }
@@ -295,4 +328,193 @@ bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shar
   }
 
   return true;
+}
+
+tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergyScaleUncertainties(shared_ptr<NanoEvent> event,
+    string allJetsCollectionName, string goodJetsCollectionName, string goodBJetsCollectionName,
+    pair<float,float> goodJetCuts, pair<float,float> goodBJetCuts, pair<float,float> metPtCuts) {
+  
+  map<string, float> jec = {{"systematic", 1.0}};
+  map<string, float> met = {{"systematic", 1.0}};
+
+  auto baseJetCollection = event->GetCollection(allJetsCollectionName);
+  auto goodJetCollection = event->GetCollection(goodJetsCollectionName);
+  auto goodBJetCollection = event->GetCollection(goodBJetsCollectionName);
+
+  auto extraCollectionsDescriptions = event->GetEvent()->GetExtraCollectionsDescriptions();
+  auto goodJetsPtCutsIt = extraCollectionsDescriptions[goodJetsCollectionName].allCuts.find("pt");
+  auto goodBJetsPtCutsIt = extraCollectionsDescriptions[goodBJetsCollectionName].allCuts.find("pt");
+  pair<float, float> goodJetPtCuts;
+  pair<float, float> goodBJetPtCuts;
+  if (goodJetsPtCutsIt != extraCollectionsDescriptions[goodJetsCollectionName].allCuts.end()) {
+    goodJetPtCuts = goodJetsPtCutsIt->second;
+  } else {
+    error() << "Good jet pt cuts not defined - it is needed for jet energy corrections" << endl;
+    return make_tuple(jec, met);
+  }
+  if (goodBJetsPtCutsIt != extraCollectionsDescriptions[goodBJetsCollectionName].allCuts.end()) {
+    goodBJetPtCuts = goodBJetsPtCutsIt->second;
+  } else{
+    goodBJetPtCuts = goodJetPtCuts;
+  }
+
+  auto &config = ConfigManager::GetInstance();
+  string rhoBranchName;
+  try {
+    config.GetValue("rhoBranchName", rhoBranchName);
+  } catch (const Exception &e) {
+    warn() << "Rho branch not specified -- will assume standard name fixedGridRhoFastjetAll" << endl;
+    rhoBranchName = "fixedGridRhoFastjetAll";
+  }
+  float rho = event->Get(rhoBranchName);
+  
+  map<string,int> nPassingGoodJets, nPassingGoodBJets;
+  map<string,float> totalPxDifference, totalPyDifference;
+  for (auto jet : *baseJetCollection) {
+    auto nanoJet = asNanoJet(jet);
+    map<string,float> corrections = nanoJet->GetJetEnergyCorrections(rho);
+    float pt = nanoJet->GetPt();
+
+    const bool isGoodJet = nanoJet->IsInCollection(goodJetCollection);
+    const bool isGoodBJet = nanoJet->IsInCollection(goodBJetCollection);
+    
+    for (auto &[name, correction] : corrections) {
+      float newJetPt = pt*correction;
+
+      if (nPassingGoodJets.find(name) == nPassingGoodJets.end()) {
+        nPassingGoodJets[name] = 0;
+        nPassingGoodBJets[name] = 0;
+        totalPxDifference[name] = 0;
+        totalPyDifference[name] = 0;
+      }
+
+      if (isGoodJet && newJetPt >= goodJetPtCuts.first && newJetPt <= goodJetPtCuts.second) {
+        nPassingGoodJets[name]++;
+      }
+      if (isGoodBJet && newJetPt >= goodBJetPtCuts.first && newJetPt <= goodBJetPtCuts.second) {
+        nPassingGoodBJets[name]++;
+      }
+      // Needed to propagate MET
+      totalPxDifference[name] += nanoJet->GetPxDifference(newJetPt);
+      totalPyDifference[name] += nanoJet->GetPyDifference(newJetPt);
+    }
+  }
+  for (auto &[name, nPassingJets] : nPassingGoodJets) {
+    jec[name] = 0.0;
+    if (nPassingGoodJets[name] < goodJetCuts.first || nPassingGoodJets[name] > goodJetCuts.second) continue;
+    if (nPassingGoodBJets[name] < goodBJetCuts.first || nPassingGoodBJets[name] > goodBJetCuts.second) continue;
+    jec[name] = 1.0;
+  }
+  for (auto &[name, pxDifference] : totalPxDifference) {
+    string met_name = name;
+    size_t pos = met_name.find("jec");
+    if (pos != std::string::npos) {
+      met_name.replace(pos, 3, "met"); 
+    }
+    met[met_name] = 0.0;
+    float newMetPt = PropagateMET(event, totalPxDifference[name], totalPyDifference[name]);
+    if (newMetPt < metPtCuts.first || newMetPt > metPtCuts.second) continue;
+    met[met_name] = 1.0;
+  }
+  return make_tuple(jec, met);
+}
+
+void NanoEventProcessor::ApplyJetEnergyResolution(const shared_ptr<NanoEvent> event) {
+  auto &config = ConfigManager::GetInstance();
+  string rhoBranchName, eventIDBranchName;
+  try {
+    config.GetValue("rhoBranchName", rhoBranchName);
+  } catch (const Exception &e) {
+    warn() << "Rho branch not specified -- will assume standard name fixedGridRhoFastjetAll" << endl;
+    rhoBranchName = "fixedGridRhoFastjetAll";
+  }
+  try {
+    config.GetValue("eventIDBranchName", eventIDBranchName);
+  } catch (const Exception &e) {
+    warn() << "Event ID branch not specified -- will assume standard name event" << endl;
+    eventIDBranchName = "event";
+  }
+  float rho = event->Get(rhoBranchName);
+  ULong64_t eventID_64 = event->Get(eventIDBranchName);
+  int eventID = static_cast<int>(eventID_64);
+  auto jets = event->GetCollection("Jet");
+  for (auto jet : *jets) {
+    asNanoJet(jet)->AddJetResolutionPt(rho, eventID, event);
+  }
+}
+
+tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergyResolutionUncertainties(const shared_ptr<NanoEvent> event, 
+    string allJetsCollectionName, string goodJetsCollectionName, string goodBJetsCollectionName,
+    pair<float,float> goodJetCuts, pair<float,float> goodBJetCuts, pair<float,float> metPtCuts) {
+  
+  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  map<string, float> jer = {{"systematic", 1.0}, {"jer_up", 1.0}, {"jer_down", 1.0}};
+  map<string, float> met = {{"systematic", 1.0}, {"met_jer_up", 1.0}, {"met_jer_down", 1.0}};
+  if (!scaleFactorsManager.ShouldApplyScaleFactor("jer") && !scaleFactorsManager.ShouldApplyVariation("jer")) 
+    return make_tuple(jer, met);
+
+  auto goodJetCollection = event->GetCollection(goodJetsCollectionName);
+  auto goodBJetCollection = event->GetCollection(goodBJetsCollectionName);
+  auto extraCollectionsDescriptions = event->GetEvent()->GetExtraCollectionsDescriptions();
+  auto goodJetsPtCutsIt = extraCollectionsDescriptions[goodJetsCollectionName].allCuts.find("pt");
+  auto goodBJetsPtCutsIt = extraCollectionsDescriptions[goodBJetsCollectionName].allCuts.find("pt");
+  pair<float, float> goodJetPtCuts;
+  pair<float, float> goodBJetPtCuts;
+  if (goodJetsPtCutsIt != extraCollectionsDescriptions[goodJetsCollectionName].allCuts.end()) {
+    goodJetPtCuts = goodJetsPtCutsIt->second;
+  } else {
+    error() << "Good jet pt cuts not defined - it is needed for jet energy resolution" << endl;
+    return make_tuple(jer, met);
+  }
+  if (goodBJetsPtCutsIt != extraCollectionsDescriptions[goodBJetsCollectionName].allCuts.end()) {
+    goodBJetPtCuts = goodBJetsPtCutsIt->second;
+  } else{
+    goodBJetPtCuts = goodJetPtCuts;
+  }
+
+  auto jets = event->GetCollection(allJetsCollectionName);
+  float totalPxDifference_up(0.0), totalPyDifference_up(0.0);
+  float totalPxDifference_down(0.0), totalPyDifference_down(0.0);
+  int nPassingGoodJets_up(0), nPassingGoodJets_down(0);
+  int nPassingGoodBJets_up(0), nPassingGoodBJets_down(0);
+  for (auto jet : *jets) {
+    auto nanoJet = asNanoJet(jet);
+    float pt_smeared = nanoJet->Get("pt_smeared");
+    float pt_smeared_up = nanoJet->Get("pt_smeared_up");
+    float pt_smeared_down = nanoJet->Get("pt_smeared_down");
+    totalPxDifference_up += nanoJet->GetPxDifference(pt_smeared_up, pt_smeared);
+    totalPyDifference_up += nanoJet->GetPyDifference(pt_smeared_up, pt_smeared);
+    totalPxDifference_down += nanoJet->GetPxDifference(pt_smeared_down, pt_smeared);
+    totalPyDifference_down += nanoJet->GetPyDifference(pt_smeared_down, pt_smeared);
+    
+    const bool isGoodJet = nanoJet->IsInCollection(goodJetCollection);
+    const bool isGoodBJet = nanoJet->IsInCollection(goodBJetCollection);
+    if (isGoodJet && pt_smeared_up >= goodJetPtCuts.first && pt_smeared_up <= goodJetPtCuts.second) {
+      nPassingGoodJets_up++;
+    }
+    if (isGoodJet && pt_smeared_down >= goodJetPtCuts.first && pt_smeared_down <= goodJetPtCuts.second) {
+      nPassingGoodJets_down++;
+    }
+    if (isGoodBJet && pt_smeared_up >= goodBJetPtCuts.first && pt_smeared_up <= goodBJetPtCuts.second) {
+      nPassingGoodBJets_up++;
+    }
+    if (isGoodBJet && pt_smeared_down >= goodBJetPtCuts.first && pt_smeared_down <= goodBJetPtCuts.second) {
+      nPassingGoodBJets_down++;
+    }
+  }
+
+  if (nPassingGoodJets_up < goodJetCuts.first || nPassingGoodJets_up > goodJetCuts.second)
+    jer["jer_up"] = 0.0;
+  if (nPassingGoodJets_down < goodJetCuts.first || nPassingGoodJets_down > goodJetCuts.second)
+    jer["jer_down"] = 0.0;
+  if (nPassingGoodBJets_up < goodBJetCuts.first || nPassingGoodBJets_up > goodBJetCuts.second)
+    jer["jer_up"] = 0.0;
+  if (nPassingGoodBJets_down < goodBJetCuts.first || nPassingGoodBJets_down > goodBJetCuts.second)
+    jer["jer_down"] = 0.0;
+
+  float newMetPt_up = PropagateMET(event, totalPxDifference_up, totalPyDifference_up);
+  float newMetPt_down = PropagateMET(event, totalPxDifference_down, totalPyDifference_down);
+  if (newMetPt_up < metPtCuts.first || newMetPt_up > metPtCuts.second) met["met_jer_up"] = 0.0;
+  if (newMetPt_down < metPtCuts.first || newMetPt_down > metPtCuts.second) met["met_jer_down"] = 0.0;
+  return make_tuple(jer,met);
 }

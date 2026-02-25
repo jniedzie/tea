@@ -38,16 +38,69 @@ map<string,float> NanoJet::GetJetEnergyCorrections(float rho) {
   return corrections;
 }
 
-float NanoJet::GetPxDifference(float newJetPt) {
+void NanoJet::AddJetResolutionPt(float rho, int eventID, shared_ptr<NanoEvent> event) {
+  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  float pt = GetPt();
+
+  // ScaleFactor
+  map<string,float> jerSF = scaleFactorsManager.GetJetEnergyResolutionVariables((float)physicsObject->Get("eta"), GetPt(), rho);
+
+  float genPt = -1;
+  auto genJet = GetJERGenJet(event, jerSF["PtResolution"]);
+  if (genJet)
+    genPt = genJet->Get("pt");
+
+  map<string, std::variant<int,double,string>> inputs  = {{"JetPt", GetPt()}};
+  inputs["JetEta"] = (float)physicsObject->Get("eta");
+  inputs["GenPt"] = genPt;
+  inputs["Rho"] = rho;
+  inputs["EventID"] = eventID;
+  inputs["JER"] = jerSF["PtResolution"];
+  inputs["JERSF"] = jerSF["systematic"];
+
+  float jetPt_factor = scaleFactorsManager.GetJetEnergyResolutionPt(inputs);
+  inputs["JERSF"] = jerSF["jerMC_ScaleFactor_up"];
+  float jetPt_factor_up = scaleFactorsManager.GetJetEnergyResolutionPt(inputs);
+  inputs["JERSF"] = jerSF["jerMC_ScaleFactor_down"];
+  float jetPt_factor_down = scaleFactorsManager.GetJetEnergyResolutionPt(inputs);
+
+  physicsObject->SetFloat("pt_smeared" , GetPt()*jetPt_factor);
+  physicsObject->SetFloat("pt_smeared_up" , GetPt()*jetPt_factor_up);
+  physicsObject->SetFloat("pt_smeared_down" , GetPt()*jetPt_factor_down);
+}
+
+shared_ptr<PhysicsObject> NanoJet::GetJERGenJet(shared_ptr<NanoEvent> event, float sigma_JER, float R_cone) {
+  shared_ptr<PhysicsObjects> genJets = event->GetCollection("GenJet");
+  float eta = physicsObject->Get("eta");
+  float phi = physicsObject->Get("phi");
+  for (auto genJet : *genJets) {
+    float dEta = eta - float(genJet->Get("eta"));
+    float dPhi = TVector2::Phi_mpi_pi(phi - float(genJet->Get("phi")));
+    float dR = TMath::Sqrt(dEta * dEta + dPhi * dPhi);
+    if (dR >= R_cone / 2) 
+      continue;
+
+    float absDPt = fabs(GetPt() - (float)genJet->Get("pt"));
+    if (absDPt >= 3 * sigma_JER * GetPt())
+      continue;
+
+    return genJet;
+  }
+  return nullptr;
+}
+
+float NanoJet::GetPxDifference(float newJetPt, float oldJetPt) {
   float phi = GetPhi();
-  float oldJetPt = GetPt();
+  if (oldJetPt < 0)
+    oldJetPt = GetPt();
   float deltaPt = newJetPt - oldJetPt;
   return deltaPt * cos(phi);
 }
 
-float NanoJet::GetPyDifference(float newJetPt) {
+float NanoJet::GetPyDifference(float newJetPt, float oldJetPt) {
   float phi = GetPhi();
-  float oldJetPt = GetPt();
+  if (oldJetPt < 0)
+    oldJetPt = GetPt();
   float deltaPt = newJetPt - oldJetPt;
   return deltaPt * sin(phi);
 }
