@@ -26,11 +26,11 @@
                     },
                     {
                         "key": "up",
-                        "value": 0.98
+                        "value": 1.02
                     },
                     {
                         "key": "down",
-                        "value": 1.02
+                        "value": 0.98
                     }
                 ]
             }

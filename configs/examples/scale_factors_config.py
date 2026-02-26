@@ -8,14 +8,17 @@ def get_scale_factors(year):
     pu_type = "Collisions16_UltraLegacy_goldenJSON"
     muon_trigger_type = "NUM_IsoMu24_or_IsoTkMu24_DEN_CutBasedIdTight_and_PFIsoTight"
     jecType = "Summer19UL16_V7_MC"
+    jerType = "Summer20UL16APV_JRV3_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2016"
     dsaYear = "2016"
     if year == "2016preVFP":
       jecType = "Summer19UL16APV_V7_MC"
+      jerType = "Summer20UL16_JRV3_MC"
   elif year == "2017":
     pu_type = "Collisions17_UltraLegacy_goldenJSON"
     jecType = "Summer19UL17_V5_MC"
+    jerType = "Summer19UL17_JRV2_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2017"
     dsaYear = "2017"
@@ -23,6 +26,7 @@ def get_scale_factors(year):
   elif year == "2018":
     pu_type = "Collisions18_UltraLegacy_goldenJSON"
     jecType = "Summer19UL18_V5_MC"
+    jerType = "Summer19UL18_JRV2_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2018"
     dsaYear = "2018"
@@ -35,12 +39,14 @@ def get_scale_factors(year):
       year_path = "2022_Summer22"
       pu_type = "Collisions2022_355100_357900_eraBCD_GoldenJson"
       jecType = "Summer22_22Sep2023_V2_MC"
+      jerType = "Summer22_22Sep2023_JRV1_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2022"
     if year == "2022postEE":
       year_path = "2022_Summer22EE"
       pu_type = "Collisions2022_359022_362760_eraEFG_GoldenJson"
       jecType = "Summer22EE_22Sep2023_V2_MC"
+      jerType = "Summer22EE_22Sep2023_JRV1_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2022EE"
   elif year == "2023preBPix" or year == "2023postBPix":
@@ -51,12 +57,14 @@ def get_scale_factors(year):
       year_path = "2023_Summer23"
       pu_type = "Collisions2023_366403_369802_eraBC_GoldenJson"
       jecType = "Summer23Prompt23_V2_MC"
+      jerType = "Summer23Prompt23_RunCv1234_JRV1_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2023"
     if year == "2023postBPix":
       year_path = "2023_Summer23BPix"
       pu_type = "Collisions2023_369803_370790_eraD_GoldenJson"
       jecType = "Summer23BPixPrompt23_V3_MC"
+      jerType = "Summer23BPixPrompt23_RunD_JRV1_MC"
       jecAlgo = "AK4PFPuppi"
       jecYear = "2023BPix"
   else:
@@ -211,6 +219,24 @@ def get_scale_factors(year):
         "level": "L1L2L3Res",
         "algo": f"{jecAlgo}",
         "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{jecYear},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{jecYear},Regrouped_EC2,Regrouped_EC2_{jecYear},Regrouped_HF,Regrouped_HF_{jecYear},Regrouped_RelativeBal,Regrouped_RelativeSample_{jecYear}",
+      },
+
+      # Jet Energy Resolution variables
+      "jerMC_ScaleFactor": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jerType}_ScaleFactor_{jecAlgo}",
+        "systematic": "nom",
+        "variations": "up,down",
+      },
+      "jerMC_PtResolution": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jerType}_PtResolution_{jecAlgo}",
+      },
+      "jerMC_smear": {
+        "path": f"../tea/jsonPOG/POG/JME/jer_smear.json.gz",
+        "type": "JERSmear",
+        "systematic": "nom",
+        "variations": "up,down",
       },
   }
   if run2:  # No Run3 PUjetID SF yet

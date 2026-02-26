@@ -20,7 +20,7 @@ class Event {
 
   inline auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
                   int line = __builtin_LINE()) {
-    if (valuesTypes.count(branchName) == 0) {
+    if (valuesTypes.count(branchName) == 0 && customValuesTypes.count(branchName) == 0) {
       std::string message = "\nTrying to access incorrect event-level branch: " + branchName;
       if (branchName.find("Weight") != std::string::npos || branchName.find("Wgt") != std::string::npos ||
           branchName.find("weight") != std::string::npos || branchName.find("wgt") != std::string::npos) {
@@ -137,13 +137,24 @@ class Event {
   UInt_t* GetUintVector(std::string branchName) { return valuesUintVector.at(branchName); }
   UShort_t* GetUshortVector(std::string branchName) { return valuesUshortVector.at(branchName); }
   Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
+
+  void SetFloat(std::string branchName, float value) {
+    customValuesFloat[branchName] = value;
+    customValuesTypes[branchName] = "Float_t";
+  }
+
  private:
   ConfigManager& config = ConfigManager::GetInstance();
 
   inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
   inline Bool_t GetBool(std::string branchName) { return valuesBool[branchName]; }
-  inline Float_t GetFloat(std::string branchName) { return valuesFloat[branchName]; }
+  // inline Float_t GetFloat(std::string branchName) { return valuesFloat[branchName]; }
+  inline Float_t GetFloat(std::string branchName) { 
+    if (valuesTypes.find(branchName) != valuesTypes.end())
+      return valuesFloat[branchName]; 
+    return customValuesFloat[branchName]; 
+  }
   inline ULong64_t GetULong(std::string branchName) { return valuesUlong[branchName]; }
   inline UChar_t GetUChar(std::string branchName) { return valuesUchar[branchName]; }
   inline Char_t GetChar(std::string branchName) { return valuesChar[branchName]; }
@@ -151,11 +162,13 @@ class Event {
   inline Short_t GetShort(std::string branchName) { return valuesShort[branchName]; }
 
   std::map<std::string, std::string> valuesTypes;  /// contains all branch names and corresponding types
+  std::map<std::string, std::string> customValuesTypes;
 
   std::map<std::string, UInt_t> valuesUint;
   std::map<std::string, Int_t> valuesInt;
   std::map<std::string, Bool_t> valuesBool;
   std::map<std::string, Float_t> valuesFloat;
+  std::map<std::string, Float_t> customValuesFloat;
   std::map<std::string, ULong64_t> valuesUlong;
   std::map<std::string, UChar_t> valuesUchar;
   std::map<std::string, Char_t> valuesChar;
