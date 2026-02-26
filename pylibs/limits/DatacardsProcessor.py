@@ -524,9 +524,9 @@ class DatacardsProcessor:
             continue
 
           if name in values:
-            self.datacard += f" {values[name][0]}"
+            self.datacard += f" {values[name]}"
           elif "signal" in values and "signal" in name:
-            self.datacard += f" {values['signal'][0]}"
+            self.datacard += f" {values['signal']}"
           else:
             self.datacard += " -"
       self.datacard += "\n"
