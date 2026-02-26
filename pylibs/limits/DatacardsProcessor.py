@@ -149,7 +149,7 @@ class DatacardsProcessor:
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
 
       if n_base != 0:
-        variation = n_variation/ n_base
+        variation = n_variation / n_base
         for symmetric_variation in self.config.symmetric_variations:
           if symmetric_variation in cms_variation_name:
             variation = abs(variation - 1) + 1
@@ -466,7 +466,7 @@ class DatacardsProcessor:
     for name, stat_error in statistical_errors.items():
       self.datacard += f"stat_err_{name} lnN\t"
       for name_, stat_error_ in statistical_errors.items():
-        if name == "data_obs":
+        if name_ == "data_obs":
           continue
         if name_ == name:
           self.datacard += f" {stat_error_}"
