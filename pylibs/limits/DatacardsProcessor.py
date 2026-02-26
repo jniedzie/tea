@@ -148,9 +148,6 @@ class DatacardsProcessor:
       n_base = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)[0]
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
 
-      if cms_variation_name == "CMS_eff_m_id_syst_loose":
-        print(f"{variation_name}: n_base = {n_base}, n_variation = {n_variation}")
-
       if n_base != 0:
         variation = n_variation/ n_base
         for symmetric_variation in self.config.symmetric_variations:
@@ -509,52 +506,16 @@ class DatacardsProcessor:
 
         if "signal" in values:
           signal_unc_ = values["signal"]
-          if isinstance(signal_unc_, list):
-            if len(signal_unc_) == 1:
-              signal_unc = signal_unc_[0]
-            elif isinstance(signal_unc_[0], float) and isinstance(signal_unc_[1], float):
-              if get_max_variation:
-                signal_unc = f"{max(signal_unc_[0], signal_unc_[1]):.3f}"
-              else:
-                signal_unc = f"{signal_unc_[0]:.3f}/{signal_unc_[1]:.3f}"
-            elif isinstance(signal_unc_[0], float) and isinstance(signal_unc_[1], str):
-              signal_unc = f"{signal_unc_[0]:.3f}"
-            else:
-              error(f"Unexpected format for signal uncertainty {param_name}: {signal_unc_}")
-          else:
-            signal_unc = signal_unc_
+          signal_unc = self.__get_variation_string(signal_unc_, get_max_variation)
 
         if "bkg" in values:
           bkg_unc_ = values["bkg"]
-          if isinstance(bkg_unc_, list):
-            if len(bkg_unc_) == 1:
-              bkg_unc = bkg_unc_[0]
-            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], float):
-              if get_max_variation:
-                bkg_unc = f"{max(bkg_unc_[0], bkg_unc_[1]):.3f}"
-              else:
-                bkg_unc = f"{bkg_unc_[0]:.3f}/{bkg_unc_[1]:.3f}"
-            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], str):
-              bkg_unc = f"{bkg_unc_[0]:.3f}"
-            else:
-              error(f"Unexpected format for background uncertainty {param_name}: {bkg_unc_}")
-          else:
-            bkg_unc = bkg_unc_
+          bkg_unc = self.__get_variation_string(bkg_unc_, get_max_variation)
 
         elif first_background_name in values:
           bkg_unc_ = values[first_background_name]
-          if isinstance(bkg_unc_, list):
-            if len(bkg_unc_) == 1:
-              bkg_unc = bkg_unc_[0]
-            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], float):
-              bkg_unc = f"{bkg_unc_[0]:.3f}/{bkg_unc_[1]:.3f}"
-            elif isinstance(bkg_unc_[0], float) and isinstance(bkg_unc_[1], str):
-              bkg_unc = f"{bkg_unc_[0]:.3f}"
-            else:
-              error(f"Unexpected format for background uncertainty {param_name}: {bkg_unc_}")
-          else:
-            bkg_unc = bkg_unc_
-
+          bkg_unc = self.__get_variation_string(bkg_unc_, get_max_variation)
+          
         self.datacard += f" {signal_unc} {bkg_unc}"
 
       else:
@@ -572,6 +533,19 @@ class DatacardsProcessor:
 
     if not self.do_abcd:
       self.datacard += "bin1   autoMCStats  10\n"
+
+  def __get_variation_string(self, unc, get_max_variation):
+    if isinstance(unc, list):
+      if len(unc) == 1:
+        return unc[0]
+      elif isinstance(unc[0], float) and isinstance(unc[1], float):
+        if get_max_variation:
+          return f"{max(unc[0], unc[1]):.3f}"
+        else:
+          return f"{unc[0]:.3f}/{unc[1]:.3f}"
+      error(f"Unexpected format for uncertainty: {unc}")
+      return
+    return unc
 
   def __add_uncertainties_on_zero(self, hist):
     for i in range(1, hist.GetNbinsX()):

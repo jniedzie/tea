@@ -658,52 +658,53 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetJetEnergyResolutionVariables(float jetEta, float jetPt, float rho) {
+map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho) {
   bool applyDefault = ShouldApplyScaleFactor("jer");
   bool applyVariations = ShouldApplyVariation("jer");
 
   string name_sf = "jerMC_ScaleFactor";
   string name_pt = "jerMC_PtResolution";
+
+  map<string, float> scaleFactors;
+  scaleFactors["systematic"] = 1.0;
+  scaleFactors["PtResolution"] = 1.0;
+
+  if (corrections.find(name_sf) == corrections.end()) {
+    if (applyDefault || applyVariations) warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_sf << endl;
+    return scaleFactors;
+  }
+  if (corrections.find(name_pt) == corrections.end()) {
+    if (applyDefault || applyVariations) warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_pt << endl;
+    return scaleFactors;
+  }
+
   auto extraArgs_sf = correctionsExtraArgs[name_sf];
   auto extraArgs_pt = correctionsExtraArgs[name_pt];
 
-  // jer SFs  
-  map<string, float> scaleFactors;
-
-  if (!applyDefault) {
-    scaleFactors["systematic"] = 1.0;
-    scaleFactors["PtResolution"] = 1.0;
-  }
-  else {
-    scaleFactors["systematic"] = TryToEvaluate(corrections[name_sf], {jetEta, extraArgs_sf["systematic"]});
-    scaleFactors["PtResolution"] = TryToEvaluate(corrections[name_pt], {jetEta, jetPt, rho});
+  if (applyDefault) {
+    scaleFactors["systematic"] = TryToEvaluate(name_sf, {jetEta, extraArgs_sf["systematic"]});
+    scaleFactors["PtResolution"] = TryToEvaluate(name_pt, {jetEta, jetPt, rho});
   }
 
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs_sf["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(corrections[name_sf], {jetEta, variation});
+    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(name_sf, {jetEta, variation});
   }
   return scaleFactors;
 }
 
-float ScaleFactorsManager::GetJetEnergyResolutionPt(map<string, variant<int, double, string>> inputArguments) {
-  bool applyDefault = ShouldApplyScaleFactor("jer");
-  bool applyVariations = ShouldApplyVariation("jer");
-
+float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, variant<int, double, string>> inputArguments) {
   string name = "jerMC_smear";
-  auto extraArgs = correctionsExtraArgs[name];
   vector<correction::Variable::Type> inputs;
   for (const correction::Variable& input: corrections[name]->inputs()) {
     inputs.push_back(inputArguments.at(input.name()));
   }
-  return corrections[name]->evaluate(inputs);
+  float factor = TryToEvaluate(name, inputs);
+  return factor;
 }
 
-bool ScaleFactorsManager::IsJetVetoMapDefined(string name){
-  return (corrections.find(name) != corrections.end());
-}
 bool ScaleFactorsManager::IsJetVetoMapDefined(string name) { return (corrections.find(name) != corrections.end()); }
 
 bool ScaleFactorsManager::IsJetInBadRegion(string name, float eta, float phi) {

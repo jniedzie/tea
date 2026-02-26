@@ -40,7 +40,7 @@ class NanoJet {
   std::map<std::string,float> GetBtaggingScaleFactors(std::string workingPoint);
   std::map<std::string,float> GetPUJetIDScaleFactors(std::string name);
   std::map<std::string,float> GetJetEnergyCorrections(float rho);
-  void AddJetResolutionPt(float rho, int eventID, std::shared_ptr<NanoEvent> event);
+  void AddSmearedPtByResolution(float rho, int eventID, std::shared_ptr<NanoEvent> event);
 
   float GetPxDifference(float newJetPt, float oldJetPt = -1);
   float GetPyDifference(float newJetPt, float oldJetPt = -1);
@@ -50,7 +50,7 @@ class NanoJet {
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
 
-  std::shared_ptr<PhysicsObject> GetJERGenJet(std::shared_ptr<NanoEvent> event, float sigma_JER, float R_cone = 0.4);
+  std::shared_ptr<PhysicsObject> GetGenJetAsRecommendedForJER(std::shared_ptr<NanoEvent> event, float sigma_JER, float R_cone = 0.4);
 
 };
 

@@ -38,15 +38,15 @@ map<string,float> NanoJet::GetJetEnergyCorrections(float rho) {
   return corrections;
 }
 
-void NanoJet::AddJetResolutionPt(float rho, int eventID, shared_ptr<NanoEvent> event) {
+void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEvent> event) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   float pt = GetPt();
 
   // ScaleFactor
-  map<string,float> jerSF = scaleFactorsManager.GetJetEnergyResolutionVariables((float)physicsObject->Get("eta"), GetPt(), rho);
+  map<string,float> jerSF = scaleFactorsManager.GetJetEnergyResolutionScaleFactorAndPtResolution((float)physicsObject->Get("eta"), GetPt(), rho);
 
   float genPt = -1;
-  auto genJet = GetJERGenJet(event, jerSF["PtResolution"]);
+  auto genJet = GetGenJetAsRecommendedForJER(event, jerSF["PtResolution"]);
   if (genJet)
     genPt = genJet->Get("pt");
 
@@ -58,18 +58,21 @@ void NanoJet::AddJetResolutionPt(float rho, int eventID, shared_ptr<NanoEvent> e
   inputs["JER"] = jerSF["PtResolution"];
   inputs["JERSF"] = jerSF["systematic"];
 
-  float jetPt_factor = scaleFactorsManager.GetJetEnergyResolutionPt(inputs);
+  float jetPt_factor = scaleFactorsManager.GetJetEnergyResolutionSmearingFactor(inputs);
   inputs["JERSF"] = jerSF["jerMC_ScaleFactor_up"];
-  float jetPt_factor_up = scaleFactorsManager.GetJetEnergyResolutionPt(inputs);
+  float jetPt_factor_up = scaleFactorsManager.GetJetEnergyResolutionSmearingFactor(inputs);
   inputs["JERSF"] = jerSF["jerMC_ScaleFactor_down"];
-  float jetPt_factor_down = scaleFactorsManager.GetJetEnergyResolutionPt(inputs);
+  float jetPt_factor_down = scaleFactorsManager.GetJetEnergyResolutionSmearingFactor(inputs);
 
   physicsObject->SetFloat("pt_smeared" , GetPt()*jetPt_factor);
   physicsObject->SetFloat("pt_smeared_up" , GetPt()*jetPt_factor_up);
   physicsObject->SetFloat("pt_smeared_down" , GetPt()*jetPt_factor_down);
+  physicsObject->SetFloat("mass_smeared" , GetMass()*jetPt_factor);
+  physicsObject->SetFloat("mass_smeared_up" , GetMass()*jetPt_factor_up);
+  physicsObject->SetFloat("mass_smeared_down" , GetMass()*jetPt_factor_down);
 }
 
-shared_ptr<PhysicsObject> NanoJet::GetJERGenJet(shared_ptr<NanoEvent> event, float sigma_JER, float R_cone) {
+shared_ptr<PhysicsObject> NanoJet::GetGenJetAsRecommendedForJER(shared_ptr<NanoEvent> event, float sigma_JER, float R_cone) {
   shared_ptr<PhysicsObjects> genJets = event->GetCollection("GenJet");
   float eta = physicsObject->Get("eta");
   float phi = physicsObject->Get("phi");
