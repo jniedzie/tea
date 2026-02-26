@@ -144,7 +144,7 @@ void ConfigManager::GetValue<string>(std::string name, string &outputValue) {
 
   PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || !PyUnicode_Check(pythonValue)) {
-    error() << "Failed retriving python value (string)" << endl;
+    error() << "Failed retrieving python value (string)" << endl;
     return;
   }
   outputValue = PyUnicode_AsUTF8(pythonValue);
@@ -154,7 +154,7 @@ template <>
 void ConfigManager::GetValue<int>(std::string name, int &outputValue) {
   PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || (!PyUnicode_Check(pythonValue) && !PyLong_Check(pythonValue))) {
-    error() << "Failed retriving python value (int)" << endl;
+    error() << "Failed retrieving python value (int)" << endl;
     return;
   }
   outputValue = PyLong_AsLong(pythonValue);
@@ -164,7 +164,7 @@ template <>
 void ConfigManager::GetValue<bool>(std::string name, bool &outputValue) {
   PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || (!PyUnicode_Check(pythonValue) && !PyBool_Check(pythonValue))) {
-    error() << "Failed retriving python value (int)" << endl;
+    error() << "Failed retrieving python value (int)" << endl;
     return;
   }
   outputValue = PyLong_AsLong(pythonValue);
@@ -174,7 +174,7 @@ template <>
 void ConfigManager::GetValue<float>(std::string name, float &outputValue) {
   PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || !PyFloat_Check(pythonValue)) {
-    error() << "Failed retriving python value (float)" << endl;
+    error() << "Failed retrieving python value (float)" << endl;
     return;
   }
   outputValue = PyFloat_AsDouble(pythonValue);
@@ -192,7 +192,7 @@ void ConfigManager::GetVector<std::string>(std::string name, std::vector<std::st
     PyObject *item = GetItem(pythonList, i);
 
     if (!item || !PyUnicode_Check(item)) {
-      error() << "Failed retriving python vector<string>" << endl;
+      error() << "Failed retrieving python vector<string>" << endl;
       continue;
     }
     std::string value = PyUnicode_AsUTF8(item);
@@ -208,7 +208,7 @@ void ConfigManager::GetVector<int>(std::string name, std::vector<int> &outputVec
     PyObject *item = GetItem(pythonList, i);
 
     if (!item || !PyLong_Check(item)) {
-      error() << "Failed retriving python vector<int>" << endl;
+      error() << "Failed retrieving python vector<int>" << endl;
       continue;
     }
     int value = PyLong_AsLong(item);
@@ -229,7 +229,7 @@ void ConfigManager::GetMap<std::string, std::string>(std::string name, std::map<
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || !PyUnicode_Check(pValue)) {
-      error() << "Failed retriving python key-value pair (string-string)" << endl;
+      error() << "Failed retrieving python key-value pair (string-string)" << endl;
       continue;
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = PyUnicode_AsUTF8(pValue);
@@ -245,7 +245,7 @@ void ConfigManager::GetMap<std::string, int>(std::string name, std::map<std::str
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || !PyLong_Check(pValue)) {
-      error() << "Failed retriving python key-value pair (string-int)" << endl;
+      error() << "Failed retrieving python key-value pair (string-int)" << endl;
       continue;
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = PyLong_AsLong(pValue);
@@ -261,7 +261,7 @@ void ConfigManager::GetMap<std::string, float>(std::string name, std::map<std::s
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || (!PyFloat_Check(pValue) && !PyLong_Check(pValue))) {
-      error() << "Failed retriving python key-value pair (string-float)" << endl;
+      error() << "Failed retrieving python key-value pair (string-float)" << endl;
       continue;
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = PyFloat_AsDouble(pValue);
@@ -277,7 +277,7 @@ void ConfigManager::GetMap<std::string, bool>(std::string name, std::map<std::st
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || !PyLong_Check(pValue)) {
-      error() << "Failed retriving python key-value pair (string-bool)" << endl;
+      error() << "Failed retrieving python key-value pair (string-bool)" << endl;
       continue;
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = PyLong_AsLong(pValue);
@@ -293,7 +293,7 @@ void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vect
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || (!PyList_Check(pValue) && !PyTuple_Check(pValue))) {
-      error() << "Failed retriving python key-value pair (string-vector<string>)" << endl;
+      error() << "Failed retrieving python key-value pair (string-vector<string>)" << endl;
       continue;
     }
     vector<string> outputVector;
@@ -314,7 +314,7 @@ void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || (!PyList_Check(pValue) && !PyTuple_Check(pValue))) {
-      error() << "Failed retriving python key-value pair (string-vector<string>)" << endl;
+      error() << "Failed retrieving python key-value pair (string-vector<string>)" << endl;
       continue;
     }
     vector<int> outputVector;
@@ -335,7 +335,7 @@ void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vecto
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || (!PyList_Check(pValue) && !PyTuple_Check(pValue))) {
-      error() << "Failed retriving python key-value pair (string-vector<float>)" << endl;
+      error() << "Failed retrieving python key-value pair (string-vector<float>)" << endl;
       continue;
     }
     vector<float> outputVector;
@@ -377,7 +377,7 @@ void ConfigManager::GetMap<string, map<string, string>>(string name, map<string,
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pValue)) {
     if (!PyUnicode_Check(pKey) || !PyDict_Check(pValue)) {
-      error() << "Failed retriving python key-value pair (string-map<string, string>)" << endl;
+      error() << "Failed retrieving python key-value pair (string-map<string, string>)" << endl;
       continue;
     }
     map<string, string> tmpMap;
@@ -402,7 +402,7 @@ void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vecto
 
   while (PyDict_Next(pythonDict, &pos, &pKey, &pOuterList)) {
     if (!PyUnicode_Check(pKey) || (!PyList_Check(pOuterList) && !PyTuple_Check(pOuterList))) {
-      error() << "Failed retriving python key-value pair (int-vector<vector<int>>)" << endl;
+      error() << "Failed retrieving python key-value pair (int-vector<vector<int>>)" << endl;
       continue;
     }
 
@@ -435,7 +435,7 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
   PyObject *first = GetItem(pythonTuple, 0);
   PyObject *second = GetItem(pythonTuple, 1);
   if (!first || !PyUnicode_Check(first) || !second || !PyList_Check(second)) {
-    error() << "Failed retriving python pair (string, vector<string>)" << endl;
+    error() << "Failed retrieving python pair (string, vector<string>)" << endl;
     return;
   }
   std::string value_first = PyUnicode_AsUTF8(first);
@@ -459,7 +459,7 @@ void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, Extra
 
   while (PyDict_Next(pythonDict, &pos, &collectionName, &collectionSettings)) {
     if (!PyUnicode_Check(collectionName)) {
-      error() << "Failed retriving python collection name (string)" << endl;
+      error() << "Failed retrieving python collection name (string)" << endl;
       continue;
     }
     PyObject *pyKey = nullptr;
@@ -495,7 +495,7 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsMap> &s
 
   while (PyDict_Next(pythonDict, &pos0, &SFname, &SFvalues)) {
     if (!PyUnicode_Check(SFname)) {
-      error() << "Failed retriving python scale factor name (string)" << endl;
+      error() << "Failed retrieving python scale factor name (string)" << endl;
       continue;
     }
     string SFnameStr = PyUnicode_AsUTF8(SFname);
@@ -506,7 +506,7 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsMap> &s
 
     while (PyDict_Next(SFvalues, &pos, &etaBin, &valuesForEta)) {
       if (!PyTuple_Check(etaBin)) {
-        error() << "Failed retriving python eta bin" << endl;
+        error() << "Failed retrieving python eta bin" << endl;
         continue;
       }
       PyObject *ptBin = nullptr;
@@ -538,7 +538,7 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple> 
 
   while (PyDict_Next(pythonDict, &pos0, &SFname, &SFvalues)) {
     if (!PyUnicode_Check(SFname)) {
-      error() << "Failed retriving python scale factor name (string)" << endl;
+      error() << "Failed retrieving python scale factor name (string)" << endl;
       continue;
     }
     string SFnameStr = PyUnicode_AsUTF8(SFname);
@@ -685,7 +685,7 @@ void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
 
   while (PyDict_Next(pythonDict, &pos, &cutName, &cutValues)) {
     if (!PyUnicode_Check(cutName)) {
-      error() << "Failed retriving python cut name (string)" << endl;
+      error() << "Failed retrieving python cut name (string)" << endl;
       continue;
     }
     PyObject *min = GetItem(cutValues, 0);
