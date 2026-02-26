@@ -33,6 +33,5 @@ def get_facility():
   else:
     fatal(f"Unknown facility for hostname: {hostname}")
     sys.exit(1)
-    exit(1)
 
   return facility
