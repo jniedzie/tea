@@ -2,7 +2,6 @@ import os
 import importlib.util
 import uuid
 from enum import Enum
-import socket
 
 from Logger import info, warn, error, fatal
 from teaHelpers import get_facility
