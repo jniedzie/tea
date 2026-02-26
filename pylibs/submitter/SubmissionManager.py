@@ -4,6 +4,7 @@ import uuid
 from enum import Enum
 
 from Logger import info, warn, error, fatal
+from teaHelpers import get_facility
 
 
 class SubmissionSystem(Enum):
@@ -75,9 +76,11 @@ class SubmissionManager:
       self.__set_condor_script_variables(len(input_files))
       self.__set_run_script_variables()
 
-      command = f"condor_submit {self.condor_config_name}"
-      # TODO: recognize automatically if we're on NAF or lxplus and choose the correct template/command
-      # command = f"condor_submit -spool {self.condor_config_name}"
+      if get_facility() == "lxplus":
+        command = f"condor_submit -spool {self.condor_config_name}"
+      else:
+        command = f"condor_submit {self.condor_config_name}"
+      
       info(f"Submitting to condor: {command}")
 
       if not args.dry:
@@ -268,7 +271,9 @@ class SubmissionManager:
     self.input_files_list_file_name = f"tmp/input_files_{hash_string}.txt"
 
   def __copy_templates(self):
-    os.system(f"cp ../tea/templates/condor_config.template.sub {self.condor_config_name}")
+    condor_config_template_name = f"condor_config_{get_facility()}.template.sub"
+
+    os.system(f"cp ../tea/templates/{condor_config_template_name} {self.condor_config_name}")
     os.system(f"cp ../tea/templates/condor_run.template.sh {self.condor_run_script_name}")
     os.system(f"chmod 700 {self.condor_run_script_name}")
     info(f"Stored condor config at: {self.condor_config_name}")
