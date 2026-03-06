@@ -42,6 +42,16 @@ void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEv
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   float pt = GetPt();
 
+  if (event->IsData()) {
+    physicsObject->SetFloat("pt_smeared" , GetPt());
+    physicsObject->SetFloat("pt_smeared_up" , GetPt());
+    physicsObject->SetFloat("pt_smeared_down" , GetPt());
+    physicsObject->SetFloat("mass_smeared" , GetMass());
+    physicsObject->SetFloat("mass_smeared_up" , GetMass());
+    physicsObject->SetFloat("mass_smeared_down" , GetMass());
+    return;
+  }
+
   // ScaleFactor
   map<string,float> jerSF = scaleFactorsManager.GetJetEnergyResolutionScaleFactorAndPtResolution((float)physicsObject->Get("eta"), GetPt(), rho);
 

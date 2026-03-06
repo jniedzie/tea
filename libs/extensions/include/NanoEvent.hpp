@@ -84,6 +84,7 @@ class NanoEvent {
 
   bool PassesHEMveto(float affectedFraction);
   bool PassesJetVetoMaps();
+  bool IsData();
 
  private:
   ConfigManager& config = ConfigManager::GetInstance();
@@ -92,7 +93,6 @@ class NanoEvent {
   std::shared_ptr<Event> event;
   std::map<std::string, float> muonTriggerSF;
 
-  bool IsData();
 };
 
 #endif /* NanoEvent_hpp */
