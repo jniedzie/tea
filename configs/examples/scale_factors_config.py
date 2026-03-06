@@ -105,18 +105,21 @@ def get_scale_factors(year):
           "type": "NUM_LooseID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
+          "statistic": "stat",
       },
       "muonIDMedium": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": "NUM_MediumID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
+          "statistical": "stat",
       },
       "muonIDTight": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": "NUM_TightID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
+          "statistical": "stat",
       },
 
       # Muon Iso
@@ -125,12 +128,14 @@ def get_scale_factors(year):
           "type": loose_muon_iso_type,
           "systematic": "nominal",
           "variations": "systup,systdown",
+          "statistical": "stat",
       },
       "muonIsoTight": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
           "type": tight_muon_iso_type,
           "systematic": "nominal",
           "variations": "systup,systdown",
+          "statistical": "stat",
       },
 
       # Pileup
@@ -166,6 +171,7 @@ def get_scale_factors(year):
           "type": muon_trigger_type,
           "systematic": "nominal",
           "variations": "systup,systdown",
+          "statistical": "stat",
       },
 
       # DSA Muon SFs
@@ -253,5 +259,6 @@ def get_scale_factors(year):
         "type": "NUM_TrackerMuons_DEN_genTracks",
         "systematic": "nominal",
         "variations": "systup,systdown",
+        "statistical": "stat",
     }
   return scaleFactors

@@ -356,6 +356,8 @@ tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergy
     const bool isGoodBJet = nanoJet->IsInCollection(goodBJetCollection);
     
     for (auto &[name, correction] : corrections) {
+      if (name == "systematic") 
+        continue;
       float newJetPt = pt*correction;
 
       UpdateNPassingJetsForPt(newJetPt, name, nPassingGoodJets, nPassingGoodBJets, 
@@ -453,6 +455,10 @@ void NanoEventProcessor::ApplyJetEnergyResolution(const shared_ptr<NanoEvent> ev
     UpdateMETDifferenceForPt(asNanoJet(jet), pt_smeared, pt_unsmeared, "met_jer",
                                totalPxDifference, totalPyDifference);
   }
+  if (IsDataEvent(event)) {
+    event->GetEvent()->SetFloat("MET_pt_smeared", (float)event->Get("MET_pt"));
+    return;
+  }
   float newMetPt = PropagateMET(event, totalPxDifference["met_jer"], totalPyDifference["met_jer"]);
   event->GetEvent()->SetFloat("MET_pt_smeared", newMetPt);
 }
@@ -501,4 +507,38 @@ tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergy
   UpdateSFsForMETJEC(event, met, totalPxDifference, totalPyDifference, metPtCuts);
   
   return make_tuple(jer,met);
+}
+
+map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(const shared_ptr<NanoEvent> event, 
+    pair<float,float> metPtCuts) {
+  
+  map<string, float> scaleFactors = {{"systematic", 1.0}};
+
+  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  if (!scaleFactorsManager.ShouldApplyVariation("metUnclEnergy")) 
+      return scaleFactors;
+
+  float metPt = event->Get("MET_pt");
+  float metPhi = event->Get("MET_phi");
+  float metPx = metPt * cos(metPhi);
+  float metPy = metPt * sin(metPhi);
+
+  float deltaUnclustEnUpDeltaX = event->Get("MET_MetUnclustEnUpDeltaX");
+  float deltaUnclustEnUpDeltaY = event->Get("MET_MetUnclustEnUpDeltaY");
+  float metPx_up = metPx + deltaUnclustEnUpDeltaX;
+  float metPx_down = metPx - deltaUnclustEnUpDeltaX;
+  float metPy_up = metPy + deltaUnclustEnUpDeltaY;
+  float metPy_down = metPy - deltaUnclustEnUpDeltaY;
+
+  float met_up = sqrt(metPx_up*metPx_up + metPy_up*metPy_up);
+  float met_down = sqrt(metPx_down*metPx_down + metPy_down*metPy_down);
+
+  scaleFactors["MET_unclusteredEnergy_up"] = 1.0;
+  scaleFactors["MET_unclusteredEnergy_down"] = 1.0;
+  if (met_up < metPtCuts.first || met_up > metPtCuts.second) 
+    scaleFactors["MET_unclusteredEnergy_up"] = 0.0;
+  if (met_down < metPtCuts.first || met_down > metPtCuts.second) 
+    scaleFactors["MET_unclusteredEnergy_down"] = 0.0;
+
+  return scaleFactors;
 }

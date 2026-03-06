@@ -54,6 +54,8 @@ class NanoEventProcessor {
     std::string allJetsCollectionName, std::string goodJetsCollectionName, std::string goodBJetsCollectionName,
     std::pair<float,float> goodJetCuts, std::pair<float,float> goodBJetCuts, std::pair<float,float> metPtCuts);
 
+  std::map<std::string, float> GetMETUnclusteredEnergyUncertainties(const std::shared_ptr<NanoEvent> event, std::pair<float,float> metPtCuts);
+
  private:
   std::unique_ptr<EventProcessor> eventProcessor;
   std::vector<std::pair<std::string, std::pair<float, float>>> eventCuts;

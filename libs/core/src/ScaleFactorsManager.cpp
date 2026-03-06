@@ -297,6 +297,14 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(name, {fabs(eta), pt, variation});
   }
+
+  if (extraArgs.find("statistical") != extraArgs.end()) {
+    string statistical = extraArgs["statistical"];
+    float statSF = TryToEvaluate(name, {fabs(eta), pt, statistical});
+    scaleFactors[name + "_" + statistical + "_up"] = scaleFactors["systematic"] + statSF;
+    scaleFactors[name + "_" + statistical + "_down"] = scaleFactors["systematic"] - statSF;
+  }
+
   return scaleFactors;
 }
 
