@@ -185,6 +185,22 @@ bool NanoMuon::HasPATSegmentMatch(shared_ptr<NanoMuons> patMuonCollection, share
   return false;
 }
 
+bool NanoMuon::HasPATProximityDRMatch(shared_ptr<NanoMuon> patMuon, shared_ptr<Event> event, float maxProxDR) {
+  // Implemented for DSA muons
+  if (!IsDSA()) return false;
+
+  auto muons = make_shared<NanoMuons>();
+  muons->push_back(patMuon);
+  muons->push_back(shared_from_this());
+  auto dimuonVertex = asNanoEvent(event)->GetVerticesForMuons(muons);
+  if (!dimuonVertex) return false;
+  if (dimuonVertex->size() < 1) return false;
+  auto vertex = dimuonVertex->at(0);
+  float dRprox = vertex->Get("dRprox");
+  if (dRprox < maxProxDR) return true;
+  return false;
+}
+
 float NanoMuon::DeltaRtoParticle(shared_ptr<PhysicsObject> particle) {
   float dEta = GetEta() - float(particle->Get("eta"));
   float dPhi = TVector2::Phi_mpi_pi(GetPhi() - float(particle->Get("phi")));

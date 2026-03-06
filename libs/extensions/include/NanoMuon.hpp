@@ -16,7 +16,7 @@ typedef Collection<std::shared_ptr<NanoMuon>> NanoMuons;
 typedef std::pair<std::shared_ptr<NanoMuon>, std::shared_ptr<NanoMuon>> NanoMuonPair;
 typedef Collection<NanoMuonPair> NanoMuonPairs;
 
-class NanoMuon {
+class NanoMuon : public std::enable_shared_from_this<NanoMuon> {
  public:
   NanoMuon(std::shared_ptr<PhysicsObject> physicsObject_);
 
@@ -53,6 +53,7 @@ class NanoMuon {
   int GetMatchesForNthBestMatch(int N);
   std::vector<int> GetMatchedPATMuonIndices(float minMatchRatio);
   bool HasPATSegmentMatch(std::shared_ptr<NanoMuons> patMuonCollection, std::shared_ptr<Event> event, float minMatchRatio);
+  bool HasPATProximityDRMatch(std::shared_ptr<NanoMuon> patMuon, std::shared_ptr<Event> event, float maxProxDR);
 
   float DeltaRtoParticle(std::shared_ptr<PhysicsObject> particle);
 
