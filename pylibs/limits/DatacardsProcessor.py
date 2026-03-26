@@ -6,6 +6,7 @@ from Logger import error, warn, info
 from ABCDHelper import ABCDHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
+from ttalps_signal_Lxy_uncertainties import get_lxy_uncertainty_for_name
 
 
 class DatacardsProcessor:
@@ -23,7 +24,7 @@ class DatacardsProcessor:
 
   def create_new_datacard(
       self, hist_name, obs_histosample, bkg_histosamples, signal_histosample,
-      nuisances, input_files, add_uncertainties_on_zero=False
+      nuisances, input_files, add_uncertainties_on_zero=False, signal_strength=0
   ):
     self.datacard = ""
 
@@ -79,9 +80,14 @@ class DatacardsProcessor:
           nuisances_abcd = self.__fill_abcd_nuisance(nuisances_for_sample)
           for k, v in nuisances_abcd.items():
             nuisances_updated[k] = v
+    
+    if "lxy_unc" in nuisances:
+      nuisances_lxy = self.__fill_lxy_nuisance(nuisances_for_sample)
+      for k, v in nuisances_lxy.items():
+        nuisances_updated[k] = v
 
-    self.__add_header(n_backgrounds)
-    self.__add_rates()
+    self.__add_header(n_backgrounds, signal_strength)
+    self.__add_rates(signal_strength)
     self.__add_nuisances(nuisances_updated)
 
     datacards_path = self.config.datacards_output_path + self.datacard_file_name + ".txt"
@@ -246,6 +252,22 @@ class DatacardsProcessor:
     
     return nuisances_updated
 
+  def __fill_lxy_nuisance(self, nuisances):
+    nuisances_updated = {}
+
+    signal_hist, signal_sample = self.histosamples["signal"]
+    name = signal_sample.name.removeprefix("signal_")
+    lxy_unc = get_lxy_uncertainty_for_name(name, self.config.category)
+
+    for key, value_tuple in nuisances.items():
+      if not isinstance(value_tuple, tuple):
+        continue
+      if value_tuple[0] == "lxy":
+        cms_variation_name = value_tuple[1]
+        nuisances_updated[cms_variation_name] = {"signal": [lxy_unc]}
+    
+    return nuisances_updated
+
   def __insert_background_sum_hist(self, abcd_point = None, histosample_name = "bkg"):
     background_sum_a = 0
     background_sum_b = 0
@@ -344,7 +366,7 @@ class DatacardsProcessor:
 
     return hist
 
-  def __add_header(self, n_backgrounds):
+  def __add_header(self, n_backgrounds, signal_strength):
     # define number of parameters
     self.datacard += "imax 1 number of channels\n"
     self.datacard += f"jmax {1 if self.do_abcd else n_backgrounds}  number of backgrounds\n"
@@ -364,19 +386,27 @@ class DatacardsProcessor:
     if "data_obs" not in self.histosamples:
       obs_rate = 0
     elif self.do_abcd:
+      sig_hist = self.histosamples["signal"][0].hist
+      abcd_values = self.abcd_helper.get_abcd(sig_hist, self.config.abcd_point, raw_errors=False)
+      signal_rate, b_sig_, c_sig_, d_sig_, signal_rate_err, _, _, _ = abcd_values
       if self.config.use_abcd_prediction:
-        bkg_hist = self.histosamples["bkg"][0].hist
-        b = bkg_hist.GetBinContent(1, 1)
-        c = bkg_hist.GetBinContent(2, 2)
-        d = bkg_hist.GetBinContent(2, 1)
+        b_sig = b_sig_ * signal_strength
+        c_sig = c_sig_ * signal_strength
+        d_sig = d_sig_ * signal_strength
 
-        b_err = bkg_hist.GetBinError(1, 1)
-        c_err = bkg_hist.GetBinError(2, 2)
-        d_err = bkg_hist.GetBinError(2, 1)
+        bkg_hist = self.histosamples["bkg"][0].hist
+        b = bkg_hist.GetBinContent(1, 1) - b_sig
+        c = bkg_hist.GetBinContent(2, 2) - c_sig
+        d = bkg_hist.GetBinContent(2, 1) - d_sig
+
+        b_err = b**0.5
+        c_err = c**0.5
+        d_err = d**0.5
 
         obs_rate, _= self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
       else:
-        obs_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
+        bkg_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
+        obs_rate = bkg_rate - signal_rate * signal_strength
     else:
       obs_rate = self.histosamples["data_obs"][0].hist.Integral()
     self.datacard += "bin bin1\n"
@@ -416,7 +446,7 @@ class DatacardsProcessor:
         index += 1
     self.datacard += "\n"
 
-  def __add_rates(self):
+  def __add_rates(self, signal_strength=0):
     self.datacard += "rate"
 
     statistical_errors = {}
@@ -425,14 +455,17 @@ class DatacardsProcessor:
       for name, (hist, sample) in self.histosamples.items():
         if "signal" in name:
           abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=False)
-          signal_rate, _, _, _, signal_rate_err, _, _, _ = abcd_values
+          signal_rate, b_sig_, c_sig_, d_sig_, signal_rate_err, _, _, _ = abcd_values
+          b_sig = b_sig_*signal_strength
+          c_sig = c_sig_*signal_strength
+          d_sig = d_sig_*signal_strength
           break
 
       bkg_hist = self.histosamples["bkg"][0].hist
       a = bkg_hist.GetBinContent(1, 2)
-      b = bkg_hist.GetBinContent(1, 1)
-      c = bkg_hist.GetBinContent(2, 2)
-      d = bkg_hist.GetBinContent(2, 1)
+      b = bkg_hist.GetBinContent(1, 1) - b_sig
+      c = bkg_hist.GetBinContent(2, 2) - c_sig
+      d = bkg_hist.GetBinContent(2, 1) - d_sig
 
       if self.config.use_abcd_prediction:
         rate, rate_err = self.abcd_helper.get_prediction(b, c, d, b**0.5, c**0.5, d**0.5)
@@ -505,16 +538,19 @@ class DatacardsProcessor:
         bkg_unc = "-"
 
         if "signal" in values:
-          signal_unc_ = values["signal"]
-          signal_unc = self.__get_variation_string(signal_unc_, get_max_variation)
+          signal_unc_ = self.__get_variation_string(values["signal"], get_max_variation)
+          if signal_unc_:
+            signal_unc = signal_unc_
 
         if "bkg" in values:
-          bkg_unc_ = values["bkg"]
-          bkg_unc = self.__get_variation_string(bkg_unc_, get_max_variation)
+          bkg_unc_ = self.__get_variation_string(values["bkg"], get_max_variation)
+          if bkg_unc_:
+            bkg_unc = bkg_unc_
 
         elif first_background_name in values:
-          bkg_unc_ = values[first_background_name]
-          bkg_unc = self.__get_variation_string(bkg_unc_, get_max_variation)
+          bkg_unc_ = self.__get_variation_string(values[first_background_name], get_max_variation)
+          if bkg_unc_:
+            bkg_unc = bkg_unc_
           
         self.datacard += f" {signal_unc} {bkg_unc}"
 

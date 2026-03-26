@@ -26,6 +26,8 @@ class NanoJet {
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
+  std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
+
   inline float GetPt() { return physicsObject->Get("pt"); }
   inline float GetEta() { return physicsObject->Get("eta"); }
   inline float GetAbsEta() { return fabs(float(physicsObject->Get("eta"))); }
@@ -37,7 +39,7 @@ class NanoJet {
 
   TLorentzVector GetFourVector();
 
-  std::map<std::string,float> GetBtaggingScaleFactors(std::string workingPoint);
+  std::map<std::string,float> GetBtaggingScaleFactors(std::string workingPoint, bool isBJet, std::string datasetName);
   std::map<std::string,float> GetPUJetIDScaleFactors(std::string name);
   std::map<std::string,float> GetJetEnergyCorrections(float rho);
   void AddSmearedPtByResolution(float rho, int eventID, std::shared_ptr<NanoEvent> event);

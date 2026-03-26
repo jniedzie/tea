@@ -571,6 +571,32 @@ class ABCDPlotter:
         contamination = contamination_hist.GetBinContent(i, j)
         info(f"Signal {mass} GeV, {ctau} mm: Significance: {significance:.2e} Contamination: {contamination:.2e}")
 
+    if self.config.run_signal_injection:
+      info(f"Signal injection:")
+      info(f"mass, ctau: \t Apred \t\t Closure \t Error \t Nmin \t Asig \t r")
+      for mass in self.config.masses:
+        for ctau in self.config.ctaus:
+
+          signal_strenght = self.abcdHelper.get_signal_strengt_r(mass, ctau)
+          if signal_strenght == None:
+            continue
+
+          signal_hist = self.signal_hists[(mass, ctau)].Clone()
+          a_sig, b_sig, c_sig, d_sig, _, _, _, _ = self.abcdHelper.get_abcd(signal_hist, self.config.abcd_point)
+          a_sig_scaled = a_sig * signal_strenght
+          a_sig_scaled_err = a_sig_scaled**0.5
+          b_tot = b - b_sig * signal_strenght
+          c_tot = c - c_sig * signal_strenght
+          d_tot = d - d_sig * signal_strenght
+          b_err_tot = b_tot**0.5
+          c_err_tot = c_tot**0.5
+          d_err_tot = d_tot**0.5
+          prediction_tot, prediction_err_tot = self.abcdHelper.get_prediction(b_tot, c_tot, d_tot, b_err_tot, c_err_tot, d_err_tot)
+          closure = self.abcdHelper.get_closure(a, prediction_tot)
+          error = self.abcdHelper.get_error(a, a_err, prediction_tot, prediction_err_tot)
+          min_n_events = min(a, b_tot, c_tot, d_tot)
+          info(f"{mass},  {ctau}: \t {prediction_tot:.1f} +/- {prediction_err_tot:.1f} \t {closure:.2f} \t {error:.2f} \t {min_n_events:.1f} \t {a_sig_scaled:.1f} +/- {a_sig_scaled_err:.1f} \t {signal_strenght:.2f}")
+
     info("\n\n")
 
   def print_params_for_varied_points(self):

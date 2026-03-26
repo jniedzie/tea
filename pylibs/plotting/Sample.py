@@ -42,6 +42,7 @@ class Sample:
     if self.cross_sections is not None and self.cross_section < 0:
 
       name = self.name.replace("signal_", "")
+      name = name.replace(f"_{self.year}", "")
 
       for key, cross_section in self.cross_sections.items():
         if name in key:

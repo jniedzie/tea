@@ -54,7 +54,7 @@ class HistogramsManager:
     for hist, sample in self.histosamples:
       self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
-  def saveDatacards(self):
+  def saveDatacards(self, signal_strength=0):
 
     # turn histosamples (tuple) into a dictionary (hist_name, sample_name -> hist, sample)
     obs_histosample = None
@@ -94,7 +94,8 @@ class HistogramsManager:
         signal_histosample,
         self.config.nuisances,
         self.input_files,
-        self.config.add_uncertainties_on_zero
+        self.config.add_uncertainties_on_zero,
+        signal_strength
     )
 
   def __get_backgrounds_sum_hist(self, hists):

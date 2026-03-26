@@ -551,3 +551,21 @@ class ABCDHelper:
       for j in range(1, hist.GetNbinsY() + 1):
         if hist.GetBinContent(i, j) == -1:
           hist.SetBinContent(i, j, default)
+
+
+  def get_signal_strengt_r(self, mass, ctau):
+    # limit_path = f"../limits/limits_{self.config.year}/results_SR_ANv3/limits_combined{self.config.category}.txt"
+    limit_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_SR_ANv3/limits_combined{self.config.category}.txt"
+    key = f"mass_{mass}_ctau_{ctau}"
+
+    with open(limit_path) as f:
+        for line in f:
+            if line.startswith(key):
+                values_str = line.split(":")[1].strip()
+                values = eval(values_str)
+                if len(values) < 3:
+                  return None
+                return float(values[3])
+
+    return None 
+

@@ -181,7 +181,10 @@ def get_limits(config):
   limits_per_process = {}
 
   for signal_sample in config.signal_samples:
-    combine_output_path = get_datacard_file_name(config, signal_sample) + ".log"
+    combine_output_path = get_datacard_file_name(config, signal_sample)
+    if hasattr(config, "run_signal_injection") and config.run_signal_injection:
+      combine_output_path += "_signal_injection_minus"
+    combine_output_path += ".log"
 
     try:
       with open(f"{config.datacards_output_path}/{combine_output_path}", "r") as combine_output_file:
@@ -208,12 +211,18 @@ def save_limits(config):
 
   file_path += ".txt"
 
-  info(f"Saving limits to {file_path}")
+  info(f"Saving limits to {output_path}{file_path}")
 
-  if not os.path.exists(os.path.dirname(config.results_output_path)):
-    os.makedirs(os.path.dirname(config.results_output_path))
+  output_path = config.results_output_path
+  if hasattr(config, "run_signal_injection") and config.run_signal_injection:
+    output_path += "signal_injection_minus/"
 
-  with open(f"{config.results_output_path}/{file_path}", "w") as limits_file:
+  os.makedirs(output_path, exist_ok=True)
+
+  if not os.path.exists(os.path.dirname(output_path)):
+    os.makedirs(os.path.dirname(output_path))
+
+  with open(f"{output_path}/{file_path}", "w") as limits_file:
     for signal_name, limits in limits_per_process.items():
       limits_file.write(f"{signal_name}: {limits}\n")
       info(f"{signal_name}: {limits}")
@@ -235,6 +244,30 @@ def print_significance(config):
     except FileNotFoundError:
       error(f"File {combine_output_path} not found.")
       continue
+
+def get_signal_strengt_from_limit_file(config, signal_name):
+  
+  match = re.search(r"mAlp-([0-9p.]+)GeV_ctau-([0-9eE.+-]+)mm", signal_name)
+  mass = 0
+  ctau = 0
+  if match:
+    mass = match.group(1)
+    ctau = match.group(2)
+  key = f"mass_{mass}_ctau_{ctau}"
+
+  file_path = f"limits_combined{config.category}.txt"
+  results_output_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_SR_ANv3/"
+
+
+  with open(f"{results_output_path}{file_path}") as f:
+      for line in f:
+          if line.startswith(key):
+              values_str = line.split(":")[1].strip()
+              values = eval(values_str)
+              if len(values) < 3:
+                return 0
+              return float(values[3])
+  return 0
 
 def main():
   ROOT.gROOT.SetBatch(True)
@@ -263,6 +296,11 @@ def main():
   for main_sample in main_samples:
     datacard_file_name = get_datacard_file_name(config, main_sample)
 
+    signal_strenght = 0
+    if config.run_signal_injection:
+      input_datacard_file_name = datacard_file_name
+      datacard_file_name = datacard_file_name + "_signal_injection_minus"
+      signal_strenght = get_signal_strengt_from_limit_file(config, main_sample.name)
   
     info(f"Creating HistogramsManager for {datacard_file_name}")
 
@@ -274,7 +312,7 @@ def main():
 
     manager.normalizeHistograms()
     manager.buildStacks()
-    manager.saveDatacards()
+    manager.saveDatacards(signal_strenght)
     datacard_file_names.append(datacard_file_name)
 
   if not config.skip_combine:

@@ -37,6 +37,8 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
+  float GetJetTagEfficiency(std::string name, std::string datasetName, float pt);
+
 
   std::map<std::string, float> GetPileupScaleFactorCustom(int nVertices);
   std::map<std::string, float> GetPileupScaleFactor(std::string name, float nVertices);

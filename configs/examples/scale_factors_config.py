@@ -8,13 +8,13 @@ def get_scale_factors(year):
     pu_type = "Collisions16_UltraLegacy_goldenJSON"
     muon_trigger_type = "NUM_IsoMu24_or_IsoTkMu24_DEN_CutBasedIdTight_and_PFIsoTight"
     jecType = "Summer19UL16_V7_MC"
-    jerType = "Summer20UL16APV_JRV3_MC"
+    jerType = "Summer20UL16_JRV3_MC"
     jecAlgo = "AK4PFchs"
     jecYear = "2016"
     dsaYear = "2016"
     if year == "2016preVFP":
       jecType = "Summer19UL16APV_V7_MC"
-      jerType = "Summer20UL16_JRV3_MC"
+      jerType = "Summer20UL16APV_JRV3_MC"
   elif year == "2017":
     pu_type = "Collisions17_UltraLegacy_goldenJSON"
     jecType = "Summer19UL17_V5_MC"
@@ -74,9 +74,11 @@ def get_scale_factors(year):
     year_path = f"{year}_UL"
     loose_muon_iso_type = "NUM_LooseRelIso_DEN_LooseID"
     tight_muon_iso_type = "NUM_TightRelIso_DEN_TightIDandIPCut"
+    qjet_type = "deepJet_incl"
   else:
     loose_muon_iso_type = "NUM_LoosePFIso_DEN_LooseID"
     tight_muon_iso_type = "NUM_TightPFIso_DEN_TightID"
+    qjet_type = "deepJet_light"
 
   scaleFactors = {
 
@@ -97,6 +99,38 @@ def get_scale_factors(year):
           "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
           "workingPoint": "T",
           "flavour": "5", # 5 = b
+      },
+      "bTaggingEfficiency": {
+        "path": f"../tea/data/b_tagging/jet_efficiency_maps/{year}_jetTagging_efficiency.json.gz",
+        "type": "efficiency_B",
+        "flavour": "5",
+      },
+      "cTaggingEfficiency": {
+        "path": f"../tea/data/b_tagging/jet_efficiency_maps/{year}_jetTagging_efficiency.json.gz",
+        "type": "efficiency_C",
+        "flavour": "4",
+      },
+      "qTaggingEfficiency": {
+        "path": f"../tea/data/b_tagging/jet_efficiency_maps/{year}_jetTagging_efficiency.json.gz",
+        "type": "efficiency_Q",
+        "flavour": "0",
+      },
+
+      "bTaggingMedium_cjet": { 
+          "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+          "type": "deepJet_comb",
+          "systematic": "central",
+          "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
+          "workingPoint": "M",
+          "flavour": "4", # 4 = c
+      },
+      "bTaggingMedium_qjet": { 
+          "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+          "type": qjet_type,
+          "systematic": "central",
+          "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
+          "workingPoint": "M",
+          "flavour": "0", # 0 = udsg
       },
 
       # Muon ID
@@ -147,19 +181,19 @@ def get_scale_factors(year):
       },
 
       "dimuonEff_Pat": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_Pat_pt_irr2_v3.json", 
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_Pat_pt_irr_v3.json", 
           "type": "dimuonEff_Pat",
           "systematic": "nominal",
           "variations": "up,down",
       },
       "dimuonEff_PatDSA": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_PatDSA_pt_irr2_v3.json", 
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_PatDSA_pt_irr_v3.json", 
           "type": "dimuonEff_PatDSA",
           "systematic": "nominal",
           "variations": "up,down",
       },
       "dimuonEff_DSA": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_DSA_pt_irr2_v3.json", 
+          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_DSA_pt_irr_v3.json", 
           "type": "dimuonEff_DSA",
           "systematic": "nominal",
           "variations": "up,down",
@@ -233,10 +267,12 @@ def get_scale_factors(year):
         "type": f"{jerType}_ScaleFactor_{jecAlgo}",
         "systematic": "nom",
         "variations": "up,down",
+        "year": year_path,
       },
       "jerMC_PtResolution": {
         "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
         "type": f"{jerType}_PtResolution_{jecAlgo}",
+        "year": year_path,
       },
       "jerMC_smear": {
         "path": f"../tea/jsonPOG/POG/JME/jer_smear.json.gz",

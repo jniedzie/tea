@@ -12,14 +12,59 @@ TLorentzVector NanoJet::GetFourVector() {
   return v;
 }
 
-map<string,float> NanoJet::GetBtaggingScaleFactors(string workingPoint) {
+map<string,float> NanoJet::GetBtaggingScaleFactors(string workingPoint, bool isBJet, string datasetName) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  return scaleFactorsManager.GetBTagScaleFactors(workingPoint, GetAbsEta(), GetPt());
+  map<string,float> scale_factors = {{"systematic", 1.0}};  
+  if (!scaleFactorsManager.ShouldApplyScaleFactor("bTagging") && !scaleFactorsManager.ShouldApplyVariation("bTagging"))
+    return scale_factors;
+
+  int hadronFlavour = abs(GetAs<int>("hadronFlavour"));
+  
+  // b jet
+  string wp_suffix = "";
+  string jetEfficiency = "bTaggingEfficiency";
+  if (hadronFlavour == 4) { // c jet
+    wp_suffix = "_cjet";
+    jetEfficiency = "cTaggingEfficiency";
+  }
+  else if (hadronFlavour != 5) { // light jet
+    wp_suffix = "_qjet";
+    jetEfficiency = "qTaggingEfficiency";
+  }
+  string jetWorkingPoint = workingPoint + wp_suffix;
+  float taggingEfficiency = scaleFactorsManager.GetJetTagEfficiency(jetEfficiency, datasetName, GetPt());
+  map<string,float> sfs = scaleFactorsManager.GetBTagScaleFactors(jetWorkingPoint, GetAbsEta(), GetPt());
+
+  for (auto &[name, weight]: sfs) {
+    string name_ = name;
+    if (wp_suffix != "") {
+      size_t pos = name_.find(wp_suffix);
+      if (pos != string::npos) 
+        name_.erase(pos, wp_suffix.size());
+    }
+    if (isBJet) {
+      scale_factors[name_] = sfs[name];
+    } else {
+      if (taggingEfficiency == 1 ) // Avoiding unstable efficiencies from low stat datasets. 
+        scale_factors[name_] = 1.0;
+      else
+        scale_factors[name_] = (1 - weight * taggingEfficiency) / (1 - taggingEfficiency);
+    }
+  }
+  
+  return scale_factors;
 }
 
 map<string,float> NanoJet::GetPUJetIDScaleFactors(string name) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  return scaleFactorsManager.GetPUJetIDScaleFactors(name, GetEta(), GetPt());
+  map<string,float> sfs = scaleFactorsManager.GetPUJetIDScaleFactors(name, GetEta(), GetPt());
+  // PU jet ID only applied to low pT jets with pT < 50 GeV
+  if (GetPt() > 50) {
+    for (auto &[name, weight]: sfs) {
+      sfs[name] = 1.0;
+    }
+  }
+  return sfs;
 }
 
 map<string,float> NanoJet::GetJetEnergyCorrections(float rho) {

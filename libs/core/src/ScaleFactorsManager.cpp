@@ -388,6 +388,22 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
   return scaleFactors;
 }
 
+float ScaleFactorsManager::GetJetTagEfficiency(string name, string datasetName, float pt) {
+  bool applyDefault = ShouldApplyScaleFactor("bTagging");
+  bool applyVariations = ShouldApplyVariation("bTagging");
+  if (!applyDefault && !applyVariations) return 1.0;
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations) warn() << "Requested bTag efficiency, which was not defined in the scale_factors_config: " << name << endl;
+    return 1.0;
+  }
+
+  auto extraArgs = correctionsExtraArgs[name];
+
+  float efficiency = TryToEvaluate(name, {datasetName, pt});
+  return efficiency;
+}
+
 vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
   vector<string> variations;
   if (!ShouldApplyVariation("bTagging")) return variations;
@@ -689,8 +705,22 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
   auto extraArgs_sf = correctionsExtraArgs[name_sf];
   auto extraArgs_pt = correctionsExtraArgs[name_pt];
 
+  // Run 2 only use jet eta as input, but Run 3 alos need jet pT
+  bool useJetPt =
+    extraArgs_sf["year"].find("2022") != string::npos ||
+    extraArgs_sf["year"].find("2023") != string::npos ||
+    extraArgs_sf["year"].find("2024") != string::npos ||
+    extraArgs_sf["year"].find("2025") != string::npos ||
+    extraArgs_sf["year"].find("2026") != string::npos;
+
+  vector<variant<int, double, string>> args_sfs;
+  args_sfs.push_back(jetEta);
+  if (useJetPt)
+    args_sfs.push_back(jetPt);
+  args_sfs.push_back(extraArgs_sf["systematic"]);
+  
   if (applyDefault) {
-    scaleFactors["systematic"] = TryToEvaluate(name_sf, {jetEta, extraArgs_sf["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(name_sf, args_sfs);
     scaleFactors["PtResolution"] = TryToEvaluate(name_pt, {jetEta, jetPt, rho});
   }
 
@@ -698,7 +728,12 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
 
   vector<string> variations = GetScaleFactorVariations(extraArgs_sf["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(name_sf, {jetEta, variation});
+    vector<variant<int, double, string>> args;
+    args.push_back(jetEta);
+    if (useJetPt)
+      args.push_back(jetPt);
+    args.push_back(variation);
+    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(name_sf, args);
   }
   return scaleFactors;
 }

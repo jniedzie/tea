@@ -3,6 +3,7 @@
 //  Created by Jeremi Niedziela on 08/08/2023.
 
 #include "NanoEventProcessor.hpp"
+#include "NanoMETXYCorr_METPhi.hpp"
 
 using namespace std;
 
@@ -37,6 +38,11 @@ NanoEventProcessor::NanoEventProcessor() {
   } catch (const Exception &e) {
     warn() << "eventIDBranchName not specified in config -- will assume standard name event" << endl;
     eventIDBranchName = "event";
+  }
+  try {
+    config.GetValue("datasetName", datasetName);
+  } catch (const Exception &e) {
+    warn() << "datasetName not specified in config -- is needed for b-tagging SFs" << endl;
   }
 }
 
@@ -121,11 +127,23 @@ map<string, float> NanoEventProcessor::GetMuonTriggerScaleFactors(const shared_p
   return weights;
 }
 
-map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared_ptr<NanoJets> b_jets) {
+map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const shared_ptr<NanoEvent> event, const shared_ptr<NanoJets> jets) {
   map<string, float> weights;
   bool firstIteration = true;
-  for (auto b_jet : *b_jets) {
-    map<string, float> weights_ = b_jet->GetBtaggingScaleFactors("bTaggingMedium");
+  if (datasetName.empty())
+    return weights;
+
+  auto allBJets = event->GetCollection("GoodMediumBtaggedJets");
+
+  for (auto jet : *jets) {
+    bool isBJet = false;
+    for (auto bJet : *allBJets) {
+      if (jet->GetPhysicsObject() == bJet) {
+        isBJet = true;
+        break;
+      }
+    }
+    map<string, float> weights_ = jet->GetBtaggingScaleFactors("bTaggingMedium", isBJet, datasetName);
     if (firstIteration) {
       weights = weights_;
       firstIteration = false;
@@ -133,15 +151,6 @@ map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const share
     }
     for (auto& [name, weight] : weights_) {
       weights[name] *= weight;
-    }
-  }
-  // special case for 0 b-jets but we still need all variation names for histograms
-  if (b_jets->size() == 0) {
-    weights["systematic"] = 1.0;
-    auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
-    auto variations = scaleFactorsManager.GetBTagVariationNames("bTaggingMedium");
-    for (auto variation : variations) {
-      weights["bTaggingMedium_" + variation] = 1.0;
     }
   }
   return weights;
@@ -520,6 +529,11 @@ map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(cons
 
   float metPt = event->Get("MET_pt");
   float metPhi = event->Get("MET_phi");
+
+  if (scaleFactorsManager.ShouldApplyScaleFactor("metXYcorrection")) {
+    metPt = event->Get("MET_pt_XYcorr");
+    metPhi = event->Get("MET_phi_XYcorr");
+  }
   float metPx = metPt * cos(metPhi);
   float metPy = metPt * sin(metPhi);
 
@@ -539,6 +553,35 @@ map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(cons
     scaleFactors["MET_unclusteredEnergy_up"] = 0.0;
   if (met_down < metPtCuts.first || met_down > metPtCuts.second) 
     scaleFactors["MET_unclusteredEnergy_down"] = 0.0;
+
+  return scaleFactors;
+}
+
+map<string, float> NanoEventProcessor::GetMETXYcorrections(const shared_ptr<NanoEvent> event, 
+    pair<float,float> metPtCuts) {
+
+  map<string, float> scaleFactors = {{"systematic", 1.0}};
+  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  if (!scaleFactorsManager.ShouldApplyScaleFactor("metXYcorrection")) 
+      return scaleFactors;
+  
+  float met_pt = event->Get("MET_pt");
+  float met_phi = event->Get("MET_phi");
+  float met_px = met_pt * cos(met_phi);
+  float met_py = met_pt * sin(met_phi);
+
+  int npv = event->GetAs<int>("PV_npvs");
+  uint run = event->Get("run");
+  bool isMC = !IsDataEvent(event);
+  pair<double,double> corrected_met = METXYCorr_Met_MetPhi(met_pt, met_phi, run, year, isMC, npv, true);
+  float met_pt_corr = corrected_met.first;
+  float met_phi_corr = corrected_met.second;
+
+  event->GetEvent()->SetFloat("MET_pt_XYcorr", met_pt_corr);
+  event->GetEvent()->SetFloat("MET_phi_XYcorr", met_phi_corr);
+  
+  if (met_pt_corr < metPtCuts.first || met_pt_corr > metPtCuts.second) 
+    scaleFactors["systematic"] = 0.0;
 
   return scaleFactors;
 }
