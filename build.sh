@@ -62,9 +62,11 @@ if ! cmake "${cmake_args[@]}"; then
 fi
 
 cmake --build . --parallel --target install
-# make links to all python files, even if not rebuilding. Include directories (if exist, and recursively):
-# configs, utils, tea/configs:
-find "${repo_root}" -name "*.py" -type f -exec ln -sf {} "${bin_dir}" \;
+# make links to all python files, even if not rebuilding. Skip generated files in bin/build.
+find "${repo_root}" \
+  -path "${bin_dir}" -prune -o \
+  -path "${build_dir}" -prune -o \
+  -name "*.py" -type f -exec ln -sf {} "${bin_dir}" \;
 
 export PYTHONPATH="${PYTHONPATH:-}:${bin_dir}/"
 cd "${start_dir}"
