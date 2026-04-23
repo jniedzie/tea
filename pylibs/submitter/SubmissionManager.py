@@ -171,7 +171,7 @@ class SubmissionManager:
         self.input_output_file_lists = self.files_config.get_input_output_file_lists()
       return None
 
-    fatal("SubmissionManager -- Unrecognized option")
+    fatal("SubmissionManager -- Unrecognized input/output configuration")
     exit()
 
   # option 1 & 3, 4, 5
