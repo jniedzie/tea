@@ -5,9 +5,8 @@ project (core)
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 14.5)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
-cmake_policy(SET CMP0054 OLD)
 cmake_policy(SET CMP0068 NEW)
 
 # setting for macOS
@@ -37,51 +36,29 @@ file(GLOB SOURCES "src/*.cpp")
 add_library(core SHARED ${SOURCES})
 
 
-# Detect the platform
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(PYTHON_LIBRARY_EXTENSION "dylib")
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    set(PYTHON_LIBRARY_EXTENSION "so")
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(PYTHON_LIBRARY_EXTENSION "dll")
-else()
-    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
-endif()
-
-# find Python
-# Check if CONDA_PREFIX is set
-if(DEFINED ENV{CONDA_PREFIX})
-    set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
-    set(Python3_EXECUTABLE "${CONDA_PREFIX_PATH}/bin/python3")
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    
-    if(Python3_FOUND)
-        # Set Python version variables manually if not set automatically
-        if(NOT DEFINED Python3_VERSION_MAJOR)
-            execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.major)"
-                            OUTPUT_VARIABLE Python3_VERSION_MAJOR
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-        if(NOT DEFINED Python3_VERSION_MINOR)
-            execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.minor)"
-                            OUTPUT_VARIABLE Python3_VERSION_MINOR
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-
-        set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")    
-        include_directories(${Python3_INCLUDE_DIR})
-    else()
-        message(FATAL_ERROR "Python3 not found in Conda environment")
+if(NOT TARGET Python3::Python)
+    if(DEFINED ENV{CONDA_PREFIX} AND EXISTS "$ENV{CONDA_PREFIX}/bin/python3")
+        set(Python3_EXECUTABLE "$ENV{CONDA_PREFIX}/bin/python3" CACHE FILEPATH "Python interpreter")
     endif()
-else()
-    message(FATAL_ERROR "CONDA_PREFIX is not set. Please activate your Conda environment.")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 endif()
+if(NOT Python3_INCLUDE_DIRS OR NOT EXISTS "${Python3_INCLUDE_DIRS}/Python.h")
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c "import sysconfig; print(sysconfig.get_path('include') or '')"
+        OUTPUT_VARIABLE Python3_INCLUDE_DIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endif()
+if(NOT Python3_INCLUDE_DIRS OR NOT EXISTS "${Python3_INCLUDE_DIRS}/Python.h")
+    message(FATAL_ERROR "Python3 headers not found for ${Python3_EXECUTABLE}. Expected Python.h under ${Python3_INCLUDE_DIRS}.")
+endif()
+message(STATUS "core using Python3 include dirs: ${Python3_INCLUDE_DIRS}")
 
 # setup includes
 include_directories("${PROJECT_SOURCE_DIR}/include")
+target_include_directories(core PUBLIC ${Python3_INCLUDE_DIRS})
 
-target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
+target_link_libraries(core PUBLIC Python3::Python ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
 
 if(correctionlib_FOUND)
   message(STATUS "correctionlib target found. Linking with correctionlib::correctionlib.")
@@ -95,4 +72,4 @@ target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 set_target_properties(core PROPERTIES INSTALL_RPATH "$ORIGIN/../tea/libs/core")
 install(TARGETS core LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
 
-set_property(TARGET core PROPERTY CXX_STANDARD 20)
+set_property(TARGET core PROPERTY CXX_STANDARD 17)

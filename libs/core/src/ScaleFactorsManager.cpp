@@ -105,7 +105,7 @@ void ScaleFactorsManager::ExtractBounds(const json& node, map<string, pair<doubl
 void ScaleFactorsManager::ReadScaleFactors() {
 #ifndef USE_CORRECTIONLIB
   return;
-#endif
+#else
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
@@ -177,12 +177,13 @@ void ScaleFactorsManager::ReadScaleFactors() {
     ExtractBounds(corrJson["data"], bounds);
     boundsPerInput[name] = bounds;
   }
+#endif
 }
 
 void ScaleFactorsManager::ReadJetEnergyCorrections() {
 #ifndef USE_CORRECTIONLIB
   return;
-#endif
+#else
 
   if (!ShouldApplyScaleFactor("jec") && !ShouldApplyVariation("jec")) return;
 
@@ -223,6 +224,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
       }
     }
   }
+#endif
 }
 
 void ScaleFactorsManager::ReadScaleFactorFlags() {
@@ -516,7 +518,7 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
 
 map<string, pair<double, double>> ScaleFactorsManager::GetInputBounds(map<string, string> extraArgs) {
   map<string, pair<double, double>> inputBounds = {};
-  if (!extraArgs.contains("inputBounds")) return inputBounds;
+  if (extraArgs.find("inputBounds") == extraArgs.end()) return inputBounds;
   string bounds_str = extraArgs["inputBounds"];
   istringstream ss(bounds_str);
   string item;
@@ -629,9 +631,17 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   bool applyDefault = ShouldApplyScaleFactor("jec");
   bool applyVariations = ShouldApplyVariation("jec");
 
+  map<string, float> scaleFactors;
+
+#ifndef USE_CORRECTIONLIB
+  if (applyDefault || applyVariations) {
+    warn() << "Requested jet energy corrections, but correctionlib is not available. Returning neutral corrections." << endl;
+  }
+  scaleFactors["systematic"] = 1.0;
+  return scaleFactors;
+#else
   string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
-  map<string, float> scaleFactors;
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else {
@@ -656,6 +666,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   }
 
   return scaleFactors;
+#endif
 }
 
 map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho) {
@@ -696,6 +707,10 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
 }
 
 float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, variant<int, double, string>> inputArguments) {
+#ifndef USE_CORRECTIONLIB
+  warn() << "Requested jet energy resolution smearing, but correctionlib is not available. Returning neutral smearing." << endl;
+  return 1.0;
+#else
   string name = "jerMC_smear";
   vector<correction::Variable::Type> inputs;
   for (const correction::Variable& input: corrections[name]->inputs()) {
@@ -703,6 +718,7 @@ float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, vari
   }
   float factor = TryToEvaluate(name, inputs);
   return factor;
+#endif
 }
 
 bool ScaleFactorsManager::IsJetVetoMapDefined(string name) { return (corrections.find(name) != corrections.end()); }

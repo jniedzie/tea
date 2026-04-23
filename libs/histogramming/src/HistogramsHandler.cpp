@@ -184,7 +184,10 @@ void HistogramsHandler::SaveHistograms() {
   string filename = outputPath.substr(outputPath.find_last_of("/"));
   if (path == "") path = "./";
   string command = "mkdir -p " + path;
-  system(command.c_str());
+  const int mkdir_status = system(command.c_str());
+  if (mkdir_status != 0) {
+    warn() << "Failed to create histogram output directory with command: " << command << endl;
+  }
 
   auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
   outputFile->cd();
