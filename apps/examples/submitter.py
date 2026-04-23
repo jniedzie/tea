@@ -24,6 +24,8 @@ def get_args():
                       )
                       )
   parser.add_argument("--resubmit_job", type=int, default=None, help="Resubmitt a specific job.")
+  parser.add_argument("--resubmit_failed", action="store_true", default=False,
+                      help="Resubmit only jobs whose output ROOT files are missing or corrupted.")
   parser.add_argument("--memory", type=float, default=1.0, help="Requested memory in GB.")
   parser.add_argument("--max_materialize", type=int, default=5000,
                       help=(

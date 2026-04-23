@@ -1,8 +1,9 @@
 import os
 import importlib.util
 import uuid
+import ast
 from enum import Enum
-
+import ROOT
 from Logger import info, warn, error, fatal
 from teaHelpers import get_facility
 
@@ -65,7 +66,12 @@ class SubmissionManager:
     self.memory_request = args.memory
     self.materialize_max = args.max_materialize
     self.resubmit_job = args.resubmit_job
+    self.resubmit_failed = args.resubmit_failed
     self.save_logs = args.save_logs
+
+    if self.resubmit_job is not None and self.resubmit_failed:
+      fatal("Please use either --resubmit_job or --resubmit_failed")
+      exit()
 
     input_files = self.__get_input_file_list()
 
@@ -73,7 +79,11 @@ class SubmissionManager:
       self.__setup_temp_file_paths()
       self.__copy_templates()
       self.__save_file_list_to_file(input_files)
-      self.__set_condor_script_variables(len(input_files))
+      n_jobs = self.__keep_only_failed_inputs() if self.resubmit_failed else len(input_files)
+      info(f"Will submit {n_jobs} jobs and skip {len(input_files) - n_jobs} healthy ones")
+      if n_jobs == 0:
+        return
+      self.__set_condor_script_variables(n_jobs)
       self.__set_run_script_variables()
 
       if get_facility() == "lxplus":
@@ -283,6 +293,51 @@ class SubmissionManager:
     with open(self.input_files_list_file_name, "w") as file:
       for input_file_path in input_files:
         file.write(f"{input_file_path}\n")
+
+  def __keep_only_failed_inputs(self):
+    failed_lines = []
+    lines = open(self.input_files_list_file_name).read().splitlines()
+    n_lines = len(lines)
+    for i, line in enumerate(lines, start=1):
+      percentage = (i * 100) // n_lines if n_lines > 0 else 100
+      width = 50
+      pos = (percentage * width) // 100
+      progress_bar = "\r\033[1;92m["
+      for j in range(width):
+        if j < pos:
+          progress_bar += "="
+        elif j == pos:
+          progress_bar += ">"
+        else:
+          progress_bar += " "
+      progress_bar += f"] {percentage}% (File {i}/{n_lines})"
+      info(progress_bar, end="")
+      entry = ast.literal_eval(line) if line.startswith("(") else line
+      input_path, tree_path, hist_path = (entry if isinstance(entry, tuple) else (entry, None, None))
+      input_name = self.files_config.file_name if hasattr(self.files_config, "file_name") else input_path.strip().split("/")[-1]
+      outputs = []
+      if tree_path or (hasattr(self.files_config, "output_trees_dir") and self.files_config.output_trees_dir != ""):
+        outputs.append(tree_path if tree_path else f"{self.files_config.output_trees_dir}/{input_name}")
+      if hist_path or (hasattr(self.files_config, "output_hists_dir") and self.files_config.output_hists_dir != ""):
+        outputs.append(hist_path if hist_path else f"{self.files_config.output_hists_dir}/{input_name}")
+      if hasattr(self.files_config, "output_dir") and self.files_config.output_dir != "":
+        outputs.append(f"{self.files_config.output_dir}/{input_name}")
+
+      is_healthy = len(outputs) > 0
+      for path in outputs:
+        root_file = ROOT.TFile.Open(path, "READ") if os.path.exists(path) else None
+        is_healthy = is_healthy and root_file and not root_file.IsZombie() and not root_file.TestBit(ROOT.TFile.kRecovered)
+        if root_file:
+          root_file.Close()
+      if not is_healthy:
+        failed_lines.append(line)
+    if n_lines > 0:
+      info("\033[0m\n")
+
+    with open(self.input_files_list_file_name, "w") as file:
+      for line in failed_lines:
+        file.write(f"{line}\n")
+    return len(failed_lines)
 
   def __setup_voms_proxy(self):
     voms_proxy_path = os.popen("voms-proxy-info -path").read().strip()
