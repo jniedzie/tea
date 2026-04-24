@@ -86,7 +86,9 @@ class SubmissionManager:
       self.__set_condor_script_variables(n_jobs)
       self.__set_run_script_variables()
 
-      if get_facility() == "lxplus":
+      facility = get_facility()
+
+      if facility == "lxplus":
         command = f"condor_submit -spool {self.condor_config_name}"
       else:
         command = f"condor_submit {self.condor_config_name}"
@@ -282,6 +284,10 @@ class SubmissionManager:
 
   def __copy_templates(self):
     condor_config_template_name = f"condor_config_{get_facility()}.template.sub"
+    # check if template exists
+    if not os.path.exists(f"../tea/templates/{condor_config_template_name}"):
+      fatal(f"Condor config template not found: ../tea/templates/{condor_config_template_name}")
+      exit()
 
     os.system(f"cp ../tea/templates/{condor_config_template_name} {self.condor_config_name}")
     os.system(f"cp ../tea/templates/condor_run.template.sh {self.condor_run_script_name}")

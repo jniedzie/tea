@@ -30,6 +30,8 @@ def get_facility():
     facility = "lxplus"
   elif "naf" in hostname:
     facility = "naf"
+  elif "iihe.ac.be" in hostname:
+    facility = "vub"
   else:
     fatal(f"Unknown facility for hostname: {hostname}")
     sys.exit(1)
