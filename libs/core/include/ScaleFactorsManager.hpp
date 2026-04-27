@@ -85,6 +85,9 @@ class ScaleFactorsManager {
   void ReadPileupSFs();
 
   float TryToEvaluate(const std::string& name, const std::vector<std::variant<int, double, std::string>>& args);
+#ifdef USE_CORRECTIONLIB
+  float EvaluateCorrectionArgs(const std::string& name, const std::vector<correction::Variable::Type>& args);
+#endif
 
   std::vector<std::string> GetScaleFactorVariations(std::string variations_str);
   std::map<std::string, std::pair<double, double>> GetInputBounds(std::map<std::string, std::string> extraArgs);
