@@ -7,6 +7,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <variant>
+
 #include "Helpers.hpp"
 
 #ifdef USE_CORRECTIONLIB

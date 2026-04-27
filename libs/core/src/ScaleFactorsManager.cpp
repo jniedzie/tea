@@ -8,12 +8,25 @@
 #include <zlib.h>
 #include <fstream>
 #include <type_traits>
+#include <utility>
 
 using namespace std;
 using json = nlohmann::json;
 
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
+
+namespace {
+template <typename Value>
+correction::Variable::Type MakeCorrectionArg(Value&& value) {
+  using DecayedValue = std::decay_t<Value>;
+  if constexpr (std::is_same_v<DecayedValue, int> && std::is_constructible_v<correction::Variable::Type, long>) {
+    return correction::Variable::Type(static_cast<long>(value));
+  } else {
+    return correction::Variable::Type(std::forward<Value>(value));
+  }
+}
+}  // namespace
 #else
 namespace {
 std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string& path) {
@@ -419,12 +432,7 @@ float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<s
   correctionArgs.reserve(args.size());
   for (const auto& arg : args) {
     std::visit([&](const auto& value) {
-      using Value = std::decay_t<decltype(value)>;
-      if constexpr (std::is_same_v<Value, int>) {
-        correctionArgs.emplace_back(static_cast<long>(value));
-      } else {
-        correctionArgs.emplace_back(value);
-      }
+      correctionArgs.emplace_back(MakeCorrectionArg(value));
     }, arg);
   }
   return EvaluateCorrectionArgs(name, correctionArgs);
@@ -467,19 +475,18 @@ float ScaleFactorsManager::EvaluateCorrectionArgs(const std::string& name, const
       double min = bounds.at(varName).first;
       double max = bounds.at(varName).second;
 
-      if (std::holds_alternative<double>(clampedArgs[i])) {
-        double& val = std::get<double>(clampedArgs[i]);
-
-        if (val < min) val = min + 1e-6;
-        if (val >= max) val = max - 1e-6;
-      }
-
-      else if (std::holds_alternative<long>(clampedArgs[i])) {
-        long& val = std::get<long>(clampedArgs[i]);
-
-        if (val < min) val = static_cast<long>(std::ceil(min));
-        if (val >= max) val = static_cast<long>(std::floor(max - 1));
-      }
+      std::visit(
+          [&](auto& val) {
+            using ValueType = std::decay_t<decltype(val)>;
+            if constexpr (std::is_floating_point_v<ValueType>) {
+              if (val < min) val = min + 1e-6;
+              if (val >= max) val = max - 1e-6;
+            } else if constexpr (std::is_integral_v<ValueType>) {
+              if (val < min) val = static_cast<ValueType>(std::ceil(min));
+              if (val >= max) val = static_cast<ValueType>(std::floor(max - 1));
+            }
+          },
+          clampedArgs[i]);
     }
 
     try {
@@ -733,12 +740,7 @@ float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, vari
   vector<correction::Variable::Type> inputs;
   for (const correction::Variable& input: corrections[name]->inputs()) {
     std::visit([&](const auto& value) {
-      using Value = std::decay_t<decltype(value)>;
-      if constexpr (std::is_same_v<Value, int>) {
-        inputs.emplace_back(static_cast<long>(value));
-      } else {
-        inputs.emplace_back(value);
-      }
+      inputs.emplace_back(MakeCorrectionArg(value));
     }, inputArguments.at(input.name()));
   }
   float factor = EvaluateCorrectionArgs(name, inputs);
