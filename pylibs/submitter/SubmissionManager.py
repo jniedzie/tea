@@ -331,7 +331,10 @@ class SubmissionManager:
 
       is_healthy = len(outputs) > 0
       for path in outputs:
-        root_file = ROOT.TFile.Open(path, "READ") if os.path.exists(path) else None
+        try:
+          root_file = ROOT.TFile.Open(path, "READ") if os.path.exists(path) else None
+        except OSError:
+          root_file = None
         is_healthy = is_healthy and root_file and not root_file.IsZombie() and not root_file.TestBit(ROOT.TFile.kRecovered)
         if root_file:
           root_file.Close()
