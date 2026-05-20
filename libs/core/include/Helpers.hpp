@@ -7,30 +7,10 @@
 
 #include <TKey.h>
 
-#include "Math/GenVector/LorentzVector.h"
-#include "Math/GenVector/PxPyPzE4D.h"
-#include "TApplication.h"
-#include "TBox.h"
 #include "TBranchElement.h"
 #include "TCanvas.h"
-#include "TEllipse.h"
-#include "TEnv.h"
-#include "TEveGeoNode.h"
-#include "TEveLine.h"
-#include "TEveManager.h"
-#include "TEveProjectionAxes.h"
-#include "TEveProjectionManager.h"
-#include "TEveViewer.h"
 #include "TF1.h"
 #include "TFile.h"
-#include "TGLViewer.h"
-#include "TGeoManager.h"
-#include "TGeoMaterial.h"
-#include "TGeoMedium.h"
-#include "TGeoSphere.h"
-#include "TGeoTorus.h"
-#include "TGeoTube.h"
-#include "TGeoVolume.h"
 #include "TGraph.h"
 #include "TGraphAsymmErrors.h"
 #include "TGraphPolar.h"
@@ -44,7 +24,6 @@
 #include "TMath.h"
 #include "TMatrixD.h"
 #include "TPolyLine.h"
-#include "TPolyLine3D.h"
 #include "TROOT.h"
 #include "TRandom.h"
 #include "TRotation.h"
@@ -53,8 +32,6 @@
 #include "TTree.h"
 #include "TVector2.h"
 #include "TVectorD.h"
-#include "TView.h"
-#include "TView3D.h"
 
 #pragma clang diagnostic pop  // restores the saved state for diagnostics
 

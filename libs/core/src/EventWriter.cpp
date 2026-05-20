@@ -78,7 +78,7 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
     if (!isVectorBranch) continue;
 
     string branchName = branchPtr->GetName();
-    if (!branchName.starts_with("Particle_")) continue;
+    if (branchName.rfind("Particle_", 0) != 0) continue;
 
     auto leaf = eventReader->GetLeaf(branchPtr);
     string branchType = leaf->GetTypeName();

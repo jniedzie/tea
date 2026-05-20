@@ -12,8 +12,6 @@ EventProcessor::EventProcessor() {
   try {
     config.GetVector("triggerSelection", triggerNames);
   } catch (const Exception& e) {
-    warn() << "Couldn't read triggerSelection from file ";
-    warn() << "(which may be fine if you're not tyring to apply trigger selection)" << endl;
   }
 
   try {
@@ -29,7 +27,6 @@ EventProcessor::EventProcessor() {
 
   try {
     config.GetMap("goldenJson", goldenJson);
-    // check if the map is valid and has some entries
     if (goldenJson.empty()) {
       fatal() << "Golden JSON is empty" << endl;
       exit(1);

@@ -3,6 +3,7 @@
 #include "EventReader.hpp"
 #include "EventWriter.hpp"
 #include "ExtensionsHelpers.hpp"
+#include "UserExtensionsHelpers.hpp"
 #include "HistogramsHandler.hpp"
 #include "Profiler.hpp"
 #include "HistogramsFiller.hpp"
@@ -14,25 +15,14 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-  
-  auto args = make_unique<ArgsManager>(argc, argv);
-  if (!args->GetString("config").has_value()) {
-    fatal() << "No config file provided" << endl;
-    exit(1);
-  }
+  // Define required and optional arguments for your app
+  vector<string> requiredArgs = {"config"};
+  vector<string> optionalArgs = {"input_path", "output_hists_path"};
 
-  ConfigManager::Initialize(args->GetString("config").value());
-  auto &config = ConfigManager::GetInstance();
-  
-  if (args->GetString("input_path").has_value()) {
-    config.SetInputPath(args->GetString("input_path").value());
-  }
-  if (args->GetString("output_hists_path").has_value()) {
-    config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
-  }
-  if (args->GetString("output_trees_path").has_value()) {
-    config.SetTreesOutputPath(args->GetString("output_trees_path").value());
-  }
+  // Initialize the config with the arguments
+  auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
+  ConfigManager::Initialize(args);
+  auto& config = ConfigManager::GetInstance();
 
   // Create event reader and writer, which will handle input/output trees for you
   auto eventReader = make_shared<EventReader>();
