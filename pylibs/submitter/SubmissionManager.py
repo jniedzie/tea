@@ -2,6 +2,7 @@ import os
 import importlib.util
 import uuid
 import ast
+import subprocess
 from enum import Enum
 import ROOT
 from Logger import info, warn, error, fatal
@@ -153,6 +154,22 @@ class SubmissionManager:
       files = [line.strip() for line in file if line.strip()]
     return files
 
+  def __get_files_from_input_directory(self, input_directory):
+    if input_directory.startswith("/store/"):
+      redirector = getattr(self.files_config, "redirector", "cms-xrd-global.cern.ch")
+      if not redirector.startswith("root://"):
+        redirector = f"root://{redirector}"
+      xrdfs_command = ["xrdfs", redirector, "ls", input_directory]
+      info(f"\n\nExecuting xrdfs_command={' '.join(xrdfs_command)}")
+      try:
+        files = subprocess.check_output(xrdfs_command, text=True).splitlines()
+      except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        fatal(f"Could not list input directory with xrdfs: {input_directory}. Error: {e}")
+        exit()
+      return [file_path for file_path in files if file_path.endswith(".root")]
+
+    return os.popen(f"find {input_directory} -maxdepth 1 -name '*.root'").read().splitlines()
+
   def __get_input_file_list(self):
     if hasattr(self.files_config, "dataset"):
       max_files = getattr(self.files_config, "max_files", -1)
@@ -172,7 +189,7 @@ class SubmissionManager:
       return self.files_config.input_file_list
 
     if hasattr(self.files_config, "input_directory"):
-      return os.popen(f"find {self.files_config.input_directory} -maxdepth 1 -name '*.root'").read().splitlines()
+      return self.__get_files_from_input_directory(self.files_config.input_directory)
 
     if hasattr(self.files_config, "input_output_file_list"):
       return self.files_config.input_output_file_list
