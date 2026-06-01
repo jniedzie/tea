@@ -119,6 +119,8 @@ def print_job_summary(jobs, use_condor):
     info(f"    output: {output_file}")
     for input_file in input_files:
       info(f"    input: {input_file}")
+      
+    info(f"\n\ncommand: hadd -f -j -k {output_file} {' '.join(input_files)}\n\n")
 
 
 def create_condor_job(condor_dir, merge_kind, sample, batch_index, output_file, input_files):

@@ -7,6 +7,7 @@ error                 = <error_path>
 log                   = <log_path>
 request_memory        = <memory_request> GB
 +JobFlavour           = "<job_flavour>"
+max_materialize       = <materialize_max>
 
 # should_transfer_files   = YES
 # when_to_transfer_output = ON_EXIT
