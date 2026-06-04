@@ -16,6 +16,9 @@ def get_args():
   parser.add_argument("--files_config", type=str, default=None, help="Python config with a list of input/output paths.")
   parser.add_argument("--local", action="store_true", default=False, help="Run locally.")
   parser.add_argument("--condor", action="store_true", default=False, help="Run on condor.")
+  parser.add_argument("--local_parallel", action="store_true", default=False, help="Run condor-style jobs locally in parallel.")
+  parser.add_argument("--local_parallel_jobs", type=int, default=None,
+                      help="Number of parallel local jobs. Defaults to the number of CPUs available to this process.")
   parser.add_argument("--save_logs", action="store_true", default=False, help="Save condor logs.")
   parser.add_argument("--job_flavour", type=str, default="espresso",
                       help=(
@@ -98,14 +101,17 @@ def main():
   args = get_args()
 
   submission_system = SubmissionSystem.unknown
+  n_submission_systems = sum([args.local, args.condor, args.local_parallel])
+  if n_submission_systems != 1:
+    fatal("Please select exactly one of --local, --condor, or --local_parallel")
+    exit()
+
   if args.local:
     submission_system = SubmissionSystem.local
   if args.condor:
     submission_system = SubmissionSystem.condor
-
-  if submission_system == SubmissionSystem.unknown:
-    fatal("Please select either --local or --condor")
-    exit()
+  if args.local_parallel:
+    submission_system = SubmissionSystem.local_parallel
 
   files_config = get_files_config(args)
   applyScaleFactors = {}
@@ -186,6 +192,8 @@ def main():
       submission_manager.run_locally()
     if submission_system == SubmissionSystem.condor:
       submission_manager.run_condor(args)
+    if submission_system == SubmissionSystem.local_parallel:
+      submission_manager.run_local_parallel(args)
 
   logger_print()
 

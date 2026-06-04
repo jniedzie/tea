@@ -3,6 +3,7 @@ import importlib.util
 import uuid
 import ast
 import subprocess
+import shlex
 from enum import Enum
 import ROOT
 from Logger import info, warn, error, fatal
@@ -12,7 +13,8 @@ from teaHelpers import get_facility
 class SubmissionSystem(Enum):
   local = 1
   condor = 2
-  unknown = 3
+  local_parallel = 3
+  unknown = 4
 
 
 class SubmissionManager:
@@ -42,7 +44,7 @@ class SubmissionManager:
     if hasattr(self.files_config, "extra_args"):
       self.extra_args = self.files_config.extra_args
 
-    if submission_system == SubmissionSystem.condor:
+    if submission_system in (SubmissionSystem.condor, SubmissionSystem.local_parallel):
       self.__create_condor_directories()
 
   def run_locally(self):
@@ -76,6 +78,8 @@ class SubmissionManager:
 
     input_files = self.__get_input_file_list()
 
+    submitted_jobs = []
+
     def submit(input_files):
       self.__setup_temp_file_paths()
       self.__copy_templates()
@@ -84,7 +88,7 @@ class SubmissionManager:
       info(f"Will submit {n_jobs} jobs and skip {len(input_files) - n_jobs} healthy ones")
       if n_jobs == 0:
         return
-      self.__set_condor_script_variables(n_jobs)
+      effective_n_jobs = self.__set_condor_script_variables(n_jobs)
       self.__set_run_script_variables()
 
       facility = get_facility()
@@ -99,16 +103,89 @@ class SubmissionManager:
       if not args.dry:
         os.system(command)
 
+      return self.condor_run_script_name, effective_n_jobs
+
     if input_files is None and hasattr(self.files_config, "get_input_output_file_lists"):
       info("Getting input files from input_output_file_lists")
       if self.input_output_file_lists is None:
         self.input_output_file_lists = self.files_config.get_input_output_file_lists()
 
       for input_files in self.input_output_file_lists:
-        submit(input_files)
+        submitted_job = submit(input_files)
+        if submitted_job is not None:
+          submitted_jobs.append(submitted_job)
 
     else:
-      submit(input_files)
+      submitted_job = submit(input_files)
+      if submitted_job is not None:
+        submitted_jobs.append(submitted_job)
+
+    return submitted_jobs
+
+  def run_local_parallel(self, args):
+    info("Running locally in parallel")
+
+    dry = args.dry
+    try:
+      args.dry = True
+      submitted_jobs = self.run_condor(args)
+    finally:
+      args.dry = dry
+
+    for script_name, n_jobs in submitted_jobs:
+      self.__run_condor_script_locally_parallel(script_name, n_jobs, args.local_parallel_jobs)
+
+  def __run_condor_script_locally_parallel(self, script_name, n_jobs, requested_max_workers):
+    max_workers = self.__get_local_parallel_jobs(n_jobs, requested_max_workers)
+    info(f"Executing {script_name} locally with {max_workers} parallel jobs")
+
+    completed_jobs = 0
+    failed_jobs = []
+    script_path = shlex.quote(f"./{script_name}")
+    last_job = n_jobs - 1
+    command = (
+        f"seq 0 {last_job} | "
+        f"xargs -P {max_workers} -I{{}} sh -c "
+        f"'\"$1\" \"$2\" >/dev/null 2>&1; status=$?; printf \"%s %s\\n\" \"$2\" \"$status\"' sh {script_path} {{}}"
+    )
+
+    print(f"Processed 0/{n_jobs} jobs", end="", flush=True)
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    for line in process.stdout:
+      parts = line.strip().split()
+      if len(parts) == 2:
+        job_number = int(parts[0])
+        returncode = int(parts[1])
+        completed_jobs += 1
+        if returncode != 0:
+          failed_jobs.append((job_number, returncode))
+        print(f"\rProcessed {completed_jobs}/{n_jobs} jobs", end="", flush=True)
+
+    _, stderr = process.communicate()
+    print()
+
+    if process.returncode != 0:
+      error(f"Local parallel runner failed with exit code {process.returncode}: {stderr.strip()}")
+
+    if failed_jobs:
+      failed_jobs_str = ", ".join(f"{job_number} ({returncode})" for job_number, returncode in failed_jobs[:10])
+      if len(failed_jobs) > 10:
+        failed_jobs_str += ", ..."
+      error(f"{len(failed_jobs)} local parallel jobs failed: {failed_jobs_str}")
+
+  def __get_local_parallel_jobs(self, n_jobs, requested_max_workers):
+    if requested_max_workers is not None:
+      if requested_max_workers < 1:
+        fatal("--local_parallel_jobs must be at least 1")
+        exit()
+      return min(requested_max_workers, n_jobs)
+
+    if hasattr(os, "sched_getaffinity"):
+      return min(len(os.sched_getaffinity(0)), n_jobs)
+    cpu_count = os.cpu_count()
+    if cpu_count is not None:
+      return min(cpu_count, n_jobs)
+    return min(40, n_jobs)
 
   def __create_dir_if_not_exists(self, dir_path):
     if not os.path.exists(dir_path):
@@ -456,11 +533,16 @@ class SubmissionManager:
 
     if self.resubmit_job is not None:
       os.system(f"{self.sed_command} 's{self.sed_char}$(ProcId){self.sed_char}{self.resubmit_job}{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}1{self.sed_char}g' {self.condor_config_name}")
-    elif hasattr(self.files_config, "file_name"):
-      os.system(f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}1{self.sed_char}g' {self.condor_config_name}")
-    else:
-      max_files = n_files
-      if hasattr(self.files_config, "max_files"):
-        max_files = self.files_config.max_files if self.files_config.max_files != -1 else n_files
-      os.system(f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}{max_files}{self.sed_char}g' {self.condor_config_name}")
+
+    n_jobs = self.__get_effective_n_jobs(n_files)
+    os.system(f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}{n_jobs}{self.sed_char}g' {self.condor_config_name}")
+    return n_jobs
+
+  def __get_effective_n_jobs(self, n_files):
+    if self.resubmit_job is not None:
+      return 1
+    if hasattr(self.files_config, "file_name"):
+      return 1
+    if hasattr(self.files_config, "max_files"):
+      return self.files_config.max_files if self.files_config.max_files != -1 else n_files
+    return n_files
