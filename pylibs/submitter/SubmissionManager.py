@@ -162,9 +162,18 @@ class SubmissionManager:
       xrdfs_command = ["xrdfs", redirector, "ls", input_directory]
       info(f"\n\nExecuting xrdfs_command={' '.join(xrdfs_command)}")
       try:
-        files = subprocess.check_output(xrdfs_command, text=True).splitlines()
-      except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        fatal(f"Could not list input directory with xrdfs: {input_directory}. Error: {e}")
+        files = subprocess.check_output(
+          xrdfs_command,
+          text=True,
+          stderr=subprocess.STDOUT,
+        ).splitlines()
+      except FileNotFoundError as e:
+        fatal(f"xrdfs not found while listing input directory: {input_directory}. Error: {e}")
+        exit()
+      except subprocess.CalledProcessError as e:
+        fatal(
+          f"Could not list input directory with xrdfs: {input_directory}. Output:\n{e.output}"
+        )
         exit()
       return [file_path for file_path in files if file_path.endswith(".root")]
 
