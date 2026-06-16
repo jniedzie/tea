@@ -119,6 +119,7 @@ def print_job_summary(jobs, use_condor):
     info(f"    output: {output_file}")
     for input_file in input_files:
       info(f"    input: {input_file}")
+    info(f"    command: {shlex.join(['hadd', '-f', '-j', '-k', output_file, *input_files])}")
 
 
 def create_condor_job(condor_dir, merge_kind, sample, batch_index, output_file, input_files):
