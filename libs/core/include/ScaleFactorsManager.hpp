@@ -13,10 +13,12 @@
 #include "correction.h"
 using CorrectionRef = correction::Correction::Ref;
 using CompoundCorrectionRef = correction::CompoundCorrection::Ref;
+using CorrectionArgType = correction::Variable::Type;
 #else
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
 using CompoundCorrectionRef = DummyCorrectionRef;
+using CorrectionArgType = std::variant<long, double, std::string>;
 #endif
 
 struct MuonID;
