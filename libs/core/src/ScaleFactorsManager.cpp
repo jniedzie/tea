@@ -300,7 +300,7 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, const vector<variant<long, double, string>>& args) {
+map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, const vector<CorrectionArgType>& args) {
   bool applyDefault = ShouldApplyScaleFactor("dsamuon");
   bool applyVariations = ShouldApplyVariation("dsamuon");
 
@@ -408,7 +408,7 @@ map<string, float> ScaleFactorsManager::GetPileupScaleFactor(string name, float 
   return scaleFactors;
 }
 
-float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<std::variant<long, double, std::string>>& args) {
+float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<CorrectionArgType>& args) {
 #ifndef USE_CORRECTIONLIB
   return 1.0;
 #else
@@ -575,7 +575,7 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string 
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetCustomScaleFactors(string name, const vector<variant<long, double, string>>& args) {
+map<string, float> ScaleFactorsManager::GetCustomScaleFactors(string name, const vector<CorrectionArgType>& args) {
   bool applyDefault = ShouldApplyScaleFactor(name);
   bool applyVariations = ShouldApplyVariation(name);
 
@@ -600,7 +600,7 @@ map<string, float> ScaleFactorsManager::GetCustomScaleFactors(string name, const
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetDimuonScaleFactors(string name, const vector<variant<long, double, string>>& args) {
+map<string, float> ScaleFactorsManager::GetDimuonScaleFactors(string name, const vector<CorrectionArgType>& args) {
   bool applyDefault = ShouldApplyScaleFactor(name);
   bool applyVariations = ShouldApplyVariation(name);
 
@@ -695,7 +695,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
   return scaleFactors;
 }
 
-float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, variant<long, double, string>> inputArguments) {
+float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, CorrectionArgType> inputArguments) {
   string name = "jerMC_smear";
   vector<correction::Variable::Type> inputs;
   for (const correction::Variable& input: corrections[name]->inputs()) {

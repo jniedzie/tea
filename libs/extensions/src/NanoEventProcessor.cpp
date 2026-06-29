@@ -223,8 +223,8 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
   auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
   bool firstIteration = true;
   for (auto muon : *muonCollection) {
-    vector<std::variant<long, double, std::string>> args = {(double)muon->Get("pt")};
-    // vector<std::variant<long, double, std::string>> args = {(double)muon->Get("pt"), (double)fabs(muon->GetAs<float>("dxyPVTraj"))};
+    vector<CorrectionArgType> args = {(double)muon->Get("pt")};
+    // vector<CorrectionArgType> args = {(double)muon->Get("pt"), (double)fabs(muon->GetAs<float>("dxyPVTraj"))};
     if (firstIteration) {
       auto weights_setup = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
       for (auto& [name, weight] : weights_setup) weights[name] = 1.0;

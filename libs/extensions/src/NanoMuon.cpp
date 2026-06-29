@@ -76,11 +76,11 @@ map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, strin
 map<string,float> NanoMuon::GetEmptyDSAScaleFactors(string nameID, string nameReco_cosmic) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  vector<std::variant<long, double, std::string>> args_jpsi = {(double)fabs(GetEta()), (double)GetPt()};
+  vector<CorrectionArgType> args_jpsi = {(double)fabs(GetEta()), (double)GetPt()};
   string nameID_jpsi = nameID;
   map<string,float> idSF_jpsi = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_jpsi, args_jpsi);
 
-  vector<std::variant<long, double, std::string>> args_reco = {};
+  vector<CorrectionArgType> args_reco = {};
   map<string,float> recoSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameReco_cosmic, args_reco);
 
   map<string,float> emptySF;
@@ -98,11 +98,11 @@ map<string,float> NanoMuon::GetDSAScaleFactors(string nameID, string nameReco_co
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  vector<std::variant<long, double, std::string>> args_jpsi = {(double)fabs(GetEta()), (double)GetPt()};
+  vector<CorrectionArgType> args_jpsi = {(double)fabs(GetEta()), (double)GetPt()};
   string nameID_jpsi = nameID;
   map<string,float> idSF_jpsi = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_jpsi, args_jpsi);
 
-  vector<std::variant<long, double, std::string>> args_cosmic = {(double)fabs((float)Get("dxyPVTraj"))};
+  vector<CorrectionArgType> args_cosmic = {(double)fabs((float)Get("dxyPVTraj"))};
   string nameID_cosmic = nameID + "_cosmic";
   map<string,float> idSF_cosmic = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_cosmic, args_cosmic);
 
@@ -114,7 +114,7 @@ map<string,float> NanoMuon::GetDSAScaleFactors(string nameID, string nameReco_co
     string name_cosmic = nameID_cosmic + "_" + variation;
     idSF[name_jpsi] = idSF_jpsi[name_jpsi] * idSF_cosmic[name_cosmic];
   }
-  vector<std::variant<long, double, std::string>> args_reco = {};
+  vector<CorrectionArgType> args_reco = {};
   map<string,float> recoSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameReco_cosmic, args_reco);
 
   scaleFactor["systematic"] = idSF["systematic"] * recoSF["systematic"];
