@@ -50,7 +50,7 @@ void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEv
   if (genJet)
     genPt = genJet->Get("pt");
 
-  map<string, std::variant<int,double,string>> inputs  = {{"JetPt", GetPt()}};
+  map<string, std::variant<long,double,string>> inputs  = {{"JetPt", GetPt()}};
   inputs["JetEta"] = (float)physicsObject->Get("eta");
   inputs["GenPt"] = genPt;
   inputs["Rho"] = rho;
