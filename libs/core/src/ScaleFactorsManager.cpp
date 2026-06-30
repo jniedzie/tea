@@ -7,12 +7,25 @@
 
 #include <zlib.h>
 #include <fstream>
+#include <type_traits>
+#include <utility>
 
 using namespace std;
 using json = nlohmann::json;
 
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
+namespace {
+template <typename Value>
+correction::Variable::Type MakeCorrectionArg(Value&& value) {
+  using DecayedValue = std::decay_t<Value>;
+  if constexpr (std::is_same_v<DecayedValue, int> && std::is_constructible_v<correction::Variable::Type, long>) {
+    return correction::Variable::Type(static_cast<long>(value));
+  } else {
+    return correction::Variable::Type(std::forward<Value>(value));
+  }
+}
+}  // namespace
 #else
 namespace {
 std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string& path) {
@@ -105,7 +118,7 @@ void ScaleFactorsManager::ExtractBounds(const json& node, map<string, pair<doubl
 void ScaleFactorsManager::ReadScaleFactors() {
 #ifndef USE_CORRECTIONLIB
   return;
-#endif
+#else
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
@@ -177,12 +190,13 @@ void ScaleFactorsManager::ReadScaleFactors() {
     ExtractBounds(corrJson["data"], bounds);
     boundsPerInput[name] = bounds;
   }
+#endif
 }
 
 void ScaleFactorsManager::ReadJetEnergyCorrections() {
 #ifndef USE_CORRECTIONLIB
   return;
-#endif
+#else
 
   if (!ShouldApplyScaleFactor("jec") && !ShouldApplyVariation("jec")) return;
 
@@ -223,6 +237,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
       }
     }
   }
+#endif
 }
 
 void ScaleFactorsManager::ReadScaleFactorFlags() {
@@ -369,13 +384,13 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
     scaleFactors["systematic"] = 1.0;
   else
     scaleFactors["systematic"] =
-        TryToEvaluate(name, {extraArgs["systematic"], extraArgs["workingPoint"], (long)(long)stoi(extraArgs["flavour"]), eta, pt});
+        TryToEvaluate(name, {extraArgs["systematic"], extraArgs["workingPoint"], (long)stoi(extraArgs["flavour"]), eta, pt});
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] =
-        TryToEvaluate(name, {variation, extraArgs["workingPoint"], (long)(long)stoi(extraArgs["flavour"]), eta, pt});
+        TryToEvaluate(name, {variation, extraArgs["workingPoint"], (long)stoi(extraArgs["flavour"]), eta, pt});
   }
   return scaleFactors;
 }
@@ -412,6 +427,19 @@ float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<C
 #ifndef USE_CORRECTIONLIB
   return 1.0;
 #else
+  vector<correction::Variable::Type> correctionArgs;
+  correctionArgs.reserve(args.size());
+  for (const auto& arg : args) {
+    std::visit([&](const auto& value) {
+      correctionArgs.emplace_back(MakeCorrectionArg(value));
+    }, arg);
+  }
+  return EvaluateCorrectionArgs(name, correctionArgs);
+#endif
+}
+
+#ifdef USE_CORRECTIONLIB
+float ScaleFactorsManager::EvaluateCorrectionArgs(const std::string& name, const vector<correction::Variable::Type>& args) {
   try {
     return corrections[name]->evaluate(args);
   } catch (std::runtime_error& e) {
@@ -446,20 +474,18 @@ float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<C
       double min = bounds.at(varName).first;
       double max = bounds.at(varName).second;
 
-      if (std::holds_alternative<double>(clampedArgs[i])) {
-        double& val = std::get<double>(clampedArgs[i]);
-
-        if (val < min) val = min + 1e-6;
-        if (val >= max) val = max - 1e-6;
-      }
-
-      // Handle long (correctionlib uses long, not int)
-      else if (std::holds_alternative<long>(clampedArgs[i])) {
-        long& val = std::get<long>(clampedArgs[i]);
-
-        if (val < min) val = static_cast<long>(std::ceil(min));
-        if (val >= max) val = static_cast<long>(std::floor(max - 1));
-      }
+      std::visit(
+          [&](auto& val) {
+            using ValueType = std::decay_t<decltype(val)>;
+            if constexpr (std::is_floating_point_v<ValueType>) {
+              if (val < min) val = min + 1e-6;
+              if (val >= max) val = max - 1e-6;
+            } else if constexpr (std::is_integral_v<ValueType>) {
+              if (val < min) val = static_cast<ValueType>(std::ceil(min));
+              if (val >= max) val = static_cast<ValueType>(std::floor(max - 1));
+            }
+          },
+          clampedArgs[i]);
     }
 
     try {
@@ -475,8 +501,8 @@ float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<C
       exit(1);
     }
   }
-#endif
 }
+#endif
 
 map<string, float> ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
   bool applyDefault = ShouldApplyScaleFactor("pileup");
@@ -629,9 +655,19 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   bool applyDefault = ShouldApplyScaleFactor("jec");
   bool applyVariations = ShouldApplyVariation("jec");
 
+  map<string, float> scaleFactors;
+
+
+#ifndef USE_CORRECTIONLIB
+  if (applyDefault || applyVariations) {
+    warn() << "Requested jet energy corrections, but correctionlib is not available. Returning neutral corrections." << endl;
+  }
+  scaleFactors["systematic"] = 1.0;
+  return scaleFactors;
+#else
   string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
-  map<string, float> scaleFactors;
+  
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else {
@@ -656,6 +692,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
   }
 
   return scaleFactors;
+#endif
 }
 
 map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho) {
@@ -696,14 +733,22 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
 }
 
 float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, CorrectionArgType> inputArguments) {
+#ifndef USE_CORRECTIONLIB
+  warn() << "Requested jet energy resolution smearing, but correctionlib is not available. Returning neutral smearing." << endl;
+  return 1.0;
+#else
   string name = "jerMC_smear";
   vector<correction::Variable::Type> inputs;
   for (const correction::Variable& input: corrections[name]->inputs()) {
-    inputs.push_back(inputArguments.at(input.name()));
+    std::visit([&](const auto& value) {
+      inputs.emplace_back(MakeCorrectionArg(value));
+    }, inputArguments.at(input.name()));
   }
-  float factor = TryToEvaluate(name, inputs);
+  float factor = EvaluateCorrectionArgs(name, inputs);
   return factor;
+#endif
 }
+
 
 bool ScaleFactorsManager::IsJetVetoMapDefined(string name) { return (corrections.find(name) != corrections.end()); }
 
