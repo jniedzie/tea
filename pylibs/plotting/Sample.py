@@ -26,7 +26,7 @@ class Sample:
   line_color: int = ROOT.kBlack
   line_style: int = ROOT.kSolid
   line_alpha: float = 1.0
-  line_width: int = 1
+  line_width: int = 2
   marker_color: int = ROOT.kBlack
   marker_style: int = 20
   marker_size: float = 1.0

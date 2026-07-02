@@ -193,7 +193,8 @@ class ABCDHelper:
 
     background_hist = background_hist.Clone()
     signal_hist = signal_hist.Clone()
-    background_hist.Scale(1.0 / background_hist.Integral())
+    if background_hist.Integral() != 0:
+      background_hist.Scale(1.0 / background_hist.Integral())
     
     if signal_hist.Integral() != 0:
       signal_hist.Scale(1.0 / signal_hist.Integral())
@@ -555,8 +556,12 @@ class ABCDHelper:
 
   def get_signal_strengt_r(self, mass, ctau):
     # limit_path = f"../limits/limits_{self.config.year}/results_SR_ANv3/limits_combined{self.config.category}.txt"
-    limit_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_SR_ANv3/limits_combined{self.config.category}.txt"
+    # limit_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_SR_ANv3/limits_combined{self.config.category}.txt"
+    # limit_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_years_combined_dxydzIso_SR_ANv5/limits_combined{self.config.category}.txt"
+    # limit_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_SR_ANv6_regionBCD/limits_combined{self.config.category}.txt"
+    limit_path = f"../limits/limits_2016preVFP2016postVFP201720182022preEE2022postEE2023preBPix2023postBPix/results_SR_ANv6_regionBCD/limits_combined.txt"
     key = f"mass_{mass}_ctau_{ctau}"
+    # key = f"signal_tta_mAlp-{mass}GeV_ctau-{ctau}mm"
 
     with open(limit_path) as f:
         for line in f:

@@ -55,7 +55,8 @@ class ScaleFactorsManager {
 
   void ReadJetEnergyCorrections();
   bool ShouldApplyJetEnergyCorrections() { return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec"); }
-  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
+  std::map<std::string, float> GetJetEnergyCorrectionUncertainties(std::map<std::string, float> inputArguments);
+  std::map<std::string, float> GetJetEnergyCorrections(std::vector<std::string> jecNames, std::map<std::string, float> inputArguments);
   std::map<std::string, float> GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho);
   float GetJetEnergyResolutionSmearingFactor(std::map<std::string, std::variant<int,double,std::string>> inputArguments);
 

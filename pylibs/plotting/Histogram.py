@@ -80,6 +80,21 @@ class Histogram:
         original_label = self.hist.GetXaxis().GetBinLabel(original_bin)
         if original_label != "":
           new_histogram.GetXaxis().SetBinLabel(i, original_label)
+      
+      if self.x_max > 0:
+        # Add overflow bin
+        start_bin = self.hist.FindBin(self.x_max + 1e-9)
+        last_bin = new_n_bins
+        overflow_content = 0.0
+        overflow_error2 = 0.0
+        for i in range(start_bin, self.hist.GetNbinsX() + 2):
+            overflow_content += self.hist.GetBinContent(i)
+            overflow_error2 += self.hist.GetBinError(i)**2
+        new_content = new_histogram.GetBinContent(last_bin) + overflow_content
+        new_error = (new_histogram.GetBinError(last_bin)**2 + overflow_error2)**0.5
+        new_histogram.SetBinContent(last_bin, new_content)
+        new_histogram.SetBinError(last_bin, new_error)
+
       self.hist = new_histogram
 
   def isGood(self):

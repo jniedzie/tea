@@ -6,8 +6,9 @@ import ROOT
 
 class Styler:
 
-  def __init__(self, config):
-    self.config = config
+  def __init__(self, config=None):
+    if config != None:
+      self.config = config
 
     self.topMargin = 0.06
     self.bottomMargin = 0.4
@@ -35,15 +36,19 @@ class Styler:
     # pad.SetPad(0, 0.0, 1, 1)
     self.__setupPadDefaults(pad)
     pad.SetBottomMargin(0.2)
-    pad.SetTopMargin(self.topMargin + 0.03)
+    pad.SetTopMargin(self.topMargin)
+    # pad.SetTopMargin(self.topMargin - 0.0001)
+    # pad.SetBottomMargin(0.16)
+    # pad.SetRightMargin(0.07)
+    pad.SetLeftMargin(self.leftMargin - 0.01)
 
   def __setupPadDefaults(self, pad):
     pad.SetLeftMargin(self.leftMargin)
     pad.SetBottomMargin(self.bottomMargin)
     pad.SetRightMargin(self.rightMargin)
     pad.SetTopMargin(self.topMargin)
-    pad.SetTickx(0)
-    pad.SetTicky(0)
+    pad.SetTickx(1)
+    pad.SetTicky(1)
 
   def __setStyle(self):
     gStyle.SetPadTopMargin(self.topMargin)
@@ -152,7 +157,10 @@ class Styler:
 
       plot.GetYaxis().SetTitle("Data/MC" if is_ratio else hist.y_label)
       plot.GetYaxis().SetTitleSize(self.labelFontSize)
-      plot.GetYaxis().SetTitleOffset(1.5)
+      plot.GetYaxis().SetTitleOffset(1.7)
+      if is_ratio:
+        plot.GetYaxis().SetTitleSize(19)
+        plot.GetYaxis().SetTitleOffset(1.8)
 
       plot.GetYaxis().SetLabelSize(self.labelFontSize)
 

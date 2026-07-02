@@ -26,6 +26,11 @@ class HistogramPlotter:
 
     self.stacks = {sample_type: self.__getStackDict(
         sample_type) for sample_type in SampleType}
+    self.combined_stacks = {sample_type: self.__getStackDict(
+        sample_type) for sample_type in SampleType}
+
+    self.combined_hists = {sample_type: self.__getStackDict(
+        sample_type) for sample_type in SampleType}
 
     if hasattr(self.config, "histogramsRatio"):
       self.ratiohists = {sample_type: self.__getRatioDict(
@@ -60,6 +65,10 @@ class HistogramPlotter:
 
     if not os.path.exists(self.config.output_path):
       os.makedirs(self.config.output_path)
+    
+    self.minIntegral = 1e-99
+    if hasattr(self.config, "minIntegral"):
+      self.minIntegral = config.minIntegral
 
   def __histosampleExists(self, hist, sample):
     for h, s in self.histosamples:
@@ -139,11 +148,30 @@ class HistogramPlotter:
         self.legends[hist.getName()] = {}
 
       if sample.custom_legend is not None:
-        self.legends[hist.getName()][sample.name] = sample.custom_legend.getRootLegend()
+        self.legends[hist.getName()][sample.legend_description] = sample.custom_legend.getRootLegend()
       elif (hist.getName(), sample.type) not in already_added:
         legend = self.config.legends[sample.type] if hasattr(self.config, "legends") else None
         self.legends[hist.getName()][sample.type] = legend.getRootLegend() if legend is not None else None
         already_added.append((hist.getName(), sample.type))
+
+    combined_categories_str = ""
+    for cat in self.config.combined_categories:
+      combined_categories_str += cat
+
+    for hist_name, sample_dict in list(self.legends.items()):
+      combined_categories_name = ""
+      for cat in self.config.combined_categories:
+        if cat in hist_name:
+          combined_categories_name = hist_name.replace(cat, combined_categories_str)
+          break
+      if combined_categories_name != "":
+        if combined_categories_name not in self.legends:
+          self.legends[combined_categories_name] = {}
+          print(f"-------------- combined_categories_name: {combined_categories_name}")
+        for sample_type, leg in sample_dict.items():
+          if (combined_categories_name, sample_type) not in already_added:
+            self.legends[combined_categories_name][sample_type] = copy.deepcopy(leg)
+            already_added.append((combined_categories_name, sample_type))
 
     for hist_pass, hist_tot, sample in self.ratiosamples:
       hist = copy.deepcopy(hist_pass)
@@ -153,7 +181,7 @@ class HistogramPlotter:
 
       if sample.custom_legend is not None:
         self.legends[hist.getName(
-        )][sample.name] = sample.custom_legend.getRootLegend()
+        )][sample.legend_description] = sample.custom_legend.getRootLegend()
       elif (hist.getName(), sample.type) not in already_added:
         self.legends[hist.getName(
         )][sample.type] = self.config.legends[sample.type].getRootLegend()
@@ -248,6 +276,13 @@ class HistogramPlotter:
       self.normalizer.normalize(hist, sample, self.__getDataIntegral(
           hist), self.__getBackgroundIntegral(hist))
 
+    combined_hists = {}
+    combined_categories = []
+    combined_categories_str = ""
+    combined_hist_names = []
+    for cat in self.config.combined_categories:
+      combined_categories.append(cat)
+      combined_categories_str += cat
     for hist, sample in self.histosamples:
       if not hist.isGood():
         warn(
@@ -256,16 +291,133 @@ class HistogramPlotter:
 
       if hist.getName().endswith('_ratio') or hist.getName().endswith('_denom'):
         continue
-
+      
       self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
-      key = sample.type if sample.custom_legend is None else sample.name
+      key = sample.type if sample.custom_legend is None else sample.legend_description
       opt = self.config.legends[sample.type].options if hasattr(self.config, "legends") else None
 
       options = opt if sample.custom_legend is None else sample.custom_legend.options
 
       if sample.legend_description != "" and self.legends[hist.getName()][key] is not None:
-        self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
+        # self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
+        if sample.type not in combined_hists:
+          combined_hists[sample.type] = {}
+        if hist.getName() not in combined_hists[sample.type]:
+          combined_hists[sample.type][hist.getName()] = {}
+        if sample.legend_description not in combined_hists[sample.type][hist.getName()]:
+          combined_hists[sample.type][hist.getName()][sample.legend_description] = {
+            "hist": copy.deepcopy(hist),
+            "histhist": copy.deepcopy(hist.hist),
+            "options": options,
+          }
+        else:
+          combined_hists[sample.type][hist.getName()][sample.legend_description]["histhist"].Add(copy.deepcopy(hist.hist))
+    
+    for sample_type, hist_dict in combined_hists.items():
+      # First pass: build map from combined_hist_name -> list of source hist_names
+      combined_to_sources = {}
+      for hist_name in hist_dict.keys():
+        for cat in combined_categories:
+          if cat in hist_name:
+            combined_hist_name = hist_name.replace(cat, combined_categories_str)
+            if combined_hist_name not in combined_to_sources:
+              combined_to_sources[combined_hist_name] = []
+            combined_to_sources[combined_hist_name].append(hist_name)
+            break
+
+      # Second pass: process individual hist_names as before
+      for hist_name, groups in hist_dict.items():
+        sorted_groups = sorted(
+          groups.items(),
+          key=lambda item: item[1]["histhist"].Integral()
+        )
+        for legend_name, data in sorted_groups:
+          hist_ = data["hist"]
+          hist = data["histhist"]
+          options = data["options"]
+          if sample.type == SampleType.background and hist.Integral() < self.minIntegral:
+            warn(f"Background sample sums in {legend_name} have normalized events less than {self.minIntegral}, excluded from plots")
+            continue
+          self.combined_stacks[sample_type][hist_name].Add(hist)
+          if self.legends[hist_name][legend_name] is not None:
+            self.legends[hist_name][legend_name].AddEntry(hist, legend_name, options)
+
+      # Third pass: merge all source hist_names into each combined_hist_name
+      for combined_hist_name, source_hist_names in combined_to_sources.items():
+          # Accumulate per legend_name across all source hist_names
+          merged = {}  # legend_name -> {"hist": TH1, "hist_": hist_, "options": options}
+          for hist_name in source_hist_names:
+              groups = hist_dict[hist_name]
+              sorted_groups = sorted(
+                  groups.items(),
+                  key=lambda item: item[1]["histhist"].Integral()
+              )
+              for legend_name, data in sorted_groups:
+                  hist_ = data["hist"]
+                  hist = data["histhist"]
+                  options = data["options"]
+                  if sample.type == SampleType.background and hist.Integral() < self.minIntegral:
+                      continue
+                  if legend_name not in merged:
+                      merged[legend_name] = {"hist": copy.deepcopy(hist), "hist_": hist_, "options": options}
+                  else:
+                      merged[legend_name]["hist"].Add(hist)  # sum into existing TH1
+          # Now add one TH1 per legend_name to the stack
+          for legend_name, data in sorted(merged.items(), key=lambda item: item[1]["hist"].Integral()):
+              hist = data["hist"]
+              hist_ = data["hist_"]
+              options = data["options"]
+
+              if combined_hist_name not in combined_hist_names:
+                  combined_hist_names.append(combined_hist_name)
+                  combined_histogram = copy.deepcopy(hist_)
+                  combined_histogram.name = combined_hist_name
+                  self.config.histograms = self.config.histograms + (combined_histogram,)
+
+              self.stacks[sample_type][combined_hist_name].Add(hist)
+              self.combined_stacks[sample_type][combined_hist_name].Add(hist)
+
+              if self.legends[combined_hist_name][legend_name] is not None:
+                  self.legends[combined_hist_name][legend_name].AddEntry(hist, legend_name, options)
+
+    # for sample_type, hist_dict in combined_hists.items():
+    #   for hist_name, groups in hist_dict.items():
+    #     sorted_groups = sorted(
+    #       groups.items(),
+    #       key=lambda item: item[1]["histhist"].Integral()
+    #     )
+    #     combined_hist_name = ""
+    #     for cat in combined_categories:
+    #       if cat in hist_name:
+    #         combined_hist_name = hist_name.replace(cat, combined_categories_str)
+    #         break
+    #     for legend_name, data in sorted_groups:
+    #       hist_ = data["hist"]
+    #       hist = data["histhist"]
+    #       options = data["options"]
+    #       if sample.type == SampleType.background and hist.Integral() < self.minIntegral:
+    #         warn(f"Background sample sums in {legend_name} have normalized events less than {self.minIntegral}, excluded from plots")
+    #         continue
+    #       self.combined_stacks[sample_type][hist_name].Add(hist)
+    #       if self.legends[hist_name][legend_name] is not None:
+    #         self.legends[hist_name][legend_name].AddEntry(hist, legend_name, options)
+                  
+    #       if combined_hist_name != "":
+    #         if combined_hist_name not in combined_hist_names:
+    #           combined_hist_names.append(combined_hist_name)
+    #           combined_histogram = copy.deepcopy(hist_)
+    #           combined_histogram.name = combined_hist_name
+    #           self.config.histograms = self.config.histograms + (combined_histogram,)
+            
+    #         # print(f"hist_name: {hist_name}")
+    #         # print(f"combined_hist_name: {combined_hist_name}")
+    #         self.stacks[sample_type][combined_hist_name].Add(copy.deepcopy(hist))
+    #         self.combined_stacks[sample_type][combined_hist_name].Add(copy.deepcopy(hist))
+
+    #         if self.legends[combined_hist_name][legend_name] is not None:
+    #           self.legends[combined_hist_name][legend_name].AddEntry(hist, legend_name, options)
+
 
   def addHists2D(self, input_file, sample):
     if not hasattr(self.config, "histograms2D"):
@@ -313,7 +465,7 @@ class HistogramPlotter:
       hist_ratio.setupRatio(sample)
       self.ratiohists[sample.type][hist_ratio.getName()].Add(hist_ratio.hist)
 
-      key = sample.type if sample.custom_legend is None else sample.name
+      key = sample.type if sample.custom_legend is None else sample.legend_description
       self.legends[hist_ratio.getName()][key].AddEntry(
           hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
 
@@ -399,10 +551,12 @@ class HistogramPlotter:
     for sample_type in SampleType:
       options = self.config.plotting_options[sample_type]
       options = f"{options} same" if firstPlotted else options
-      stack = self.stacks[sample_type][hist.getName()]
-      if stack.GetNhists() > 0:
-        stack.Draw(options)
-        self.styler.setupFigure(stack, hist)
+      # stack = self.stacks[sample_type][hist.getName()]
+      print(f"sample_type: {sample_type}, hist.getName(): {hist.getName()}")
+      stack_combined = self.combined_stacks[sample_type][hist.getName()]
+      if stack_combined:
+        stack_combined.Draw(options)
+        self.styler.setupFigure(stack_combined, hist)
         firstPlotted = True
 
   def __drawRatioHists(self, canvas, hist):
@@ -515,7 +669,9 @@ class HistogramPlotter:
     base_sample_type = SampleType.data if doRatio else SampleType.background
 
     try:
-      base_hist = self.stacks[base_sample_type][hist.getName()].GetHists()[
+      # base_hist = self.stacks[base_sample_type][hist.getName()].GetHists()[
+      #     0]
+      base_hist = self.combined_stacks[base_sample_type][hist.getName()].GetHists()[
           0]
     except Exception:
       return None
@@ -525,7 +681,7 @@ class HistogramPlotter:
     backgrounds_sum = base_hist.Clone(title)
     backgrounds_sum.Reset()
 
-    for background_hist in self.stacks[SampleType.background][hist.getName()].GetHists():
+    for background_hist in self.combined_stacks[SampleType.background][hist.getName()].GetHists():
       backgrounds_sum.Add(background_hist)
 
     if not doRatio:
@@ -560,9 +716,22 @@ class HistogramPlotter:
   def __getStackDict(self, sample_type):
     hists_dict = {}
 
+    combined_categories_str = ""
+    for cat in self.config.combined_categories:
+      combined_categories_str += cat
+
     for hist in self.config.histograms:
       title = hist.getName() + sample_type.name
       hists_dict[hist.getName()] = ROOT.THStack(title, title)
+
+      combined_hist_name = ""
+      for cat in self.config.combined_categories:
+          if cat in hist.getName():
+            combined_hist_name = hist.getName().replace(cat, combined_categories_str)
+            break
+      if combined_hist_name != "":
+        combined_title = combined_hist_name + sample_type.name
+        hists_dict[combined_hist_name] = ROOT.THStack(combined_title, combined_title)
 
     return hists_dict
 

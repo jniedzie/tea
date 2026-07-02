@@ -382,3 +382,30 @@ shared_ptr<PhysicsObjects> NanoDimuonVertex::GetGenMothers(shared_ptr<PhysicsObj
 
   return genMothers;
 }
+
+optional<float> NanoDimuonVertex::GetABCDDimuonVariable(string variableName) {
+  if (variableName == "absCollinearityAngle")
+    return fabs(GetCollinearityAngle());
+  if (variableName == "logAbsCollinearityAngle")
+    return TMath::Log10(fabs(GetCollinearityAngle()));
+  if (variableName == "pt")
+    return GetDimuonPt();
+  if (variableName == "logPt")
+    return TMath::Log10(GetDimuonPt());
+  if (variableName == "absDxyPVTraj1")
+    return fabs(Muon1()->GetAs<float>("dxyPVTraj"));
+  if (variableName == "absDxyPVTraj2")
+    return fabs(Muon2()->GetAs<float>("dxyPVTraj"));
+  if (variableName == "logDxyPVTraj1")
+    return TMath::Log10(fabs(Muon1()->GetAs<float>("dxyPVTraj")));
+  if (variableName == "logDxyPVTraj2")
+    return TMath::Log10(fabs(Muon2()->GetAs<float>("dxyPVTraj")));
+  
+  try {
+    float variable = physicsObject->GetAs<float>(variableName);
+    return variable;
+  } catch (const Exception& e) {
+    warn() << "Cannot find ABCD dimuon variable " << variableName << endl;
+  }
+  return nullopt;
+}

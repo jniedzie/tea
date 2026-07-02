@@ -95,6 +95,8 @@ class NanoDimuonVertex {
   std::string GetGenMotherCategory(std::shared_ptr<PhysicsObjects> genMuonCollection);
   std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
 
+  std::optional<float> GetABCDDimuonVariable(std::string variableName);
+
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
   std::shared_ptr<NanoMuon> muon1;

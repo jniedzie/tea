@@ -435,8 +435,8 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
 // Other methods
 //-------------------------------------------------------------------------------------------------
 
-void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, ExtraCollection> &extraEventCollections) {
-  PyObject *pythonDict = GetPythonDict("extraEventCollections");
+void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, ExtraCollection> &extraEventCollections, string extraEventCollectionsName) {
+  PyObject *pythonDict = GetPythonDict(extraEventCollectionsName);
 
   PyObject *collectionName, *collectionSettings;
   Py_ssize_t pos = 0;

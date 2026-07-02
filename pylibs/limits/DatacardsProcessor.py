@@ -6,7 +6,7 @@ from Logger import error, warn, info
 from ABCDHelper import ABCDHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
-from ttalps_signal_Lxy_uncertainties import get_lxy_uncertainty_for_name
+from ttalps_signal_Lxy_uncertainties import get_lxy_uncertainty_for_name, get_dxydzIso_uncertainty_for_name
 
 
 class DatacardsProcessor:
@@ -22,31 +22,70 @@ class DatacardsProcessor:
     self.abcd_helper = ABCDHelper()
     self.normalizer = HistogramNormalizer(config)
 
+  # def create_new_datacard(
+  #     self, hist_name, obs_histosample, bkg_histosamples, signal_histosample,
+  #     nuisances, input_files, add_uncertainties_on_zero=False, signal_strength=0
+  # ):
   def create_new_datacard(
-      self, hist_name, obs_histosample, bkg_histosamples, signal_histosample,
-      nuisances, input_files, add_uncertainties_on_zero=False, signal_strength=0
+      self, hist_name, obs_histosamples, bkg_histosamples, signal_histosamples,
+      nuisances, nuisances_uncorrelated, nuisances_correlated, input_files, years, add_uncertainties_on_zero=False, signal_strength=0
   ):
     self.datacard = ""
 
-    if type(obs_histosample[0]) == ROOT.TObject or obs_histosample is None:
+    entry = next(iter(obs_histosamples.values()), None)
+    if (entry is None or not isinstance(entry, tuple)
+        or len(entry) == 0 or isinstance(entry[0], ROOT.TObject)):
       error("DatacardsProcessor::create_new_datacard: obs_histosample is not a histogram.")
       return
+    # if type(obs_histosample[0]) == ROOT.TObject or obs_histosample is None:
+    #   error("DatacardsProcessor::create_new_datacard: obs_histosample is not a histogram.")
+    #   return
 
-    if signal_histosample is None:
+    entry = next(iter(signal_histosamples.values()), None)
+    if entry is None:
       error("DatacardsProcessor::create_new_datacard: signal_histosample is None.")
       return
 
-    if type(signal_histosample[0]) == ROOT.TObject or signal_histosample is None:
+    if(not isinstance(entry, tuple) or len(entry) == 0
+      or isinstance(entry[0], ROOT.TObject)):
       error("DatacardsProcessor::create_new_datacard: signal_histosample is not a histogram.")
       return
+    # if signal_histosample is None:
+    #   error("DatacardsProcessor::create_new_datacard: signal_histosample is None.")
+    #   return
 
-    self.histosamples["data_obs"] = obs_histosample
-    self.histosamples["signal"] = signal_histosample
+    # if type(signal_histosample[0]) == ROOT.TObject or signal_histosample is None:
+    #   error("DatacardsProcessor::create_new_datacard: signal_histosample is not a histogram.")
+    #   return
 
-    for sample_name, histosample in bkg_histosamples.items():
-      self.histosamples[sample_name] = histosample
 
-    n_backgrounds = len(bkg_histosamples)
+    # self.histosamples["data_obs"] = obs_histosample
+    # self.histosamples["signal"] = signal_histosample
+    self.histosamples["data_obs"] = None
+    self.histosamples["signal"] = None
+    for year, histosample in obs_histosamples.items():
+      self.histosamples[f"data_obs_{year}"] = histosample
+      if self.histosamples["data_obs"] is None:
+        print(f"   1. new data histosample: {histosample[0].hist.Integral()}")
+        self.histosamples["data_obs"] = (deepcopy(histosample[0]), deepcopy(histosample[1]))
+      else:
+        print("   2. add data histosample")
+        self.histosamples["data_obs"][0].hist.Add(histosample[0].hist)
+    for year, histosample in signal_histosamples.items():
+      self.histosamples[f"signal_{year}"] = histosample
+      if self.histosamples["signal"] is None:
+        self.histosamples["signal"] = (deepcopy(histosample[0]), deepcopy(histosample[1]))
+      else:
+        self.histosamples["signal"][0].hist.Add(histosample[0].hist)
+
+    n_backgrounds = 0
+    for year, histosamples in bkg_histosamples.items():
+      for sample_name, histosample in histosamples.items():
+        self.histosamples[f"{sample_name}_{year}"] = deepcopy(histosample)
+        n_backgrounds += 1
+
+    print(f"n_backgrounds: {n_backgrounds}")
+    # n_backgrounds = len(bkg_histosamples)
     n_backgrounds = self.__remove_empty_histograms(n_backgrounds)
     if n_backgrounds == 0:
       self.histosamples["background_dummy"] = self.__get_dummy_histogram()
@@ -55,6 +94,8 @@ class DatacardsProcessor:
     # sort self.histosamples such that entries starting with "signal_" go first:
     self.histosamples = dict(sorted(self.histosamples.items(), key=lambda x: not x[0].startswith("signal")))
 
+    uncorrelated_nuisances_for_sample = deepcopy(nuisances_uncorrelated)
+    correlated_nuisances_for_sample = deepcopy(nuisances_correlated)
     nuisances_for_sample = deepcopy(nuisances)
     nuisances_updated = {}
     for k, v in nuisances_for_sample.items():
@@ -65,8 +106,13 @@ class DatacardsProcessor:
       self.__flip_signal_to_region_a()
 
       self.__insert_background_sum_hist()
-      nuisances_varations = self.__fill_in_variation_nuisances(
-          hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
+
+      nuisances_varations = self.__fill_in_uncorrelated_variation_nuisances(
+          hist_name, self.histosamples["signal"][1].name, uncorrelated_nuisances_for_sample, input_files)
+      for k, v in nuisances_varations.items():
+        nuisances_updated[k] = v
+      nuisances_varations = self.__fill_in_correlated_variation_nuisances(
+          hist_name, self.histosamples["signal"][1].name, correlated_nuisances_for_sample, input_files, bkg_histosamples.keys())
       for k, v in nuisances_varations.items():
         nuisances_updated[k] = v
 
@@ -84,6 +130,11 @@ class DatacardsProcessor:
     if "lxy_unc" in nuisances:
       nuisances_lxy = self.__fill_lxy_nuisance(nuisances_for_sample)
       for k, v in nuisances_lxy.items():
+        nuisances_updated[k] = v
+
+    if "dxydzIso_unc" in nuisances:
+      nuisances_dxydzIso = self.__fill_dxydzIso_nuisance(nuisances_for_sample)
+      for k, v in nuisances_dxydzIso.items():
         nuisances_updated[k] = v
 
     self.__add_header(n_backgrounds, signal_strength)
@@ -114,27 +165,59 @@ class DatacardsProcessor:
           n_backgrounds -= 1
 
     for name in to_remove:
+      print(f"name to remove: {name}")
       del self.histosamples[name]
 
     return n_backgrounds
 
-  def __fill_in_variation_nuisances(self, hist_name, sample_name, nuisances, input_files):
+  def __get_variation_year(self, variation_name):
+    name, year = variation_name.rsplit("_", 1)
+    return name, year
+
+  def __get_hist_for_other_years(self, year):
+    hist_other_years = None
+    for name, histosample in self.histosamples.items():
+      if not name.startswith("signal"):
+        continue
+      if name == "signal":
+        continue
+      if name.endswith(year):
+        continue
+      # print(f"other year: {name}")
+      if hist_other_years is None:
+        hist_other_years = histosample[0].hist.Clone()
+        continue
+      hist_other_years.Add(histosample[0].hist)
+    return hist_other_years
+
+  def __fill_in_uncorrelated_variation_nuisances(self, hist_name, input_sample_name, nuisances, input_files):
     nuisances_updated = {}
-    for variation_name, value_tuple in nuisances.items():
+    for input_variation_name, value_tuple in nuisances.items():
       if not isinstance(value_tuple, tuple):
         continue
-
       if value_tuple[0] != "variation":
         continue
-
+      
       cms_variation_name = value_tuple[1]
+
+      variation_name, year = self.__get_variation_year(input_variation_name)
+
+      if f"signal_{year}" not in self.histosamples:
+        continue
+
+      sample_name = input_sample_name + "_" + year
 
       # If we run over a specific dimuon category we don't want to apply variations from other categories
       if "dimuon" in variation_name:
-        if not cms_variation_name.endswith(self.config.category):
+        if f"{self.config.category}_" not in cms_variation_name:
           continue
 
-      hist, sample = self.histosamples["signal"]
+      hist_sum, sample_sum = self.histosamples["signal"]
+      hist_, sample = self.histosamples[f"signal_{year}"]
+      # print(f"--- variation_name: {variation_name}, year: {year}, sample_name: {sample_name}, hist_name: {hist_name}")
+      hist_other_years = self.__get_hist_for_other_years(year)
+
+      # print(f"- {variation_name}/{hist_name}_{variation_name}")
 
       variation_hist = Histogram2D(
           name=f"{variation_name}/{hist_name}_{variation_name}",
@@ -143,20 +226,30 @@ class DatacardsProcessor:
           y_rebin=self.config.rebin_2D,
       )
 
+      # print(f"sample.year = {sample.year}, sample.name = {sample.name}, sample.luminosity = {sample.luminosity}")
+      # print(f"- {input_files[sample_name]}")
       variation_hist.load(input_files[sample_name])
       variation_hist.setup(sample)
       self.normalizer.normalize(variation_hist, sample, None, None)
 
-      histograms = self.abcd_helper.flip_signal_to_region_a({"signal": variation_hist.hist}, self.config.signal_bin)
-      variation_hist.set_hist(histograms["signal"])
+      # print(f"integral before flipping: {variation_hist.hist.Integral()}")
+
+      histograms = self.abcd_helper.flip_signal_to_region_a({"signal_"+year: variation_hist.hist}, self.config.signal_bin)
+      variation_hist.set_hist(histograms["signal_"+year])
+      # print(f"integral after flipping: {variation_hist.hist.Integral()}")
 
       # get number of events in the signal bin
-      n_base = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point)[0]
+      n_base = self.abcd_helper.get_abcd(hist_sum.hist, self.config.abcd_point)[0]
       n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
+      n_other_years = 0
+      if hist_other_years is not None:
+        n_other_years = self.abcd_helper.get_abcd(hist_other_years, self.config.abcd_point)[0]
+
+      # print(f"n_base: {n_base}, n_variation: {n_variation}, n_other_years: {n_other_years}")
 
       if n_base != 0:
-        variation = n_variation / n_base
-        for symmetric_variation in self.config.symmetric_variations:
+        variation = (n_variation + n_other_years) / n_base
+        for symmetric_variation in self.config.symmetric_nuisances:
           if symmetric_variation in cms_variation_name:
             variation = abs(variation - 1) + 1
       else:
@@ -172,8 +265,80 @@ class DatacardsProcessor:
       if nuisances_updated[cms_variation_name]["signal"][idx] != 0.0:
         warn(f"Overwriting existing variation value for {cms_variation_name} and signal bin")
       nuisances_updated[cms_variation_name]["signal"][idx] = variation
-
+    
     return nuisances_updated
+
+  def __fill_in_correlated_variation_nuisances(self, hist_name, input_sample_name, nuisances, input_files, years):
+    nuisances_updated = {}
+    for variation_name, value_tuple in nuisances.items():
+      if not isinstance(value_tuple, tuple):
+        continue
+      if value_tuple[0] != "variation":
+        continue
+
+      cms_variation_name = value_tuple[1]
+      hist_sum, sample_sum = self.histosamples["signal"]
+
+      variation_hist = Histogram2D(
+          name=f"{variation_name}/{hist_name}_{variation_name}",
+          norm_type=NormalizationType.to_lumi,
+          x_rebin=self.config.rebin_2D,
+          y_rebin=self.config.rebin_2D,
+      )
+
+      idx = 1
+      variation_comb = None
+      if "down" in variation_name or "Dn" in variation_name:
+        idx = 0
+
+      for year in years:
+        if f"signal_{year}" not in self.histosamples:
+          continue
+        # muon reco not yet given for run 3 - TODO: should probably not be hardcoded here
+        if variation_name.startswith("muonReco") and (year.startswith("2022") or year.startswith("2023")):
+          continue
+        sample_name = input_sample_name + "_" + year
+
+        hist_, sample = self.histosamples[f"signal_{year}"]
+        hist_other_years = self.__get_hist_for_other_years(year)
+        
+        variation_hist.load(input_files[sample_name])
+        variation_hist.setup(sample)
+        self.normalizer.normalize(variation_hist, sample, None, None)
+
+        histograms = self.abcd_helper.flip_signal_to_region_a({"signal": variation_hist.hist}, self.config.signal_bin)
+        variation_hist.set_hist(histograms["signal"])
+
+        # get number of events in the signal bin
+        n_base = self.abcd_helper.get_abcd(hist_sum.hist, self.config.abcd_point)[0]
+        n_variation = self.abcd_helper.get_abcd(variation_hist.hist, self.config.abcd_point)[0]
+        n_other_years = 0
+        if hist_other_years is not None:
+          n_other_years = self.abcd_helper.get_abcd(hist_other_years, self.config.abcd_point)[0]
+
+        if n_base != 0:
+          variation = (n_variation + n_other_years) / n_base
+        else:
+          variation = 0
+          warn(f"Histogram {hist_name} has no events in the signal bin. Setting variation to 0.")
+        
+        if variation_comb is None:
+          variation_comb = variation
+        else:
+          if idx == 0 and variation < variation_comb:
+            variation_comb = variation
+          if idx == 1 and variation > variation_comb:
+            variation_comb = variation
+      
+      if cms_variation_name not in nuisances_updated:
+        nuisances_updated[cms_variation_name] = {"signal": [0.0,0.0]}
+      
+      if nuisances_updated[cms_variation_name]["signal"][idx] != 0.0:
+        warn(f"Overwriting existing variation value for {cms_variation_name} and signal bin")
+      nuisances_updated[cms_variation_name]["signal"][idx] = variation
+    
+    return nuisances_updated
+          
 
   def __fill_closure_nuisance(self, nuisances):
     nuisances_updated = {}
@@ -268,6 +433,22 @@ class DatacardsProcessor:
     
     return nuisances_updated
 
+  def __fill_dxydzIso_nuisance(self, nuisances):
+    nuisances_updated = {}
+
+    signal_hist, signal_sample = self.histosamples["signal"]
+    name = signal_sample.name.removeprefix("signal_")
+    dxydzIso_unc = get_dxydzIso_uncertainty_for_name(name, self.config.category)
+
+    for key, value_tuple in nuisances.items():
+      if not isinstance(value_tuple, tuple):
+        continue
+      if value_tuple[0] == "dxydzIso":
+        cms_variation_name = value_tuple[1]
+        nuisances_updated[cms_variation_name] = {"signal": [dxydzIso_unc]}
+    
+    return nuisances_updated
+
   def __insert_background_sum_hist(self, abcd_point = None, histosample_name = "bkg"):
     background_sum_a = 0
     background_sum_b = 0
@@ -284,9 +465,10 @@ class DatacardsProcessor:
     hist_sum = None
 
     for name, (hist, sample) in self.histosamples.items():
-      if name == "data_obs" or "signal" in name:
+      if "data_obs" in name or "signal" in name:
         continue
       if name.startswith("bkg"):
+        print(f"{name} starts with bkg")
         continue
 
       abcd_values = self.abcd_helper.get_abcd(hist.hist, abcd_point)
@@ -389,24 +571,31 @@ class DatacardsProcessor:
       sig_hist = self.histosamples["signal"][0].hist
       abcd_values = self.abcd_helper.get_abcd(sig_hist, self.config.abcd_point, raw_errors=False)
       signal_rate, b_sig_, c_sig_, d_sig_, signal_rate_err, _, _, _ = abcd_values
-      if self.config.use_abcd_prediction:
-        b_sig = b_sig_ * signal_strength
-        c_sig = c_sig_ * signal_strength
-        d_sig = d_sig_ * signal_strength
+      if self.config.blinded_region_A:
+        if self.config.use_abcd_prediction:
+          b_sig = b_sig_ * signal_strength
+          c_sig = c_sig_ * signal_strength
+          d_sig = d_sig_ * signal_strength
 
-        bkg_hist = self.histosamples["bkg"][0].hist
-        b = bkg_hist.GetBinContent(1, 1) - b_sig
-        c = bkg_hist.GetBinContent(2, 2) - c_sig
-        d = bkg_hist.GetBinContent(2, 1) - d_sig
+          bkg_hist = self.histosamples["bkg"][0].hist
+          b = bkg_hist.GetBinContent(1, 1) - b_sig
+          c = bkg_hist.GetBinContent(2, 2) - c_sig
+          d = bkg_hist.GetBinContent(2, 1) - d_sig
 
-        b_err = b**0.5
-        c_err = c**0.5
-        d_err = d**0.5
+          b_err = b**0.5
+          c_err = c**0.5
+          d_err = d**0.5
 
-        obs_rate, _= self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+          obs_rate, _= self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+        else:
+          bkg_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
+          obs_rate = bkg_rate - signal_rate * signal_strength
+      
       else:
-        bkg_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
-        obs_rate = bkg_rate - signal_rate * signal_strength
+        data_obs = self.histosamples["data_obs"][0].hist
+        obs_abcd_values = self.abcd_helper.get_abcd(data_obs, self.config.abcd_point, raw_errors=True)
+        obs_rate = obs_abcd_values[0]
+      
     else:
       obs_rate = self.histosamples["data_obs"][0].hist.Integral()
     self.datacard += "bin bin1\n"
@@ -454,6 +643,8 @@ class DatacardsProcessor:
     if self.do_abcd:
       for name, (hist, sample) in self.histosamples.items():
         if "signal" in name:
+          if not name == "signal":
+            continue
           abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=False)
           signal_rate, b_sig_, c_sig_, d_sig_, signal_rate_err, _, _, _ = abcd_values
           b_sig = b_sig_*signal_strength
@@ -527,11 +718,11 @@ class DatacardsProcessor:
     for param_name, values in nuisances.items():
 
       get_max_variation = False
-      for symmetric_variation in self.config.symmetric_variations:
+      for symmetric_variation in self.config.symmetric_nuisances:
           if symmetric_variation in param_name:
             get_max_variation = True
 
-      self.datacard += f"{param_name} lnN"    
+      self.datacard += f"{param_name} lnN"
 
       if self.do_abcd:
         signal_unc = "-"
@@ -570,15 +761,16 @@ class DatacardsProcessor:
     if not self.do_abcd:
       self.datacard += "bin1   autoMCStats  10\n"
 
-  def __get_variation_string(self, unc, get_max_variation):
+  def __get_variation_string(self, unc, get_max_variation, tolerance=11):
     if isinstance(unc, list):
       if len(unc) == 1:
         return unc[0]
       elif isinstance(unc[0], float) and isinstance(unc[1], float):
         if get_max_variation:
-          return f"{max(unc[0], unc[1]):.3f}"
-        else:
-          return f"{unc[0]:.3f}/{unc[1]:.3f}"
+          return f"{max(unc[0], unc[1]):.{tolerance}f}"
+        if abs(unc[0] - 1) < 10**(-1*tolerance) and abs(unc[1] - 1) < 10**(-1*tolerance):
+          return f"{unc[0]:.{tolerance}f}"
+        return f"{unc[0]:.{tolerance}f}/{unc[1]:.{tolerance}f}"
       error(f"Unexpected format for uncertainty: {unc}")
       return
     return unc

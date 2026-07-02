@@ -21,6 +21,7 @@ class HistogramsManager:
     self.abcd_helper = ABCDHelper(config)
 
     self.stacks = {sample_type: self.__getStackDict(sample_type) for sample_type in SampleType}
+    self.stacks_over_years = {sample_type: self.__getStackDict(sample_type) for sample_type in SampleType}
 
     self.histsAndSamples = {}
 
@@ -46,6 +47,19 @@ class HistogramsManager:
 
     self.histosamples.append((copy.deepcopy(hist), sample))
 
+
+  def addHistosamples(self, hist, samples):
+    for sample in samples:
+      file = self.__get_file(sample)
+      hist.load(file)
+      hist.setup(sample)
+
+      if not hist.isGood():
+        warn(f"No good histogram {hist.getName()} for sample {sample.name}")
+        continue
+
+      self.histosamples.append((copy.deepcopy(hist), sample))
+
   def normalizeHistograms(self):
     for hist, sample in self.histosamples:
       self.normalizer.normalize(hist, sample, None, None)
@@ -53,12 +67,20 @@ class HistogramsManager:
   def buildStacks(self):
     for hist, sample in self.histosamples:
       self.stacks[sample.type][hist.getName()].Add(hist.hist)
+      if hist.getName() not in self.stacks_over_years:
+        self.stacks_over_years[sample.type][hist.getName()] = {}
+      if sample.year not in self.stacks_over_years[sample.type][hist.getName()]:
+        self.stacks_over_years[sample.type][hist.getName()][sample.year] = hist.hist
+      else:
+        self.stacks_over_years[sample.type][hist.getName()][sample.year].Add(hist.hist)
 
   def saveDatacards(self, signal_strength=0):
 
     # turn histosamples (tuple) into a dictionary (hist_name, sample_name -> hist, sample)
-    obs_histosample = None
-    signal_histosample = None
+    # obs_histosample = None
+    # signal_histosample = None
+    obs_histosamples = {}
+    signal_histosamples = {}
     background_histosamples = {}
 
     hist_name = None
@@ -68,11 +90,18 @@ class HistogramsManager:
         fatal(f"Histogram name {hist.getName()} does not match previous histogram name {hist_name}")
         exit(1)
 
-      if sample.type == SampleType.data:
-        obs_histosample = (hist, sample)
-      elif sample.type == SampleType.signal:
-        signal_histosample = (hist, sample)
-      elif sample.type == SampleType.background:
+      if sample.type == SampleType.data and self.config.do_data:
+        print(f"1. sample data ")
+        # obs_histosample = (hist, sample)
+        obs_histosamples[sample.year] = (hist, sample)
+      if sample.type == SampleType.signal:
+        # signal_histosample = (hist, sample)
+        signal_histosamples[sample.year] = (hist, sample)
+      elif sample.type == SampleType.background or (sample.type == SampleType.data and self.config.do_data):
+        if sample.type == SampleType.background:
+          print(f"2. sample background ")
+        else:
+          print(f"2. sample data ")
         n_entries = hist.hist.GetEntries()
         if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
           warn(
@@ -80,20 +109,32 @@ class HistogramsManager:
               f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded.")
           )
           continue
-        background_histosamples[sample.name] = (hist, sample)
+        # background_histosamples[sample.name] = (hist, sample)
+        if sample.year not in background_histosamples:
+          background_histosamples[sample.year] = {}
+        background_histosamples[sample.year][sample.name] = (hist, sample)
 
       hist_name = hist.getName()
 
-    if obs_histosample is None:
-      obs_histosample = self.__get_backgrounds_sum_hist(background_histosamples)
+    # if obs_histosample is None:
+    #   obs_histosample = self.__get_backgrounds_sum_hist(background_histosamples)
+    if obs_histosamples is None or not obs_histosamples:
+      print(" !!!!!!!!")
+      for year in background_histosamples:
+        obs_histosamples[year] = self.__get_backgrounds_sum_hist(background_histosamples[year])
 
     self.datacardsProcessor.create_new_datacard(
         hist_name,
-        obs_histosample,
+        # obs_histosample,
+        obs_histosamples,
         background_histosamples,
-        signal_histosample,
+        # signal_histosample,
+        signal_histosamples,
         self.config.nuisances,
+        self.config.nuisances_uncorrelated,
+        self.config.nuisances_correlated,
         self.input_files,
+        self.config.years,
         self.config.add_uncertainties_on_zero,
         signal_strength
     )

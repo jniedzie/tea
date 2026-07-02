@@ -1,6 +1,7 @@
 import ROOT
 import os
 import math
+import numpy as np
 
 from ABCDHelper import ABCDHelper
 from ABCDHistogramsHelper import ABCDHistogramsHelper
@@ -8,7 +9,7 @@ from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
 from Logger import fatal, warn, info
 from ttalps_luminosities import get_luminosity
-from ttalps_cross_sections import get_cross_sections, get_theory_cross_section
+from ttalps_cross_sections import get_cross_sections, get_theory_cross_section_for_coupling, get_expected_signal_cross_section
 
 class ABCDPlotter:
   def __init__(self, config, args):
@@ -44,6 +45,9 @@ class ABCDPlotter:
     self.variable_1_max = None
     self.variable_2_min = None
     self.variable_2_max = None
+
+    self._background_hist_draw = None
+    self._signal_hist_draw = {}
 
     os.makedirs(config.output_path, exist_ok=True)
 
@@ -114,6 +118,24 @@ class ABCDPlotter:
 
     return n_signals
 
+  def __draw_lumi_label(self):
+    lumi_text = ""
+    lumi_text_xmin = 0.58
+    if self.config.luminosity_sum_run2 != 0 and self.config.luminosity_sum_run3 == 0:
+      lumi_text = f"#scale[0.8]{{{self.config.luminosity_sum_run2/1000:.0f} fb^{{-1}} (13 TeV)}}"
+    elif self.config.luminosity_sum_run2 == 0 and self.config.luminosity_sum_run3 != 0:
+      lumi_text = f"#scale[0.8]{{{self.config.luminosity_sum_run3/1000:.0f} fb^{{-1}} (13.6 TeV)}}"
+    else:
+      lumi_text = f"#scale[0.8]{{{self.config.luminosity_sum_run2/1000:.0f} fb^{{-1}} (13 TeV), {self.config.luminosity_sum_run3/1000:.0f} fb^{{-1}} (13.6 TeV)}}"
+      lumi_text_xmin = 0.46
+    
+    tex = ROOT.TLatex(lumi_text_xmin, 0.97, lumi_text)
+    tex.SetNDC()
+    tex.SetTextFont(42)
+    tex.SetTextSize(0.045)
+    tex.SetLineWidth(2)
+    tex.DrawClone()
+
   def plot_per_signal_hists(self):
     clones = {}
 
@@ -123,6 +145,12 @@ class ABCDPlotter:
     line = ROOT.TLine()
     line.SetLineWidth(1)
     line.SetLineColor(ROOT.kGreen+2)
+
+    output_root_file_path = f"{self.config.output_path}/signal_hists/histograms{self.config.category}.root"
+    if not os.path.exists(os.path.dirname(output_root_file_path)):
+      os.makedirs(os.path.dirname(output_root_file_path), exist_ok=True)
+    background_saved = False
+    out_file = ROOT.TFile(output_root_file_path, "RECREATE")
 
     for i_mass, mass in enumerate(self.config.masses):
       for i_ctau, ctau in enumerate(self.config.ctaus):
@@ -140,6 +168,8 @@ class ABCDPlotter:
 
         self.canvases["grid"].cd(i_pad)
         self.set_pad_style()
+        ROOT.gPad.SetBottomMargin(0.11)
+        ROOT.gPad.SetTopMargin(0.06)
         clones["background"].GetYaxis().SetTitle(clones["background"].GetYaxis().GetTitle() +
                                                  self.abcdHelper.get_nice_name(self.config.variable_1))
         clones["background"].GetXaxis().SetTitle(clones["background"].GetXaxis().GetTitle() +
@@ -150,8 +180,27 @@ class ABCDPlotter:
         clones["background"].GetYaxis().SetTitleSize(0.05)
 
         clones["background"].DrawNormalized("BOX")
-
         clones[(mass, ctau)].DrawNormalized("BOX SAME")
+
+        if not background_saved:
+          clones["background"].Write("background")
+          background_saved = True
+        clones[(mass, ctau)].Write(f"signal_{mass}_{ctau}")
+
+
+        # clones["background"].SetMaximum(max(clones["background"].GetMaximum(), clones[(mass, ctau)].GetMaximum()))
+        # clones["background"].SetMinimum(1e-4)
+        # clones["background"].SetMaximum(1e3)
+        # clones["background"].Draw("BOX")
+        # clones[(mass, ctau)].Draw("BOX SAME")
+        # clones[(mass, ctau)].SetMaximum(10)
+        # clones[(mass, ctau)].SetMinimum(0)
+        # clones[(mass, ctau)].Draw("COLZ")
+        # ROOT.gPad.SetLogz(True)
+        ROOT.gPad.Update()
+        self._signal_hist_draw[f"background_{mass}_{ctau}"] = clones["background"]
+        self._signal_hist_draw[f"{mass}_{ctau}"] = clones[(mass, ctau)]
+
         if self.config.grid_line:
           x_min = self.config.grid_line[0]
           y_min = self.config.grid_line[2]
@@ -159,19 +208,33 @@ class ABCDPlotter:
           y_max = self.config.grid_line[3]
           line.DrawLine(x_min, y_min, x_max, y_max)
         
-        label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
+        # label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
+        label.DrawLatexNDC(0.14, 0.88, mass_label)
+        label.SetTextSize(0.055)
 
         overlap = self.abcdHelper.get_overlap_coefficient(
             self.signal_hists[(mass, ctau)],
             self.background_hist,
             mass, ctau)
-        label.DrawLatexNDC(0.13, 0.92, f"Overlap: {overlap:.2f}")
+        # label.DrawLatexNDC(0.13, 0.92, f"Overlap: {overlap:.2f}")
+
+        self.__draw_lumi_label()
+        tex = ROOT.TLatex(0.11, 0.97, "#bf{CMS} #it{Preliminary}")
+        tex.SetNDC()
+        tex.SetTextFont(42)
+        tex.SetTextSize(0.045)
+        tex.SetLineWidth(2)
+        tex.DrawClone()
 
         self.canvases["significance"].cd(i_pad)
         self.set_pad_style()
         if self.significance_hists[(mass, ctau)] is not None:
           self.significance_hists[(mass, ctau)].Draw("colz")
         label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
+
+    out_file.Close()
+    
+    # self._signal_hist_draw = clones
 
   def get_background_correlation(self):
     correlation = self.background_hist.GetCorrelationFactor()
@@ -185,6 +248,8 @@ class ABCDPlotter:
     ROOT.gStyle.SetOptStat(0)
 
     clone.DrawNormalized("BOX")
+    # clone.Draw("COLZ")
+    self._background_hist_draw = clone
 
     # print correlation between variables in the plot
     correlation = clone.GetCorrelationFactor()
@@ -339,6 +404,13 @@ class ABCDPlotter:
           ROOT.gStyle.SetOptStat(0)
           self.lines[i_pad][0].Draw()
           self.lines[i_pad][1].Draw()
+          label = ROOT.TLatex()
+          label.SetTextSize(0.06)
+          label.SetTextColor(self.config.abcd_line_color)
+          label.DrawLatex(self.variable_1_min + 0.2, line_y + 0.2, "A")
+          label.DrawLatex(self.variable_1_min + 0.2, line_y - 0.6, "B")
+          label.DrawLatex(self.variable_1_max - 0.4, line_y + 0.2, "C")
+          label.DrawLatex(self.variable_1_max - 0.4, line_y - 0.6, "D")
           self.canvases["grid"].Update()
 
           self.canvases["significance"].cd(i_pad)
@@ -578,16 +650,22 @@ class ABCDPlotter:
         for ctau in self.config.ctaus:
 
           signal_strenght = self.abcdHelper.get_signal_strengt_r(mass, ctau)
+          # signal_strenght = 1
           if signal_strenght == None:
             continue
+
+          sign_factor = 1
+          if self.config.do_data:
+            # We do data - sig for do_data
+            sign_factor = -1
 
           signal_hist = self.signal_hists[(mass, ctau)].Clone()
           a_sig, b_sig, c_sig, d_sig, _, _, _, _ = self.abcdHelper.get_abcd(signal_hist, self.config.abcd_point)
           a_sig_scaled = a_sig * signal_strenght
           a_sig_scaled_err = a_sig_scaled**0.5
-          b_tot = b - b_sig * signal_strenght
-          c_tot = c - c_sig * signal_strenght
-          d_tot = d - d_sig * signal_strenght
+          b_tot = b + sign_factor * (b_sig * signal_strenght)
+          c_tot = c + sign_factor * (c_sig * signal_strenght)
+          d_tot = d + sign_factor * (d_sig * signal_strenght)
           b_err_tot = b_tot**0.5
           c_err_tot = c_tot**0.5
           d_err_tot = d_tot**0.5
@@ -666,6 +744,7 @@ class ABCDPlotter:
       self.normalizer.normalize(hist, sample, None, None)
 
       n_entries = hist.hist.GetEntries()
+      print(f"Histogram {sample.name} has {n_entries} entries and integral {hist.hist.Integral()}")
 
       if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
         warn(
@@ -681,6 +760,8 @@ class ABCDPlotter:
       for year in self.config.years:
         data_path = self.config.data_paths[year]
         path = f"{self.config.base_path}/{data_path}"
+        print(f"Loading background histogram from {path} for year {year}")
+        print(f"Background histogram name: {self.background_hist_name}")
         
         hist = Histogram2D(
             name=self.background_hist_name,
@@ -696,6 +777,7 @@ class ABCDPlotter:
           return
 
         hist.load(self.data_file)
+        print(f"1 --- Data histogram for year {year} has {hist.hist.GetEntries()} entries and integral {hist.hist.Integral()}")
         hist.setup()
 
         if not hist.hist:
@@ -704,6 +786,8 @@ class ABCDPlotter:
 
         cloned_hist = hist.hist.Clone()
         cloned_hist.SetDirectory(0) 
+
+        print(f"--- Data histogram for year {year} has {cloned_hist.GetEntries()} entries and integral {cloned_hist.Integral()}")
 
         if self.background_hist is None:
           self.background_hist = cloned_hist
@@ -759,9 +843,13 @@ class ABCDPlotter:
             cross_section = self.config.signal_cross_section
             if self.config.signal_cross_section == -1:
               mass_ = float(mass.replace("p", "."))
-              cross_section = get_theory_cross_section(mass_, year)
+              ctau_ = float(ctau)
+              # cross_section = get_cross_section_for_theory_coupling(mass, ctau)
+              cross_section = get_theory_cross_section_for_coupling(mass, ctau, year, coupling=1.0)
+              # cross_section = get_expected_signal_cross_section(mass_, ctau_)
             scale = luminosity*cross_section/initial_weight_sum
             self.signal_scales[(mass, ctau, year)] = scale
+            # signal_hist.Scale(scale)
 
           if (mass, ctau) not in self.signal_hists:
             self.signal_hists[(mass, ctau)] = signal_hist

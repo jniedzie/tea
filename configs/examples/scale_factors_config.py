@@ -1,33 +1,53 @@
 
 from Logger import error
 
+jec_mc_types = {
+  "2016preVFP": "Summer19UL16APV_V7_MC",
+  "2016postVFP": "Summer19UL16_V7_MC",
+  "2017": "Summer19UL17_V5_MC",
+  "2018": "Summer19UL18_V5_MC",
+  "2022preEE": "Summer22_22Sep2023_V2_MC",
+  "2022postEE": "Summer22EE_22Sep2023_V2_MC",
+  "2023preBPix": "Summer23Prompt23_V2_MC",
+  "2023postBPix": "Summer23BPixPrompt23_V3_MC",
+}
 
-def get_scale_factors(year):
+jec_data_types = {
+  "2016preVFP": "Summer19UL16APV_RunBCD_V7_DATA",
+  "2016postVFP": "Summer19UL16_RunFGH_V7_DATA",
+  "2017": "Summer19UL17_RunB_V5_DATA",
+  "2018": "Summer19UL18_RunA_V5_DATA",
+  "2022preEE": "Summer22_22Sep2023_RunCD_V2_DATA",
+  "2022postEE": "Summer22EE_22Sep2023_RunE_V2_DATA",
+  "2023preBPix": "Summer23Prompt23_V2_DATA",
+  "2023postBPix": "Summer23BPixPrompt23_V3_DATA",
+}
+
+jer_types = {
+  "2016preVFP": "Summer20UL16APV_JRV3_MC",
+  "2016postVFP": "Summer20UL16_JRV3_MC",
+  "2017": "Summer19UL17_JRV2_MC",
+  "2018": "Summer19UL18_JRV2_MC",
+  "2022preEE": "Summer22_22Sep2023_JRV1_MC",
+  "2022postEE": "Summer22EE_22Sep2023_JRV1_MC",
+  "2023preBPix": "Summer23Prompt23_RunCv123_JRV1_MC",
+  "2023postBPix": "Summer23BPixPrompt23_RunD_JRV1_MC",
+}
+
+def get_scale_factors(year, isData=False):
   run2 = True
   if year == "2016preVFP" or year == "2016postVFP":
     pu_type = "Collisions16_UltraLegacy_goldenJSON"
     muon_trigger_type = "NUM_IsoMu24_or_IsoTkMu24_DEN_CutBasedIdTight_and_PFIsoTight"
-    jecType = "Summer19UL16_V7_MC"
-    jerType = "Summer20UL16_JRV3_MC"
-    jecAlgo = "AK4PFchs"
     jecYear = "2016"
     dsaYear = "2016"
-    if year == "2016preVFP":
-      jecType = "Summer19UL16APV_V7_MC"
-      jerType = "Summer20UL16APV_JRV3_MC"
   elif year == "2017":
     pu_type = "Collisions17_UltraLegacy_goldenJSON"
-    jecType = "Summer19UL17_V5_MC"
-    jerType = "Summer19UL17_JRV2_MC"
-    jecAlgo = "AK4PFchs"
     jecYear = "2017"
     dsaYear = "2017"
     muon_trigger_type = "NUM_IsoMu27_DEN_CutBasedIdTight_and_PFIsoTight"
   elif year == "2018":
     pu_type = "Collisions18_UltraLegacy_goldenJSON"
-    jecType = "Summer19UL18_V5_MC"
-    jerType = "Summer19UL18_JRV2_MC"
-    jecAlgo = "AK4PFchs"
     jecYear = "2018"
     dsaYear = "2018"
     muon_trigger_type = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
@@ -38,16 +58,10 @@ def get_scale_factors(year):
     if year == "2022preEE":
       year_path = "2022_Summer22"
       pu_type = "Collisions2022_355100_357900_eraBCD_GoldenJson"
-      jecType = "Summer22_22Sep2023_V2_MC"
-      jerType = "Summer22_22Sep2023_JRV1_MC"
-      jecAlgo = "AK4PFPuppi"
       jecYear = "2022"
     if year == "2022postEE":
       year_path = "2022_Summer22EE"
       pu_type = "Collisions2022_359022_362760_eraEFG_GoldenJson"
-      jecType = "Summer22EE_22Sep2023_V2_MC"
-      jerType = "Summer22EE_22Sep2023_JRV1_MC"
-      jecAlgo = "AK4PFPuppi"
       jecYear = "2022EE"
   elif year == "2023preBPix" or year == "2023postBPix":
     run2 = False
@@ -56,29 +70,29 @@ def get_scale_factors(year):
     if year == "2023preBPix":
       year_path = "2023_Summer23"
       pu_type = "Collisions2023_366403_369802_eraBC_GoldenJson"
-      jecType = "Summer23Prompt23_V2_MC"
-      jerType = "Summer23Prompt23_RunCv1234_JRV1_MC"
-      jecAlgo = "AK4PFPuppi"
       jecYear = "2023"
     if year == "2023postBPix":
       year_path = "2023_Summer23BPix"
       pu_type = "Collisions2023_369803_370790_eraD_GoldenJson"
-      jecType = "Summer23BPixPrompt23_V3_MC"
-      jerType = "Summer23BPixPrompt23_RunD_JRV1_MC"
-      jecAlgo = "AK4PFPuppi"
       jecYear = "2023BPix"
   else:
     error(f"Year {year} not supported.")
+
+  jecTypeMC = jec_mc_types[year]
+  jecTypeData = jec_data_types[year]
+  jerType = jer_types[year]
 
   if run2:
     year_path = f"{year}_UL"
     loose_muon_iso_type = "NUM_LooseRelIso_DEN_LooseID"
     tight_muon_iso_type = "NUM_TightRelIso_DEN_TightIDandIPCut"
     qjet_type = "deepJet_incl"
+    jecAlgo = "AK4PFchs"
   else:
     loose_muon_iso_type = "NUM_LoosePFIso_DEN_LooseID"
     tight_muon_iso_type = "NUM_TightPFIso_DEN_TightID"
     qjet_type = "deepJet_light"
+    jecAlgo = "AK4PFPuppi"
 
   scaleFactors = {
 
@@ -139,7 +153,7 @@ def get_scale_factors(year):
           "type": "NUM_LooseID_DEN_TrackerMuons",
           "systematic": "nominal",
           "variations": "systup,systdown",
-          "statistic": "stat",
+          "statistical": "stat",
       },
       "muonIDMedium": {
           "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
@@ -255,10 +269,62 @@ def get_scale_factors(year):
       # Jet Energy Correction uncertainties
       "jecMC": {
         "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": f"{jecType}",
+        "type": f"{jecTypeMC}",
         "level": "L1L2L3Res",
         "algo": f"{jecAlgo}",
         "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{jecYear},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{jecYear},Regrouped_EC2,Regrouped_EC2_{jecYear},Regrouped_HF,Regrouped_HF_{jecYear},Regrouped_RelativeBal,Regrouped_RelativeSample_{jecYear}",
+      },
+
+      "jecL1L2L3MC": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeMC}",
+        "level": "L1L2L3Res",
+        "algo": f"{jecAlgo}",
+      },
+      "jecL1L2L3Data": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeData}",
+        "level": "L1L2L3Res",
+        "algo": f"{jecAlgo}",
+      },
+
+      "jecL1MC": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeMC}",
+        "level": "L1FastJet",
+        "algo": f"{jecAlgo}",
+      },
+      "jecL1Data": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeData}",
+        "level": "L1FastJet",
+        "algo": f"{jecAlgo}",
+      },
+
+      "jecL2MC": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeMC}",
+        "level": "L2Relative",
+        "algo": f"{jecAlgo}",
+      },
+      "jecL2Data": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeData}",
+        "level": "L2Relative",
+        "algo": f"{jecAlgo}",
+      },
+
+      "jecL2L3MC": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeMC}",
+        "level": "L2L3Residual",
+        "algo": f"{jecAlgo}",
+      },
+      "jecL2L3Data": {
+        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+        "type": f"{jecTypeData}",
+        "level": "L2L3Residual",
+        "algo": f"{jecAlgo}",
       },
 
       # Jet Energy Resolution variables

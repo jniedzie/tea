@@ -10,11 +10,11 @@ NanoEvent::~NanoEvent() {}
 
 TLorentzVector NanoEvent::GetMetFourVector() {
   TLorentzVector metVector;
-  metVector.SetPtEtaPhiM(Get("MET_pt"), 0, Get("MET_phi"), 0);
+  float metPt = event->GetMetPt();
+  float metPhi = event->GetMetPhi();
+  metVector.SetPtEtaPhiM(metPt, 0, metPhi, 0);
   return metVector;
 }
-
-float NanoEvent::GetMetPt() { return Get("MET_pt"); }
 
 shared_ptr<NanoMuons> NanoEvent::GetDRMatchedMuons(shared_ptr<NanoMuons> muonCollection, float matchingDeltaR) {
   auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
@@ -547,7 +547,7 @@ bool NanoEvent::PassesHEMveto(float affectedFraction) {
 
   for (auto& jet : *jets) {
     // jet pT > 15 GeV
-    float jetPt = jet->Get("pt");
+    float jetPt = asNanoJet(jet)->GetPt();
     if (jetPt < 15) continue;
 
     // tight jet ID with lep veto OR [tight jet ID & (jet EM fraction < 0.9) & (jets that don’t overlap with PF muon (dR < 0.2)]
@@ -596,7 +596,7 @@ bool NanoEvent::PassesJetVetoMaps() {
 
   for (auto& jet : *jets) {
     // jet pT > 15 GeV
-    float jetPt = jet->Get("pt");
+    float jetPt = asNanoJet(jet)->GetPt();
     if (jetPt < 15) continue;
 
     // tightLepVeto jet ID

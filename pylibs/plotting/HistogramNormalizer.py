@@ -92,8 +92,9 @@ class HistogramNormalizer:
     if sample.type == SampleType.background:
       scale /= self.background_initial_sum_weights[(sample.name,sample.year)]
     elif sample.type == SampleType.signal:
-      if self.signal_initial_sum_weights[sample.name] != 0:
-        scale /= self.signal_initial_sum_weights[sample.name]
+      if self.signal_initial_sum_weights[sample.name + "_" + sample.year] != 0:
+        scale /= self.signal_initial_sum_weights[sample.name + "_" + sample.year]
+
     elif sample.type == SampleType.data:
       scale = 1
 
@@ -168,8 +169,8 @@ class HistogramNormalizer:
           warn(f"Sample {sample.name} has no events after cuts, consider removing it from the config")
 
       elif sample.type == SampleType.signal:
-        self.signal_final_sum_weights[sample.name] = final_weight_sum
-        self.signal_initial_sum_weights[sample.name] = initial_weight_sum
+        self.signal_final_sum_weights[sample.name + "_" + sample.year] = final_weight_sum
+        self.signal_initial_sum_weights[sample.name + "_" + sample.year] = initial_weight_sum
 
       elif sample.type == SampleType.data:
         self.data_final_entries[sample.name] = final_weight_sum

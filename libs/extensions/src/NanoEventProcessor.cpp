@@ -4,6 +4,7 @@
 
 #include "NanoEventProcessor.hpp"
 #include "NanoMETXYCorr_METPhi.hpp"
+#include "Math/Vector2D.h"
 
 using namespace std;
 
@@ -307,16 +308,14 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
 }
 
 float NanoEventProcessor::PropagateMET(const shared_ptr<NanoEvent> event, float totalPxDifference, float totalPyDifference) {
-  float metPt = event->Get("MET_pt");
-  float metPhi = event->Get("MET_phi");
+  float metPt = event->GetMetPt();
+  float metPhi = event->GetMetPhi();
   float newMetPx = metPt * cos(metPhi) - totalPxDifference;
   float newMetPy = metPt * sin(metPhi) - totalPyDifference;
   return sqrt(newMetPx * newMetPx + newMetPy * newMetPy);
 }
 
 bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shared_ptr<CutFlowManager> cutFlowManager) {
-  if (!eventProcessor->PassesEventCuts(event->GetEvent(), cutFlowManager)) return false;
-
   for (auto& [cutName, cutValues] : eventCuts) {
     if (cutName.substr(0, 5) != "nano_") continue;
 
@@ -324,6 +323,9 @@ bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shar
       if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
     } else if (cutName == "nano_applyJetVetoMaps") {
       if (cutValues.first > 0.5 && !event->PassesJetVetoMaps()) return false;
+    } else if (cutName == "nano_MET_pt") {
+      float metPt = event->GetMetPt();
+      if (!inRange(metPt, cutValues)) return false;
     } else {
       error() << "Unknown nano event cut: " << cutName << endl;
       continue;
@@ -331,8 +333,103 @@ bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shar
 
     if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
   }
+  if (!eventProcessor->PassesEventCuts(event->GetEvent(), cutFlowManager)) return false;
 
   return true;
+}
+
+void NanoEventProcessor::ApplyPuppiMETEnergyScaleCorrections(shared_ptr<NanoEvent> event,
+    string allJetsCollectionName, string corT1METJetsCollectionName) {
+  
+  string metBranch = event->GetMetBranchName();
+  if (metBranch.find("Puppi") == string::npos) {
+    event->GetEvent()->UpdateMetVariables(metBranch+"_JES", event->GetMetPt(), event->GetMetPhi());
+    return;
+  }
+
+  auto jetCollection = event->GetCollection(allJetsCollectionName);
+  auto corT1METJetsCollection = event->GetCollection(corT1METJetsCollectionName);
+  float rho = event->Get(rhoBranchName);
+  string dataStr = IsDataEvent(event) ? "Data" : "MC";
+  vector<string> jecNames = {"jecL1"+dataStr, "jecL1L2L3"+dataStr};
+  
+  float RawPuppiMET_pt = event->Get("RawPuppiMET_pt");
+  float RawPuppiMET_phi = event->Get("RawPuppiMET_phi");
+  ROOT::Math::Polar2DVector PuppiMET_p2D_Type1Corr(RawPuppiMET_pt,RawPuppiMET_phi);
+  uint run = event->Get("run");
+
+  for (auto jet : *jetCollection) {
+    auto nanoJet = asNanoJet(jet);
+    map<string,float> corrections = nanoJet->GetJetEnergyCorrections(jecNames, rho, run);
+    float pt = nanoJet->Get("pt");
+    float phi = nanoJet->GetPhi();
+    float rawFactor = nanoJet->Get("rawFactor");
+    float muonSubtrFactor = nanoJet->Get("muonSubtrFactor");
+
+    float pt_noMuRaw = pt * (1. - rawFactor) * (1. - muonSubtrFactor);
+    float pt_noMuL1 = pt_noMuRaw * corrections["jecL1"+dataStr];
+    float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3"+dataStr];
+
+    if (pt_noMuL1L2L3 < 15)
+      continue;
+
+    float chEmEF = nanoJet->Get("chEmEF");
+    float neEmEF = nanoJet->Get("neEmEF");
+    if (chEmEF + neEmEF > 0.9)
+      continue;
+  
+    ROOT::Math::Polar2DVector Jet_p2D_noMuL1L2L3(pt_noMuL1L2L3, phi);
+    ROOT::Math::Polar2DVector Jet_p2D_noMuL1(pt_noMuL1, phi);
+    ROOT::Math::Polar2DVector Jet_p2D_corrTerMET = Jet_p2D_noMuL1L2L3 - Jet_p2D_noMuL1;
+    PuppiMET_p2D_Type1Corr -= Jet_p2D_corrTerMET;
+  }
+  for (auto jet : *corT1METJetsCollection) {
+    auto nanoJet = asNanoJet(jet);
+    map<string,float> corrections = nanoJet->GetJetEnergyCorrections(jecNames, rho, run);
+    float pt = nanoJet->Get("rawPt");
+    float phi = nanoJet->GetPhi();
+    float muonSubtrFactor = nanoJet->Get("muonSubtrFactor");
+
+    float pt_noMuRaw = pt * (1. - muonSubtrFactor);
+
+    float pt_noMuL1 = pt_noMuRaw * corrections["jecL1"];
+    float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3"];
+        
+    if (pt_noMuL1L2L3 < 15)
+      continue;
+    float EmEF = nanoJet->Get("EmEF");
+    if (EmEF > 0.9)
+      continue;
+    
+    ROOT::Math::Polar2DVector CorrT1METJet_p2D_noMuL1L2L3(pt_noMuL1L2L3, phi);
+    ROOT::Math::Polar2DVector CorrT1METJet_p2D_noMuL1(pt_noMuL1, phi);
+    ROOT::Math::Polar2DVector CorrT1METJet_p2D_corrTerMET = CorrT1METJet_p2D_noMuL1L2L3 - CorrT1METJet_p2D_noMuL1;
+    PuppiMET_p2D_Type1Corr -= CorrT1METJet_p2D_corrTerMET;
+  }
+  float newMetPt = PuppiMET_p2D_Type1Corr.R();
+  float newMetPhi = PuppiMET_p2D_Type1Corr.Phi();
+
+  event->GetEvent()->UpdateMetVariables(metBranch+"_JES", newMetPt, newMetPhi);
+}
+
+map<string,float> NanoEventProcessor::GetMETEnergyScaleScaleFactors(shared_ptr<NanoEvent> event, pair<float,float> metPtCuts) {
+  float newMetPt = event->GetMetPt();
+  map<string,float> met = {{"systematic", 1.0}};
+  if (newMetPt < metPtCuts.first || newMetPt > metPtCuts.second) 
+    met = {{"systematic", 0.0}};
+  return met;
+}
+
+void NanoEventProcessor::ApplyJetEnergyScaleCorrections(const shared_ptr<NanoEvent> event) {  
+  float rho = event->Get(rhoBranchName);
+  auto jets = event->GetCollection("Jet");
+  bool isData = IsDataEvent(event);
+  uint run = event->Get("run");
+  
+  for (auto jet : *jets) {
+    float pt_before = asNanoJet(jet)->GetPt();
+    asNanoJet(jet)->UpdateJetEnergyScaleVariables(rho, isData, run);
+  }
 }
 
 tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergyScaleUncertainties(shared_ptr<NanoEvent> event,
@@ -358,16 +455,16 @@ tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergy
   map<string,float> totalPxDifference, totalPyDifference;
   for (auto jet : *baseJetCollection) {
     auto nanoJet = asNanoJet(jet);
-    map<string,float> corrections = nanoJet->GetJetEnergyCorrections(rho);
+    map<string,float> uncertainties = nanoJet->GetJetEnergyCorrectionUncertainties(rho);
     float pt = nanoJet->GetPt();
 
     const bool isGoodJet = nanoJet->IsInCollection(goodJetCollection);
     const bool isGoodBJet = nanoJet->IsInCollection(goodBJetCollection);
     
-    for (auto &[name, correction] : corrections) {
+    for (auto &[name, uncertainty] : uncertainties) {
       if (name == "systematic") 
         continue;
-      float newJetPt = pt*correction;
+      float newJetPt = pt*uncertainty;
 
       UpdateNPassingJetsForPt(newJetPt, name, nPassingGoodJets, nPassingGoodBJets, 
                              goodJetPtCuts, goodBJetPtCuts, isGoodJet, isGoodBJet);
@@ -458,18 +555,19 @@ void NanoEventProcessor::ApplyJetEnergyResolution(const shared_ptr<NanoEvent> ev
   auto jets = event->GetCollection("Jet");
   map<string,float> totalPxDifference, totalPyDifference;
   for (auto jet : *jets) {
-    asNanoJet(jet)->AddSmearedPtByResolution(rho, eventID, event);
     float pt_unsmeared = asNanoJet(jet)->GetPt();
+    asNanoJet(jet)->AddSmearedPtByResolution(rho, eventID, event);
     float pt_smeared = jet->Get("pt_smeared");
     UpdateMETDifferenceForPt(asNanoJet(jet), pt_smeared, pt_unsmeared, "met_jer",
                                totalPxDifference, totalPyDifference);
   }
+  string metBranch = event->GetUpdatedMetBranchName();
   if (IsDataEvent(event)) {
-    event->GetEvent()->SetFloat("MET_pt_smeared", (float)event->Get("MET_pt"));
+    event->GetEvent()->UpdateMetVariables(metBranch+"_smeared", (float)event->GetMetPt(), (float)event->GetMetPhi());
     return;
   }
   float newMetPt = PropagateMET(event, totalPxDifference["met_jer"], totalPyDifference["met_jer"]);
-  event->GetEvent()->SetFloat("MET_pt_smeared", newMetPt);
+  event->GetEvent()->UpdateMetVariables(metBranch+"_smeared", newMetPt, (float)event->GetMetPhi());
 }
 
 tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergyResolutionUncertainties(const shared_ptr<NanoEvent> event, 
@@ -527,13 +625,8 @@ map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(cons
   if (!scaleFactorsManager.ShouldApplyVariation("metUnclEnergy")) 
       return scaleFactors;
 
-  float metPt = event->Get("MET_pt");
-  float metPhi = event->Get("MET_phi");
-
-  if (scaleFactorsManager.ShouldApplyScaleFactor("metXYcorrection")) {
-    metPt = event->Get("MET_pt_XYcorr");
-    metPhi = event->Get("MET_phi_XYcorr");
-  }
+  float metPt = event->GetMetPt();
+  float metPhi = event->GetMetPhi();
   float metPx = metPt * cos(metPhi);
   float metPy = metPt * sin(metPhi);
 
@@ -557,16 +650,13 @@ map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(cons
   return scaleFactors;
 }
 
-map<string, float> NanoEventProcessor::GetMETXYcorrections(const shared_ptr<NanoEvent> event, 
-    pair<float,float> metPtCuts) {
-
-  map<string, float> scaleFactors = {{"systematic", 1.0}};
+void NanoEventProcessor::ApplyMETXYcorrections(const shared_ptr<NanoEvent> event) {
   auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
   if (!scaleFactorsManager.ShouldApplyScaleFactor("metXYcorrection")) 
-      return scaleFactors;
+      return;
   
-  float met_pt = event->Get("MET_pt");
-  float met_phi = event->Get("MET_phi");
+  float met_pt = event->GetMetPt();
+  float met_phi = event->GetMetPhi();
   float met_px = met_pt * cos(met_phi);
   float met_py = met_pt * sin(met_phi);
 
@@ -577,11 +667,17 @@ map<string, float> NanoEventProcessor::GetMETXYcorrections(const shared_ptr<Nano
   float met_pt_corr = corrected_met.first;
   float met_phi_corr = corrected_met.second;
 
-  event->GetEvent()->SetFloat("MET_pt_XYcorr", met_pt_corr);
-  event->GetEvent()->SetFloat("MET_phi_XYcorr", met_phi_corr);
-  
-  if (met_pt_corr < metPtCuts.first || met_pt_corr > metPtCuts.second) 
-    scaleFactors["systematic"] = 0.0;
+  string metBranch = event->GetUpdatedMetBranchName();
+  event->GetEvent()->UpdateMetVariables(metBranch+"_XYcorr", met_pt_corr, met_phi_corr);
+}
 
+map<string, float> NanoEventProcessor::GetMETXYScaleFactors(const shared_ptr<NanoEvent> event, 
+    pair<float,float> metPtCuts) {
+
+  float met_pt = event->GetMetPt();
+
+  map<string, float> scaleFactors = {{"systematic", 1.0}};
+  if (met_pt < metPtCuts.first || met_pt > metPtCuts.second) 
+    scaleFactors["systematic"] = 0.0;
   return scaleFactors;
 }

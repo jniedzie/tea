@@ -28,9 +28,9 @@ def get_file(sample):
   return file
 
 
-def get_datacard_file_name(config, signal_sample):
+def get_datacard_file_name(config, sample_name):
   if config.use_combined_limits:
-    match = re.search(r"mAlp-([0-9p.]+)GeV_ctau-([0-9eE.+-]+)mm", signal_sample.name)
+    match = re.search(r"mAlp-([0-9p.]+)GeV_ctau-([0-9eE.+-]+)mm", sample_name)
     mass = 0
     ctau = 0
     if match:
@@ -38,7 +38,7 @@ def get_datacard_file_name(config, signal_sample):
       ctau = match.group(2)
     datacard_path = f"combined_datacard_{mass}_{ctau}{config.category}"
   else:
-    datacard_path = f"datacard_{config.histogram.getName()}_{signal_sample.name}"
+    datacard_path = f"datacard_{config.histogram.getName()}_{sample_name}"
     if hasattr(config, "do_abcd") and config.do_abcd:
       datacard_path += "_ABCD"
       if config.use_abcd_prediction:
@@ -47,6 +47,13 @@ def get_datacard_file_name(config, signal_sample):
         datacard_path += "real"
   return datacard_path
 
+def group_samples_over_years(samples):
+  grouped = {}
+  for sample in samples:
+    if sample.name not in grouped:
+      grouped[sample.name] = []
+    grouped[sample.name].append(sample)
+  return grouped
 
 def run_command(command):
   return os.system(command)
@@ -181,7 +188,7 @@ def get_limits(config):
   limits_per_process = {}
 
   for signal_sample in config.signal_samples:
-    combine_output_path = get_datacard_file_name(config, signal_sample)
+    combine_output_path = get_datacard_file_name(config, signal_sample.name)
     if hasattr(config, "run_signal_injection") and config.run_signal_injection:
       combine_output_path += "_signal_injection_minus"
     combine_output_path += ".log"
@@ -211,11 +218,11 @@ def save_limits(config):
 
   file_path += ".txt"
 
-  info(f"Saving limits to {output_path}{file_path}")
-
   output_path = config.results_output_path
   if hasattr(config, "run_signal_injection") and config.run_signal_injection:
     output_path += "signal_injection_minus/"
+
+  info(f"Saving limits to {output_path}{file_path}")
 
   os.makedirs(output_path, exist_ok=True)
 
@@ -230,7 +237,7 @@ def save_limits(config):
 
 def print_significance(config):
   for data_sample in config.data_samples:
-    combine_output_path = get_datacard_file_name(config, data_sample) + ".log"
+    combine_output_path = get_datacard_file_name(config, data_sample.name) + ".log"
 
     try:
       with open(f"{config.datacards_output_path}/{combine_output_path}", "r") as combine_output_file:
@@ -282,30 +289,36 @@ def main():
   background_samples = config.background_samples if hasattr(config, "background_samples") else []
 
   for signal_sample in signal_samples:
-    input_files[signal_sample.name] = get_file(signal_sample)
+    input_files[f"{signal_sample.name}_{signal_sample.year}"] = get_file(signal_sample)
 
   for background_sample in background_samples:
-    input_files[background_sample.name] = get_file(background_sample)
+    if f"{background_sample.name}_{background_sample.year}" not in input_files:
+      input_files[f"{background_sample.name}_{background_sample.year}"] = get_file(background_sample)
 
   for data_sample in data_samples:
-    input_files[data_sample.name] = get_file(data_sample)
+    if f"{data_sample.name}_{data_sample.year}" not in input_files:
+      input_files[f"{data_sample.name}_{data_sample.year}"] = {}
+    input_files[f"{data_sample.name}_{data_sample.year}"] = get_file(data_sample)
 
-  main_samples = signal_samples if args.method == "AsymptoticLimits" else data_samples
+  all_main_samples = signal_samples if args.method == "AsymptoticLimits" else data_samples
   other_samples = background_samples + (data_samples if args.method == "AsymptoticLimits" else signal_samples)
 
-  for main_sample in main_samples:
-    datacard_file_name = get_datacard_file_name(config, main_sample)
+  main_samples_over_years = group_samples_over_years(all_main_samples)
+  # other_samples_over_years = group_samples_over_years(all_other_samples)
+
+  for main_sample_name, main_samples in main_samples_over_years.items():
+    datacard_file_name = get_datacard_file_name(config, main_sample_name)
 
     signal_strenght = 0
     if config.run_signal_injection:
       input_datacard_file_name = datacard_file_name
       datacard_file_name = datacard_file_name + "_signal_injection_minus"
-      signal_strenght = get_signal_strengt_from_limit_file(config, main_sample.name)
+      signal_strenght = get_signal_strengt_from_limit_file(config, main_sample_name)
   
     info(f"Creating HistogramsManager for {datacard_file_name}")
 
     manager = HistogramsManager(config, input_files, datacard_file_name)
-    manager.addHistosample(config.histogram, main_sample)
+    manager.addHistosamples(config.histogram, main_samples)
 
     for other_sample in other_samples:
       manager.addHistosample(config.histogram, other_sample)

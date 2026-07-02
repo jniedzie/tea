@@ -42,6 +42,7 @@ class NanoEventProcessor {
     std::string allJetsCollectionName, std::string goodJetsCollectionName, std::string goodBJetsCollectionName,
     std::pair<float,float> goodJetCuts, std::pair<float,float> goodBJetCuts, std::pair<float,float> metPtCuts);
 
+  void ApplyJetEnergyScaleCorrections(const std::shared_ptr<NanoEvent> event);
   void ApplyJetEnergyResolution(const std::shared_ptr<NanoEvent> event);
   
   /***
@@ -54,8 +55,20 @@ class NanoEventProcessor {
     std::string allJetsCollectionName, std::string goodJetsCollectionName, std::string goodBJetsCollectionName,
     std::pair<float,float> goodJetCuts, std::pair<float,float> goodBJetCuts, std::pair<float,float> metPtCuts);
 
+  /***
+  * Calculates Puppi MET energy scale corrections for a given event and saves them as new branches with methBranchName + "_pt_JES" in the event.
+  * allJetsCollectionName and corT1METJetsCollectionName are names for the collections including all jets and the jets used for Type 1 MET corrections in the event.
+  * @return map of scale factors for Puppi MET energy scale corrections, 1 or 0 depending on if the event passes the MET cut.
+  ***/
+  void ApplyPuppiMETEnergyScaleCorrections(const std::shared_ptr<NanoEvent> event,
+    std::string allJetsCollectionName, std::string corT1METJetsCollectionName);
+
+  std::map<std::string,float> GetMETEnergyScaleScaleFactors(std::shared_ptr<NanoEvent> event, std::pair<float,float> metPtCuts);
+
   std::map<std::string, float> GetMETUnclusteredEnergyUncertainties(const std::shared_ptr<NanoEvent> event, std::pair<float,float> metPtCuts);
-  std::map<std::string, float> GetMETXYcorrections(const std::shared_ptr<NanoEvent> event, std::pair<float,float> metPtCuts);
+
+  void ApplyMETXYcorrections(const std::shared_ptr<NanoEvent> event);
+  std::map<std::string, float> GetMETXYScaleFactors(const std::shared_ptr<NanoEvent> event, std::pair<float,float> metPtCuts);
 
  private:
   std::unique_ptr<EventProcessor> eventProcessor;

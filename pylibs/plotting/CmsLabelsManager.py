@@ -5,6 +5,8 @@ class CmsLabelsManager:
     def __init__(self, config):
         self.config = config
 
+        self.show_ratio_plots = config.show_ratio_plots
+
         self.show_labels = False
         if hasattr(self.config, "show_cms_labels"):
             self.show_labels = self.config.show_cms_labels
@@ -53,14 +55,22 @@ class CmsLabelsManager:
             lumi_unit = "fb"
 
         # get lumi and convert from pb to fb
+        self.lumi = ""
+        self.lumi_run2 = ""
+        self.lumi_run3 = ""
         if hasattr(self.config, "lumi_label_value"):
-            self.lumi = f"{self.config.lumi_label_value / 1000.0:.1f} {lumi_unit}^{{-1}}"
-        else:
-            self.lumi = ""
+            self.lumi = f"{self.config.lumi_label_value / 1000.0:.0f} {lumi_unit}^{{-1}}"
+        elif hasattr(self.config, "lumi_label_value_run2") and hasattr(self.config, "lumi_label_value_run3"):
+            if self.config.lumi_label_value_run2 != 0:
+                self.lumi_run2 = f"{self.config.lumi_label_value_run2 / 1000.0:.0f} {lumi_unit}^{{-1}}"
+            if self.config.lumi_label_value_run3 != 0:
+                self.lumi_run3 = f"{self.config.lumi_label_value_run3 / 1000.0:.0f} {lumi_unit}^{{-1}}"
 
         if hasattr(self.config, "beam_label"):
             self.collision_energy = " (" + self.config.beam_label+")"
         else:
+            self.collision_energy_run2 = " (13 TeV)"
+            self.collision_energy_run3 = " (13.6 TeV)"
             self.collision_energy = " (13 TeV)"
             if "2022" in self.config.year or "2023" in self.config.year:
                 self.collision_energy = " (13.6 TeV)"
@@ -94,7 +104,14 @@ class CmsLabelsManager:
         self.bottom = pad.GetBottomMargin()
 
     def __drawLumiText(self):
-        lumiText = self.lumi + self.collision_energy
+        if self.lumi != "":
+            lumiText = self.lumi + self.collision_energy
+        elif self.lumi_run2 != "" and self.lumi_run3 != "":
+            lumiText = self.lumi_run2 + self.collision_energy_run2 + ", " + self.lumi_run3 + self.collision_energy_run3
+        elif self.lumi_run2 != "":
+            lumiText = self.lumi_run2 + self.collision_energy_run2
+        elif self.lumi_run3 != "":
+            lumiText = self.lumi_run3 + self.collision_energy_run3
 
         latex = ROOT.TLatex()
         latex.SetNDC()

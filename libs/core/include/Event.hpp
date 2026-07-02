@@ -143,6 +143,12 @@ class Event {
     customValuesTypes[branchName] = "Float_t";
   }
 
+  std::string GetMetBranchName() { return metBranchName; }
+  std::string GetUpdatedMetBranchName();
+  void UpdateMetVariables(std::string newBranchName, float pt, float phi);
+  float GetMetPt();
+  float GetMetPhi();
+
  private:
   ConfigManager& config = ConfigManager::GetInstance();
 
@@ -195,6 +201,9 @@ class Event {
   insertion_ordered_map<std::string, ExtraCollection> extraCollectionsDescriptions;
   std::map<std::string, std::string> defaultCollectionsTypes;
   std::map<std::string, std::pair<unsigned, unsigned>> runRangesPerEra;
+
+  std::string metBranchName;
+  std::string metUpdatedBranchName;
 
   friend class EventReader;
   template <typename T>
