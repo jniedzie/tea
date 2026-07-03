@@ -7,18 +7,18 @@
 
 #include <nlohmann/json.hpp>
 
-#include <variant>
-
 #include "Helpers.hpp"
 
 #ifdef USE_CORRECTIONLIB
 #include "correction.h"
 using CorrectionRef = correction::Correction::Ref;
 using CompoundCorrectionRef = correction::CompoundCorrection::Ref;
+using CorrectionArgType = correction::Variable::Type;
 #else
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
 using CompoundCorrectionRef = DummyCorrectionRef;
+using CorrectionArgType = std::variant<long, double, std::string>;
 #endif
 
 struct MuonID;
@@ -36,7 +36,7 @@ class ScaleFactorsManager {
 
   std::map<std::string, float> GetPUJetIDScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetMuonScaleFactors(std::string name, float eta, float pt);
-  std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
+  std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<CorrectionArgType>& args);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
 
@@ -46,9 +46,9 @@ class ScaleFactorsManager {
   std::vector<std::string> GetBTagVariationNames(std::string name);
 
   std::map<std::string, float> GetCustomScaleFactorsForCategory(std::string name, std::string category);
-  std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
+  std::map<std::string, float> GetCustomScaleFactors(std::string name, const std::vector<CorrectionArgType>& args);
 
-  std::map<std::string, float> GetDimuonScaleFactors(std::string name, const std::vector<std::variant<int, double, std::string>>& args);
+  std::map<std::string, float> GetDimuonScaleFactors(std::string name, const std::vector<CorrectionArgType>& args);
 
   bool IsJetVetoMapDefined(std::string name);
   bool IsJetInBadRegion(std::string name, float eta, float phi);
@@ -57,7 +57,7 @@ class ScaleFactorsManager {
   bool ShouldApplyJetEnergyCorrections() { return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec"); }
   std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
   std::map<std::string, float> GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho);
-  float GetJetEnergyResolutionSmearingFactor(std::map<std::string, std::variant<int,double,std::string>> inputArguments);
+  float GetJetEnergyResolutionSmearingFactor(std::map<std::string, CorrectionArgType> inputArguments);
 
   bool ShouldApplyScaleFactor(const std::string& name);
   bool ShouldApplyVariation(const std::string& name);
@@ -86,10 +86,11 @@ class ScaleFactorsManager {
   void ReadScaleFactors();
   void ReadPileupSFs();
 
-  float TryToEvaluate(const std::string& name, const std::vector<std::variant<int, double, std::string>>& args);
-#ifdef USE_CORRECTIONLIB
-  float EvaluateCorrectionArgs(const std::string& name, const std::vector<correction::Variable::Type>& args);
-#endif
+  float TryToEvaluate(const std::string& name, const std::vector<CorrectionArgType>& args);
+
+  #ifdef USE_CORRECTIONLIB
+    float EvaluateCorrectionArgs(const std::string& name, const std::vector<correction::Variable::Type>& args);
+  #endif
 
   std::vector<std::string> GetScaleFactorVariations(std::string variations_str);
   std::map<std::string, std::pair<double, double>> GetInputBounds(std::map<std::string, std::string> extraArgs);

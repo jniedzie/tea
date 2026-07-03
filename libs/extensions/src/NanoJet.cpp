@@ -50,18 +50,18 @@ void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEv
   if (genJet)
     genPt = genJet->Get("pt");
 
-  map<string, std::variant<int,double,string>> inputs  = {{"JetPt", GetPt()}};
+  map<string, CorrectionArgType> inputs  = {{"JetPt", GetPt()}};
   inputs["JetEta"] = (float)physicsObject->Get("eta");
-  inputs["GenPt"] = genPt;
-  inputs["Rho"] = rho;
-  inputs["EventID"] = eventID;
-  inputs["JER"] = jerSF["PtResolution"];
-  inputs["JERSF"] = jerSF["systematic"];
+  inputs["GenPt"] = (double)genPt;
+  inputs["Rho"] = (double)rho;
+  inputs["EventID"] = (long)eventID;
+  inputs["JER"] = (double)jerSF["PtResolution"];
+  inputs["JERSF"] = (double)jerSF["systematic"];
 
   float jetPt_factor = scaleFactorsManager.GetJetEnergyResolutionSmearingFactor(inputs);
-  inputs["JERSF"] = jerSF["jerMC_ScaleFactor_up"];
+  inputs["JERSF"] = (double)jerSF["jerMC_ScaleFactor_up"];
   float jetPt_factor_up = scaleFactorsManager.GetJetEnergyResolutionSmearingFactor(inputs);
-  inputs["JERSF"] = jerSF["jerMC_ScaleFactor_down"];
+  inputs["JERSF"] = (double)jerSF["jerMC_ScaleFactor_down"];
   float jetPt_factor_down = scaleFactorsManager.GetJetEnergyResolutionSmearingFactor(inputs);
 
   physicsObject->SetFloat("pt_smeared" , GetPt()*jetPt_factor);
