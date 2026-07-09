@@ -32,7 +32,12 @@ private:
   std::vector<std::string> branchesToKeep;
   std::vector<std::string> branchesToRemove;
 
+  std::map<std::string, std::vector<bool>> boolVectorBuffers;
+  std::map<std::string, std::vector<std::string>> boolVectorBranchesPerTree;
+
   void SetupOutputTree();
+  void SetupBoolVectorBranches(std::string treeName);
+  void RepackBoolVectorBranches(std::string treeName);
 
   friend class CutFlowManager;
 };

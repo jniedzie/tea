@@ -60,12 +60,44 @@ void EventWriter::SetupOutputTree() {
 
     outputTrees[name] = tree->CloneTree(0);
     outputTrees[name]->Reset();
+    SetupBoolVectorBranches(name);
 
     tree->SetBranchStatus("*", 1);
   }
 }
 
-void EventWriter::AddCurrentEvent(string treeName) { outputTrees[treeName]->Fill(); }
+void EventWriter::SetupBoolVectorBranches(string treeName) {
+  auto outputTree = outputTrees[treeName];
+
+  for (auto branchIter : *outputTree->GetListOfBranches()) {
+    auto branch = (TBranch *)branchIter;
+    if (!eventReader->IsVectorBranch(branch)) continue;
+
+    auto leaf = eventReader->GetLeaf(branch);
+    if (string(leaf->GetTypeName()) != "vector<bool>") continue;
+
+    string branchName = branch->GetName();
+    boolVectorBuffers[branchName] = vector<bool>();
+    outputTree->SetBranchAddress(branchName.c_str(), &boolVectorBuffers[branchName]);
+    boolVectorBranchesPerTree[treeName].push_back(branchName);
+  }
+}
+
+void EventWriter::RepackBoolVectorBranches(string treeName) {
+  auto it = boolVectorBranchesPerTree.find(treeName);
+  if (it == boolVectorBranchesPerTree.end()) return;
+
+  auto &event = eventReader->currentEvent;
+  for (auto &branchName : it->second) {
+    auto *source = event->GetStdUintVector(branchName);
+    boolVectorBuffers[branchName].assign(source->begin(), source->end());
+  }
+}
+
+void EventWriter::AddCurrentEvent(string treeName) {
+  RepackBoolVectorBranches(treeName);
+  outputTrees[treeName]->Fill();
+}
 
 void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepIndices) {
   auto &event = eventReader->currentEvent;
@@ -96,6 +128,7 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
   // Set the filtered number of particles for the branch before filling
   Int_t nParticles = static_cast<Int_t>(writeIndex);
   outputTrees[treeName]->SetBranchAddress("Event_numberP", &nParticles);
+  RepackBoolVectorBranches(treeName);
   outputTrees[treeName]->Fill();
 }
 
