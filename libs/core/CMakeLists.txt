@@ -89,8 +89,8 @@ target_link_libraries(core PUBLIC Python3::Python ${ROOT_LIBRARIES} ZLIB::ZLIB T
 
 if(correctionlib_FOUND)
   message(STATUS "correctionlib target found. Linking with correctionlib::correctionlib.")
-  target_link_libraries(core PRIVATE correctionlib)
-  target_compile_definitions(core PRIVATE -DUSE_CORRECTIONLIB)
+  target_link_libraries(core PUBLIC correctionlib)
+  target_compile_definitions(core PUBLIC -DUSE_CORRECTIONLIB)
 else()
   message(WARNING "correctionlib target not found. Building without correctionlib.")
 endif()
