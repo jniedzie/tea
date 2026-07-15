@@ -77,7 +77,7 @@ void EventWriter::SetupBoolVectorBranches(string treeName) {
     if (string(leaf->GetTypeName()) != "vector<bool>") continue;
 
     string branchName = branch->GetName();
-    boolVectorBuffers[branchName] = new vector<bool>();
+    boolVectorBuffers[branchName] = vector<bool>();
     outputTree->SetBranchAddress(branchName.c_str(), &boolVectorBuffers[branchName]);
     boolVectorBranchesPerTree[treeName].push_back(branchName);
   }
@@ -90,7 +90,7 @@ void EventWriter::RepackBoolVectorBranches(string treeName) {
   auto &event = eventReader->currentEvent;
   for (auto &branchName : it->second) {
     auto *source = event->GetStdUintVector(branchName);
-    boolVectorBuffers[branchName]->assign(source->begin(), source->end());
+    boolVectorBuffers[branchName].assign(source->begin(), source->end());
   }
 }
 
