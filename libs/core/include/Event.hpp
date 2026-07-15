@@ -137,6 +137,7 @@ class Event {
   UInt_t* GetUintVector(std::string branchName) { return valuesUintVector.at(branchName); }
   UShort_t* GetUshortVector(std::string branchName) { return valuesUshortVector.at(branchName); }
   Short_t* GetShortVector(std::string branchName) { return valuesShortVector.at(branchName); }
+  std::vector<unsigned int>* GetStdUintVector(std::string branchName) { return valuesStdUintVector.at(branchName); }
 
   void SetFloat(std::string branchName, float value) {
     customValuesFloat[branchName] = value;

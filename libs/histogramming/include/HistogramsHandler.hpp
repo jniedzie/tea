@@ -23,6 +23,7 @@ class HistogramsHandler {
   void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
   TH1D* GetHistogram1D(HistNames names) { return histograms1D[names]; }
   std::map<HistNames, TH1D*> GetHistograms1D() { return histograms1D; }
+  std::map<HistNames, TH2D*> GetHistograms2D() { return histograms2D; }
   void SaveHistograms();
   
  private:
