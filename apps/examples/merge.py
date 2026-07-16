@@ -1,3 +1,4 @@
+#!python
 import argparse
 import concurrent.futures
 import glob

@@ -1,3 +1,4 @@
+#!python
 from Logger import info
 
 import argparse

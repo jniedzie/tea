@@ -1,3 +1,4 @@
+#!python
 import argparse
 import importlib.util
 import uuid

@@ -1,3 +1,4 @@
+#!python
 from HistogramPlotter import HistogramPlotter
 from Logger import error, logger_print
 
