@@ -138,11 +138,7 @@ void HistogramsHandler::Fill(string name, double value) {
   CheckHistogram(name, "");
   histograms1D[make_pair(name, "")]->Fill(value, weight);
 
-  // if "name" is still in unfilledHistograms, remove it
-  auto it = find(unfilledHistograms.begin(), unfilledHistograms.end(), name);
-  if (it != unfilledHistograms.end()) {
-    unfilledHistograms.erase(it);
-  }
+  RemoveFromUnfilled(name);
 
   // handle SF variation histograms
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
@@ -157,11 +153,21 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   double weight = eventWeights["default"];
   CheckHistogram(name, "");
   histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
+
+  RemoveFromUnfilled(name);
+
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
   for (auto& [sfName, weight] : eventWeights) {
     if (sfName == "default") continue;
     CheckHistogram(name, sfName);
     histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
+  }
+}
+
+void HistogramsHandler::RemoveFromUnfilled(string name) {
+  auto it = find(unfilledHistograms.begin(), unfilledHistograms.end(), name);
+  if (it != unfilledHistograms.end()) {
+    unfilledHistograms.erase(it);
   }
 }
 

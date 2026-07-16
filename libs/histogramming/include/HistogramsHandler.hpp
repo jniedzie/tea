@@ -41,6 +41,7 @@ class HistogramsHandler {
   std::map<std::string,float> eventWeights;
   bool sfSetup = false;
 
+  void RemoveFromUnfilled(std::string name);
   void CheckHistogram(std::string name, std::string directory);
   void SetupHistograms();
   void SetupSFvariationHistograms();
