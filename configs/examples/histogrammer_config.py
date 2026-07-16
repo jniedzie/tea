@@ -27,7 +27,10 @@ defaultHistParams = (
   ("GoodLeptons", "eta", 100, -2.5, 2.5, ""),
 )
 
-histParams = (("Muon", "scaledPt", 400, 0, 200, ""), )
+histParams = (
+  ("Muon", "scaledPt", 400, 0, 200, ""),
+  ("Muon", "someUnfilledHistogram", 400, 0, 200, ""),
+)
 
 # Uncomment this if your events tree has a name other than "Events" (or if you have multiple trees):
 # eventsTreeNames = [

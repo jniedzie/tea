@@ -25,10 +25,12 @@ class HistogramsHandler {
   std::map<HistNames, TH1D*> GetHistograms1D() { return histograms1D; }
   std::map<HistNames, TH2D*> GetHistograms2D() { return histograms2D; }
   void SaveHistograms();
+  void Print();
   
  private:
   std::map<HistNames, TH1D*> histograms1D;
   std::map<HistNames, TH2D*> histograms2D;
+  std::vector<std::string> unfilledHistograms;
 
   std::map<std::string, HistogramParams> histParams;
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
@@ -39,6 +41,7 @@ class HistogramsHandler {
   std::map<std::string,float> eventWeights;
   bool sfSetup = false;
 
+  void RemoveFromUnfilled(std::string name);
   void CheckHistogram(std::string name, std::string directory);
   void SetupHistograms();
   void SetupSFvariationHistograms();
