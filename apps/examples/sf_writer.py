@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python3
 from ScaleFactorProducer import ScaleFactorProducer
 from CorrectionWriter import CorrectionWriter
 from Logger import *
