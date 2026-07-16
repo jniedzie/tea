@@ -231,6 +231,9 @@ void EventReader::SetupScalarBranch(string branchName, string branchType, string
   } else if (branchType == "Float_t") {
     currentEvent->valuesFloat[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesFloat[branchName]);
+  } else if (branchType == "Double_t") {
+    currentEvent->valuesDouble[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesDouble[branchName]);
   } else if (branchType == "ULong64_t") {
     currentEvent->valuesUlong[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUlong[branchName]);
@@ -253,6 +256,7 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
   for (int i = 0; i < maxCollectionElements; i++) {
     string branchTypeToStore = branchType;
     if (branchType == "vector<float>") branchTypeToStore = "Float_t";
+    if (branchType == "vector<double>") branchTypeToStore = "Double_t";
     if (branchType == "vector<int>") branchTypeToStore = "Int_t";
     if (branchType == "vector<unsigned int>") branchTypeToStore = "UInt_t";
     if (branchType == "vector<bool>") branchTypeToStore = "UInt_t";
@@ -263,6 +267,11 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesFloatVector[branchName]);
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesFloat[variableName] = &currentEvent->valuesFloatVector[branchName][i];
+    }
+  } else if (branchType == "Double_t") {
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesDoubleVector[branchName]);
+    for (int i = 0; i < maxCollectionElements; i++) {
+      currentEvent->collections[collectionName]->at(i)->valuesDouble[variableName] = &currentEvent->valuesDoubleVector[branchName][i];
     }
   } else if (branchType == "UChar_t") {
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUcharVector[branchName]);
@@ -304,6 +313,12 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesStdFloatVector[branchName]);
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesFloat[variableName] = &currentEvent->valuesStdFloatVector[branchName]->at(i);
+    }
+  } else if (branchType == "vector<double>") {
+    currentEvent->valuesStdDoubleVector[branchName] = new vector<double>(maxCollectionElements, 0);
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesStdDoubleVector[branchName]);
+    for (int i = 0; i < maxCollectionElements; i++) {
+      currentEvent->collections[collectionName]->at(i)->valuesDouble[variableName] = &currentEvent->valuesStdDoubleVector[branchName]->at(i);
     }
   } else if (branchType == "vector<int>") {
     currentEvent->valuesStdIntVector[branchName] = new vector<int>(maxCollectionElements, 0);
@@ -378,6 +393,9 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
       for (const auto& branchName : branchList) {
         if (currentEvent->valuesStdFloatVector.count(branchName)) {
           collectionSize = currentEvent->valuesStdFloatVector[branchName]->size();
+          break;
+        } else if (currentEvent->valuesStdDoubleVector.count(branchName)) {
+          collectionSize = currentEvent->valuesStdDoubleVector[branchName]->size();
           break;
         } else if (currentEvent->valuesStdUintVector.count(branchName)) {
           collectionSize = currentEvent->valuesStdUintVector[branchName]->size();
