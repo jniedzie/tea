@@ -124,8 +124,8 @@ void ScaleFactorsManager::ReadScaleFactors() {
   map<string, map<string, string>> scaleFactors;
   try {
     config.GetMap("scaleFactors", scaleFactors);
-  } catch (Exception& e) {
-    warn() << "Couldn't read scaleFactors from config -- will assume all SFs = 1.0." << endl;
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- will assume all SFs = 1.0." << endl;
     return;
   }
 
