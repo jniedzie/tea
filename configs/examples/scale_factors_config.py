@@ -28,7 +28,7 @@
 # L1PreFiringWeight is special: it reads directly from NanoAOD branches and
 # therefore does not need `path` or `type`.
 #
-# Scale factors are only loaded when the matching entry is present in the
+# Scale factors are only applied when the matching entry is enabled in the
 # `applyScaleFactors` config dict.  An absent or empty `scaleFactors` dict is
 # equivalent to disabling all scale factors (all weights default to 1.0).
 
