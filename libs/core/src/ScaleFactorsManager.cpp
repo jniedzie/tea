@@ -208,10 +208,8 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
-  try {
-    config.GetMap("scaleFactors", scaleFactors);
   } catch (const Exception& e) {
-    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- will assume all SFs = 1.0." << endl;
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no JEC corrections will be loaded (weights default to 1.0)." << endl;
     return;
   }
 
