@@ -8,22 +8,22 @@
 # scaleFactors is a dict[str, dict[str, str]] where each key is an arbitrary
 # scale-factor name and the value is a sub-dict with the following fields:
 #
-#   path        (required for correctionlib SFs) – path to the correctionlib
+#   path        (required for correctionlib SFs) - path to the correctionlib
 #               JSON or JSON.gz file.
-#   type        (required for correctionlib SFs) – correction name inside the
+#   type        (required for correctionlib SFs) - correction name inside the
 #               file (passed to CorrectionSet::at()).
-#   systematic  – key used to look up the nominal weight variation
+#   systematic  - key used to look up the nominal weight variation
 #               (e.g. "nominal", "central", "nom").
-#   variations  – comma-separated list of variation keys that produce the
+#   variations  - comma-separated list of variation keys that produce the
 #               up/down systematic weights (e.g. "up,down", "systup,systdown").
 #               Only needed when you want systematic variations in histograms.
 #
 # Additional keys are correction-specific:
-#   workingPoint – b-tagging / PU-jet-ID working point ("L", "M", "T").
-#   flavour      – jet flavour for b-tagging (e.g. "5" for b-jets).
-#   level        – JEC level string (e.g. "L1L2L3Res").
-#   algo         – jet algorithm (e.g. "AK4PFchs", "AK4PFPuppi").
-#   uncertainties – comma-separated JEC uncertainty sources.
+#   workingPoint - b-tagging / PU-jet-ID working point ("L", "M", "T").
+#   flavour      - jet flavour for b-tagging (e.g. "5" for b-jets).
+#   level        - JEC level string (e.g. "L1L2L3Res").
+#   algo         - jet algorithm (e.g. "AK4PFchs", "AK4PFPuppi").
+#   uncertainties - comma-separated JEC uncertainty sources.
 #
 # L1PreFiringWeight is special: it reads directly from NanoAOD branches and
 # therefore does not need `path` or `type`.
