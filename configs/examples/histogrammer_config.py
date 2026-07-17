@@ -1,4 +1,4 @@
-# scaleFactors: optional dict that maps scale-factor names to their correctionlib configuration.
+# scaleFactors: optional dict that maps scale-factor names to their configuration (correctionlib-based and special cases).
 # When absent (or empty), no scale factors are applied and all event weights default to 1.0.
 #
 # Each entry has the form:
