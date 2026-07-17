@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python3
 from Logger import info
 
 import argparse
