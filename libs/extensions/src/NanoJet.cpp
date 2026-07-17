@@ -41,7 +41,6 @@ map<string, float> NanoJet::GetJetEnergyCorrections(float rho) {
 
 void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEvent> event) {
   auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  float pt = GetPt();
 
   // ScaleFactor
   map<string, float> jerSF =
