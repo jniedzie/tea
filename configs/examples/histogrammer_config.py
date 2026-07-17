@@ -13,7 +13,7 @@
 #
 # See configs/examples/scale_factors_config.py for a full set of standard CMS scale factors
 # and the list of names recognised by NanoEventProcessor (bTaggingMedium, muonIDTight,
-# pileup, L1PreFiringWeight, jecMC, jerMC_ScaleFactor, …).
+# pileup, L1PreFiringWeight, jecMC, jerMC_ScaleFactor, ...).
 #
 # To use the standard set, uncomment the lines below:
 # from scale_factors_config import get_scale_factors
