@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from HistogramPlotter import HistogramPlotter
 from Logger import error, logger_print
 
