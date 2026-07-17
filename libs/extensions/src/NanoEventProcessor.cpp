@@ -84,7 +84,11 @@ map<string, float> NanoEventProcessor::GetL1PreFiringWeight(const std::shared_pt
   }
 
   map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+  } catch (Exception& e) {
+    warn() << "Couldn't read scaleFactors from config -- will assume all SFs = 1.0." << endl;
+  }
   if (scaleFactors.find(name) == scaleFactors.end()) {
     warn() << "L1PreFiringWeight not defined in scale_factors_config -- will assume SF=1.0" << endl;
     return {{"systematic", 1.0}};
