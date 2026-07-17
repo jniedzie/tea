@@ -50,6 +50,10 @@ class Event {
         Float_t value = Get(branchName);
         return value;
       }
+      if (branchType == "Double_t") {
+        Double_t value = Get(branchName);
+        return value;
+      }
       if (branchType == "UChar_t") {
         UChar_t value = Get(branchName);
         return value;
@@ -74,36 +78,42 @@ class Event {
       return value;
     } catch (BadTypeException& e) {
       try {
-        Int_t value = Get(branchName);
-        defaultCollectionsTypes[branchName] = "Int_t";
+        Double_t value = Get(branchName);
+        defaultCollectionsTypes[branchName] = "Double_t";
         return value;
       } catch (BadTypeException& e) {
         try {
-          UChar_t value = Get(branchName);
-          defaultCollectionsTypes[branchName] = "UChar_t";
+          Int_t value = Get(branchName);
+          defaultCollectionsTypes[branchName] = "Int_t";
           return value;
         } catch (BadTypeException& e) {
           try {
-            UShort_t value = Get(branchName);
-            defaultCollectionsTypes[branchName] = "UShort_t";
+            UChar_t value = Get(branchName);
+            defaultCollectionsTypes[branchName] = "UChar_t";
             return value;
           } catch (BadTypeException& e) {
             try {
-              Short_t value = Get(branchName);
-              defaultCollectionsTypes[branchName] = "Short_t";
+              UShort_t value = Get(branchName);
+              defaultCollectionsTypes[branchName] = "UShort_t";
               return value;
             } catch (BadTypeException& e) {
               try {
-                UInt_t value = Get(branchName);
-                defaultCollectionsTypes[branchName] = "UInt_t";
+                Short_t value = Get(branchName);
+                defaultCollectionsTypes[branchName] = "Short_t";
                 return value;
               } catch (BadTypeException& e) {
                 try {
-                  Bool_t value = Get(branchName);
-                  defaultCollectionsTypes[branchName] = "Bool_t";
+                  UInt_t value = Get(branchName);
+                  defaultCollectionsTypes[branchName] = "UInt_t";
                   return value;
                 } catch (BadTypeException& e) {
-                  error() << "Couldn't get value for branch " << branchName << std::endl;
+                  try {
+                    Bool_t value = Get(branchName);
+                    defaultCollectionsTypes[branchName] = "Bool_t";
+                    return value;
+                  } catch (BadTypeException& e) {
+                    error() << "Couldn't get value for branch " << branchName << std::endl;
+                  }
                 }
               }
             }
@@ -132,6 +142,7 @@ class Event {
   Int_t* GetIntVector(std::string branchName) { return valuesIntVector.at(branchName); }
   Bool_t* GetBoolVector(std::string branchName) { return valuesBoolVector.at(branchName); }
   Float_t* GetFloatVector(std::string branchName) { return valuesFloatVector.at(branchName); }
+  Double_t* GetDoubleVector(std::string branchName) { return valuesDoubleVector.at(branchName); }
   UChar_t* GetUcharVector(std::string branchName) { return valuesUcharVector.at(branchName); }
   Char_t* GetCharVector(std::string branchName) { return valuesCharVector.at(branchName); }
   UInt_t* GetUintVector(std::string branchName) { return valuesUintVector.at(branchName); }
@@ -151,11 +162,12 @@ class Event {
   inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
   inline Bool_t GetBool(std::string branchName) { return valuesBool[branchName]; }
   // inline Float_t GetFloat(std::string branchName) { return valuesFloat[branchName]; }
-  inline Float_t GetFloat(std::string branchName) { 
+  inline Float_t GetFloat(std::string branchName) {
     if (valuesTypes.find(branchName) != valuesTypes.end())
-      return valuesFloat[branchName]; 
-    return customValuesFloat[branchName]; 
+      return valuesFloat[branchName];
+    return customValuesFloat[branchName];
   }
+  inline Double_t GetDouble(std::string branchName) { return valuesDouble[branchName]; }
   inline ULong64_t GetULong(std::string branchName) { return valuesUlong[branchName]; }
   inline UChar_t GetUChar(std::string branchName) { return valuesUchar[branchName]; }
   inline Char_t GetChar(std::string branchName) { return valuesChar[branchName]; }
@@ -170,6 +182,7 @@ class Event {
   std::map<std::string, Bool_t> valuesBool;
   std::map<std::string, Float_t> valuesFloat;
   std::map<std::string, Float_t> customValuesFloat;
+  std::map<std::string, Double_t> valuesDouble;
   std::map<std::string, ULong64_t> valuesUlong;
   std::map<std::string, UChar_t> valuesUchar;
   std::map<std::string, Char_t> valuesChar;
@@ -179,6 +192,7 @@ class Event {
   std::map<std::string, Int_t[maxCollectionElements]> valuesIntVector;
   std::map<std::string, Bool_t[maxCollectionElements]> valuesBoolVector;
   std::map<std::string, Float_t[maxCollectionElements]> valuesFloatVector;
+  std::map<std::string, Double_t[maxCollectionElements]> valuesDoubleVector;
   std::map<std::string, UChar_t[maxCollectionElements]> valuesUcharVector;
   std::map<std::string, Char_t[maxCollectionElements]> valuesCharVector;
   std::map<std::string, UInt_t[maxCollectionElements]> valuesUintVector;
@@ -186,6 +200,7 @@ class Event {
   std::map<std::string, Short_t[maxCollectionElements]> valuesShortVector;
 
   std::map<std::string, std::vector<float>*> valuesStdFloatVector;
+  std::map<std::string, std::vector<double>*> valuesStdDoubleVector;
   std::map<std::string, std::vector<int>*> valuesStdIntVector;
   std::map<std::string, std::vector<unsigned int>*> valuesStdUintVector;
 
