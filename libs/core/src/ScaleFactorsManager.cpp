@@ -122,6 +122,8 @@ void ScaleFactorsManager::ReadScaleFactors() {
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
   } catch (const Exception& e) {
     warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no correctionlib scale factors will be loaded (weights default to 1.0)." << endl;
     return;
