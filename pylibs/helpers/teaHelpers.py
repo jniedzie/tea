@@ -1,8 +1,7 @@
 import re
 import inspect
 import socket
-import sys
-from Logger import error, fatal
+from Logger import error, warn
 
 
 def get_year_from_samples(samples):
@@ -33,7 +32,7 @@ def get_facility():
   elif "iihe.ac.be" in hostname:
     facility = "vub"
   else:
-    fatal(f"Unknown facility for hostname: {hostname}")
-    sys.exit(1)
+    warn(f"Unknown facility for hostname: {hostname}, defaulting to generic template")
+    facility = "default"
 
   return facility

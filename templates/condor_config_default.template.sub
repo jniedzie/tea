@@ -1,0 +1,10 @@
+Universe              = vanilla
+executable            = <executable>
+arguments             = $(ProcId)
+GetEnv                = True
+output                = <output_path>
+error                 = <error_path>
+log                   = <log_path>
+request_memory        = <memory_request> GB
+
+queue <n_jobs>
