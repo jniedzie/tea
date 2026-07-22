@@ -124,7 +124,12 @@ void ScaleFactorsManager::ReadScaleFactors() {
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no correctionlib scale factors will be loaded (weights default to 1.0)." << endl;
+    return;
+  }
 
   for (auto& [name, values] : scaleFactors) {
     if (!values.count("path") || !values.count("type")) continue;
@@ -205,7 +210,12 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no JEC corrections will be loaded (weights default to 1.0)." << endl;
+    return;
+  }
 
   for (auto& [name, values] : scaleFactors) {
     if (name.find("jec") == std::string::npos) continue;
