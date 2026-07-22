@@ -120,8 +120,10 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
       writeIndex = FilterBranch(event->GetIntVector(branchName), keepIndices);
     } else if (branchType == "Float_t") {
       writeIndex = FilterBranch(event->GetFloatVector(branchName), keepIndices);
+    } else if (branchType == "Double_t") {
+      writeIndex = FilterBranch(event->GetDoubleVector(branchName), keepIndices);
     } else {
-      fatal() << "Unsupported branch type in AddCurrentEvent: " << branchPtr->GetName() << "\ttype: " << leaf->GetTypeName() << endl;
+      fatal() << "Unsupported branch type in AddCurrentHepMCevent: " << branchPtr->GetName() << "\ttype: " << leaf->GetTypeName() << endl;
       exit(1);
     }
   }

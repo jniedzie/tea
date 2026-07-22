@@ -3,12 +3,14 @@
 //  Created by Jeremi Niedziela on 01/11/2023.
 
 #include "ScaleFactorsManager.hpp"
-#include "ConfigManager.hpp"
 
 #include <zlib.h>
+
 #include <fstream>
 #include <type_traits>
 #include <utility>
+
+#include "ConfigManager.hpp"
 
 using namespace std;
 using json = nlohmann::json;
@@ -122,7 +124,12 @@ void ScaleFactorsManager::ReadScaleFactors() {
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no correctionlib scale factors will be loaded (weights default to 1.0)." << endl;
+    return;
+  }
 
   for (auto& [name, values] : scaleFactors) {
     if (!values.count("path") || !values.count("type")) continue;
@@ -203,7 +210,12 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
   auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no JEC corrections will be loaded (weights default to 1.0)." << endl;
+    return;
+  }
 
   for (auto& [name, values] : scaleFactors) {
     if (name.find("jec") == std::string::npos) continue;
@@ -380,17 +392,20 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
 
   map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
-  if (!applyDefault)
+  if (!applyDefault) {
     scaleFactors["systematic"] = 1.0;
-  else
-    scaleFactors["systematic"] =
-        TryToEvaluate(name, {extraArgs["systematic"], extraArgs["workingPoint"], stol(extraArgs["flavour"]), eta, pt});
+  } else {
+    vector<CorrectionArgType> args = {extraArgs["systematic"], extraArgs["workingPoint"], static_cast<int>(std::stol(extraArgs["flavour"])),
+                                      static_cast<double>(eta), static_cast<double>(pt)};
+    scaleFactors["systematic"] = TryToEvaluate(name, args);
+  }
   if (!applyVariations) return scaleFactors;
 
   vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name + "_" + variation] =
-        TryToEvaluate(name, {variation, extraArgs["workingPoint"], stol(extraArgs["flavour"]), eta, pt});
+    vector<CorrectionArgType> args = {variation, extraArgs["workingPoint"], static_cast<int>(std::stol(extraArgs["flavour"])),
+                                      static_cast<double>(eta), static_cast<double>(pt)};
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, args);
   }
   return scaleFactors;
 }
@@ -430,9 +445,7 @@ float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<C
   vector<correction::Variable::Type> correctionArgs;
   correctionArgs.reserve(args.size());
   for (const auto& arg : args) {
-    std::visit([&](const auto& value) {
-      correctionArgs.emplace_back(MakeCorrectionArg(value));
-    }, arg);
+    std::visit([&](const auto& value) { correctionArgs.emplace_back(MakeCorrectionArg(value)); }, arg);
   }
   return EvaluateCorrectionArgs(name, correctionArgs);
 #endif
@@ -657,7 +670,6 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
 
   map<string, float> scaleFactors;
 
-
 #ifndef USE_CORRECTIONLIB
   if (applyDefault || applyVariations) {
     warn() << "Requested jet energy corrections, but correctionlib is not available. Returning neutral corrections." << endl;
@@ -667,7 +679,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
 #else
   string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
-  
+
   if (!applyDefault)
     scaleFactors["systematic"] = 1.0;
   else {
@@ -707,11 +719,13 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
   scaleFactors["PtResolution"] = 1.0;
 
   if (corrections.find(name_sf) == corrections.end()) {
-    if (applyDefault || applyVariations) warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_sf << endl;
+    if (applyDefault || applyVariations)
+      warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_sf << endl;
     return scaleFactors;
   }
   if (corrections.find(name_pt) == corrections.end()) {
-    if (applyDefault || applyVariations) warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_pt << endl;
+    if (applyDefault || applyVariations)
+      warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_pt << endl;
     return scaleFactors;
   }
 
@@ -739,16 +753,13 @@ float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, Corr
 #else
   string name = "jerMC_smear";
   vector<correction::Variable::Type> inputs;
-  for (const correction::Variable& input: corrections[name]->inputs()) {
-    std::visit([&](const auto& value) {
-      inputs.emplace_back(MakeCorrectionArg(value));
-    }, inputArguments.at(input.name()));
+  for (const correction::Variable& input : corrections[name]->inputs()) {
+    std::visit([&](const auto& value) { inputs.emplace_back(MakeCorrectionArg(value)); }, inputArguments.at(input.name()));
   }
   float factor = EvaluateCorrectionArgs(name, inputs);
   return factor;
 #endif
 }
-
 
 bool ScaleFactorsManager::IsJetVetoMapDefined(string name) { return (corrections.find(name) != corrections.end()); }
 

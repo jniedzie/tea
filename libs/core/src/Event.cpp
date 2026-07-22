@@ -48,7 +48,7 @@ bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName
     return true;
   }
   // important: checking float first makes things much faster, since most branches are floats
-  return tryGet<Float_t, Bool_t, UChar_t, UInt_t, Int_t, UShort_t, Short_t>(physicsObject, branchName, cuts);
+  return tryGet<Float_t, Double_t, Bool_t, UChar_t, UInt_t, Int_t, UShort_t, Short_t>(physicsObject, branchName, cuts);
 }
 
 void Event::AddExtraCollections() {
