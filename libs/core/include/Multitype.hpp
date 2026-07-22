@@ -39,6 +39,10 @@ class Multitype {
     checkType("Float_t");
     return object->GetFloat(branchName);
   }
+  operator Double_t() {
+    checkType("Double_t");
+    return object->GetDouble(branchName);
+  }
   operator ULong64_t() {
     checkType("ULong64_t");
     return object->GetULong(branchName);
