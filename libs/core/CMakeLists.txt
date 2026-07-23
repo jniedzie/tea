@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10..4.0 FATAL_ERROR)
 project (core)
 
 # setup variables for macOS builds
