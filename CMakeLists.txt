@@ -1,9 +1,5 @@
-cmake_minimum_required(VERSION 3.14..4.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...4.0 FATAL_ERROR)
 project(tea)
-
-# setup variables for macOS builds
-set(CMAKE_OSX_ARCHITECTURES "arm64")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 14.5)
 
 if(NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 17)
@@ -16,10 +12,19 @@ endif()
 
 cmake_policy(SET CMP0068 NEW)
 
-# setting for macOS
-set(CMAKE_MACOSX_RPATH 1)
+if(APPLE)
+    set(CMAKE_MACOSX_RPATH ON)
+    set(TEA_INSTALL_RPATH "@loader_path;@loader_path/../bin")
+elseif(UNIX)
+    set(TEA_INSTALL_RPATH
+        "$ORIGIN"
+        "$ORIGIN/../tea/libs/core"
+        "$ORIGIN/../tea/libs/extensions"
+        "$ORIGIN/../tea/libs/histogramming"
+    )
+endif()
+set(CMAKE_INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "@loader_path/../bin")
 
 # setup install directory to "bin"
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/bin")
@@ -102,3 +107,14 @@ foreach(APP_SOURCE ${APP_SOURCES})
    set_property(TARGET ${APP_NAME} PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})
    install(TARGETS ${APP_NAME} DESTINATION .)
 endforeach()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_test(
+        NAME tea_smoke_examples
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/ci/smoke-test.sh"
+                "${CMAKE_INSTALL_PREFIX}"
+                "${CMAKE_CURRENT_SOURCE_DIR}"
+                "${CMAKE_CURRENT_BINARY_DIR}/smoke"
+    )
+endif()

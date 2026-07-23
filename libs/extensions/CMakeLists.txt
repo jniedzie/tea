@@ -1,10 +1,6 @@
-cmake_minimum_required(VERSION 3.14..4.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...4.0 FATAL_ERROR)
 
 project (extensions)
-
-# setup variables for macOS builds
-set(CMAKE_OSX_ARCHITECTURES "arm64")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 14.5)
 
 if(NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 17)
@@ -12,11 +8,6 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 cmake_policy(SET CMP0068 NEW)
-
-# setting for macOS
-set(CMAKE_MACOSX_RPATH 1)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "@loader_path/../bin")
 
 # setup ROOT-specific variables
 find_program(ROOT_CONFIG_EXECUTABLE root-config)
@@ -78,7 +69,7 @@ target_include_directories(extensions PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_libraries(extensions PUBLIC Python3::Python core)
 target_include_directories(extensions PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
-set_target_properties(extensions PROPERTIES INSTALL_RPATH "$ORIGIN/../tea/libs/extensions")
+set_target_properties(extensions PROPERTIES INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 install(TARGETS extensions LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 set_property(TARGET extensions PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})
