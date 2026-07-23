@@ -1,0 +1,12 @@
+name: tea-ci
+channels:
+  - conda-forge
+dependencies:
+  - cmake=3.31.8
+  - correctionlib=2.8.0
+  - gcc=14.3.0
+  - gxx=14.3.0
+  - make
+  - python=3.9.23
+  - root=6.34.10
+  - zlib=1.3.2
