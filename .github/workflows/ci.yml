@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux (GitHub-hosted)
+            runner: ubuntu-24.04
+          - name: macOS (Apple Silicon)
+            runner: macos-14
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: Create the build environment
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          activate-environment: tea-ci
+          environment-file: ci/environment.yml
+          miniforge-version: latest
+          conda-solver: libmamba
+
+      - name: Record tool versions
+        run: |
+          cmake --version
+          c++ --version
+          python3 --version
+          root-config --version
+          conda list
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build and install
+        run: cmake --build build --parallel 2 --target install
+
+      - name: Run standalone example smoke tests
+        run: ctest --test-dir build --output-on-failure
