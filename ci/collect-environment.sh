@@ -67,8 +67,28 @@ PY
 printf 'Wrote %s\n' "${output}"
 
 if command -v conda >/dev/null 2>&1; then
-  conda list --explicit > "${output_stem}.conda-explicit.txt"
-  conda env export > "${output_stem}.conda-environment.yml"
-  printf 'Wrote %s\n' "${output_stem}.conda-explicit.txt"
-  printf 'Wrote %s\n' "${output_stem}.conda-environment.yml"
+  conda_target=()
+  if [[ -n "${CONDA_PREFIX:-}" ]]; then
+    conda_target=(--prefix "${CONDA_PREFIX}")
+  fi
+
+  write_conda_export() {
+    destination="$1"
+    shift
+    temporary="$(mktemp "${destination}.tmp.XXXXXX")"
+    if "$@" > "${temporary}"; then
+      mv "${temporary}" "${destination}"
+      printf 'Wrote %s\n' "${destination}"
+    else
+      rm -f "${temporary}"
+      printf 'Could not write %s\n' "${destination}" >&2
+    fi
+  }
+
+  write_conda_export \
+    "${output_stem}.conda-explicit.txt" \
+    conda list --explicit "${conda_target[@]}"
+  write_conda_export \
+    "${output_stem}.conda-environment.yml" \
+    conda env export "${conda_target[@]}"
 fi
