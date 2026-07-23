@@ -100,6 +100,7 @@ else()
 endif()
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
+set_target_properties(core PROPERTIES INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 install(TARGETS core LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 set_property(TARGET core PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})

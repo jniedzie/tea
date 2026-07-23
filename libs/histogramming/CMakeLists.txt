@@ -68,6 +68,7 @@ target_include_directories(histogramming PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_libraries(histogramming PUBLIC Python3::Python core extensions)
 target_include_directories(histogramming PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
+set_target_properties(histogramming PROPERTIES INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 install(TARGETS histogramming LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 set_property(TARGET histogramming PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})

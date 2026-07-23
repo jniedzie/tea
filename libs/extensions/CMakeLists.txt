@@ -69,6 +69,7 @@ target_include_directories(extensions PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_libraries(extensions PUBLIC Python3::Python core)
 target_include_directories(extensions PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
+set_target_properties(extensions PROPERTIES INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 install(TARGETS extensions LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 set_property(TARGET extensions PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})

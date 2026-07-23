@@ -14,10 +14,16 @@ cmake_policy(SET CMP0068 NEW)
 
 if(APPLE)
     set(CMAKE_MACOSX_RPATH ON)
-    set(CMAKE_INSTALL_RPATH "@loader_path")
+    set(TEA_INSTALL_RPATH "@loader_path;@loader_path/../bin")
 elseif(UNIX)
-    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+    set(TEA_INSTALL_RPATH
+        "$ORIGIN"
+        "$ORIGIN/../tea/libs/core"
+        "$ORIGIN/../tea/libs/extensions"
+        "$ORIGIN/../tea/libs/histogramming"
+    )
 endif()
+set(CMAKE_INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # setup install directory to "bin"

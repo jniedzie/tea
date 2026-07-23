@@ -14,12 +14,12 @@ else
 fi
 
 "${bin_dir}/histogrammer" \
-  --config "${source_dir}/ci/smoke_histogrammer_config.py" \
+  --config "${source_dir}/configs/examples/histogrammer_config.py" \
   --input_path "${source_dir}/samples/background_dy.root" \
   --output_hists_path "${output_dir}/histograms.root"
 
 "${bin_dir}/skimmer" \
-  --config "${source_dir}/ci/smoke_skimmer_config.py" \
+  --config "${source_dir}/configs/examples/skimmer_config.py" \
   --input_path "${source_dir}/samples/background_dy.root" \
   --output_trees_path "${output_dir}/skim.root"
 
