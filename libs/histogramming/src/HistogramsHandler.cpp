@@ -230,9 +230,9 @@ void HistogramsHandler::SaveHistograms() {
 void HistogramsHandler::Print() {
   for (auto& name : unfilledHistograms) {
     auto it1 = histograms1D.find({name, ""});
-    if (it1 != histograms1D.end() && it1->second->GetEntries() != 0) continue;
+    if (it1 != histograms1D.end() && it1->second->GetSumOfWeights() != 0) continue;
     auto it2 = histograms2D.find({name, ""});
-    if (it2 != histograms2D.end() && it2->second->GetEntries() != 0) continue;
+    if (it2 != histograms2D.end() && it2->second->GetSumOfWeights() != 0) continue;
     warn() << "Histogram defined but not filled: " << name << endl;
   }
 }
