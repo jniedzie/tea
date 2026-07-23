@@ -3,6 +3,7 @@ set -u
 
 label="${1:-$(hostname -s 2>/dev/null || printf unknown)}"
 output="${2:-tea-environment-${label}.txt}"
+output_stem="${output%.txt}"
 
 {
   printf 'label=%s\n' "${label}"
@@ -64,3 +65,10 @@ PY
 } > "${output}"
 
 printf 'Wrote %s\n' "${output}"
+
+if command -v conda >/dev/null 2>&1; then
+  conda list --explicit > "${output_stem}.conda-explicit.txt"
+  conda env export > "${output_stem}.conda-environment.yml"
+  printf 'Wrote %s\n' "${output_stem}.conda-explicit.txt"
+  printf 'Wrote %s\n' "${output_stem}.conda-environment.yml"
+fi
