@@ -88,7 +88,16 @@ if command -v conda >/dev/null 2>&1; then
   write_conda_export \
     "${output_stem}.conda-explicit.txt" \
     conda list --explicit "${conda_target[@]}"
-  write_conda_export \
-    "${output_stem}.conda-environment.yml" \
-    conda env export "${conda_target[@]}"
+
+  if [[ "${#conda_target[@]}" -eq 0 ]]; then
+    write_conda_export \
+      "${output_stem}.conda-environment.yml" \
+      conda env export
+  elif conda env export --help 2>&1 | grep -q -- '--prefix'; then
+    write_conda_export \
+      "${output_stem}.conda-environment.yml" \
+      conda env export "${conda_target[@]}"
+  else
+    printf 'Skipping optional YAML export: this conda-env version does not support prefix-based environments.\n' >&2
+  fi
 fi
