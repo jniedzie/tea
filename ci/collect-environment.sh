@@ -100,4 +100,23 @@ if command -v conda >/dev/null 2>&1; then
   else
     printf 'Skipping optional YAML export: this conda-env version does not support prefix-based environments.\n' >&2
   fi
+
+  if [[ -n "${CONDA_PREFIX:-}" && -d "${CONDA_PREFIX}/conda-meta" ]]; then
+    write_conda_export \
+      "${output_stem}.conda-meta.json" \
+      python3 - "${CONDA_PREFIX}/conda-meta" <<'PY'
+import glob
+import json
+import os
+import sys
+
+records = []
+for path in sorted(glob.glob(os.path.join(sys.argv[1], "*.json"))):
+    with open(path, encoding="utf-8") as package_file:
+        records.append(json.load(package_file))
+
+json.dump(records, sys.stdout, indent=2, sort_keys=True)
+sys.stdout.write("\n")
+PY
+  fi
 fi
