@@ -10,21 +10,12 @@
 
 using namespace std;
 
-int main(int argc, char **argv) {
-  auto args = make_unique<ArgsManager>(argc, argv);
-
+int main(int argc, char **argv) {  
   // Initialize ConfigManager with the path passed as an argument to the app
-  ConfigManager::Initialize(args->GetString("config").value());
-  auto &config = ConfigManager::GetInstance();
-
-  // If input path was provided as an argument, set it in the config.
-  // Otherwise, it will be set to the value from the config file.
-  if (args->GetString("input_path").has_value()) {
-    config.SetInputPath(args->GetString("input_path").value());
-  }
-  if (args->GetString("output_hists_path").has_value()) {
-    config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
-  }
+  vector<string> requiredArgs = {"config"};
+  vector<string> optionalArgs = {"input_path", "output_hists_path"};
+  auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
+  ConfigManager::Initialize(args);
 
   // Create event reader and writer, which will handle input/output trees for you
   auto eventReader = make_shared<EventReader>();
