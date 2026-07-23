@@ -71,18 +71,23 @@ if(NOT Python3_INCLUDE_DIRS OR NOT EXISTS "${Python3_INCLUDE_DIRS}/Python.h")
 endif()
 message(STATUS "core using Python3 include dirs: ${Python3_INCLUDE_DIRS}")
 
-find_package(correctionlib QUIET)
-if(NOT correctionlib_FOUND)
-    execute_process(
-        COMMAND "${Python3_EXECUTABLE}" -c
-                "import pathlib, correctionlib; print(pathlib.Path(correctionlib.__file__).parent / 'cmake')"
-        OUTPUT_VARIABLE correctionlib_CMAKE_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    if(correctionlib_CMAKE_PATH)
-        find_package(correctionlib QUIET PATHS "${correctionlib_CMAKE_PATH}" NO_DEFAULT_PATH)
+option(TEA_ENABLE_CORRECTIONLIB "Build tea with correctionlib support when available" ON)
+if(TEA_ENABLE_CORRECTIONLIB)
+    find_package(correctionlib QUIET)
+    if(NOT correctionlib_FOUND)
+        execute_process(
+            COMMAND "${Python3_EXECUTABLE}" -c
+                    "import pathlib, correctionlib; print(pathlib.Path(correctionlib.__file__).parent / 'cmake')"
+            OUTPUT_VARIABLE correctionlib_CMAKE_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(correctionlib_CMAKE_PATH)
+            find_package(correctionlib QUIET PATHS "${correctionlib_CMAKE_PATH}" NO_DEFAULT_PATH)
+        endif()
     endif()
+else()
+    set(correctionlib_FOUND FALSE)
 endif()
 
 # setup includes
@@ -92,11 +97,14 @@ target_include_directories(core PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_libraries(core PUBLIC Python3::Python ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
 
 if(correctionlib_FOUND)
-  message(STATUS "correctionlib target found. Linking with correctionlib::correctionlib.")
+  message(STATUS "TEA correctionlib support: ENABLED")
   target_link_libraries(core PUBLIC correctionlib)
   target_compile_definitions(core PUBLIC -DUSE_CORRECTIONLIB)
 else()
-  message(WARNING "correctionlib target not found. Building without correctionlib.")
+  message(STATUS "TEA correctionlib support: DISABLED")
+  if(TEA_ENABLE_CORRECTIONLIB)
+    message(WARNING "correctionlib target not found. Building without correctionlib.")
+  endif()
 endif()
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
