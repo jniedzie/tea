@@ -151,7 +151,7 @@ void HistogramsHandler::Fill(string name, double value) {
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   double weight = eventWeights["default"];
-  CheckHistogram(name, "");
+  CheckHistogram2D(name, "");
   histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
 
   RemoveFromUnfilled(name);
@@ -159,7 +159,7 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
   for (auto& [sfName, weight] : eventWeights) {
     if (sfName == "default") continue;
-    CheckHistogram(name, sfName);
+    CheckHistogram2D(name, sfName);
     histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
   }
 }
@@ -172,8 +172,15 @@ void HistogramsHandler::RemoveFromUnfilled(string name) {
 }
 
 void HistogramsHandler::CheckHistogram(string name, string directory) {
-  if (!histograms1D.count(make_pair(name, directory)) && !histograms2D.count(make_pair(name, directory))) {
-    fatal() << "Couldn't find key: " << name << ", " << directory << " in histograms map" << endl;
+  if (!histograms1D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 1D histograms map" << endl;
+    exit(1);
+  }
+}
+
+void HistogramsHandler::CheckHistogram2D(string name, string directory) {
+  if (!histograms2D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 2D histograms map" << endl;
     exit(1);
   }
 }
