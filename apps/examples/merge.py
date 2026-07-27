@@ -199,7 +199,7 @@ def main():
     raise ValueError("--n-files-to-merge must be greater than 0")
 
   files_config = load_files_config(args.files_config)
-  samples = files_config.samples
+  samples = files_config.samples if hasattr(files_config, "samples") else [""]
   merge_targets = get_merge_targets(files_config)
   if not merge_targets:
     raise ValueError("files_config must define output_hists_dir and/or output_trees_dir")
