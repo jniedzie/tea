@@ -15,10 +15,9 @@ defaultHistParams = (
 
 # define custom histograms (you will have to fill them in your HistogramsFiller)
 histParams = (
-#    name         bins  xmin    xmax    dir
-  ("m_inv",      1000,  0,      10,     "kinematics"),
-  ("delta_phi",  1000, -3.5,    3.5,    "kinematics"),
-  ("n_muons",    20,    0,      20,     "counters"  ),
+#    collection variable         bins  xmin    xmax    dir
+  ("Dimuon", "mInv",      1000,  0,      10,     "kinematics"),
+  ("Dimuon", "deltaPhi",  1000, -3.5,    3.5,    "kinematics"),
 )
 
 # define custom 2D histograms (you will have to fill them in your HistogramsFiller)
