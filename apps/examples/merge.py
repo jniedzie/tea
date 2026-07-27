@@ -19,7 +19,7 @@ def parse_args():
     "-n",
     "--n-files-to-merge",
     type=int,
-    default=20,
+    default=-1,
     help="Number of input files per merged output.",
   )
   parser.add_argument(
@@ -100,9 +100,13 @@ def collect_jobs(samples, base_dir, merge_kind, chunk_size):
     if not input_files:
       continue
 
-    for batch_index, batch_files in enumerate(chunk_files(input_files, chunk_size)):
-      output_file = os.path.join(output_dir, f"ntuple_{batch_index}.root")
-      jobs.append((merge_kind, sample, batch_index, input_dir, output_dir, output_file, batch_files))
+    if chunk_size == -1:
+      output_file = os.path.join(output_dir, f"ntuple_0.root")
+      jobs.append((merge_kind, sample, 0, input_dir, output_dir, output_file, input_files))
+    else:
+      for batch_index, batch_files in enumerate(chunk_files(input_files, chunk_size)):
+        output_file = os.path.join(output_dir, f"ntuple_{batch_index}.root")
+        jobs.append((merge_kind, sample, batch_index, input_dir, output_dir, output_file, batch_files))
 
   return jobs
 
@@ -195,9 +199,7 @@ def run_jobs_locally(merge_jobs):
 
 def main():
   args = parse_args()
-  if args.n_files_to_merge <= 0:
-    raise ValueError("--n-files-to-merge must be greater than 0")
-
+  
   files_config = load_files_config(args.files_config)
   samples = files_config.samples if hasattr(files_config, "samples") else [""]
   merge_targets = get_merge_targets(files_config)
