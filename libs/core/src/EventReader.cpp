@@ -365,18 +365,20 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   int percentage = ((iEvent + 1) * 100) / nEvents;
   if (percentage != lastPrinted) {
     lastPrinted = percentage;
-    cerr << "\r\033[1;92m[";
+    std::ostringstream progress;
+    progress << "\033[1;92m[";
     int width = 50;
     int pos = (percentage * width) / 100;
     for (int i = 0; i < width; ++i) {
       if (i < pos)
-        cerr << "=";
+        progress << "=";
       else if (i == pos)
-        cerr << ">";
+        progress << ">";
       else
-        cerr << " ";
+        progress << " ";
     }
-    cerr << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")" << flush;
+    progress << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")";
+    Terminal::SetProgress(progress.str());
   }
 
   currentEvent->Reset();
