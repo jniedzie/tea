@@ -29,6 +29,12 @@ inline void PrintMessage(const std::string& message) {
   std::cout << "\r\033[2K" << message;
   std::cerr << "\r\033[2K" << progressLine << std::flush;
 }
+
+inline void FinishProgress() {
+  if (progressLine.empty()) return;
+  std::cerr << "\r\033[2K\n" << std::flush;
+  progressLine.clear();
+}
 }  // namespace Terminal
 
 class Logger {
@@ -75,6 +81,7 @@ class Logger {
   }
 
   void Print() {
+    Terminal::FinishProgress();
     for (auto &[warning, count] : warnings) {
       Terminal::PrintMessage("[occured " + std::to_string(count) + " times] \033[1;33m" + warning + "\033[0m");
     }
