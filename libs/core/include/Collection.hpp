@@ -7,13 +7,17 @@
 
 #include <vector>
 #include <cstddef>
+#include <algorithm>
 
 template <typename T>
 class Collection : public std::vector<T> {
  private:
  public:
   size_t stopIndex = 0;
-  void ChangeVisibleSize(size_t index) { stopIndex = index; }
+  // The event-reported collection size may be larger than the backing vector
+  // (for example when an input event exceeds maxCollectionElements).  Never
+  // let iteration expose elements that do not exist.
+  void ChangeVisibleSize(size_t index) { stopIndex = std::min(index, std::vector<T>::size()); }
 
   void push_back(const T &value) {
     std::vector<T>::push_back(value);
