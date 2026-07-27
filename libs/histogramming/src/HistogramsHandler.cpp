@@ -201,9 +201,14 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outpu
 }
 
 void HistogramsHandler::SaveHistograms() {
-  string path = outputPath.substr(0, outputPath.find_last_of("/"));
-  string filename = outputPath.substr(outputPath.find_last_of("/"));
-  if (path == "") path = "./";
+  const auto separator = outputPath.find_last_of("/");
+  string path = separator == string::npos ? "./" : outputPath.substr(0, separator);
+  string filename = separator == string::npos ? outputPath : outputPath.substr(separator + 1);
+  if (path.empty()) path = "./";
+  if (filename.empty()) {
+    error() << "Cannot save histograms: output path has no filename: " << outputPath << endl;
+    return;
+  }
   string command = "mkdir -p " + path;
   const int mkdir_status = system(command.c_str());
   if (mkdir_status != 0) {
