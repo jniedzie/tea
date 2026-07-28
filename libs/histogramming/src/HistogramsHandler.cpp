@@ -4,6 +4,8 @@
 
 #include "HistogramsHandler.hpp"
 
+#include <filesystem>
+
 #include "ConfigManager.hpp"
 #include "ExtensionsHelpers.hpp"
 
@@ -212,10 +214,10 @@ void HistogramsHandler::SaveHistograms() {
     error() << "Cannot save histograms: output path has no filename: " << outputPath << endl;
     return;
   }
-  string command = "mkdir -p " + path;
-  const int mkdir_status = system(command.c_str());
-  if (mkdir_status != 0) {
-    warn() << "Failed to create histogram output directory with command: " << command << endl;
+  std::error_code ec;
+  std::filesystem::create_directories(path, ec);
+  if (ec) {
+    warn() << "Failed to create histogram output directory: " << path << " (" << ec.message() << ")" << endl;
   }
 
   auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
