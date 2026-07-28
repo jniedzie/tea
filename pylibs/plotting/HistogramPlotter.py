@@ -3,6 +3,7 @@ import ROOT
 import os
 import os.path
 import copy
+from math import isfinite
 from array import array
 
 from Sample import SampleType
@@ -318,7 +319,7 @@ class HistogramPlotter:
           hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
 
   def __drawLineAtOne(self, canvas, hist):
-    if not self.show_ratios:
+    if not self.show_ratios or not (isfinite(hist.x_min) and isfinite(hist.x_max)):
       return
 
     global line

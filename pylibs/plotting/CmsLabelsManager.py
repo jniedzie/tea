@@ -45,6 +45,8 @@ class CmsLabelsManager:
         if hasattr(self.config, "label_y"):
             self.relPosY = self.config.label_y
 
+        self.label_outside_axes = getattr(self.config, "label_outside_axes", False)
+
         self.extraOverCmsTextSize = 0.76
 
         if hasattr(self.config, "lumi_unit"):
@@ -122,9 +124,7 @@ class CmsLabelsManager:
         pad_logo.Modified()
 
     def __drawCmsText(self):
-
-        posX_ = self.left + self.relPosX*(1-self.left-self.right)
-        posY_ = 1-self.top - self.relPosY*(1-self.top-self.bottom)
+        posX_, posY_ = self.__label_position()
 
         latex = ROOT.TLatex()
         latex.SetTextFont(self.cmsTextFont)
@@ -136,8 +136,7 @@ class CmsLabelsManager:
         if self.extraText is None:
             return
 
-        posX_ = self.left + self.relPosX*(1-self.left-self.right)
-        posY_ = 1-self.top - self.relPosY*(1-self.top-self.bottom)
+        posX_, posY_ = self.__label_position()
 
         latex = ROOT.TLatex()
         latex.SetTextFont(self.extraTextFont)
@@ -146,6 +145,12 @@ class CmsLabelsManager:
         latex.SetTextSize(extraTextSize*self.top)
         latex.DrawLatex(posX_, posY_ - self.relExtraDY *
                         self.cmsTextSize*self.top, self.extraText)
+
+    def __label_position(self):
+        if self.label_outside_axes:
+            return self.left + self.relPosX * self.left, 1 - 0.5 * self.top
+        return (self.left + self.relPosX*(1-self.left-self.right),
+                1-self.top - self.relPosY*(1-self.top-self.bottom))
 
     def drawLabels2D(self, canvas):
         latex = ROOT.TLatex()
