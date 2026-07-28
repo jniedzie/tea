@@ -2,7 +2,6 @@ from Logger import warn
 
 from ROOT import TObject, gStyle
 import ROOT
-from math import isfinite
 
 
 class Styler:
@@ -135,14 +134,14 @@ class Styler:
       plot.SetMinimum(self.config.ratio_limits[0])
       plot.SetMaximum(self.config.ratio_limits[1])
     else:
-      if isfinite(hist.y_min) and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
+      if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
         plot.SetMinimum(hist.y_min)
-      if isfinite(hist.y_max) and hist.y_max > 0:
+      if hist.y_max is not None and hist.y_max > 0:
         plot.SetMaximum(hist.y_max)
 
     try:
       plot.SetTitle("" if is_ratio else hist.title)
-      if isfinite(hist.x_min) and isfinite(hist.x_max):
+      if hist.x_min is not None and hist.x_max is not None:
         plot.GetXaxis().SetLimits(hist.x_min, hist.x_max)
 
       plot.GetXaxis().SetTitle(hist.x_label)
@@ -176,19 +175,19 @@ class Styler:
       label_size = self.labelFontSize / float(pad.GetWh())
     label_font = 42
 
-    if isfinite(hist.y_min) and (hist.y_min > 0):
+    if hist.y_min is not None and (hist.y_min > 0):
       plot.SetMinimum(hist.y_min)
-    if isfinite(hist.y_max) and (hist.y_max > 0):
+    if hist.y_max is not None and (hist.y_max > 0):
       plot.SetMaximum(hist.y_max)
 
-    if isfinite(hist.z_min) and (hist.z_min > 0):
+    if hist.z_min is not None and (hist.z_min > 0):
       plot.SetMinimum(hist.z_min)
-    if isfinite(hist.z_max) and (hist.z_max > 0):
+    if hist.z_max is not None and (hist.z_max > 0):
       plot.SetMaximum(hist.z_max)
 
     try:
       plot.SetTitle(hist.title)
-      if isfinite(hist.x_min) and isfinite(hist.x_max):
+      if hist.x_min is not None and hist.x_max is not None:
         plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
       plot.GetXaxis().SetTitle(hist.x_label)
       plot.GetXaxis().SetTitleFont(label_font)
@@ -197,7 +196,7 @@ class Styler:
       plot.GetXaxis().SetLabelFont(label_font)
       plot.GetXaxis().SetLabelSize(label_size)
 
-      if isfinite(hist.y_min) and isfinite(hist.y_max):
+      if hist.y_min is not None and hist.y_max is not None:
         plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
       plot.GetYaxis().SetTitle(hist.y_label)
       plot.GetYaxis().SetTitleFont(label_font)

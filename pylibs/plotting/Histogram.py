@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from copy import deepcopy
 from array import array
-from math import nan, isfinite
 import ROOT
 
 from Sample import SampleType
@@ -17,10 +16,10 @@ class Histogram:
   log_y: bool = False
   norm_type: int = NormalizationType.to_lumi
   rebin: int = 1
-  x_min: float = nan
-  x_max: float = nan
-  y_min: float = nan
-  y_max: float = nan
+  x_min: float = None
+  x_max: float = None
+  y_min: float = None
+  y_max: float = None
   x_label: str = ""
   y_label: str = ""
   suffix: str = ""
@@ -64,10 +63,10 @@ class Histogram:
     if not self.isGood():
       return
 
-    if isfinite(self.x_min) or isfinite(self.x_max):
+    if self.x_min is not None or self.x_max is not None:
       original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
-      x_min = self.x_min if isfinite(self.x_min) else original_bins[0]
-      x_max = self.x_max if isfinite(self.x_max) else original_bins[-1]
+      x_min = self.x_min if self.x_min is not None else original_bins[0]
+      x_max = self.x_max if self.x_max is not None else original_bins[-1]
       new_bin_edges = [x for x in original_bins if x_min <= x <= x_max]
       if x_max not in new_bin_edges:
         new_bin_edges.append(x_max)
@@ -131,12 +130,12 @@ class Histogram2D:
   norm_type: int = NormalizationType.to_lumi
   x_rebin: int = 1
   y_rebin: int = 1
-  x_min: float = nan
-  x_max: float = nan
-  y_min: float = nan
-  y_max: float = nan
-  z_min: float = nan
-  z_max: float = nan
+  x_min: float = None
+  x_max: float = None
+  y_min: float = None
+  y_max: float = None
+  z_min: float = None
+  z_max: float = None
   x_label: str = ""
   y_label: str = ""
   z_label: str = ""
