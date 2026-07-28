@@ -246,6 +246,9 @@ void EventReader::SetupScalarBranch(string branchName, string branchType, string
   } else if (branchType == "Short_t") {
     currentEvent->valuesShort[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesShort[branchName]);
+  } else if (branchType == "UShort_t") {
+    currentEvent->valuesUshort[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUshort[branchName]);
   } else {
     error() << "unsupported scalar branch type: " << branchType << "\t (branch name: " << branchName << ")" << endl;
   }
