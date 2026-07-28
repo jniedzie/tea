@@ -87,15 +87,15 @@ class Logger {
     Terminal::PrintMessage("\033[0m\n========== Logs summary =========="
                           "\033[0m\n");
     for (auto &[warning, count] : warnings) {
-      Terminal::PrintMessage("\033[0m[occured " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+      Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
                             "\033[1;33m" + warning + "\033[0m");
     }
     for (auto &[error, count] : errors) {
-      Terminal::PrintMessage("\033[0m[occured " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+      Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
                             "\033[1;31m" + error + "\033[0m");
     }
     for (auto &[fatal, count] : fatals) {
-      Terminal::PrintMessage("\033[0m[occured " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+      Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
                             "\033[1;35m" + fatal + "\033[0m");
     }
   }
