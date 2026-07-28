@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from copy import deepcopy
 from array import array
+from typing import Optional
 import ROOT
 
 from Sample import SampleType
@@ -16,10 +17,10 @@ class Histogram:
   log_y: bool = False
   norm_type: int = NormalizationType.to_lumi
   rebin: int = 1
-  x_min: float = None
-  x_max: float = None
-  y_min: float = None
-  y_max: float = None
+  x_min: Optional[float] = None
+  x_max: Optional[float] = None
+  y_min: Optional[float] = None
+  y_max: Optional[float] = None
   x_label: str = ""
   y_label: str = ""
   suffix: str = ""
@@ -130,12 +131,12 @@ class Histogram2D:
   norm_type: int = NormalizationType.to_lumi
   x_rebin: int = 1
   y_rebin: int = 1
-  x_min: float = None
-  x_max: float = None
-  y_min: float = None
-  y_max: float = None
-  z_min: float = None
-  z_max: float = None
+  x_min: Optional[float] = None
+  x_max: Optional[float] = None
+  y_min: Optional[float] = None
+  y_max: Optional[float] = None
+  z_min: Optional[float] = None
+  z_max: Optional[float] = None
   x_label: str = ""
   y_label: str = ""
   z_label: str = ""

@@ -318,11 +318,20 @@ class HistogramPlotter:
           hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
 
   def __drawLineAtOne(self, canvas, hist):
-    if not self.show_ratios or hist.x_min is None or hist.x_max is None:
+    if not self.show_ratios:
       return
 
+    ratio_stack = self.__getRatioStack(hist)
+    if ratio_stack is None or not hasattr(ratio_stack, "GetHistogram"):
+      return
+    ratio_histogram = ratio_stack.GetHistogram()
+    if ratio_histogram is None:
+      return
+    x_min = hist.x_min if hist.x_min is not None else ratio_histogram.GetXaxis().GetXmin()
+    x_max = hist.x_max if hist.x_max is not None else ratio_histogram.GetXaxis().GetXmax()
+
     global line
-    line = ROOT.TLine(hist.x_min, 1, hist.x_max, 1)
+    line = ROOT.TLine(x_min, 1, x_max, 1)
     line.SetLineColor(ROOT.kBlack)
     line.SetLineStyle(ROOT.kDashed)
 

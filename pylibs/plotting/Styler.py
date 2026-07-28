@@ -177,7 +177,7 @@ class Styler:
     x_min = axis.GetXmin()
     x_max = axis.GetXmax()
     if hist.x_min is None or hist.x_max is None:
-      if x_min < 0 < x_max or x_min == 0 or x_max == 0:
+      if x_min <= 0 or x_max <= 0:
         padding = 0.05 * (x_max - x_min)
         automatic_x_min = x_min - padding
         automatic_x_max = x_max + padding
@@ -200,8 +200,14 @@ class Styler:
         automatic_y_min = min(values) if values else 0.0
         automatic_y_min = min(0.0, automatic_y_min)
       automatic_y_max = 1.3 * maximum
-      plot.SetMinimum(hist.y_min if hist.y_min is not None else automatic_y_min)
-      plot.SetMaximum(hist.y_max if hist.y_max is not None else automatic_y_max)
+      minimum = hist.y_min
+      if minimum is None or (hist.log_y and minimum <= 0):
+        minimum = automatic_y_min
+      maximum = hist.y_max
+      if maximum is None or maximum <= 0:
+        maximum = automatic_y_max
+      plot.SetMinimum(minimum)
+      plot.SetMaximum(maximum)
 
   def setupFigure2D(self, plot, hist):
     if plot is None or type(plot) is TObject:
@@ -213,11 +219,6 @@ class Styler:
     if pad is not None and pad.GetWh() > 0:
       label_size = self.labelFontSize / float(pad.GetWh())
     label_font = 42
-
-    if hist.y_min is not None and (hist.y_min > 0):
-      plot.SetMinimum(hist.y_min)
-    if hist.y_max is not None and (hist.y_max > 0):
-      plot.SetMaximum(hist.y_max)
 
     if hist.z_min is not None and (hist.z_min > 0):
       plot.SetMinimum(hist.z_min)
