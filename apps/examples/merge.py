@@ -20,7 +20,7 @@ def parse_args():
     "--n-files-to-merge",
     type=int,
     default=-1,
-    help="Number of input files per merged output.",
+    help="Number of input files per merged output (-1 to merge all files into a single output).",
   )
   parser.add_argument(
     "--condor",
