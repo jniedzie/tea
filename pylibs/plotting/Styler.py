@@ -134,6 +134,7 @@ class Styler:
       plot.SetMinimum(self.config.ratio_limits[0])
       plot.SetMaximum(self.config.ratio_limits[1])
     else:
+      self.__setAutomaticLimits(plot, hist)
       if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
         plot.SetMinimum(hist.y_min)
       if hist.y_max is not None and hist.y_max > 0:
@@ -163,6 +164,44 @@ class Styler:
     except Exception:
       warn("Couldn't set axes limits")
       return
+
+  def __setAutomaticLimits(self, plot, hist):
+    """Set missing bounds from the already-drawn plot, with a small margin."""
+    if not hasattr(plot, "GetHistogram"):
+      return
+    source_histogram = plot.GetHistogram()
+    if source_histogram is None:
+      return
+
+    axis = plot.GetXaxis()
+    x_min = axis.GetXmin()
+    x_max = axis.GetXmax()
+    if hist.x_min is None or hist.x_max is None:
+      if x_min < 0 < x_max or x_min == 0 or x_max == 0:
+        padding = 0.05 * (x_max - x_min)
+        automatic_x_min = x_min - padding
+        automatic_x_max = x_max + padding
+      else:
+        automatic_x_min = 0.7 * x_min
+        automatic_x_max = 1.3 * x_max
+      plot.GetXaxis().SetLimits(
+          hist.x_min if hist.x_min is not None else automatic_x_min,
+          hist.x_max if hist.x_max is not None else automatic_x_max)
+
+    if hist.y_min is None or hist.y_max is None:
+      values = [source_histogram.GetBinContent(i)
+                for i in range(1, source_histogram.GetNbinsX() + 1)]
+      positive_values = [value for value in values if value > 0]
+      maximum = max(positive_values) if positive_values else 1.0
+      if hist.log_y:
+        minimum = min(positive_values) if positive_values else maximum / 1000.0
+        automatic_y_min = 0.7 * minimum
+      else:
+        automatic_y_min = min(values) if values else 0.0
+        automatic_y_min = min(0.0, automatic_y_min)
+      automatic_y_max = 1.3 * maximum
+      plot.SetMinimum(hist.y_min if hist.y_min is not None else automatic_y_min)
+      plot.SetMaximum(hist.y_max if hist.y_max is not None else automatic_y_max)
 
   def setupFigure2D(self, plot, hist):
     if plot is None or type(plot) is TObject:
