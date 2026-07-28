@@ -82,14 +82,21 @@ class Logger {
 
   void Print() {
     Terminal::FinishProgress();
+    if (warnings.empty() && errors.empty() && fatals.empty()) return;
+
+    Terminal::PrintMessage("\033[0m\n========== Logs summary =========="
+                          "\033[0m\n");
     for (auto &[warning, count] : warnings) {
-      Terminal::PrintMessage("[occured " + std::to_string(count) + " times] \033[1;33m" + warning + "\033[0m");
+      Terminal::PrintMessage("\033[0m[occured " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+                            "\033[1;33m" + warning + "\033[0m");
     }
     for (auto &[error, count] : errors) {
-      Terminal::PrintMessage("[occured " + std::to_string(count) + " times] \033[1;31m" + error + "\033[0m");
+      Terminal::PrintMessage("\033[0m[occured " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+                            "\033[1;31m" + error + "\033[0m");
     }
     for (auto &[fatal, count] : fatals) {
-      Terminal::PrintMessage("[occured " + std::to_string(count) + " times] \033[1;35m" + fatal + "\033[0m");
+      Terminal::PrintMessage("\033[0m[occured " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+                            "\033[1;35m" + fatal + "\033[0m");
     }
   }
 
@@ -129,7 +136,7 @@ struct warn {
     auto &logger = Logger::GetInstance();
     logger.currentWarningStream << os;
     if (!logger.addWarning()) {
-      Terminal::PrintMessage("[first occurence] \033[1;33m" + logger.currentWarningStream.str() + "\033[0m");
+      Terminal::PrintMessage("\033[0m[first occurence] \033[1;33m" + logger.currentWarningStream.str() + "\033[0m");
     }
     logger.currentWarningStream.str("");
     return *this;
@@ -189,7 +196,7 @@ struct fatal {
 
 class Exception : public std::exception {
  public:
-  Exception(const char *message) { message_ = "\033[1;35m" + (std::string)message + "\033[0m"; }
+  Exception(const char *message) { message_ = message; }
   virtual const char *what() const throw() { return message_.c_str(); }
 
  private:

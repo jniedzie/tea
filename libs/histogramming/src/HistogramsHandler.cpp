@@ -15,13 +15,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(histParams, "defaultHistParams");
   } catch (const Exception& e) {
-    info() << "No defaultHistParams found in config file" << endl;
   }
 
   try {
     config.GetHistogramsParams(histParams, "histParams");
   } catch (const Exception& e) {
-    info() << "No histParams found in config file" << endl;
   }
 
   try {
@@ -37,13 +35,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(irregularHistParams2D, "irregularHistParams2D");
   } catch (const Exception& e) {
-    info() << "No irregularHistParams2D found in config file" << endl;
   }
 
   try {
     config.GetValue("histogramsOutputFilePath", outputPath);
   } catch (const Exception& e) {
-    info() << "No histogramsOutputFilePath found in config file" << endl;
   }
   try {
     config.GetVector("SFvariationVariables", SFvariationVariables);
