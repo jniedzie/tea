@@ -451,7 +451,7 @@ class HistogramPlotter:
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawLegends(canvas, hist)
-      self.cmsLabelsManager.drawLabels(canvas)
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       # make sure plot border is on top of everything else
       canvas.GetPad(1).GetFrame().SetLineWidth(2)
@@ -509,7 +509,7 @@ class HistogramPlotter:
 
       self.__drawRatioHists(canvas, hist_nom)
       self.__drawLegends(canvas, hist_nom)
-      self.cmsLabelsManager.drawLabels(canvas)
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       canvas.Update()
 

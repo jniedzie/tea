@@ -13,12 +13,12 @@ class CmsLabelsManager:
         if hasattr(self.config, "label_text"):
             self.cmsText = self.config.label_text
         
-        self.cmsTextFont = 61
+        self.cmsTextFont = 63
 
         self.extraText = None
         if hasattr(self.config, "extraText"):
             self.extraText = self.config.extraText
-        self.extraTextFont = 52
+        self.extraTextFont = 53
 
         self.lumiTextSize = 0.6
 
@@ -27,17 +27,15 @@ class CmsLabelsManager:
         else:
             self.lumiTextOffset = -0.
 
-        self.cmsTextSize = 0.75
+        self.labelTextSize = 20
         self.cmsTextOffset = 0.1
 
         if config.show_ratio_plots:
-            self.relPosX = 0.045
-            self.relPosY = 0.035
-            self.relExtraDY = 1.2
+            self.relPosX = 0.055
+            self.relPosY = 0.04
         else:
-            self.relPosX = 0.045
-            self.relPosY = 0.070
-            self.relExtraDY = 1.2
+            self.relPosX = 0.055
+            self.relPosY = 0.04
 
         if hasattr(self.config, "label_x"):
             self.relPosX = self.config.label_x
@@ -46,8 +44,6 @@ class CmsLabelsManager:
             self.relPosY = self.config.label_y
 
         self.label_outside_axes = getattr(self.config, "label_outside_axes", False)
-
-        self.extraOverCmsTextSize = 0.76
 
         if hasattr(self.config, "lumi_unit"):
             lumi_unit = self.config.lumi_unit
@@ -97,6 +93,10 @@ class CmsLabelsManager:
 
     def __drawLumiText(self):
         lumiText = self.lumi + self.collision_energy
+        if self.label_outside_axes:
+            _, label_pos_y = self.__label_position()
+        else:
+            label_pos_y = 1-self.top + 0.015
 
         latex = ROOT.TLatex()
         latex.SetNDC()
@@ -105,8 +105,9 @@ class CmsLabelsManager:
         latex.SetTextFont(43)
         latex.SetTextAlign(31)
 
-        latex.SetTextSize(20)
-        latex.DrawLatex(1-self.right, 1-self.top + self.lumiTextOffset * self.top, lumiText)
+        latex.SetTextSize(self.labelTextSize)
+        right_boundary = 1-self.right
+        latex.DrawLatex(right_boundary, label_pos_y + self.lumiTextOffset * self.top, lumiText)
 
     def __drawLogo(self):
         posX_ = self.left + 0.045 * \
@@ -127,9 +128,10 @@ class CmsLabelsManager:
         posX_, posY_ = self.__label_position()
 
         latex = ROOT.TLatex()
+        latex.SetNDC()
         latex.SetTextFont(self.cmsTextFont)
-        latex.SetTextSize(self.cmsTextSize*self.top)
-        latex.SetTextAlign(13)
+        latex.SetTextSize(self.labelTextSize)
+        latex.SetTextAlign(11 if self.label_outside_axes else 13)
         latex.DrawLatex(posX_, posY_, self.cmsText)
 
     def __drawExtraCmsText(self):
@@ -137,43 +139,45 @@ class CmsLabelsManager:
             return
 
         posX_, posY_ = self.__label_position()
+        if self.label_outside_axes:
+            posX_ += 55.0/self.width
 
         latex = ROOT.TLatex()
+        latex.SetNDC()
         latex.SetTextFont(self.extraTextFont)
-        latex.SetTextAlign(13)
-        extraTextSize = self.extraOverCmsTextSize * self.cmsTextSize
-        latex.SetTextSize(extraTextSize*self.top)
-        latex.DrawLatex(posX_, posY_ - self.relExtraDY *
-                        self.cmsTextSize*self.top, self.extraText)
+        latex.SetTextAlign(11 if self.label_outside_axes else 13)
+        latex.SetTextSize(self.labelTextSize)
+        extra_pos_y = posY_
+        if not self.label_outside_axes:
+            extra_pos_y -= (self.labelTextSize + 6.0)/self.height
+        latex.DrawLatex(posX_, extra_pos_y, self.extraText)
 
     def __label_position(self):
         if self.label_outside_axes:
-            return self.left + self.relPosX * self.left, 1 - 0.5 * self.top
+            return self.left, 1 - self.top + 0.015
         return (self.left + self.relPosX*(1-self.left-self.right),
                 1-self.top - self.relPosY*(1-self.top-self.bottom))
 
     def drawLabels2D(self, canvas):
         latex = ROOT.TLatex()
         latex.SetTextFont(self.cmsTextFont)
-        latex.SetTextSize(self.cmsTextSize*self.top)
+        latex.SetTextSize(self.labelTextSize)
 
         latex.SetTextAlign(13)
         latex.SetNDC()
         latex.DrawLatex(0.1, 0.99, self.cmsText)
 
         canvas.Update()
-        cms_width = latex.GetTextSize()
-        print(f"cms width: {cms_width}")
+        cms_width = 55.0/canvas.GetWw()
 
         if self.extraText is not None:
 
             latex = ROOT.TLatex()
             latex.SetTextFont(self.extraTextFont)
             latex.SetTextAlign(13)
-            extraTextSize = self.extraOverCmsTextSize * self.cmsTextSize
-            latex.SetTextSize(extraTextSize*self.top)
+            latex.SetTextSize(self.labelTextSize)
             latex.SetNDC()
-            posX_ = 0.1 + 2*cms_width + 0.01
+            posX_ = 0.1 + cms_width
             posY_ = 0.99 - 0.01
             latex.DrawLatex(posX_, posY_, self.extraText)
             
@@ -185,5 +189,5 @@ class CmsLabelsManager:
         latex.SetTextColor(ROOT.kBlack)
         latex.SetTextFont(43)
         latex.SetTextAlign(31)
-        latex.SetTextSize(20)
+        latex.SetTextSize(self.labelTextSize)
         latex.DrawLatex(1-self.right, 1-self.top + 2*self.lumiTextOffset * self.top + 0.01, lumiText)
