@@ -4,6 +4,8 @@
 
 #include "HistogramsHandler.hpp"
 
+#include <filesystem>
+
 #include "ConfigManager.hpp"
 #include "ExtensionsHelpers.hpp"
 
@@ -15,13 +17,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(histParams, "defaultHistParams");
   } catch (const Exception& e) {
-    info() << "No defaultHistParams found in config file" << endl;
   }
 
   try {
     config.GetHistogramsParams(histParams, "histParams");
   } catch (const Exception& e) {
-    info() << "No histParams found in config file" << endl;
   }
 
   try {
@@ -37,13 +37,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(irregularHistParams2D, "irregularHistParams2D");
   } catch (const Exception& e) {
-    info() << "No irregularHistParams2D found in config file" << endl;
   }
 
   try {
     config.GetValue("histogramsOutputFilePath", outputPath);
   } catch (const Exception& e) {
-    info() << "No histogramsOutputFilePath found in config file" << endl;
   }
   try {
     config.GetVector("SFvariationVariables", SFvariationVariables);
@@ -151,7 +149,7 @@ void HistogramsHandler::Fill(string name, double value) {
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   double weight = eventWeights["default"];
-  CheckHistogram(name, "");
+  CheckHistogram2D(name, "");
   histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
 
   RemoveFromUnfilled(name);
@@ -159,7 +157,7 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
   for (auto& [sfName, weight] : eventWeights) {
     if (sfName == "default") continue;
-    CheckHistogram(name, sfName);
+    CheckHistogram2D(name, sfName);
     histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
   }
 }
@@ -172,8 +170,15 @@ void HistogramsHandler::RemoveFromUnfilled(string name) {
 }
 
 void HistogramsHandler::CheckHistogram(string name, string directory) {
-  if (!histograms1D.count(make_pair(name, directory)) && !histograms2D.count(make_pair(name, directory))) {
-    fatal() << "Couldn't find key: " << name << ", " << directory << " in histograms map" << endl;
+  if (!histograms1D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 1D histograms map" << endl;
+    exit(1);
+  }
+}
+
+void HistogramsHandler::CheckHistogram2D(string name, string directory) {
+  if (!histograms2D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 2D histograms map" << endl;
     exit(1);
   }
 }
@@ -201,13 +206,18 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outpu
 }
 
 void HistogramsHandler::SaveHistograms() {
-  string path = outputPath.substr(0, outputPath.find_last_of("/"));
-  string filename = outputPath.substr(outputPath.find_last_of("/"));
-  if (path == "") path = "./";
-  string command = "mkdir -p " + path;
-  const int mkdir_status = system(command.c_str());
-  if (mkdir_status != 0) {
-    warn() << "Failed to create histogram output directory with command: " << command << endl;
+  const auto separator = outputPath.find_last_of("/");
+  string path = separator == string::npos ? "./" : outputPath.substr(0, separator);
+  string filename = separator == string::npos ? outputPath : outputPath.substr(separator + 1);
+  if (path.empty()) path = "./";
+  if (filename.empty()) {
+    error() << "Cannot save histograms: output path has no filename: " << outputPath << endl;
+    return;
+  }
+  std::error_code ec;
+  std::filesystem::create_directories(path, ec);
+  if (ec) {
+    warn() << "Failed to create histogram output directory: " << path << " (" << ec.message() << ")" << endl;
   }
 
   auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");

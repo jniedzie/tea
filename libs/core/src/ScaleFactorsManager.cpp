@@ -45,6 +45,14 @@ ScaleFactorsManager::ScaleFactorsManager() {
 
   ReadScaleFactorFlags();
   ReadScaleFactors();
+  if (scaleFactorsRead && !applyScaleFactors.empty()) {
+    info() << "\n------------------------------------" << endl;
+    info() << "Applying scale factors:" << endl;
+    for (auto& [name, applyVector] : applyScaleFactors) {
+      info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
+    }
+    info() << "------------------------------------\n" << endl;
+  }
   if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
   ReadJetEnergyCorrections();
 }
@@ -126,6 +134,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
   map<string, map<string, string>> scaleFactors;
   try {
     config.GetMap("scaleFactors", scaleFactors);
+    scaleFactorsRead = !scaleFactors.empty();
   } catch (const Exception& e) {
     warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no correctionlib scale factors will be loaded (weights default to 1.0)." << endl;
     return;
@@ -261,12 +270,6 @@ void ScaleFactorsManager::ReadScaleFactorFlags() {
     warn() << "Couldn't read applyScaleFactors from config." << endl;
   }
 
-  info() << "\n------------------------------------" << endl;
-  info() << "Applying scale factors:" << endl;
-  for (auto& [name, applyVector] : applyScaleFactors) {
-    info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
-  }
-  info() << "------------------------------------\n" << endl;
 }
 
 void ScaleFactorsManager::ReadPileupSFs() {
