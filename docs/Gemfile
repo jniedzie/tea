@@ -1,10 +1,5 @@
 source "https://rubygems.org"
-ruby RUBY_VERSION
-
-# gem "jekyll", "4.0"
-
-# to use GitHub Pages
-# gem "github-pages", group: :jekyll_plugins
+# GitHub Pages-compatible Jekyll and plugins.
 gem "github-pages", "~> 228", group: :jekyll_plugins
 
 # If you have any plugins, put them here!
