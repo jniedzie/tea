@@ -411,8 +411,25 @@ class HistogramPlotter:
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() > 0:
         stack.Draw(options)
-        self.styler.setupFigure(stack, hist)
         firstPlotted = True
+
+    # Apply automatic limits only after every sample has been drawn.  A
+    # THStack's axis is established by its first draw, while subsequent
+    # stacks (signals/data) can contain larger contributions.
+    plotted_histograms = []
+    for sample_type in SampleType:
+      stack = self.stacks[sample_type][hist.getName()]
+      if stack.GetNhists() == 0:
+        continue
+      stack_histograms = stack.GetStack()
+      if stack_histograms and stack_histograms.GetSize() > 0:
+        plotted_histograms.append(stack_histograms.Last())
+
+    first_stack = next((self.stacks[sample_type][hist.getName()]
+                        for sample_type in SampleType
+                        if self.stacks[sample_type][hist.getName()].GetNhists() > 0), None)
+    if first_stack is not None:
+      self.styler.setupFigure(first_stack, hist, source_histograms=plotted_histograms)
 
   def __drawRatioHists(self, canvas, hist):
     canvas.cd(1)

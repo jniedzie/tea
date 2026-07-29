@@ -126,7 +126,7 @@ class Styler:
 
     gStyle.SetPaperSize(20., 20.)
 
-  def setupFigure(self, plot, hist, is_ratio=False):
+  def setupFigure(self, plot, hist, is_ratio=False, source_histograms=None):
     if plot is None or type(plot) is TObject:
       return
 
@@ -134,7 +134,7 @@ class Styler:
       plot.SetMinimum(self.config.ratio_limits[0])
       plot.SetMaximum(self.config.ratio_limits[1])
     else:
-      self.__setAutomaticLimits(plot, hist)
+      self.__setAutomaticLimits(plot, hist, source_histograms)
       if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
         plot.SetMinimum(hist.y_min)
       if hist.y_max is not None and hist.y_max > 0:
@@ -165,17 +165,18 @@ class Styler:
       warn("Couldn't set axes limits")
       return
 
-  def __setAutomaticLimits(self, plot, hist):
-    """Set missing bounds from the already-drawn plot, with a small margin."""
+  def __setAutomaticLimits(self, plot, hist, source_histograms=None):
+    """Set missing bounds from all plotted contributions, with a small margin."""
     if not hasattr(plot, "GetHistogram"):
       return
     source_histogram = plot.GetHistogram()
     if source_histogram is None:
       return
 
-    axis = plot.GetXaxis()
-    x_min = axis.GetXmin()
-    x_max = axis.GetXmax()
+    source_histograms = source_histograms or [source_histogram]
+
+    x_min = min(h.GetXaxis().GetXmin() for h in source_histograms)
+    x_max = max(h.GetXaxis().GetXmax() for h in source_histograms)
     if hist.x_min is None or hist.x_max is None:
       if x_min <= 0 or x_max <= 0:
         padding = 0.05 * (x_max - x_min)
@@ -189,8 +190,10 @@ class Styler:
           hist.x_max if hist.x_max is not None else automatic_x_max)
 
     if hist.y_min is None or hist.y_max is None:
-      values = [source_histogram.GetBinContent(i)
-                for i in range(1, source_histogram.GetNbinsX() + 1)]
+      values = []
+      for source in source_histograms:
+        values.extend(source.GetBinContent(i)
+                      for i in range(1, source.GetNbinsX() + 1))
       positive_values = [value for value in values if value > 0]
       maximum = max(positive_values) if positive_values else 1.0
       if hist.log_y:

@@ -6,7 +6,7 @@ from HistogramNormalizer import NormalizationType
 
 year = "2018"
 show_cms_labels = True
-label_outside_axes = False
+label_outside_axes = True
 extraText = "Preliminary"
 
 samples = (
@@ -26,8 +26,8 @@ output_path = "../plots"
 
 histograms = (
 #            name            title     logx   logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
-  Histogram("Muon_pt" , "Muon p_{T}",  False, True,   NormalizationType.to_lumi, 5,   0  , 150,  1,   1e5 , "p_{T} [GeV]", "# events (2018)"),
-  Histogram("Muon_eta", "Muon #eta",   False, False,  NormalizationType.to_lumi, 5,  -2.4, 2.4,  0,   5e3  , "#eta"       , "# events (2018)"),
+  Histogram("Muon_pt" , "Muon p_{T}",  False, True,   NormalizationType.to_lumi, 5,   None  , None,  None,   None , "p_{T} [GeV]", "# events (2018)"),
+  Histogram("Muon_eta", "Muon #eta",   False, False,  NormalizationType.to_lumi, 5,  None, None,  None,   None  , "#eta"       , "# events (2018)"),
 )
 luminosity = 63670.  # pb^-1 (2018)
 
