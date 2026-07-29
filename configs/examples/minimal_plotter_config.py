@@ -3,11 +3,15 @@ from Sample import Sample, SampleType
 from Legend import Legend
 from Histogram import Histogram
 from HistogramNormalizer import NormalizationType
+from CmsLabelsManager import CmsLabel
 
 year = "2018"
 show_cms_labels = True
 label_outside_axes = True
-extraText = "Preliminary"
+
+# Allowed labels: paper, paper_sim, paper_supplementary, paper_sim_supplementary, pas, pas_sim, pas_supplementary,
+# pas_sim_supplementary, thesis, thesis_sim, private_data_sim, private_data, private_sim.
+cms_label = CmsLabel.paper_sim_supplementary
 
 samples = (
   Sample(

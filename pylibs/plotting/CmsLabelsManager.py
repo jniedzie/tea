@@ -1,4 +1,23 @@
 import ROOT
+from enum import Enum
+
+
+class CmsLabel(Enum):
+    """Allowed CMS plot labels from the CMS plotting guidelines."""
+
+    paper = ("CMS", None)
+    paper_sim = ("CMS", "Simulation")
+    paper_supplementary = ("CMS", "Supplementary")
+    paper_sim_supplementary = ("CMS", "Simulation Supplementary")
+    pas = ("CMS", "Preliminary")
+    pas_sim = ("CMS", "Simulation Preliminary")
+    pas_supplementary = ("CMS", "Preliminary")
+    pas_sim_supplementary = ("CMS", "Simulation Preliminary")
+    thesis = ("CMS", "Work in progress")
+    thesis_sim = ("CMS", "Simulation Work in progress")
+    private_data_sim = (None, "Private work (CMS data/simulation)")
+    private_data = (None, "Private work (CMS data)")
+    private_sim = (None, "Private work (CMS simulation)")
 
 
 class CmsLabelsManager:
@@ -9,15 +28,15 @@ class CmsLabelsManager:
         if hasattr(self.config, "show_cms_labels"):
             self.show_labels = self.config.show_cms_labels
 
-        self.cmsText = "CMS"
-        if hasattr(self.config, "label_text"):
-            self.cmsText = self.config.label_text
+        cms_label = getattr(self.config, "cms_label", CmsLabel.paper)
+        if not isinstance(cms_label, CmsLabel):
+            raise TypeError("cms_label must be a CmsLabel enum value")
+        if hasattr(self.config, "label_text") or hasattr(self.config, "extraText"):
+            raise ValueError("Use cms_label with a CmsLabel enum value instead of free text")
+        self.cmsText, self.extraText = cms_label.value
         
         self.cmsTextFont = 63
 
-        self.extraText = None
-        if hasattr(self.config, "extraText"):
-            self.extraText = self.config.extraText
         self.extraTextFont = 53
 
         self.lumiTextSize = 0.6
@@ -129,6 +148,9 @@ class CmsLabelsManager:
 
         latex = ROOT.TLatex()
         latex.SetNDC()
+        if self.cmsText is None:
+            return
+
         latex.SetTextFont(self.cmsTextFont)
         latex.SetTextSize(self.labelTextSize)
         latex.SetTextAlign(11 if self.label_outside_axes else 13)
@@ -139,7 +161,7 @@ class CmsLabelsManager:
             return
 
         posX_, posY_ = self.__label_position()
-        if self.label_outside_axes:
+        if self.label_outside_axes and self.cmsText is not None:
             posX_ += 55.0/self.width
 
         latex = ROOT.TLatex()
@@ -159,13 +181,13 @@ class CmsLabelsManager:
                 1-self.top - self.relPosY*(1-self.top-self.bottom))
 
     def drawLabels2D(self, canvas):
-        latex = ROOT.TLatex()
-        latex.SetTextFont(self.cmsTextFont)
-        latex.SetTextSize(self.labelTextSize)
-
-        latex.SetTextAlign(13)
-        latex.SetNDC()
-        latex.DrawLatex(0.1, 0.99, self.cmsText)
+        if self.cmsText is not None:
+            latex = ROOT.TLatex()
+            latex.SetTextFont(self.cmsTextFont)
+            latex.SetTextSize(self.labelTextSize)
+            latex.SetTextAlign(13)
+            latex.SetNDC()
+            latex.DrawLatex(0.1, 0.99, self.cmsText)
 
         canvas.Update()
         cms_width = 55.0/canvas.GetWw()
@@ -177,8 +199,8 @@ class CmsLabelsManager:
             latex.SetTextAlign(13)
             latex.SetTextSize(self.labelTextSize)
             latex.SetNDC()
-            posX_ = 0.1 + cms_width
-            posY_ = 0.99 - 0.01
+            posX_ = 0.1 if self.cmsText is None else 0.1 + cms_width
+            posY_ = 0.99 if self.cmsText is None else 0.99 - 0.01
             latex.DrawLatex(posX_, posY_, self.extraText)
             
 
