@@ -16,6 +16,9 @@ brew install --cask docker
 
 Before the first use, start Docker Desktop yourself and wait until it says that Docker is running. Docker Desktop may require a first-run license, login, or macOS permission confirmation that a shell script cannot complete.
 
+**Linux**
+Install Docker Engine using the instructions for your distribution in the [Docker documentation](https://docs.docker.com/engine/install/), then make sure the Docker daemon is running and your user can run `docker` without `sudo`.
+
 2. Run locally
 
 Once docker is installed and running, you can start the website:
@@ -25,7 +28,7 @@ cd docs
 ./run.sh
 ```
 
-The script prints the preview URL and opens it in the default browser <http://localhost:4000/tea/docs/home/>. 
+The script prints the preview URL and opens it in the default browser on macOS. On Linux, open <http://localhost:4000/tea/docs/home/> yourself.
 
 Keep the terminal open while using the preview; press `Ctrl-C` there to stop the server.
 
