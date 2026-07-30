@@ -31,8 +31,13 @@ The command creates `apps/my_analysis.cpp` and `configs/my_analysis_config.py`.
 A typical app parses `--config`, initializes `ConfigManager`, then reads events:
 
 ```cpp
-auto args = std::make_unique<ArgsManager>(argc, argv);
-ConfigManager::Initialize(args->GetString("config").value());
+vector<string> requiredArgs = {"config"};
+vector<string> optionalArgs = {"input_path", "output_hists_path"};
+
+auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
+ConfigManager::Initialize(args);
+
+auto& config = ConfigManager::GetInstance();
 
 auto eventReader = std::make_shared<EventReader>();
 for (int iEvent = 0; iEvent < eventReader->GetNevents(); ++iEvent) {
