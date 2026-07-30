@@ -62,7 +62,8 @@ class CmsLabelsManager:
             self.collision_energy = " (" + self.config.beam_label+")"
         else:
             self.collision_energy = " (13 TeV)"
-            if "2022" in self.config.year or "2023" in self.config.year:
+            year = getattr(self.config, "year", "")
+            if "2022" in year or "2023" in year:
                 self.collision_energy = " (13.6 TeV)"
 
         self.drawLogo = False
