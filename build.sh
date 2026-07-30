@@ -3,6 +3,41 @@
 _build_sh_sourced=0
 [[ "${BASH_SOURCE[0]}" != "$0" ]] && _build_sh_sourced=1
 
+setup_root_environment() {
+  if [[ -n "${CONDA_PREFIX:-}" && -x "${CONDA_PREFIX}/bin/python3" ]]; then
+    case ":${PATH}:" in
+      *":${CONDA_PREFIX}/bin:"*) ;;
+      *) export PATH="${CONDA_PREFIX}/bin:${PATH}" ;;
+    esac
+  fi
+
+  if ! command -v root-config >/dev/null 2>&1; then
+    return
+  fi
+
+  local root_bindir root_prefix
+  root_prefix="$(root-config --prefix 2>/dev/null || true)"
+
+  # Conda packages provide ROOT to the environment's own Python and explicitly
+  # forbid sourcing thisroot.sh. Putting CONDA_PREFIX/bin first is sufficient.
+  if [[ -n "${CONDA_PREFIX:-}" && "${root_prefix}" == "${CONDA_PREFIX}" ]]; then
+    return
+  fi
+
+  root_bindir="$(root-config --bindir 2>/dev/null || true)"
+  if [[ -z "${root_bindir}" ]]; then
+    root_bindir="${root_prefix}/bin"
+  fi
+
+  if [[ -f "${root_bindir}/thisroot.sh" ]]; then
+    # ROOT uses this script to expose PyROOT and its runtime libraries.
+    source "${root_bindir}/thisroot.sh"
+  fi
+}
+
+setup_root_environment
+unset -f setup_root_environment
+
 _build_sh_restore_history=0
 if [[ "${_build_sh_sourced}" -eq 1 && $- == *i* ]]; then
   if set -o | grep -q '^history[[:space:]]*on$'; then
