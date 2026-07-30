@@ -19,7 +19,10 @@ def get_args():
   parser.add_argument("--condor", action="store_true", default=False, help="Run on condor.")
   parser.add_argument("--local_parallel", action="store_true", default=False, help="Run condor-style jobs locally in parallel.")
   parser.add_argument("--local_parallel_jobs", type=int, default=None,
-                      help="Number of parallel local jobs. Defaults to the number of CPUs available to this process.")
+                      help=(
+                          "Number of parallel local jobs. Defaults to the CPUs available "
+                          "to this process, capped at 4 on lxplus."
+                      ))
   parser.add_argument("--save_logs", action="store_true", default=False, help="Save condor logs.")
   parser.add_argument("--job_flavour", type=str, default="espresso",
                       help=(

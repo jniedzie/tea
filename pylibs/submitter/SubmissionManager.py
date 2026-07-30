@@ -3,7 +3,7 @@ import importlib.util
 import uuid
 import ast
 import subprocess
-import shlex
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 import ROOT
 from Logger import info, warn, error, fatal
@@ -133,39 +133,73 @@ class SubmissionManager:
       args.dry = dry
 
     for script_name, n_jobs in submitted_jobs:
-      self.__run_condor_script_locally_parallel(script_name, n_jobs, args.local_parallel_jobs)
+      self.__run_condor_script_locally_parallel(
+          script_name, n_jobs, args.local_parallel_jobs, args.save_logs
+      )
 
-  def __run_condor_script_locally_parallel(self, script_name, n_jobs, requested_max_workers):
+  def __run_condor_script_locally_parallel(
+      self, script_name, n_jobs, requested_max_workers, save_logs
+  ):
     max_workers = self.__get_local_parallel_jobs(n_jobs, requested_max_workers)
     info(f"Executing {script_name} locally with {max_workers} parallel jobs")
+    if save_logs:
+      info("Local job output will be stored in the output/ and error/ directories")
 
     completed_jobs = 0
     failed_jobs = []
-    script_path = shlex.quote(f"./{script_name}")
-    last_job = n_jobs - 1
-    command = (
-        f"seq 0 {last_job} | "
-        f"xargs -P {max_workers} -I{{}} sh -c "
-        f"'\"$1\" \"$2\" >/dev/null 2>&1; status=$?; printf \"%s %s\\n\" \"$2\" \"$status\"' sh {script_path} {{}}"
-    )
+    started_jobs = 0
+    script_stem = os.path.splitext(os.path.basename(script_name))[0]
 
-    print(f"Processed 0/{n_jobs} jobs", end="", flush=True)
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    for line in process.stdout:
-      parts = line.strip().split()
-      if len(parts) == 2:
-        job_number = int(parts[0])
-        returncode = int(parts[1])
+    def run_job(job_number):
+      nonlocal started_jobs
+      started_jobs += 1
+      print(
+          f"\rStarted {started_jobs}/{n_jobs}; completed {completed_jobs}/{n_jobs}",
+          end="", flush=True
+      )
+      stdout = subprocess.DEVNULL
+      stderr = subprocess.DEVNULL
+      output_file = None
+      error_file = None
+      try:
+        if save_logs:
+          output_file = open(f"output/{script_stem}.{job_number}.out", "w")
+          error_file = open(f"error/{script_stem}.{job_number}.err", "w")
+          stdout = output_file
+          stderr = error_file
+        return subprocess.run(
+            [f"./{script_name}", str(job_number)],
+            stdout=stdout,
+            stderr=stderr,
+            check=False,
+        ).returncode
+      finally:
+        if output_file is not None:
+          output_file.close()
+        if error_file is not None:
+          error_file.close()
+
+    print(f"Started 0/{n_jobs}; completed 0/{n_jobs}", end="", flush=True)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+      futures = {
+          executor.submit(run_job, job_number): job_number
+          for job_number in range(n_jobs)
+      }
+      for future in as_completed(futures):
+        job_number = futures[future]
+        try:
+          returncode = future.result()
+        except Exception as exception:
+          returncode = -1
+          error(f"Local parallel job {job_number} could not be run: {exception}")
         completed_jobs += 1
         if returncode != 0:
           failed_jobs.append((job_number, returncode))
-        print(f"\rProcessed {completed_jobs}/{n_jobs} jobs", end="", flush=True)
-
-    _, stderr = process.communicate()
+        print(
+            f"\rStarted {started_jobs}/{n_jobs}; completed {completed_jobs}/{n_jobs}",
+            end="", flush=True
+        )
     print()
-
-    if process.returncode != 0:
-      error(f"Local parallel runner failed with exit code {process.returncode}: {stderr.strip()}")
 
     if failed_jobs:
       failed_jobs_str = ", ".join(f"{job_number} ({returncode})" for job_number, returncode in failed_jobs[:10])
@@ -181,11 +215,16 @@ class SubmissionManager:
       return min(requested_max_workers, n_jobs)
 
     if hasattr(os, "sched_getaffinity"):
-      return min(len(os.sched_getaffinity(0)), n_jobs)
-    cpu_count = os.cpu_count()
-    if cpu_count is not None:
-      return min(cpu_count, n_jobs)
-    return min(40, n_jobs)
+      cpu_count = len(os.sched_getaffinity(0))
+    else:
+      cpu_count = os.cpu_count() or 40
+
+    # lxplus login nodes are shared and CPU-heavy ROOT jobs also compete for EOS
+    # bandwidth. Starting one worker per visible core often makes every job appear
+    # stalled, so use a conservative default. Users can explicitly override it.
+    if get_facility() == "lxplus":
+      cpu_count = min(cpu_count, 4)
+    return min(cpu_count, n_jobs)
 
   def __create_dir_if_not_exists(self, dir_path):
     if not os.path.exists(dir_path):
