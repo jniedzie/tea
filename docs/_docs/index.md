@@ -22,7 +22,7 @@ New users should start with the [guided LLP tutorial]({{ "/docs/tutorial_overvie
 
 ## Get help
 
-For questions, bugs, and feature requests, open a [GitHub issue](https://github.com/jniedzie/tea/issues). The [roadmap]({{ "/docs/roadmap/" | relative_url }}) distinguishes documented workflows from incomplete documentation.
+For questions, bugs, and feature requests, open a [GitHub issue](https://github.com/jniedzie/tea/issues).
 
 ## Analyses using tea
 

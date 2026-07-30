@@ -16,7 +16,7 @@ Available wrappers include:
 - `NanoEvent` and `NanoEventProcessor` for event-level helpers;
 - `NanoMuon`, `NanoElectron`, and `NanoJet` for reconstructed objects;
 - `NanoGenParticle` for generator ancestry and matching;
-- `NanoDimuonVertex` for LLP NanoAOD or EXO NanoAOD dimuon vertices.
+- `NanoDimuonVertex` for LLPNanoAOD or EXONanoAOD dimuon vertices.
 
 Convert only when the input actually follows the expected branches:
 
