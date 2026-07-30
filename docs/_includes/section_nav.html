@@ -1,52 +1,35 @@
-{% comment %}
-Map grabs the doc sections, giving us an array of arrays. Join, flattens all
-the items to a comma delimited string. Split turns it into an array again.
-{% endcomment %}
-{% assign docs = site.data.docs | map: 'docs' | join: ',' | split: ',' %}
-
-{% comment %}
-Because this is built for every page, lets find where we are in the ordered
-document list by comparing url strings. Then if there's something previous or
-next, lets build a link to it.
-{% endcomment %}
+{% assign docs = site.data.docs | map: "docs" | join: "," | split: "," %}
 
 {% for document in docs %}
-  {% assign document_url = document | prepend:"/docs/" | append:"/" %}
+  {% assign document_url = document | prepend: "/docs/" | append: "/" %}
   {% if document_url == page.url %}
-    <ul class="pager">
-      {% if forloop.first %}
-        <li class="previous disabled">
-          <a>
-            <span aria-hidden="true">&larr;</span> Previous
-          </a>
-        </li>
-      {% else %}
-        {% assign previous = forloop.index0 | minus: 1 %}
-        {% assign previous_page = docs[previous] | prepend:"/docs/" | append:"/" %}
-        <li class="previous">
-          <a href="{{ previous_page | relative_url }}">
-            <span aria-hidden="true">&larr;</span> Previous
-          </a>
-        </li>
-      {% endif %}
+    <nav class="docs-pager" aria-label="Previous and next pages">
+      <ul class="pager">
+        {% unless forloop.first %}
+          {% assign previous = forloop.index0 | minus: 1 %}
+          {% assign previous_slug = docs[previous] %}
+          {% assign previous_url = previous_slug | prepend: "/docs/" | append: "/" %}
+          {% assign previous_page = site.docs | where: "url", previous_url | first %}
+          <li class="previous">
+            <a href="{{ previous_url | relative_url }}">
+              <span aria-hidden="true">&larr;</span> {{ previous_page.nav_title | default: previous_page.title | strip_html }}
+            </a>
+          </li>
+        {% endunless %}
 
-      {% if forloop.last %}
-        <li class="next disabled">
-          <a>
-            Next <span aria-hidden="true">&rarr;</span>
-          </a>
-        </li>
-      {% else %}
-        {% assign next = forloop.index0 | plus: 1 %}
-        {% assign next_page = docs[next] | prepend:"/docs/" | append:"/" %}
-        <li class="next">
-          <a href="{{ next_page | relative_url }}">
-            Next <span aria-hidden="true">&rarr;</span>
-          </a>
-        </li>
-      {% endif %}
+        {% unless forloop.last %}
+          {% assign next = forloop.index0 | plus: 1 %}
+          {% assign next_slug = docs[next] %}
+          {% assign next_url = next_slug | prepend: "/docs/" | append: "/" %}
+          {% assign next_page = site.docs | where: "url", next_url | first %}
+          <li class="next">
+            <a href="{{ next_url | relative_url }}">
+              {{ next_page.nav_title | default: next_page.title | strip_html }} <span aria-hidden="true">&rarr;</span>
+            </a>
+          </li>
+        {% endunless %}
       </ul>
-    <div class="clear"></div>
+    </nav>
     {% break %}
   {% endif %}
 {% endfor %}

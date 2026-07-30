@@ -1,114 +1,29 @@
 ---
-title: Welcome to <code class="monospace">tea</code>!
+title: Welcome to <code class="monospace">tea</code>
+nav_title: Overview
 permalink: /docs/home/
-redirect_from: /docs/index.html
+redirect_from:
+  - /docs/index.html
 ---
 
-<img src="{{site.baseurl}}//assets/img/tea_logo_black_extended_inv.jpg" alt="tea_logo" width="400" align="right"/>
+<img src="{{ "/assets/img/tea_logo_black_extended_inv.jpg" | relative_url }}" alt="Toolkit for Efficient Analysis logo" width="400" align="right"/>
 
-`tea` (toolkit for efficient analysis) is a set of tools developed at DESY for analysis of any ROOT trees. 
+`tea`—the Toolkit for Efficient Analysis—is a C++ and Python toolkit for loop-based analysis of ROOT trees. It handles repetitive work such as tree I/O, object collections, event selection, histogramming, plotting, corrections, and batch submission while leaving analysis decisions in readable code and Python configuration.
 
-It is designed for speed (CPU-intensive operations implemented in C++), based on intuitive loop-based logic, while hidding most of the tricky and tedious operations behind a user-friendly API and using Python for configuration and lightweight operations.
+New users should start with the [guided LLP tutorial]({{ "/docs/tutorial_overview/" | relative_url }}). For a shorter check that the installation works, follow [First analysis]({{ "/docs/first_analysis/" | relative_url }}).
 
-To get a feel for how a `tea` app looks like, have a look at an [example app]({{site.baseurl}}/docs/example_app/).
+## Main workflow
 
-If you are ready to dive into the world of `tea`, check out the [installation instructions]({{site.baseurl}}/docs/repo_setup/), and then head to our [tutorials]({{site.baseurl}}/docs/my_first_histogrammer/).
+1. [Install `tea`]({{ "/docs/installation/" | relative_url }}) inside an analysis repository.
+2. [Read ROOT trees]({{ "/docs/tree_io/" | relative_url }}) and define object collections.
+3. [Select or skim events]({{ "/docs/selecting_skimming/" | relative_url }}).
+4. [Produce histograms]({{ "/docs/histogramming/" | relative_url }}) and [make plots]({{ "/docs/plotting/" | relative_url }}).
+5. [Submit independent jobs]({{ "/docs/job_submission/" | relative_url }}) when the input grows.
 
-In case of any questions, ideas, bugs, feature requests, etc. - please open a [GitHub issue](https://github.com/jniedzie/tea/issues) - we will be more than happy to discuss!
+## Get help
 
-## Features
-The framework will help you with:
-- reading any kind of flat ntuples stored in ROOT files (e.g. NanoAOD or HEPMC converted to ROOT),
-- applying selections,
-- saving skimmed trees,
-- creating cut flow tables,
-- creating histograms,
-- plotting histograms,
-- submission to HTCondor based grid systems (e.g. lxplus or NAF),
-- applying correction (e.g. Pile-Up reweighting, b-tagging SFs, muon SFs, etc.).
+For questions, bugs, and feature requests, open a [GitHub issue](https://github.com/jniedzie/tea/issues). The [roadmap]({{ "/docs/roadmap/" | relative_url }}) distinguishes documented workflows from incomplete documentation.
 
-Upcoming features:
+## Analyses using tea
 
-- optimization and verification of ABCD method for background estimation,
-- estimation of systematic uncertainties,
-- calculating limits with Combine.
-
-<div class="grid-container">
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/tree_reader/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_reader.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/tree_writer/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_tree_writer.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/nano_aod/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_nano.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/hepmc/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_hepmc.png" alt="Alt Text">
-    </a>
-  </div>
-
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/skimming/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_skimming.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/histogramming/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_hist.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/scale_factors/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_SFs.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/plotting/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_plotting.png" alt="Alt Text">
-    </a>
-  </div>
-  
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/submitter/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_grid.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/abcd/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_abcd.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/systematics/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_uncertainties.png" alt="Alt Text">
-    </a>
-  </div>
-  <div class="image-link">
-    <a class="image-link" href="{{site.baseurl}}/docs/limits/">
-      <img src="{{site.baseurl}}//assets/img/tea_icons_limits.png" alt="Alt Text">
-    </a>
-  </div>
-  
-  
-  
-  
-</div>
-
-## Analyses implemented with `tea`
-So far, `tea` has been used by the following analyses:
-- [CMS Light-by-light](https://github.com/jniedzie/tea_lbl), [2412.15413](https://arxiv.org/abs/2412.15413)
-- [SHIFT@LHC](https://github.com/jniedzie/tea_shift), [2406.08557](https://arxiv.org/abs/2406.08557)
-- [Search for long-lived ALPs in tt̄ events](https://github.com/jniedzie/tea_ttalps)
-- [CMS HGCal beam-test analysis](https://github.com/jniedzie/tea_hgcal)
-- [Search for Hexaquarks](https://github.com/jniedzie/tea_hexaquarks)
-
-We would be more than happy to welcome you and your analysis on board! 
-You are also invited to contribute to `tea` - help us make it better and more suited for a wide range of scenarios by [creating PRs](https://github.com/jniedzie/tea/pulls), [reporting bugs and creating requests for features](https://github.com/jniedzie/tea/issues).
+`tea` has supported collider and phenomenology analyses using NanoAOD-like and HepMC-derived ROOT inputs. The [analyses page]({{ "/docs/analyses/" | relative_url }}) keeps this community list separate from the beginner path.

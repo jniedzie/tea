@@ -1,27 +1,26 @@
-<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-  {% for section in site.data.docs %}
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h4 class="panel-title">
-          <a data-parent="#accordion">{{ section.title }}</a>
-        </h4>
-      </div>
-      {% assign collapsed = false %}
-      {% for item in section.docs %}
-        {% assign item_url = item | prepend:"/docs/" | append:"/" %}
-        {% if item_url == page.url %}
-          {% assign collapsed = false %}
-        {% endif %}
-      {% endfor %}
-      <div class="panel-collapse" id="collapse-{{forloop.index}}" role="tabpanel" aria-label="Side Navigation">
+<nav class="docs-global-nav" aria-label="Documentation">
+  <button class="docs-nav-toggle" type="button" aria-expanded="false" aria-controls="docs-nav-sections">
+    Documentation
+    <span aria-hidden="true"></span>
+  </button>
+  <div id="docs-nav-sections" class="docs-nav-sections">
+    {% for section in site.data.docs %}
+      <section class="docs-nav-section">
+        <h2 class="docs-nav-heading">{{ section.title }}</h2>
         <div class="list-group">
           {% for item in section.docs %}
-            {% assign item_url = item | prepend:"/docs/" | append:"/" %}
-            {% assign p = site.docs | where:"url", item_url | first %}
-            <a class="list-group-item {% if item_url == page.url %}active{% endif %}" href="{{ p.url  | relative_url }}"><li>{{ p.title }}</li></a>
+            {% assign item_url = item | prepend: "/docs/" | append: "/" %}
+            {% assign item_page = site.docs | where: "url", item_url | first %}
+            {% if item_page %}
+              <a
+                class="list-group-item{% if item_url == page.url %} active{% endif %}"
+                href="{{ item_page.url | relative_url }}"
+                {% if item_url == page.url %}aria-current="page"{% endif %}
+              >{{ item_page.nav_title | default: item_page.title }}</a>
+            {% endif %}
           {% endfor %}
         </div>
-      </div>
-    </div>
-  {% endfor %}
-</div>
+      </section>
+    {% endfor %}
+  </div>
+</nav>

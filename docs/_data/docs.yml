@@ -1,40 +1,49 @@
-- title: About <code class="monospace">tea</code>
+- title: Start here
   docs:
-  - home
-  - example_app
-  - framework_structure
-  - types_in_tea
-  
-- title: Getting Started
-  docs:
-  - prerequisites
-  - repo_setup
-  - build
-  - create_script
+    - home
+    - installation
+    - first_analysis
+    - project_structure
+    - build
 
-- title: Features
+- title: Analysis workflow
   docs:
-  - tree_reader
-  - tree_writer
-  - nano_aod
-  - hepmc
-  - skimming
-  - pruning
-  - histogramming
-  - scale_factors
-  - plotting
-  - job_submission
-  - abcd
-  - systematics
-  - limits
+    - tree_io
+    - selecting_skimming
+    - pruning
+    - histogramming
+    - plotting
+    - corrections_systematics
+    - job_submission
 
 - title: Tutorial
   docs:
-  - my_first_histogrammer
-  - my_first_plots
-  - my_first_skimming
-  - custom_app_printer
-  - extra_event_collections
-  - custom_histogrammer
-  - custom_physics_objects
-  - custom_events
+    - tutorial_overview
+    - tutorial_histograms
+    - tutorial_plotting
+    - tutorial_skimming
+    - tutorial_custom_histograms
+    - tutorial_data_mc
+    - tutorial_limits
+    - tutorial_submission
+
+- title: Customize tea
+  docs:
+    - custom_app
+    - event_collections
+    - custom_data_model
+
+- title: Reference
+  docs:
+    - configuration
+    - built_in_apps
+    - event_api
+    - supported_formats
+    - types
+
+- title: Contributing
+  docs:
+    - updating_tea
+    - contributing
+    - analyses
+    - roadmap
