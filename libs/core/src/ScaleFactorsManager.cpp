@@ -558,7 +558,7 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
 
 map<string, pair<double, double>> ScaleFactorsManager::GetInputBounds(map<string, string> extraArgs) {
   map<string, pair<double, double>> inputBounds = {};
-  if (!extraArgs.contains("inputBounds")) return inputBounds;
+  if (extraArgs.find("inputBounds") == extraArgs.end()) return inputBounds;
   string bounds_str = extraArgs["inputBounds"];
   istringstream ss(bounds_str);
   string item;
