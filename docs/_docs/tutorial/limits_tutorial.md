@@ -14,8 +14,7 @@ The goal is to produce datacards, run `AsymptoticLimits`, and draw an expected l
 ## Prepare the configuration
 
 ```bash
-cp tea/configs/das_exercises/task6_limits_config.py \
-  configs/tutorial/expected_limits.py
+cp tea/configs/das_exercises/task6_limits_config.py configs/expected_limits.py
 ```
 
 Update:
@@ -34,7 +33,7 @@ use_combined_limits = False
 
 ## Run
 
-From `bin/`:
+From `bin/` (remember to run `build.sh` after adding new files):
 
 ```bash
 python3 limits_producer.py --config expected_limits.py

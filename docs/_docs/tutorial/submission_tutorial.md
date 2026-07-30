@@ -10,8 +10,7 @@ You need an application and config that work on one file. The goal is to separat
 ## Prepare the files config
 
 ```bash
-cp tea/configs/das_exercises/task7_files_config.py \
-  configs/tutorial/large_samples.py
+cp tea/configs/das_exercises/task7_files_config.py configs/large_samples.py
 ```
 
 The provided `samples` list covers data, top background, and five signal masses. Keep the base path:
@@ -65,10 +64,9 @@ The example files config writes merged files such as `background_ttsemileptonic_
 Copy the matching plotting configuration:
 
 ```bash
-cp ../tea/configs/das_exercises/task7_plotting.py \
-  ../configs/tutorial/large_sample_plots.py
-cd ..
+cp tea/configs/das_exercises/task7_plotting.py configs/large_sample_plots.py
 source tea/build.sh
+
 cd bin
 python plotter.py --config large_sample_plots.py
 ```
@@ -77,7 +75,7 @@ Update its file and output paths if you changed the task-7 directory names. Veri
 
 ## Optional statistical follow-up
 
-The DAS sequence returns to the limit workflow after the larger-sample checks and also provides `task7_significance_config.py`. Both require a validated Combine environment, consistent merged histograms, and an analysis-approved treatment of collision data. Use the [expected-limit exercise]({{ "/docs/tutorial_limits/" | relative_url }}) as the technical starting point; do not treat the tutorial configuration as an analysis result.
+The DAS sequence returns to the limit workflow after the larger-sample checks and also provides `task7_significance_config.py`. Both require a validated Combine environment and consistently merged histograms. Use the [expected-limit exercise]({{ "/docs/tutorial_limits/" | relative_url }}) as the technical starting point.
 
 ## Expected output
 

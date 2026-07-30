@@ -14,8 +14,7 @@ The goal is to overlay the signal on the background and write PDF plots.
 ## Prepare the plotting config
 
 ```bash
-cp tea/configs/das_exercises/task2_plotting.py \
-  configs/tutorial/plot_histograms.py
+cp tea/configs/das_exercises/task2_plotting.py configs/plot_histograms.py
 ```
 
 Point the two `Sample` entries at:
@@ -52,7 +51,7 @@ histograms = (
 ```bash
 source tea/build.sh
 cd bin
-python plotter.py --config plot_histograms.py
+python3 plotter.py --config plot_histograms.py
 ```
 
 ## Expected output

@@ -14,8 +14,7 @@ Complete the [tutorial setup]({{ "/docs/tutorial_overview/" | relative_url }}) a
 From the analysis root:
 
 ```bash
-cp tea/configs/das_exercises/task1_simple_histograms.py \
-  configs/tutorial/simple_histograms.py
+cp tea/configs/das_exercises/task1_simple_histograms.py configs/simple_histograms.py
 ```
 
 Set the paths and histogram definitions:
@@ -54,7 +53,7 @@ cd bin
 rootls ../results/tutorial/histograms/background_ttsemileptonic.root
 ```
 
-If the file is missing, check the input path and create the output directory from the tutorial overview.
+If the file is missing, check the input path and output directories.
 
 ## Next step
 

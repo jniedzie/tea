@@ -10,8 +10,7 @@ You need the tutorial’s selection definitions and histogramming workflow. The 
 ## Prepare the analysis config
 
 ```bash
-cp tea/configs/das_exercises/task5_data_mc.py \
-  configs/tutorial/data_mc_histograms.py
+cp tea/configs/das_exercises/task5_data_mc.py configs/data_mc_histograms.py
 ```
 
 Complete the `TightMuons`, `LooseElectrons`, and `GoodJets` selections, then define control-region event cuts. Run the same configuration once with:

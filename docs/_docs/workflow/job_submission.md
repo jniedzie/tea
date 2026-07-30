@@ -17,7 +17,7 @@ Use `tea/configs/das_exercises/task7_files_config.py` and the corresponding task
 Run on lxplus (or some other supported node), from `bin/`:
 
 ```bash
-python submitter.py \
+python3 submitter.py \
   --app histogrammer \
   --config task4_advanced_histograms.py \
   --files_config task7_files_config.py \

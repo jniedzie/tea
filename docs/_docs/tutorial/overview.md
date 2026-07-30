@@ -28,23 +28,16 @@ The tutorial uses:
 └── large_samples/
 ```
 
-Keep generated files below your analysis project:
-
-```bash
-mkdir -p results/tutorial/{histograms,plots,trees,limits}
-mkdir -p configs/tutorial
-```
-
 All application commands run from `bin/`, so tutorial output paths begin with `../results/tutorial/`.
 
 ## What you will produce
 
 By the end, you will have:
 
-- ROOT histograms for background, signal, and collision data;
 - a skimmed signal tree;
 - a custom C++ histogrammer for dimuon observables;
-- data-to-simulation plots;
+- ROOT histograms for background, signal, and collision data;
+- data-vs-simulation plots;
 - optionally, a Combine datacard and expected-limit plot;
 - a files configuration that scales the workflow to larger samples.
 

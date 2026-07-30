@@ -12,8 +12,7 @@ You need access to the DAS signal file. The goal is to keep events with missing 
 ## Prepare the skimmer config
 
 ```bash
-cp tea/configs/das_exercises/task3_skimmer.py \
-  configs/tutorial/skim_signal.py
+cp tea/configs/das_exercises/task3_skimmer.py configs/skim_signal.py
 ```
 
 Complete the event selection:
