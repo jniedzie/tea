@@ -66,7 +66,7 @@ bool ScaleFactorsManager::ShouldApplyVariation(const std::string& name) {
 }
 
 void ScaleFactorsManager::ExtractBounds(const json& node, map<string, pair<double, double>>& bounds) {
-  if (!node.contains("nodetype")) return;
+  if (node.find("nodetype") == node.end()) return;
 
   string type = node["nodetype"];
 
@@ -558,7 +558,7 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
 
 map<string, pair<double, double>> ScaleFactorsManager::GetInputBounds(map<string, string> extraArgs) {
   map<string, pair<double, double>> inputBounds = {};
-  if (!extraArgs.contains("inputBounds")) return inputBounds;
+  if (extraArgs.find("inputBounds") == extraArgs.end()) return inputBounds;
   string bounds_str = extraArgs["inputBounds"];
   istringstream ss(bounds_str);
   string item;
