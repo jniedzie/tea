@@ -321,8 +321,17 @@ class HistogramPlotter:
     if not self.show_ratios:
       return
 
+    ratio_stack = self.__getRatioStack(hist)
+    if ratio_stack is None or not hasattr(ratio_stack, "GetHistogram"):
+      return
+    ratio_histogram = ratio_stack.GetHistogram()
+    if ratio_histogram is None:
+      return
+    x_min = hist.x_min if hist.x_min is not None else ratio_histogram.GetXaxis().GetXmin()
+    x_max = hist.x_max if hist.x_max is not None else ratio_histogram.GetXaxis().GetXmax()
+
     global line
-    line = ROOT.TLine(hist.x_min, 1, hist.x_max, 1)
+    line = ROOT.TLine(x_min, 1, x_max, 1)
     line.SetLineColor(ROOT.kBlack)
     line.SetLineStyle(ROOT.kDashed)
 
@@ -402,8 +411,25 @@ class HistogramPlotter:
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() > 0:
         stack.Draw(options)
-        self.styler.setupFigure(stack, hist)
         firstPlotted = True
+
+    # Apply automatic limits only after every sample has been drawn.  A
+    # THStack's axis is established by its first draw, while subsequent
+    # stacks (signals/data) can contain larger contributions.
+    plotted_histograms = []
+    for sample_type in SampleType:
+      stack = self.stacks[sample_type][hist.getName()]
+      if stack.GetNhists() == 0:
+        continue
+      stack_histograms = stack.GetStack()
+      if stack_histograms and stack_histograms.GetSize() > 0:
+        plotted_histograms.append(stack_histograms.Last())
+
+    first_stack = next((self.stacks[sample_type][hist.getName()]
+                        for sample_type in SampleType
+                        if self.stacks[sample_type][hist.getName()].GetNhists() > 0), None)
+    if first_stack is not None:
+      self.styler.setupFigure(first_stack, hist, source_histograms=plotted_histograms)
 
   def __drawRatioHists(self, canvas, hist):
     canvas.cd(1)
@@ -442,7 +468,7 @@ class HistogramPlotter:
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawLegends(canvas, hist)
-      self.cmsLabelsManager.drawLabels(canvas)
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       # make sure plot border is on top of everything else
       canvas.GetPad(1).GetFrame().SetLineWidth(2)
@@ -500,7 +526,7 @@ class HistogramPlotter:
 
       self.__drawRatioHists(canvas, hist_nom)
       self.__drawLegends(canvas, hist_nom)
-      self.cmsLabelsManager.drawLabels(canvas)
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       canvas.Update()
 

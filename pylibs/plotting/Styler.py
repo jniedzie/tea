@@ -126,7 +126,7 @@ class Styler:
 
     gStyle.SetPaperSize(20., 20.)
 
-  def setupFigure(self, plot, hist, is_ratio=False):
+  def setupFigure(self, plot, hist, is_ratio=False, source_histograms=None):
     if plot is None or type(plot) is TObject:
       return
 
@@ -134,14 +134,16 @@ class Styler:
       plot.SetMinimum(self.config.ratio_limits[0])
       plot.SetMaximum(self.config.ratio_limits[1])
     else:
-      if (hist.y_min > 0) or (not hist.log_y and hist.y_min == 0):
+      self.__setAutomaticLimits(plot, hist, source_histograms)
+      if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
         plot.SetMinimum(hist.y_min)
-      if (hist.y_max > 0):
+      if hist.y_max is not None and hist.y_max > 0:
         plot.SetMaximum(hist.y_max)
 
     try:
       plot.SetTitle("" if is_ratio else hist.title)
-      plot.GetXaxis().SetLimits(hist.x_min, hist.x_max)
+      if hist.x_min is not None and hist.x_max is not None:
+        plot.GetXaxis().SetLimits(hist.x_min, hist.x_max)
 
       plot.GetXaxis().SetTitle(hist.x_label)
 
@@ -163,6 +165,53 @@ class Styler:
       warn("Couldn't set axes limits")
       return
 
+  def __setAutomaticLimits(self, plot, hist, source_histograms=None):
+    """Set missing bounds from all plotted contributions, with a small margin."""
+    if not hasattr(plot, "GetHistogram"):
+      return
+    source_histogram = plot.GetHistogram()
+    if source_histogram is None:
+      return
+
+    source_histograms = source_histograms or [source_histogram]
+
+    x_min = min(h.GetXaxis().GetXmin() for h in source_histograms)
+    x_max = max(h.GetXaxis().GetXmax() for h in source_histograms)
+    if hist.x_min is None or hist.x_max is None:
+      if x_min <= 0 or x_max <= 0:
+        padding = 0.05 * (x_max - x_min)
+        automatic_x_min = x_min - padding
+        automatic_x_max = x_max + padding
+      else:
+        automatic_x_min = 0.7 * x_min
+        automatic_x_max = 1.3 * x_max
+      plot.GetXaxis().SetLimits(
+          hist.x_min if hist.x_min is not None else automatic_x_min,
+          hist.x_max if hist.x_max is not None else automatic_x_max)
+
+    if hist.y_min is None or hist.y_max is None:
+      values = []
+      for source in source_histograms:
+        values.extend(source.GetBinContent(i)
+                      for i in range(1, source.GetNbinsX() + 1))
+      positive_values = [value for value in values if value > 0]
+      maximum = max(positive_values) if positive_values else 1.0
+      if hist.log_y:
+        minimum = min(positive_values) if positive_values else maximum / 1000.0
+        automatic_y_min = 0.7 * minimum
+      else:
+        automatic_y_min = min(values) if values else 0.0
+        automatic_y_min = min(0.0, automatic_y_min)
+      automatic_y_max = 1.3 * maximum
+      minimum = hist.y_min
+      if minimum is None or (hist.log_y and minimum <= 0):
+        minimum = automatic_y_min
+      maximum = hist.y_max
+      if maximum is None or maximum <= 0:
+        maximum = automatic_y_max
+      plot.SetMinimum(minimum)
+      plot.SetMaximum(maximum)
+
   def setupFigure2D(self, plot, hist):
     if plot is None or type(plot) is TObject:
       return
@@ -174,19 +223,15 @@ class Styler:
       label_size = self.labelFontSize / float(pad.GetWh())
     label_font = 42
 
-    if (hist.y_min > 0):
-      plot.SetMinimum(hist.y_min)
-    if (hist.y_max > 0):
-      plot.SetMaximum(hist.y_max)
-
-    if (hist.z_min > 0):
+    if hist.z_min is not None and (hist.z_min > 0):
       plot.SetMinimum(hist.z_min)
-    if (hist.z_max > 0):
+    if hist.z_max is not None and (hist.z_max > 0):
       plot.SetMaximum(hist.z_max)
 
     try:
       plot.SetTitle(hist.title)
-      plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
+      if hist.x_min is not None and hist.x_max is not None:
+        plot.GetXaxis().SetRangeUser(hist.x_min, hist.x_max)
       plot.GetXaxis().SetTitle(hist.x_label)
       plot.GetXaxis().SetTitleFont(label_font)
       plot.GetXaxis().SetTitleSize(label_size)
@@ -194,7 +239,8 @@ class Styler:
       plot.GetXaxis().SetLabelFont(label_font)
       plot.GetXaxis().SetLabelSize(label_size)
 
-      plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
+      if hist.y_min is not None and hist.y_max is not None:
+        plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
       plot.GetYaxis().SetTitle(hist.y_label)
       plot.GetYaxis().SetTitleFont(label_font)
       plot.GetYaxis().SetTitleSize(label_size)
