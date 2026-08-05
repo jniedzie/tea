@@ -43,6 +43,10 @@ class PhysicsObject {
     return Multitype(this, branchName);
   }
 
+  inline bool HasBranch(std::string branchName) {
+    return valuesTypes.count(branchName) > 0 || customValuesTypes.count(branchName) > 0;
+  }
+
   inline TLorentzVector GetFourVector() {
     TLorentzVector vec;
     vec.SetPtEtaPhiM(GetAs<float>("pt"), GetAs<float>("eta"), GetAs<float>("phi"), GetAs<float>("mass"));

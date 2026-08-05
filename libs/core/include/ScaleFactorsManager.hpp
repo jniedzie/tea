@@ -18,7 +18,7 @@ using CorrectionArgType = correction::Variable::Type;
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
 using CompoundCorrectionRef = DummyCorrectionRef;
-using CorrectionArgType = std::variant<long, double, std::string>;
+using CorrectionArgType = std::variant<int, double, std::string>;
 #endif
 
 struct MuonID;
@@ -39,6 +39,8 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<CorrectionArgType>& args);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
+  float GetJetTagEfficiency(std::string name, std::string datasetName, float pt);
+
 
   std::map<std::string, float> GetPileupScaleFactorCustom(int nVertices);
   std::map<std::string, float> GetPileupScaleFactor(std::string name, float nVertices);
@@ -55,7 +57,8 @@ class ScaleFactorsManager {
 
   void ReadJetEnergyCorrections();
   bool ShouldApplyJetEnergyCorrections() { return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec"); }
-  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
+  std::map<std::string, float> GetJetEnergyCorrectionUncertainties(std::map<std::string, float> inputArguments);
+  std::map<std::string, float> GetJetEnergyCorrections(std::vector<std::string> jecNames, std::map<std::string, float> inputArguments);
   std::map<std::string, float> GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho);
   float GetJetEnergyResolutionSmearingFactor(std::map<std::string, CorrectionArgType> inputArguments);
 
