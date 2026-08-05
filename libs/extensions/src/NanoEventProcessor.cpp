@@ -669,8 +669,7 @@ void NanoEventProcessor::ApplyMETXYcorrections(const shared_ptr<NanoEvent> event
   
   float met_pt = event->GetMetPt();
   float met_phi = event->GetMetPhi();
-  float met_px = met_pt * cos(met_phi);
-  float met_py = met_pt * sin(met_phi);
+  // METXYCorr_Met_MetPhi operates on (pt, phi); no need to compute (px, py) here.
 
   int npv = event->GetAs<int>("PV_npvs");
   uint run = event->Get("run");
