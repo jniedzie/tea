@@ -440,7 +440,6 @@ void NanoEventProcessor::ApplyJetEnergyScaleCorrections(const shared_ptr<NanoEve
   uint run = event->Get("run");
   
   for (auto jet : *jets) {
-    float pt_before = asNanoJet(jet)->GetPt();
     asNanoJet(jet)->UpdateJetEnergyScaleVariables(rho, isData, run);
   }
 }
