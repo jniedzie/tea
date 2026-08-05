@@ -15,24 +15,39 @@ class NanoGenParticle {
  public:
   NanoGenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
            int line = __builtin_LINE()) {
-    return physicsObject->Get(branchName, file, function, line);
+    return physicsObject->Get(branchName, verbose, file, function, line);
   }
-  float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
+
+  template <typename T>
+  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
+
+  std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
+
+  bool operator==(const std::shared_ptr<NanoGenParticle> otherGenParticle) {
+    return GetPhysicsObject() == otherGenParticle->GetPhysicsObject();
+  }
 
   TLorentzVector GetFourVector(float mass);
   float GetMass() { return physicsObject->Get("mass"); }
   float GetPt() { return physicsObject->Get("pt"); }
+  float GetEta() { return physicsObject->Get("eta"); }
+  float GetPhi() { return physicsObject->Get("phi"); }
   int GetPdgId() { return physicsObject->Get("pdgId"); }
-  int GetMotherIndex() { return physicsObject->Get("genPartIdxMother"); }
-  int GetStatusFlags() { return physicsObject->Get("statusFlags"); }
+  int GetMotherIndex() { return physicsObject->GetAs<int>("genPartIdxMother"); }
+  int GetStatusFlags() { return physicsObject->GetAs<int>("statusFlags"); }
   float GetDxy(float pv_x, float pv_y);
 
   bool IsLastCopy() { return (GetStatusFlags() & isLastCopy); }
   bool IsFirstCopy() { return (GetStatusFlags() & isFirstCopy); }
+  bool IsPrompt() { return (GetStatusFlags() & isPrompt); }
+  bool IsHardProcess() { return (GetStatusFlags() & isHardProcess); }
+  bool IsFromHardProcess() { return (GetStatusFlags() & fromHardProcess); }
+  bool IsFromHardProcessBeforeFSR() { return (GetStatusFlags() & fromHardProcessBeforeFSR); }
+  bool IsLastCopyBeforeFSR() { return (GetStatusFlags() & isLastCopyBeforeFSR); }
 
   bool IsGoodBottomQuark(std::shared_ptr<NanoGenParticle> mother);
   bool IsGoodUdscQuark(std::shared_ptr<NanoGenParticle> mother);
@@ -44,6 +59,8 @@ class NanoGenParticle {
   bool IsMuon();
 
   std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
+
+  void Print();
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

@@ -10,6 +10,7 @@ class Legend:
     y2: float = 0.5
     options: str = ""
     title: str = ""
+    text_size: float = 20
 
     def getRootLegend(self):
         legend = TLegend(self.x1, self.y1, self.x2, self.y2)
@@ -20,8 +21,8 @@ class Legend:
         legend.SetBorderSize(0)
         # legend.SetFillColor(0)
         # legend.SetFillStyle(0)
-        legend.SetTextFont(42)
-        legend.SetTextSize(0.035)
+        legend.SetTextFont(43)
+        legend.SetTextSize(self.text_size)
 
         # set legend title
         if self.title != "":

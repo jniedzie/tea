@@ -1,10 +1,9 @@
 ## specify how many events to run on (and how often to print current event number)
 nEvents = 100
-printEveryNevents = 10
 
 # specify input/output paths 
-inputFilePath = "input_tree.root"
-histogramsOutputFilePath = "output_histograms.root"
+inputFilePath = "../tea/samples/background_dy.root"
+histogramsOutputFilePath = "../samples/histograms/custom_histograms.root"
 
 # define default histograms (can be filled automatically with HistogramsFiller, based on collection and variable names)
 defaultHistParams = (
@@ -16,10 +15,9 @@ defaultHistParams = (
 
 # define custom histograms (you will have to fill them in your HistogramsFiller)
 histParams = (
-#    name         bins  xmin    xmax    dir
-  ("m_inv",      1000,  0,      10,     "kinematics"),
-  ("delta_phi",  1000, -3.5,    3.5,    "kinematics"),
-  ("n_muons",    20,    0,      20,     "counters"  ),
+#    collection variable         bins  xmin    xmax    dir
+  ("Dimuon", "mInv",      1000,  0,      10,     "kinematics"),
+  ("Dimuon", "deltaPhi",  1000, -3.5,    3.5,    "kinematics"),
 )
 
 # define custom 2D histograms (you will have to fill them in your HistogramsFiller)

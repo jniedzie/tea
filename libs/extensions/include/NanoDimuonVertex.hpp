@@ -9,35 +9,42 @@
 #include "Helpers.hpp"
 #include "PhysicsObject.hpp"
 #include "ScaleFactorsManager.hpp"
+#include "NanoMuon.hpp"
 
 class NanoDimuonVertex;
-typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoMuonVertices;
+typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoDimuonVertices;
 
 class NanoDimuonVertex {
  public:
   NanoDimuonVertex(std::shared_ptr<PhysicsObject> physicsObject_, const std::shared_ptr<Event> event);
 
-  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
            int line = __builtin_LINE()) {
-    return physicsObject->Get(branchName, file, function, line);
+    return physicsObject->Get(branchName, verbose, file, function, line);
   }
-  float GetAsFloat(std::string branchName) { return physicsObject->GetAsFloat(branchName); }
+
+  template <typename T>
+  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
-  std::shared_ptr<PhysicsObject> Muon1() { return muon1; }
-  std::shared_ptr<PhysicsObject> Muon2() { return muon2; }
+  std::shared_ptr<NanoMuon> Muon1() { return muon1; }
+  std::shared_ptr<NanoMuon> Muon2() { return muon2; }
 
-  bool isDSAMuon1() { return float(physicsObject->Get("isDSAMuon1")) == 1.; }
-  bool isDSAMuon2() { return float(physicsObject->Get("isDSAMuon2")) == 1.; }
-  float muonIndex1() { return float(physicsObject->Get("originalMuonIdx1")); }
-  float muonIndex2() { return float(physicsObject->Get("originalMuonIdx2")); }
-  bool isValid() { return (float)Get("isValid") > 0; }
+  bool IsDSAMuon1() { return float(physicsObject->Get("isDSAMuon1")) == 1.; }
+  bool IsDSAMuon2() { return float(physicsObject->Get("isDSAMuon2")) == 1.; }
+  float MuonIndex1() { return float(physicsObject->Get("originalMuonIdx1")); }
+  float MuonIndex2() { return float(physicsObject->Get("originalMuonIdx2")); }
+  bool IsValid() { return (float)Get("isValid") > 0; }
+
+  bool IsPatDimuon() { return GetVertexCategory() == "Pat"; }
+  bool IsPatDSADimuon() { return GetVertexCategory() == "PatDSA"; }
+  bool IsDSADimuon() { return GetVertexCategory() == "DSA"; }
 
   std::shared_ptr<PhysicsObject> GetPhysicsObject() { return physicsObject; }
 
   std::string GetVertexCategory();
-  std::pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>> GetMuons(const std::shared_ptr<Event> event);
+  std::pair<std::shared_ptr<NanoMuon>, std::shared_ptr<NanoMuon>> GetMuons(const std::shared_ptr<Event> event);
 
   TLorentzVector GetFourVector();
   float GetInvariantMass() { return GetFourVector().M(); }
@@ -58,20 +65,40 @@ class NanoDimuonVertex {
 
   float GetDimuonChargeProduct();
   float GetOuterDeltaR();
+  float GetDeltaR() { return Get("dR"); }
 
   float GetDeltaEta();
   float GetDeltaPhi();
   float GetOuterDeltaEta();
   float GetOuterDeltaPhi();
+  float GetLeadingMuonPt();
 
-  float GetTotalNumberOfSegments();
-  float GetTotalNumberOfDTHits();
-  float GetTotalNumberOfCSCHits();
+  float GetLogDisplacedTrackIso(std::string isolationVariable);
+  float GetDeltaDisplacedTrackIso03();
+  float GetLogDeltaDisplacedTrackIso03();
+  float GetDeltaDisplacedTrackIso04();
+  float GetLogDeltaDisplacedTrackIso04();
+  float GetLogDeltaSquaredDisplacedTrackIso03();
+  float GetLogDeltaSquaredDisplacedTrackIso04();
+
+  int GetTotalNumberOfSegments();
+  int GetTotalNumberOfDTHits();
+  int GetTotalNumberOfCSCHits();
+
+  std::shared_ptr<NanoMuon> GetLeadingMuon();
+  std::shared_ptr<NanoMuon> GetSubleadingMuon();
+
+  bool HasMuonIndices(int muonIdx1, int muonIdx2);
+
+  std::string GetGenMotherResonanceCategory(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
+  std::string GetGenMotherBackgroundCategory(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
+  std::string GetGenMotherCategory(std::shared_ptr<PhysicsObjects> genMuonCollection);
+  std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
-  std::shared_ptr<PhysicsObject> muon1;
-  std::shared_ptr<PhysicsObject> muon2;
+  std::shared_ptr<NanoMuon> muon1;
+  std::shared_ptr<NanoMuon> muon2;
 
   TVector3 Lxyz;
   float LxySigma;

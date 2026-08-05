@@ -1,0 +1,1080 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "NUM_DisplacedID_DEN_dSAMuons",
+            "description": "NUM_DisplacedID_DEN_dSAMuons",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "year",
+                    "type": "string",
+                    "description": "year/scenario: example 2016preVFP, 2017 etc"
+                },
+                {
+                    "name": "abseta",
+                    "type": "real",
+                    "description": "Probe abseta"
+                },
+                {
+                    "name": "pt",
+                    "type": "real",
+                    "description": "Probe pt"
+                },
+                {
+                    "name": "ValType",
+                    "type": "string",
+                    "description": "sf or syst (currently 'sf' is nominal, and 'systup' and 'systdown' are up/down variations with total stat+syst uncertainties. Individual systs are also available (in these cases syst only, not sf +/- syst)"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real",
+                "description": "Output scale factor (nominal) or uncertainty"
+            },
+            "data": {
+                "nodetype": "category",
+                "input": "year",
+                "content": [
+                    {
+                        "key": "2018_preUL",
+                        "value": {
+                            "nodetype": "binning",
+                            "input": "abseta",
+                            "edges": [
+                                0.0,
+                                0.9,
+                                1.2,
+                                2.1,
+                                2.4
+                            ],
+                            "content": [
+                                {
+                                    "nodetype": "binning",
+                                    "input": "pt",
+                                    "edges": [
+                                        15.0,
+                                        20.0,
+                                        25.0,
+                                        30.0,
+                                        40.0,
+                                        50.0,
+                                        60.0,
+                                        120.0
+                                    ],
+                                    "content": [
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0005798986197109723
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00012063335157480592
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0007843442073826035
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0013556644425749824
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0010877084943698803
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0004659175017263095
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9421331162290741
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0009477465429891252
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0008156208556298616
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0011671089664345158
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0009243024537315483
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.002817178606478351
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.002238501970376894
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9393995910503627
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0004467578286648788
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0008706913125125504
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.00017115577373738589
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0006922478606409096
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0014764790591602066
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0010922454825252337
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9376390646020408
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.00010782171784806671
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00030601503865251845
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0006383945843338457
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0003379312555213835
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0007805849535420112
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.000310635634897527
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9360402307755589
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 4.420555956929917e-05
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00044913546141422955
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0005141718727151301
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.00032196278842133453
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.002003043070810028
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0018825865277941611
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9339316419811785
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0012215538058555353
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00021326482904682198
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 7.516216944153387e-05
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0007133148431679256
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0016510623716436271
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0010875118461119437
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9323778385134689
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0021135296128605985
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00080016669975852
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.000934349358891251
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0009995410345776275
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0030298543038799904
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0017887800888981564
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9255640256065993
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "flow": "error"
+                                },
+                                {
+                                    "nodetype": "binning",
+                                    "input": "pt",
+                                    "edges": [
+                                        15.0,
+                                        20.0,
+                                        25.0,
+                                        30.0,
+                                        40.0,
+                                        50.0,
+                                        60.0,
+                                        120.0
+                                    ],
+                                    "content": [
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0006920260842533388
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00012926751028674577
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0010244573713866778
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.00236356524694005
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0016917292361531755
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0011475298306206083
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9577176602291801
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.000737303340378026
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0008146089208791452
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.004500151720410184
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0016390900300562554
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.005269170789898904
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.002511093665458264
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9562421861659186
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.00548297709921286
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.005568677515045806
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0062005927391936555
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0016349823318035246
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.01147445870082885
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.005669448387860709
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9586670143905155
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0008360957779356415
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0005769843618257942
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0010361036079638564
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0005990151954793902
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0016572689979460194
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0008006639378940195
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.951780018417564
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0010845891438708843
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.004385801248502796
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0007515345057430012
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0005662379666498792
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.004612173300015781
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0005438310709078853
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9511920230404616
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 2.370062223100433e-05
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.002126718270293204
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.00014967523868192334
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0012094883603154648
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0021525154238017977
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.00029568167331961437
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9509230179775958
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0001949273622655623
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.006883031070932799
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0002523247056646083
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0013988501077501993
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.006972516333928492
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0010668659099553057
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9448983766260375
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "flow": "error"
+                                },
+                                {
+                                    "nodetype": "binning",
+                                    "input": "pt",
+                                    "edges": [
+                                        15.0,
+                                        20.0,
+                                        25.0,
+                                        30.0,
+                                        40.0,
+                                        50.0,
+                                        60.0,
+                                        120.0
+                                    ],
+                                    "content": [
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.001992489018085694
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.000649896549949164
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.000496389578626631
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.010326972401701908
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.026061618601267485
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.00206392599813034
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.970870532742272
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.00034852508941252136
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0009463813945267407
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0003904758994888735
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0007260088567241583
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0013058009496650228
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0007318040791141067
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9725450858365513
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0003660672690960487
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.001867104001182951
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0021178275634576305
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0007445396643233479
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.003329374062823355
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.001726109922607244
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9733611522814325
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0001053661311445353
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00023607265097969066
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0021977656075709007
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0002852577776997443
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.002235765921886279
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0003188154223270345
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9714780799365358
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.00020076064672036598
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.002226586541183684
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.001969559201395077
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0003533676135077866
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.003832677717774402
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.002410863450689915
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9731072521420551
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 9.000119992275124e-05
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00040740973447639384
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0014187110095415512
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0005700243651069991
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.00308777758107488
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.002710635820957985
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9709873122847056
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0003159024581209646
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0002951717315801128
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0021732722582631925
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.000864474790370297
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0023431502495539977
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0007617874173794781
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9687311433674282
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "flow": "error"
+                                },
+                                {
+                                    "nodetype": "binning",
+                                    "input": "pt",
+                                    "edges": [
+                                        15.0,
+                                        20.0,
+                                        25.0,
+                                        30.0,
+                                        40.0,
+                                        50.0,
+                                        60.0,
+                                        120.0
+                                    ],
+                                    "content": [
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.001759723655032075
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0010846960320972654
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.00047456694309733205
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.003744128435403066
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.004653007894836799
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.004141506472505607
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9480227026925031
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.00015616862125422681
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0023810668363046794
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0003757183283699117
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0019994542069348667
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0031667692422220426
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0020477781261640793
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9495648760756416
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 5.2881320292685885e-06
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00026215611216540147
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0033520326869423966
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0016778998897700702
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.003765688742180918
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0016957401856333432
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9460014544932487
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 0.0026281944852244443
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.00025580050653345454
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.00024000032820342687
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0009289505307172551
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.002713442606207278
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0005764811083949217
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9454051028371113
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 9.052426334765773e-05
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 9.55195111790319e-06
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0010849629605487188
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0008702973975684788
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0019318512313969364
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0015958128563407503
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9440305746557429
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 5.215764597665817e-06
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 0.0020024347249676944
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0015891108113046948
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.0017838669438451128
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.004091295438106613
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0031943157576090897
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9473342825526203
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "nodetype": "category",
+                                            "input": "ValType",
+                                            "content": [
+                                                {
+                                                    "key": "AltSig",
+                                                    "value": 1.4899268416801448e-06
+                                                },
+                                                {
+                                                    "key": "massBin",
+                                                    "value": 9.389162097461767e-05
+                                                },
+                                                {
+                                                    "key": "massRange",
+                                                    "value": 0.0002503769428530145
+                                                },
+                                                {
+                                                    "key": "stat",
+                                                    "value": 0.003174406404175696
+                                                },
+                                                {
+                                                    "key": "syst",
+                                                    "value": 0.0032798701720470587
+                                                },
+                                                {
+                                                    "key": "tagIso",
+                                                    "value": 0.0032689511889290035
+                                                },
+                                                {
+                                                    "key": "sf",
+                                                    "value": 0.9389569419904814
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "flow": "error"
+                                }
+                            ],
+                            "flow": "error"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

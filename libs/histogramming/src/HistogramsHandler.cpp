@@ -4,48 +4,51 @@
 
 #include "HistogramsHandler.hpp"
 
+#include <filesystem>
+
 #include "ConfigManager.hpp"
 #include "ExtensionsHelpers.hpp"
 
 using namespace std;
 
 HistogramsHandler::HistogramsHandler() {
-  auto &config = ConfigManager::GetInstance();
+  auto& config = ConfigManager::GetInstance();
 
-  try{
+  try {
     config.GetHistogramsParams(histParams, "defaultHistParams");
-  }
-  catch(const Exception& e){
-    info() << "No defaultHistParams found in config file" << endl;
+  } catch (const Exception& e) {
   }
 
-  try{
+  try {
     config.GetHistogramsParams(histParams, "histParams");
-  }
-  catch(const Exception& e){
-    info() << "No histParams found in config file" << endl;
+  } catch (const Exception& e) {
   }
 
-  try{
+  try {
     config.GetHistogramsParams(irregularHistParams, "irregularHistParams");
-  }
-  catch(const Exception& e){
-    info() << "No irregularHistParams found in config file" << endl;
+  } catch (const Exception& e) {
   }
 
-  try{
+  try {
     config.GetHistogramsParams(histParams2D, "histParams2D");
-  }
-  catch(const Exception& e){
-    info() << "No histParams2D found in config file" << endl;
+  } catch (const Exception& e) {
   }
 
-  try{
+  try {
+    config.GetHistogramsParams(irregularHistParams2D, "irregularHistParams2D");
+  } catch (const Exception& e) {
+  }
+
+  try {
     config.GetValue("histogramsOutputFilePath", outputPath);
+  } catch (const Exception& e) {
   }
-  catch(const Exception& e){
-    info() << "No histogramsOutputFilePath found in config file" << endl;
+  try {
+    config.GetVector("SFvariationVariables", SFvariationVariables);
+  } catch (const Exception& e) {
   }
+
+  eventWeights["default"] = 1.0;  // Default weight
 
   SetupHistograms();
 }
@@ -53,67 +56,189 @@ HistogramsHandler::HistogramsHandler() {
 HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
-  for (auto &[title, params] : histParams) {
-    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
+  for (auto& [title, params] : histParams) {
+    histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
   }
 
-  for (auto &[title, params] : irregularHistParams) {
-    histograms1D[title] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+  for (auto& [title, params] : irregularHistParams) {
+    histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
-  for (auto &[name, params] : histParams2D) {
-    histograms2D[name] =
-        new TH2D(name.c_str(), name.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+  for (auto& [title, params] : histParams2D) {
+    histograms2D[make_pair(title, "")] =
+        new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+  }
+
+  for (auto& [title, params] : irregularHistParams2D) {
+    histograms2D[make_pair(title, "")] = new TH2D(title.c_str(), title.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0],
+                                                  params.binEdgesY.size() - 1, &params.binEdgesY[0]);
+  }
+
+  // copy names of all histograms to unfilledHistograms vector
+  for (auto& [names, hist] : histograms1D) {
+    unfilledHistograms.push_back(names.first);
+  }
+  for (auto& [names, hist] : histograms2D) {
+    unfilledHistograms.push_back(names.first);
   }
 }
 
-void HistogramsHandler::Fill(std::string name, double value, double weight)
-{
-  CheckHistogram(name);
-  histograms1D[name]->Fill(value, weight);
+void HistogramsHandler::SetupSFvariationHistograms() {
+  for (auto& [title, params] : histParams) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    for (auto& [sfName, weight] : eventWeights) {
+      if (sfName == "default") continue;
+      string titlesf = title + "_" + sfName;
+      histograms1D[make_pair(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
+    }
+  }
+
+  for (auto& [title, params] : irregularHistParams) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    for (auto& [sfName, weight] : eventWeights) {
+      if (sfName == "default") continue;
+      string titlesf = title + "_" + sfName;
+      histograms1D[make_pair(title, sfName)] = new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
+    }
+  }
+
+  for (auto& [title, params] : histParams2D) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    for (auto& [sfName, weight] : eventWeights) {
+      if (sfName == "default") continue;
+      string titlesf = title + "_" + sfName;
+      histograms2D[make_pair(title, sfName)] =
+          new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
+    }
+  }
+
+  for (auto& [title, params] : irregularHistParams2D) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    for (auto& [sfName, weight] : eventWeights) {
+      if (sfName == "default") continue;
+      string titlesf = title + "_" + sfName;
+      histograms2D[make_pair(title, sfName)] = new TH2D(titlesf.c_str(), titlesf.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0],
+                                                        params.binEdgesY.size() - 1, &params.binEdgesY[0]);
+    }
+  }
 }
 
-void HistogramsHandler::Fill(std::string name, double valueX, double valueY, double weight)
-{
-  CheckHistogram(name);
-  histograms2D[name]->Fill(valueX, valueY, weight);
+void HistogramsHandler::SetEventWeights(map<string, float> weights) {
+  eventWeights = weights;
+  if (!sfSetup) {
+    SetupSFvariationHistograms();
+    sfSetup = true;
+  }
+};
+
+void HistogramsHandler::Fill(string name, double value) {
+  double weight = eventWeights["default"];
+  CheckHistogram(name, "");
+  histograms1D[make_pair(name, "")]->Fill(value, weight);
+
+  RemoveFromUnfilled(name);
+
+  // handle SF variation histograms
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
+  for (auto& [sfName, weight] : eventWeights) {
+    if (sfName == "default") continue;
+    CheckHistogram(name, sfName);
+    histograms1D[make_pair(name, sfName)]->Fill(value, weight);
+  }
 }
 
-void HistogramsHandler::CheckHistogram(string name){
-  if (!histograms1D.count(name) && !histograms2D.count(name)) {
-    error() << "Couldn't find key: " << name << " in histograms map"<<endl;
-    info() << "Available histograms: " << endl;
-    for(auto [histName, hist] : histograms1D) info() << "\t" << histName << endl;
-    for(auto [histName, hist] : histograms2D) info() << "\t" << histName << endl;
+void HistogramsHandler::Fill(string name, double valueX, double valueY) {
+  double weight = eventWeights["default"];
+  CheckHistogram2D(name, "");
+  histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
+
+  RemoveFromUnfilled(name);
+
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
+  for (auto& [sfName, weight] : eventWeights) {
+    if (sfName == "default") continue;
+    CheckHistogram2D(name, sfName);
+    histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
+  }
+}
+
+void HistogramsHandler::RemoveFromUnfilled(string name) {
+  auto it = find(unfilledHistograms.begin(), unfilledHistograms.end(), name);
+  if (it != unfilledHistograms.end()) {
+    unfilledHistograms.erase(it);
+  }
+}
+
+void HistogramsHandler::CheckHistogram(string name, string directory) {
+  if (!histograms1D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 1D histograms map" << endl;
     exit(1);
   }
 }
 
-void HistogramsHandler::SaveHistograms() {
-  info() << "Output path: " << outputPath << endl;
+void HistogramsHandler::CheckHistogram2D(string name, string directory) {
+  if (!histograms2D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 2D histograms map" << endl;
+    exit(1);
+  }
+}
 
-  string path = outputPath.substr(0, outputPath.find_last_of("/"));
-  string filename = outputPath.substr(outputPath.find_last_of("/"));
-  if(path == "") path = "./";
-  string command = "mkdir -p " + path;
-  system(command.c_str());
-  
-  auto outputFile = new TFile((path+"/"+filename).c_str(), "recreate");
+template <typename THist>
+void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outputFile) {
+  string name = names.first;
+  string outputDir = names.second;
+  if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
+
+  outputFile->cd(outputDir.c_str());
+  if (!hist) {
+    error() << "Histogram " << name << " is null" << endl;
+    return;
+  }
+  if constexpr (std::is_same<THist, TH2D>::value) {
+    if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
+      warn() << "You're creating a very large 2D histogram: " << name << " with ";
+      warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
+      warn() << "This may cause memory issues." << endl;
+    }
+  }
+
+  hist->Write();
+}
+
+void HistogramsHandler::SaveHistograms() {
+  const auto separator = outputPath.find_last_of("/");
+  string path = separator == string::npos ? "./" : outputPath.substr(0, separator);
+  string filename = separator == string::npos ? outputPath : outputPath.substr(separator + 1);
+  if (path.empty()) path = "./";
+  if (filename.empty()) {
+    error() << "Cannot save histograms: output path has no filename: " << outputPath << endl;
+    return;
+  }
+  std::error_code ec;
+  std::filesystem::create_directories(path, ec);
+  if (ec) {
+    warn() << "Failed to create histogram output directory: " << path << " (" << ec.message() << ")" << endl;
+  }
+
+  auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
   outputFile->cd();
 
-  for (auto &[name, hist] : histograms1D) {
-    string outputDir = histParams[name].directory;
-    if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-    outputFile->cd(outputDir.c_str());
-    hist->Write();
+  for (auto& [names, hist] : histograms1D) {
+    SaveHistogram(names, hist, outputFile);
   }
-  for (auto &[name, hist] : histograms2D) {
-    string outputDir = histParams2D[name].directory;
-    if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-    outputFile->cd(outputDir.c_str());
-    hist->Write();
+  for (auto& [names, hist] : histograms2D) {
+    SaveHistogram(names, hist, outputFile);
   }
+
   outputFile->Close();
 
-  info() << "Histograms saved to: " << path << "/" << filename << endl;
+  // print the output path and filename in nice green color:
+  info() << "\033[1;32m" << "Histograms saved to: " << path << "/" << filename << "\033[0m" << endl;
+  Print();
+}
+
+void HistogramsHandler::Print() {
+  for (auto& name : unfilledHistograms) {
+    warn() << "Histogram defined but not filled: " << name << endl;
+  }
 }

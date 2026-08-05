@@ -1,0 +1,71 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "NUM_DisplacedID_DEN_dSAMuons_absdxy",
+            "description": "NUM_DisplacedID_DEN_dSAMuons_absdxy",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "absdxy",
+                    "type": "real",
+                    "description": "muon |dxy|"
+                },
+                {
+                    "name": "scale_factors",
+                    "type": "string",
+                    "description": "Choose nominal scale factor or one of the uncertainties"
+                }
+            ],
+            "output": {
+                "name": "weight",
+                "type": "real"
+            },
+            "data": {
+                "nodetype": "category",
+                "input": "scale_factors",
+                "content": [
+                    {
+                        "key": "nominal",
+                        "value": {
+                            "nodetype": "formula",
+                            "expression": "[0] * x + [1]",
+                            "parser": "TFormula",
+                            "parameters": [
+                                -0.00045,
+                                1.015
+                            ],
+                            "variables": ["absdxy"]
+                        }
+                    },
+                    {
+                        "key": "up_syst",
+                        "value": {
+                            "nodetype": "formula",
+                            "expression": "1.02 * ([0] * x + [1])",
+                            "parser": "TFormula",
+                            "parameters": [
+                                -0.00045,
+                                1.015
+                            ],
+                            "variables": ["absdxy"]
+                        }
+                    },
+                    {
+                        "key": "down_syst",
+                        "value": {
+                            "nodetype": "formula",
+                            "expression": "0.98 * ([0] * x + [1])",
+                            "parser": "TFormula",
+                            "parameters": [
+                                -0.00045,
+                                1.015
+                            ],
+                            "variables": ["absdxy"]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

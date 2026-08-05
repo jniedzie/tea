@@ -1,94 +1,114 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...4.0 FATAL_ERROR)
 project (core)
 
-# setup variables for macOS builds
-set(CMAKE_OSX_ARCHITECTURES "arm64")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 14.5)
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_STANDARD 20)
-
-cmake_policy(SET CMP0054 OLD)
 cmake_policy(SET CMP0068 NEW)
-
-# setting for macOS
-set(CMAKE_MACOSX_RPATH 1)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "@loader_path/../bin")
 
 # setup install directory to "bin"
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/bin")
 
 # setup ROOT-specific variables
-list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-find_package(ROOT REQUIRED COMPONENTS Minuit Eve Geom)
+find_program(ROOT_CONFIG_EXECUTABLE root-config)
+if(ROOT_CONFIG_EXECUTABLE)
+    execute_process(COMMAND ${ROOT_CONFIG_EXECUTABLE} --prefix OUTPUT_VARIABLE ROOT_CONFIG_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${ROOT_CONFIG_EXECUTABLE} --incdir OUTPUT_VARIABLE ROOT_CONFIG_INCDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${ROOT_CONFIG_EXECUTABLE} --libdir OUTPUT_VARIABLE ROOT_CONFIG_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${ROOT_CONFIG_EXECUTABLE} --cxxstandard OUTPUT_VARIABLE ROOT_CONFIG_CXXSTANDARD OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+
+    if(ROOT_CONFIG_CXXSTANDARD MATCHES "^[0-9]+$" AND ROOT_CONFIG_CXXSTANDARD GREATER CMAKE_CXX_STANDARD)
+        set(CMAKE_CXX_STANDARD "${ROOT_CONFIG_CXXSTANDARD}")
+    endif()
+
+    set(CMAKE_PREFIX_PATH "${ROOT_CONFIG_PREFIX};${ROOT_CONFIG_PREFIX}/cmake;${ROOT_CONFIG_LIBDIR}/cmake/ROOT;${CMAKE_PREFIX_PATH}")
+    set(CMAKE_INCLUDE_PATH "${ROOT_CONFIG_INCDIR};${CMAKE_INCLUDE_PATH}")
+    set(CMAKE_LIBRARY_PATH "${ROOT_CONFIG_LIBDIR};${CMAKE_LIBRARY_PATH}")
+
+    if(EXISTS "${ROOT_CONFIG_PREFIX}/cmake/ROOTConfig.cmake")
+        set(ROOT_DIR "${ROOT_CONFIG_PREFIX}/cmake" CACHE PATH "ROOT CMake package directory" FORCE)
+    elseif(EXISTS "${ROOT_CONFIG_LIBDIR}/cmake/ROOT/ROOTConfig.cmake")
+        set(ROOT_DIR "${ROOT_CONFIG_LIBDIR}/cmake/ROOT" CACHE PATH "ROOT CMake package directory" FORCE)
+    endif()
+endif()
+if(DEFINED ENV{ROOTSYS} AND NOT "$ENV{ROOTSYS}" STREQUAL "")
+    set(CMAKE_PREFIX_PATH "$ENV{ROOTSYS};${CMAKE_PREFIX_PATH}")
+endif()
+set(TEA_ROOT_COMPONENTS Core RIO Tree Hist Graf Gpad Matrix Physics MathCore)
+find_package(ROOT REQUIRED COMPONENTS ${TEA_ROOT_COMPONENTS})
 include(${ROOT_USE_FILE})
+include_directories(${ROOT_INCLUDE_DIRS} ${ROOT_CONFIG_INCDIR})
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE) 
-set(CMAKE_INSTALL_RPATH "/cvmfs/sft.cern.ch/lcg/releases/vdt/0.4.3-992df/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/tbb/2019_U7-ba3eb/x86_64-centos7-gcc8-opt/lib:/cvmfs/sft.cern.ch/lcg/releases/Davix/0.7.3-d94fa/x86_64-centos7-gcc8-opt/lib64/:/cvmfs/sft.cern.ch/lcg/releases/png/1.6.37-9c2fe/x86_64-centos7-gcc8-opt/lib/:/cvmfs/sft.cern.ch/lcg/releases/GSL/2.5-32fc5/x86_64-centos7-gcc8-opt/lib/")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# setup correctionlib
 find_package(ZLIB REQUIRED)
-find_package(correctionlib REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
-
-get_target_property(CORRECTIONLIB_INCLUDE_DIRS correctionlib INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "correctionlib includes: ${CORRECTIONLIB_INCLUDE_DIRS}")
-set(CORRECTIONLIB_INCLUDE_DIRS ${CORRECTIONLIB_INCLUDE_DIRS} CACHE INTERNAL "Correctionlib include dirs")
-
-# Detect the platform
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(PYTHON_LIBRARY_EXTENSION "dylib")
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    set(PYTHON_LIBRARY_EXTENSION "so")
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(PYTHON_LIBRARY_EXTENSION "dll")
-else()
-    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
-endif()
-
-# find Python
-# Check if CONDA_PREFIX is set
-if(DEFINED ENV{CONDA_PREFIX})
-    set(CONDA_PREFIX_PATH $ENV{CONDA_PREFIX})
-    set(Python3_EXECUTABLE "${CONDA_PREFIX_PATH}/bin/python3")
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    
-    if(Python3_FOUND)
-        # Set Python version variables manually if not set automatically
-        if(NOT DEFINED Python3_VERSION_MAJOR)
-            execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.major)"
-                            OUTPUT_VARIABLE Python3_VERSION_MAJOR
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-        if(NOT DEFINED Python3_VERSION_MINOR)
-            execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.version_info.minor)"
-                            OUTPUT_VARIABLE Python3_VERSION_MINOR
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-
-        set(Python3_INCLUDE_DIR "${CONDA_PREFIX_PATH}/include/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
-        set(Python3_LIBRARY "${CONDA_PREFIX_PATH}/lib/libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.${PYTHON_LIBRARY_EXTENSION}")    
-        include_directories(${Python3_INCLUDE_DIR})
-    else()
-        message(FATAL_ERROR "Python3 not found in Conda environment")
-    endif()
-else()
-    message(FATAL_ERROR "CONDA_PREFIX is not set. Please activate your Conda environment.")
-endif()
-
-# setup includes
-include_directories("${PROJECT_SOURCE_DIR}/include")
 
 # setup core library
 file(GLOB SOURCES "src/*.cpp")
 add_library(core SHARED ${SOURCES})
 
-target_link_libraries(core PUBLIC ${Python3_LIBRARY} ${ROOT_LIBRARIES} correctionlib ZLIB::ZLIB Threads::Threads)
+
+if(NOT TARGET Python3::Python)
+    if(DEFINED ENV{CONDA_PREFIX} AND EXISTS "$ENV{CONDA_PREFIX}/bin/python3")
+        set(Python3_EXECUTABLE "$ENV{CONDA_PREFIX}/bin/python3" CACHE FILEPATH "Python interpreter")
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+endif()
+if(NOT Python3_INCLUDE_DIRS OR NOT EXISTS "${Python3_INCLUDE_DIRS}/Python.h")
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c "import sysconfig; print(sysconfig.get_path('include') or '')"
+        OUTPUT_VARIABLE Python3_INCLUDE_DIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endif()
+if(NOT Python3_INCLUDE_DIRS OR NOT EXISTS "${Python3_INCLUDE_DIRS}/Python.h")
+    message(FATAL_ERROR "Python3 headers not found for ${Python3_EXECUTABLE}. Expected Python.h under ${Python3_INCLUDE_DIRS}.")
+endif()
+message(STATUS "core using Python3 include dirs: ${Python3_INCLUDE_DIRS}")
+
+option(TEA_ENABLE_CORRECTIONLIB "Build tea with correctionlib support when available" ON)
+if(TEA_ENABLE_CORRECTIONLIB)
+    find_package(correctionlib QUIET)
+    if(NOT correctionlib_FOUND)
+        execute_process(
+            COMMAND "${Python3_EXECUTABLE}" -c
+                    "import pathlib, correctionlib; print(pathlib.Path(correctionlib.__file__).parent / 'cmake')"
+            OUTPUT_VARIABLE correctionlib_CMAKE_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(correctionlib_CMAKE_PATH)
+            find_package(correctionlib QUIET PATHS "${correctionlib_CMAKE_PATH}" NO_DEFAULT_PATH)
+        endif()
+    endif()
+else()
+    set(correctionlib_FOUND FALSE)
+endif()
+
+# setup includes
+include_directories("${PROJECT_SOURCE_DIR}/include")
+target_include_directories(core PUBLIC ${Python3_INCLUDE_DIRS})
+
+target_link_libraries(core PUBLIC Python3::Python ${ROOT_LIBRARIES} ZLIB::ZLIB Threads::Threads)
+
+if(correctionlib_FOUND)
+  message(STATUS "TEA correctionlib support: ENABLED")
+  target_link_libraries(core PUBLIC correctionlib)
+  target_compile_definitions(core PUBLIC -DUSE_CORRECTIONLIB)
+else()
+  message(STATUS "TEA correctionlib support: DISABLED")
+  if(TEA_ENABLE_CORRECTIONLIB)
+    message(WARNING "correctionlib target not found. Building without correctionlib.")
+  endif()
+endif()
 target_include_directories(core PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
-set_target_properties(core PROPERTIES INSTALL_RPATH "$ORIGIN/../tea/libs/core")
+set_target_properties(core PROPERTIES INSTALL_RPATH "${TEA_INSTALL_RPATH}")
 install(TARGETS core LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX})
 
-set_property(TARGET core PROPERTY CXX_STANDARD 20)
+set_property(TARGET core PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})

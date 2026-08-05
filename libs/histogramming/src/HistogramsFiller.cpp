@@ -17,40 +17,38 @@ HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandl
   } catch (const Exception& e) {
     warn() << "Couldn't read defaultHistParams from config file - no default histograms will be included" << endl;
   }
-
-  try {
-    config.GetValue("weightsBranchName", weightsBranchName);
-  } catch (const Exception& e) {
-    info() << "Weights branch not specified -- will assume weight is 1 for all events" << endl;
-  }
 }
 
 HistogramsFiller::~HistogramsFiller() {}
 
 void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) {
-  float weight = 1.0;
-  try {
-    weight = event->Get(weightsBranchName);
-  } catch (const Exception &e) {
-    warn() << "Coudn't get weight from branch: " << weightsBranchName << endl;
-  }
+  if (!event || !histogramsHandler) return;
 
   for (auto& [title, params] : defaultHistVariables) {
     string collectionName = params.collection;
     string branchName = params.variable;
 
+    if (branchName.empty()) {
+      warn() << "Skipping default histogram '" << title << "': empty variable name" << endl;
+      continue;
+    }
+
     if (collectionName == "Event") {
       float eventVariable;
       if (branchName[0] == 'n') {
-        eventVariable = event->GetCollection(branchName.substr(1))->size();
+        auto collection = event->GetCollection(branchName.substr(1));
+        if (!collection) continue;
+        eventVariable = collection->size();
       } else {
-        eventVariable = event->GetAsFloat(branchName);
+        eventVariable = event->GetAs<float>(branchName);
       }
-      histogramsHandler->Fill(title, eventVariable, weight);
+      histogramsHandler->Fill(title, eventVariable);
     } else {
       auto collection = event->GetCollection(collectionName);
+      if (!collection) continue;
       for (auto object : *collection) {
-        histogramsHandler->Fill(title, object->GetAsFloat(branchName), weight);
+        if (!object) continue;
+        histogramsHandler->Fill(title, object->GetAs<float>(branchName));
       }
     }
   }
@@ -80,6 +78,6 @@ void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlow
     rawEventsCutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(sortedRawEventsAfterCuts[index]).c_str());
     bin++;
   }
-  histogramsHandler->SetHistogram1D("cutFlow", cutFlowHist);
-  histogramsHandler->SetHistogram1D("rawEventsCutFlow", rawEventsCutFlowHist);
+  histogramsHandler->SetHistogram1D(make_pair("cutFlow",""), cutFlowHist);
+  histogramsHandler->SetHistogram1D(make_pair("rawEventsCutFlow",""), rawEventsCutFlowHist);
 }

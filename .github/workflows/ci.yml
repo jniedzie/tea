@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux (EL9, correctionlib ${{ matrix.correctionlib }})
+    runs-on: ubuntu-24.04
+    container: almalinux:9
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - correctionlib: "with"
+            enable_correctionlib: "ON"
+            expected_support: "ENABLED"
+          - correctionlib: "without"
+            enable_correctionlib: "OFF"
+            expected_support: "DISABLED"
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Install container prerequisites
+        run: dnf install -y findutils git gzip tar which
+
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: Create the build environment
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          activate-environment: tea-ci
+          environment-file: ci/environment-linux.yml
+          miniforge-version: latest
+          conda-solver: libmamba
+
+      - name: Install correctionlib
+        if: matrix.correctionlib == 'with'
+        run: python3 -m pip install correctionlib==2.8.0
+
+      - name: Record tool versions
+        run: |
+          cmake --version
+          c++ --version
+          python3 --version
+          root-config --version
+          conda list
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DTEA_ENABLE_CORRECTIONLIB=${{ matrix.enable_correctionlib }} \
+            | tee configure.log
+          grep -F "TEA correctionlib support: ${{ matrix.expected_support }}" configure.log
+
+      - name: Build and install
+        run: cmake --build build --parallel 2 --target install
+
+      - name: Run standalone example smoke tests
+        run: ctest --test-dir build --output-on-failure
+
+  macos:
+    name: macOS (Apple Silicon)
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: Create the build environment
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          activate-environment: tea-ci
+          environment-file: ci/environment.yml
+          miniforge-version: latest
+          conda-solver: libmamba
+
+      - name: Record tool versions
+        run: |
+          cmake --version
+          c++ --version
+          python3 --version
+          root-config --version
+          conda list
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build and install
+        run: cmake --build build --parallel 2 --target install
+
+      - name: Run standalone example smoke tests
+        run: ctest --test-dir build --output-on-failure

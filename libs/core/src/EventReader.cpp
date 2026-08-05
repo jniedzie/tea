@@ -5,37 +5,45 @@
 #include "EventReader.hpp"
 
 #include "Helpers.hpp"
+#include "Profiler.hpp"
 
 using namespace std;
 
 EventReader::EventReader() {
-  auto &config = ConfigManager::GetInstance();
+  auto& config = ConfigManager::GetInstance();
 
-  config.GetVector("eventsTreeNames", eventsTreeNames);
-  config.GetMap("specialBranchSizes", specialBranchSizes);
+  try {
+    config.GetVector("eventsTreeNames", eventsTreeNames);
+  } catch (const Exception& e) {
+    warn() << "No eventsTreeNames found in config file. Assuming the name is Events - if not, it will break." << endl;
+    eventsTreeNames = {"Events"};
+  }
+  try {
+    config.GetMap("specialBranchSizes", specialBranchSizes);
+  } catch (const Exception& e) {
+  }
 
   config.GetValue("nEvents", maxEvents);
-  config.GetValue("printEveryNevents", printEveryNevents);
-  if (printEveryNevents == 0) printEveryNevents = -1;
 
   string inputFilePath;
   config.GetValue("inputFilePath", inputFilePath);
 
   currentEvent = make_shared<Event>();
 
-  // if inputFilePath is a DAS dataset name, insert a redirector into it
-  if (inputFilePath.find("root://") == string::npos && inputFilePath.find("/store/") != string::npos) {
+  info() << "Input file path: " << inputFilePath << endl;
 
+  // if inputFilePath is a DAS dataset name, insert a redirector into it
+  if ((inputFilePath.find("root://") == string::npos) && (inputFilePath.rfind("/store/", 0) == 0)) {
     vector<string> redirectors = {
-      "xrootd-cms.infn.it",
-      "cms-xrd-global.cern.ch",
-      "cmsxrootd.fnal.gov",
+        "xrootd-cms.infn.it",
+        "cms-xrd-global.cern.ch",
+        "cmsxrootd.fnal.gov",
     };
 
     string customRedirector = "";
     try {
       config.GetValue("redirector", customRedirector);
-    } catch (const Exception &e) {
+    } catch (const Exception& e) {
       info() << "No custom redirector found from config file" << endl;
     }
     if (customRedirector != "") redirectors.insert(redirectors.begin(), customRedirector);
@@ -44,7 +52,10 @@ EventReader::EventReader() {
     for (string redirector : redirectors) {
       info() << "Trying to read ROOT file with redirector:" << redirector << endl;
       tmpInputFilePath = "root://" + redirector + "/" + inputFilePath;
+
+      gSystem->RedirectOutput("/dev/null", "a");
       inputFile = TFile::Open(tmpInputFilePath.c_str());
+      gSystem->RedirectOutput(0);
 
       if (!inputFile || inputFile->IsZombie()) {
         warn() << "Failed to read ROOT file with redirector: " << redirector << endl;
@@ -58,7 +69,10 @@ EventReader::EventReader() {
     }
     inputFilePath = tmpInputFilePath;
   } else {
+    gSystem->RedirectOutput("/dev/null", "a");
     inputFile = TFile::Open(inputFilePath.c_str());
+    gSystem->RedirectOutput(0);
+
     if (!inputFile || inputFile->IsZombie()) {
       fatal() << "Local file corrupted: " << inputFilePath << endl;
       exit(1);
@@ -81,16 +95,16 @@ long long EventReader::GetNevents() const {
 }
 
 tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchName) {
-  
-
   // if collection name is specified in special collections, use that exact name as the collection name
-  for(auto &[specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+  for (auto& [specialCollectionName, specialBranchSizeName] : specialBranchSizes) {
+    if (branchName == specialBranchSizeName) break;
+
     auto pos = branchName.find(specialCollectionName);
-    
+
     if (pos != string::npos) {
       auto posEnd = pos + specialCollectionName.size();
       string collectionName = branchName.substr(0, specialCollectionName.size());
-      string variableName = branchName.substr(posEnd);
+      string variableName = branchName.substr(posEnd + 1);
       return make_tuple(collectionName, variableName);
     }
   }
@@ -104,7 +118,7 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
   // TODO: to improve this, we could add a map in the config for custom collection/variable names.
   // E.g. if someone has branches like "MuonPt", MuonEta",... they could define a map like:
   // "MuonPt": ("Muon", "Pt"), "MuonEta": ("Muon", "Eta"),...
-  // and if there's some logic to how collection and variable names are formed, 
+  // and if there's some logic to how collection and variable names are formed,
   // they could generate it automatically in the config.
 
   // otherwise, cut at the underscore
@@ -116,22 +130,30 @@ tuple<string, string> EventReader::GetCollectionAndVariableNames(string branchNa
 
 void EventReader::SetupTrees() {
   vector<string> treeNames = getListOfTrees(inputFile);
+
+  cout << "\033[1;92mLoading trees: ";
   for (string treeName : treeNames) {
     if (inputTrees.find(treeName) != inputTrees.end()) continue;
+    auto tree = (TTree*)inputFile->Get(treeName.c_str());
 
-    cout << "Loading tree: " << treeName << endl;
-    inputTrees[treeName] = (TTree *)inputFile->Get(treeName.c_str());
+    if (tree) {
+      inputTrees[treeName] = tree;
+      cout << treeName << " ✓  ";
+    } else {
+      cout << "\033[31m" << treeName << " ✗\033[1;92m  ";
+    }
   }
+  cout << "\033[0m" << endl;
 
   for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
-      inputTrees[eventsTreeName] = (TTree *)inputFile->Get(eventsTreeName.c_str());
+      inputTrees[eventsTreeName] = (TTree*)inputFile->Get(eventsTreeName.c_str());
     }
   }
 
   for (string eventsTreeName : eventsTreeNames) {
     if (!inputTrees.count(eventsTreeName)) {
-      fatal() << "Input file does not contain Events tree" << endl;
+      fatal() << "Input file does not contain " << eventsTreeName << " tree" << endl;
       exit(1);
     }
     if (!inputTrees[eventsTreeName]) {
@@ -141,12 +163,12 @@ void EventReader::SetupTrees() {
   }
 }
 
-TLeaf *EventReader::GetLeaf(TBranch *branch) {
-  TLeaf *leaf = nullptr;
+TLeaf* EventReader::GetLeaf(TBranch* branch) {
+  TLeaf* leaf = nullptr;
   string branchName = branch->GetName();
 
   if (branch->GetListOfLeaves()->GetEntries() == 1) {
-    leaf = (TLeaf *)branch->GetListOfLeaves()->First();
+    leaf = (TLeaf*)branch->GetListOfLeaves()->First();
   } else {
     error() << "Branch " << branchName << " has multiple or no leaves." << endl;
   }
@@ -158,10 +180,21 @@ TLeaf *EventReader::GetLeaf(TBranch *branch) {
   return leaf;
 }
 
+bool EventReader::IsVectorBranch(TBranch* branch) {
+  auto leaf = GetLeaf(branch);
+  string branchType = leaf->GetTypeName();
+
+  if (branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr) {
+    return true;
+  }
+  return false;
+}
+
 void EventReader::SetupBranches() {
+  branchesPerCollection.clear();
   for (string eventsTreeName : eventsTreeNames) {
     for (auto branchIter : *inputTrees[eventsTreeName]->GetListOfBranches()) {
-      auto branch = (TBranch *)branchIter;
+      auto branch = (TBranch*)branchIter;
       auto leaf = GetLeaf(branch);
 
       string branchName = branch->GetName();
@@ -170,7 +203,10 @@ void EventReader::SetupBranches() {
       if (branchType == "") error() << "Couldn't find branch type for branch: " << branchName << endl;
       branchNamesAndTypes[branchName] = branchType;
 
-      bool branchIsVector = branchType.find("vector") != string::npos || leaf->GetLenStatic() > 1 || leaf->GetLeafCount() != nullptr;
+      auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
+      branchesPerCollection[collectionName].push_back(branchName);
+
+      bool branchIsVector = IsVectorBranch(branch);
       if (branchIsVector) {
         SetupVectorBranch(branchName, branchType, eventsTreeName);
       } else {
@@ -195,12 +231,24 @@ void EventReader::SetupScalarBranch(string branchName, string branchType, string
   } else if (branchType == "Float_t") {
     currentEvent->valuesFloat[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesFloat[branchName]);
+  } else if (branchType == "Double_t") {
+    currentEvent->valuesDouble[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesDouble[branchName]);
   } else if (branchType == "ULong64_t") {
     currentEvent->valuesUlong[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUlong[branchName]);
   } else if (branchType == "UChar_t") {
     currentEvent->valuesUchar[branchName] = 0;
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUchar[branchName]);
+  } else if (branchType == "Char_t") {
+    currentEvent->valuesChar[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesChar[branchName]);
+  } else if (branchType == "Short_t") {
+    currentEvent->valuesShort[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesShort[branchName]);
+  } else if (branchType == "UShort_t") {
+    currentEvent->valuesUshort[branchName] = 0;
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUshort[branchName]);
   } else {
     error() << "unsupported scalar branch type: " << branchType << "\t (branch name: " << branchName << ")" << endl;
   }
@@ -214,8 +262,10 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
   for (int i = 0; i < maxCollectionElements; i++) {
     string branchTypeToStore = branchType;
     if (branchType == "vector<float>") branchTypeToStore = "Float_t";
+    if (branchType == "vector<double>") branchTypeToStore = "Double_t";
     if (branchType == "vector<int>") branchTypeToStore = "Int_t";
     if (branchType == "vector<unsigned int>") branchTypeToStore = "UInt_t";
+    if (branchType == "vector<bool>") branchTypeToStore = "UInt_t";
     currentEvent->collections[collectionName]->at(i)->valuesTypes[variableName] = branchTypeToStore;
   }
 
@@ -224,10 +274,20 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesFloat[variableName] = &currentEvent->valuesFloatVector[branchName][i];
     }
+  } else if (branchType == "Double_t") {
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesDoubleVector[branchName]);
+    for (int i = 0; i < maxCollectionElements; i++) {
+      currentEvent->collections[collectionName]->at(i)->valuesDouble[variableName] = &currentEvent->valuesDoubleVector[branchName][i];
+    }
   } else if (branchType == "UChar_t") {
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesUcharVector[branchName]);
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesUchar[variableName] = &currentEvent->valuesUcharVector[branchName][i];
+    }
+  } else if (branchType == "Char_t") {
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesCharVector[branchName]);
+    for (int i = 0; i < maxCollectionElements; i++) {
+      currentEvent->collections[collectionName]->at(i)->valuesChar[variableName] = &currentEvent->valuesCharVector[branchName][i];
     }
   } else if (branchType == "Int_t") {
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesIntVector[branchName]);
@@ -260,13 +320,19 @@ void EventReader::SetupVectorBranch(string branchName, string branchType, string
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesFloat[variableName] = &currentEvent->valuesStdFloatVector[branchName]->at(i);
     }
+  } else if (branchType == "vector<double>") {
+    currentEvent->valuesStdDoubleVector[branchName] = new vector<double>(maxCollectionElements, 0);
+    inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesStdDoubleVector[branchName]);
+    for (int i = 0; i < maxCollectionElements; i++) {
+      currentEvent->collections[collectionName]->at(i)->valuesDouble[variableName] = &currentEvent->valuesStdDoubleVector[branchName]->at(i);
+    }
   } else if (branchType == "vector<int>") {
     currentEvent->valuesStdIntVector[branchName] = new vector<int>(maxCollectionElements, 0);
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesStdIntVector[branchName]);
     for (int i = 0; i < maxCollectionElements; i++) {
       currentEvent->collections[collectionName]->at(i)->valuesInt[variableName] = &currentEvent->valuesStdIntVector[branchName]->at(i);
     }
-  } else if (branchType == "vector<unsigned int>") {
+  } else if (branchType == "vector<unsigned int>" || branchType == "vector<bool>") {
     currentEvent->valuesStdUintVector[branchName] = new vector<unsigned int>(maxCollectionElements, 0);
     inputTrees[eventsTreeName]->SetBranchAddress(branchName.c_str(), &currentEvent->valuesStdUintVector[branchName]);
     for (int i = 0; i < maxCollectionElements; i++) {
@@ -290,7 +356,7 @@ int EventReader::tryGet(shared_ptr<Event> event, string branchName) {
   try {
     First value = event->Get(branchName);
     return value;
-  } catch (BadTypeException &e) {
+  } catch (BadTypeException& e) {
     if constexpr (sizeof...(Rest) > 0) {
       return tryGet<Rest...>(event, branchName);
     } else {
@@ -300,30 +366,51 @@ int EventReader::tryGet(shared_ptr<Event> event, string branchName) {
 }
 
 shared_ptr<Event> EventReader::GetEvent(int iEvent) {
-  if (printEveryNevents > 0) {
-    if (iEvent % printEveryNevents == 0) info() << "Event: " << iEvent << endl;
+  static int lastPrinted = -1;
+  int nEvents = GetNevents();
+  int percentage = ((iEvent + 1) * 100) / nEvents;
+  if (percentage != lastPrinted) {
+    lastPrinted = percentage;
+    std::ostringstream progress;
+    progress << "\033[1;92m[";
+    int width = 50;
+    int pos = (percentage * width) / 100;
+    for (int i = 0; i < width; ++i) {
+      if (i < pos)
+        progress << "=";
+      else if (i == pos)
+        progress << ">";
+      else
+        progress << " ";
+    }
+    progress << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")";
+    Terminal::SetProgress(progress.str());
   }
 
   currentEvent->Reset();
 
   // Move to desired entry in all trees
-  for (auto &[name, tree] : inputTrees) tree->GetEntry(iEvent);
+  for (auto& [name, tree] : inputTrees) tree->GetEntry(iEvent);
 
   // Tell collections where to stop in loops, without actually changing their size in memory
-  for (auto &[name, collection] : currentEvent->collections) {
+  for (auto& [name, collection] : currentEvent->collections) {
     int collectionSize = -1;
 
     if (isCollectionAnStdVector[name]) {
-      for (auto &[branchName, branchType] : branchNamesAndTypes) {
-        auto [collectionName, variableName] = GetCollectionAndVariableNames(branchName);
-        if (collectionName != name) continue;
-
-        if (branchType.find("float") != string::npos) {
+      const auto& branchList = branchesPerCollection[name];
+      for (const auto& branchName : branchList) {
+        if (currentEvent->valuesStdFloatVector.count(branchName)) {
           collectionSize = currentEvent->valuesStdFloatVector[branchName]->size();
-        } else if (branchType.find("unsigned int") != string::npos) {
+          break;
+        } else if (currentEvent->valuesStdDoubleVector.count(branchName)) {
+          collectionSize = currentEvent->valuesStdDoubleVector[branchName]->size();
+          break;
+        } else if (currentEvent->valuesStdUintVector.count(branchName)) {
           collectionSize = currentEvent->valuesStdUintVector[branchName]->size();
-        } else if (branchType.find("int") != string::npos) {
+          break;
+        } else if (currentEvent->valuesStdIntVector.count(branchName)) {
           collectionSize = currentEvent->valuesStdIntVector[branchName]->size();
+          break;
         }
       }
     } else if (specialBranchSizes.count(name)) {
@@ -332,7 +419,29 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
       error() << "Empty collection name. This should never happen, so please report an issue." << endl;
       continue;
     } else {
-      collectionSize = tryGet<Int_t, UInt_t>(currentEvent, "n" + name);
+      std::string sizeBranch = "n" + name;
+      auto it = defaultBranchSizeTypes.find(name);
+      if (it != defaultBranchSizeTypes.end()) {
+        if (it->second == "UInt_t") {
+          collectionSize = currentEvent->GetAs<UInt_t>(sizeBranch);
+        } else if (it->second == "Int_t") {
+          collectionSize = currentEvent->GetAs<Int_t>(sizeBranch);
+        }
+      } else {
+        int size = -1;
+        try {
+          size = currentEvent->GetAs<Int_t>(sizeBranch);
+          defaultBranchSizeTypes[name] = "Int_t";
+        } catch (BadTypeException& e1) {
+          try {
+            size = currentEvent->GetAs<UInt_t>(sizeBranch);
+            defaultBranchSizeTypes[name] = "UInt_t";
+          } catch (BadTypeException& e2) {
+            size = -1;
+          }
+        }
+        collectionSize = size;
+      }
     }
 
     if (collectionSize < 0) {
@@ -343,5 +452,9 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   }
 
   currentEvent->AddExtraCollections();
+
+  if (iEvent == nEvents - 1) {
+    cerr << "\033[0m\n" << endl;
+  }
   return currentEvent;
 }

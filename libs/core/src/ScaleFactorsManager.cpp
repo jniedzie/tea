@@ -4,137 +4,774 @@
 
 #include "ScaleFactorsManager.hpp"
 
+#include <zlib.h>
+
+#include <fstream>
+#include <type_traits>
+#include <utility>
+
 #include "ConfigManager.hpp"
 
 using namespace std;
-using correction::CorrectionSet;
+using json = nlohmann::json;
+
+#ifdef USE_CORRECTIONLIB
+#include "correction.h"
+namespace {
+template <typename Value>
+correction::Variable::Type MakeCorrectionArg(Value&& value) {
+  using DecayedValue = std::decay_t<Value>;
+  if constexpr (std::is_same_v<DecayedValue, int> && std::is_constructible_v<correction::Variable::Type, long>) {
+    return correction::Variable::Type(static_cast<long>(value));
+  } else {
+    return correction::Variable::Type(std::forward<Value>(value));
+  }
+}
+}  // namespace
+#else
+namespace {
+std::shared_ptr<std::map<string, CorrectionRef>> from_file(const string& path) {
+  return std::make_shared<std::map<string, CorrectionRef>>();
+}
+}  // namespace
+#endif
 
 ScaleFactorsManager::ScaleFactorsManager() {
+#ifdef USE_CORRECTIONLIB
+  info() << "Using correctionlib for scale factors." << endl;
+#else
+  info() << "correctionlib not found, will assume all SFs = 1.0." << endl;
+#endif
+
   ReadScaleFactorFlags();
   ReadScaleFactors();
-  if (applyScaleFactors["pileup"]) ReadPileupSFs();
+  if (scaleFactorsRead && !applyScaleFactors.empty()) {
+    info() << "\n------------------------------------" << endl;
+    info() << "Applying scale factors:" << endl;
+    for (auto& [name, applyVector] : applyScaleFactors) {
+      info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
+    }
+    info() << "------------------------------------\n" << endl;
+  }
+  if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
+  ReadJetEnergyCorrections();
+}
+
+bool ScaleFactorsManager::ShouldApplyScaleFactor(const std::string& name) {
+  return applyScaleFactors.count(name) ? applyScaleFactors[name][0] : false;
+}
+
+bool ScaleFactorsManager::ShouldApplyVariation(const std::string& name) {
+  return applyScaleFactors.count(name) ? applyScaleFactors[name][1] : false;
+}
+
+void ScaleFactorsManager::ExtractBounds(const json& node, map<string, pair<double, double>>& bounds) {
+  if (!node.contains("nodetype")) return;
+
+  string type = node["nodetype"];
+
+  if (type == "binning") {
+    string input = node["input"];
+
+    const auto& edges = node["edges"];
+
+    auto parseEdge = [](const json& edge) -> double {
+      if (edge.is_number()) {
+        return edge.get<double>();
+      }
+      if (edge.is_string()) {
+        std::string s = edge.get<std::string>();
+        if (s == "Infinity" || s == "inf") return 1e30;
+        if (s == "-Infinity" || s == "-inf") return -1e30;
+        throw std::runtime_error("Unexpected string edge: " + s);
+      }
+      throw std::runtime_error("Unsupported edge type in JSON");
+    };
+
+    double min = parseEdge(edges.front());
+    double max = parseEdge(edges.back());
+
+    bounds[input] = {min, max};
+
+    // recurse into content
+    for (const auto& subnode : node["content"]) ExtractBounds(subnode, bounds);
+  } else if (type == "category") {
+    for (const auto& item : node["content"]) ExtractBounds(item["value"], bounds);
+  } else if (type == "multibinning") {
+    const auto& inputs = node["inputs"];
+    const auto& edges = node["edges"];
+
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      std::string input = inputs[i];
+      const auto& dimEdges = edges[i];
+
+      double min = dimEdges.front();
+      double max = dimEdges.back();
+
+      if (!bounds.count(input)) {
+        bounds[input] = {min, max};
+      } else {
+        bounds[input].first = std::max(bounds[input].first, min);
+        bounds[input].second = std::min(bounds[input].second, max);
+      }
+    }
+
+    // recurse into content
+    for (const auto& subnode : node["content"]) ExtractBounds(subnode, bounds);
+  } else if (type == "transform") {
+    // recurse into content only
+    ExtractBounds(node["content"], bounds);
+    return;
+  }
 }
 
 void ScaleFactorsManager::ReadScaleFactors() {
-  auto &config = ConfigManager::GetInstance();
+#ifndef USE_CORRECTIONLIB
+  return;
+#else
+  auto& config = ConfigManager::GetInstance();
 
   map<string, map<string, string>> scaleFactors;
-  config.GetMap("scaleFactors", scaleFactors);
-  
-  for (auto &[name, values] : scaleFactors) {
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+    scaleFactorsRead = !scaleFactors.empty();
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no correctionlib scale factors will be loaded (weights default to 1.0)." << endl;
+    return;
+  }
+
+  for (auto& [name, values] : scaleFactors) {
+    if (!values.count("path") || !values.count("type")) continue;
+
     auto cset = correction::CorrectionSet::from_file(values["path"]);
     map<string, string> extraArgs;
 
-    for (auto &[key, value] : values) {
+    for (auto& [key, value] : values) {
       if (key == "path" || key == "type") continue;
       extraArgs[key] = value;
     }
     if (corrections.count(name)) continue;
 
+    if (name.find("jec") != string::npos) continue;
     try {
       corrections[name] = cset->at(values["type"]);
       correctionsExtraArgs[name] = extraArgs;
-    } catch (std::out_of_range &e) {
+    } catch (out_of_range& e) {
       fatal() << "Incorrect correction type: " << values["type"] << endl;
       fatal() << "Available corrections: " << endl;
-      for (auto &[name, corr] : *cset) fatal() << name << endl;
-      exit(0);
+      for (auto& [name, corr] : *cset) fatal() << name << endl;
+      exit(1);
+    }
+
+    gzFile file = gzopen(values["path"].c_str(), "rb");
+    if (!file) throw std::runtime_error("Cannot open gz file");
+
+    std::string buffer;
+    char tmp[4096];
+    int bytes;
+    while ((bytes = gzread(file, tmp, sizeof(tmp))) > 0) {
+      buffer.append(tmp, bytes);
+    }
+    gzclose(file);
+
+    // Replace non-standard JSON literals
+    size_t pos = 0;
+    while ((pos = buffer.find("Infinity", pos)) != std::string::npos) {
+      buffer.replace(pos, 8, "1e30");
+      pos += 4;
+    }
+
+    pos = 0;
+    while ((pos = buffer.find("-Infinity", pos)) != std::string::npos) {
+      buffer.replace(pos, 9, "-1e30");
+      pos += 5;
+    }
+
+    json fullJson = json::parse(buffer);
+
+    json corrJson;
+
+    for (const auto& c : fullJson["corrections"]) {
+      if (c["name"] == values["type"]) {
+        corrJson = c;
+        break;
+      }
+    }
+
+    if (corrJson.is_null()) {
+      throw std::runtime_error("Correction not found in JSON");
+    }
+
+    map<string, pair<double, double>> bounds;
+    ExtractBounds(corrJson["data"], bounds);
+    boundsPerInput[name] = bounds;
+  }
+#endif
+}
+
+void ScaleFactorsManager::ReadJetEnergyCorrections() {
+#ifndef USE_CORRECTIONLIB
+  return;
+#else
+
+  if (!ShouldApplyScaleFactor("jec") && !ShouldApplyVariation("jec")) return;
+
+  auto& config = ConfigManager::GetInstance();
+
+  map<string, map<string, string>> scaleFactors;
+  try {
+    config.GetMap("scaleFactors", scaleFactors);
+  } catch (const Exception& e) {
+    warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no JEC corrections will be loaded (weights default to 1.0)." << endl;
+    return;
+  }
+
+  for (auto& [name, values] : scaleFactors) {
+    if (name.find("jec") == std::string::npos) continue;
+    auto cset = correction::CorrectionSet::from_file(values["path"]);
+
+    if (corrections.count(name)) continue;
+
+    string type = values["type"] + "_" + values["level"] + "_" + values["algo"];
+    try {
+      compoundCorrections[name] = cset->compound().at(type);
+      correctionsExtraArgs[name] = values;
+    } catch (std::out_of_range& e) {
+      fatal() << "Incorrect correction type: " << type << endl;
+      fatal() << "Available corrections: " << endl;
+      for (auto& [name, corr] : *cset) fatal() << name << endl;
+      exit(1);
+    }
+    vector<string> uncertainties = GetScaleFactorVariations(values["uncertainties"]);
+    for (auto uncertainty : uncertainties) {
+      string unc_type = values["type"] + "_" + uncertainty + "_" + values["algo"];
+      string unc_name = name + "_" + uncertainty;
+      if (corrections.count(unc_name)) continue;
+      try {
+        corrections[unc_name] = cset->at(unc_type);
+        correctionsExtraArgs[unc_name] = values;
+      } catch (std::out_of_range& e) {
+        fatal() << "Incorrect correction type: " << unc_type << endl;
+        fatal() << "Available corrections: " << endl;
+        for (auto& [name, corr] : *cset) fatal() << name << endl;
+        exit(1);
+      }
     }
   }
+#endif
 }
 
 void ScaleFactorsManager::ReadScaleFactorFlags() {
-  auto &config = ConfigManager::GetInstance();
-  config.GetMap("applyScaleFactors", applyScaleFactors);
+  auto& config = ConfigManager::GetInstance();
 
-  info() << "\n------------------------------------" << endl;
-  info() << "Applying scale factors:" << endl;
-  for (auto &[name, apply] : applyScaleFactors) {
-    info() << "  " << name << ": " << apply << endl;
+  try {
+    config.GetMap("applyScaleFactors", applyScaleFactors);
+  } catch (Exception& e) {
+    warn() << "Couldn't read applyScaleFactors from config." << endl;
   }
-  info() << "------------------------------------\n" << endl;
+
 }
 
 void ScaleFactorsManager::ReadPileupSFs() {
-  auto &config = ConfigManager::GetInstance();
+  auto& config = ConfigManager::GetInstance();
 
   string pileupScaleFactorsPath, pileupScaleFactorsHistName;
   config.GetValue("pileupScaleFactorsPath", pileupScaleFactorsPath);
   config.GetValue("pileupScaleFactorsHistName", pileupScaleFactorsHistName);
   info() << "Reading pileup scale factors from file: " << pileupScaleFactorsPath << "\thistogram: " << pileupScaleFactorsHistName << endl;
-  pileupSFvalues = (TH1D *)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
+  pileupSFvalues = (TH1D*)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
 }
 
-float ScaleFactorsManager::GetJetIDScaleFactor(string name, float eta, float pt) {
-  if (!applyScaleFactors["jetID"]) return 1.0;
+map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, float eta, float pt) {
+  bool applyDefault = ShouldApplyScaleFactor("PUjetID");
+  bool applyVariations = ShouldApplyVariation("PUjetID");
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations)
+      warn() << "Requested PUJetID SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(name, {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, {eta, pt, variation, extraArgs["workingPoint"]});
+  }
+  return scaleFactors;
+}
+
+map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float eta, float pt) {
+  bool applyDefault = ShouldApplyScaleFactor("muon");
+  bool applyVariations = ShouldApplyVariation("muon");
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations) warn() << "Requested muon SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {eta, pt, extraArgs["systematic"], extraArgs["workingPoint"]});
+  map<string, float> scaleFactors;
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(name, {fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, {fabs(eta), pt, variation});
+  }
+  return scaleFactors;
 }
 
-float ScaleFactorsManager::GetMuonScaleFactor(string name, float eta, float pt) {
-  if (!applyScaleFactors["muon"]) return 1.0;
+map<string, float> ScaleFactorsManager::GetDSAMuonScaleFactors(string name, const vector<CorrectionArgType>& args) {
+  bool applyDefault = ShouldApplyScaleFactor("dsamuon");
+  bool applyVariations = ShouldApplyVariation("dsamuon");
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations)
+      warn() << "Requested DSA muon SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
+  auto extraArgs = correctionsExtraArgs[name];
+  auto systematic_args = args;
+  systematic_args.push_back(extraArgs["systematic"]);
+  map<string, float> scaleFactors;
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(name, systematic_args);
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    auto variation_args = args;
+    variation_args.push_back(variation);
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, variation_args);
+  }
+  return scaleFactors;
+}
+
+map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, float eta, float pt) {
+  bool applyDefault = ShouldApplyScaleFactor("muonTrigger");
+  bool applyVariations = ShouldApplyVariation("muonTrigger");
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations)
+      warn() << "Requested muon trigger SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
+  map<string, float> scaleFactors;
+
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(name, {fabs(eta), pt, extraArgs["systematic"]});
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, {fabs(eta), pt, variation});
+  }
+  return scaleFactors;
 }
 
-float ScaleFactorsManager::GetMuonTriggerScaleFactor(string name, float eta, float pt) {
-  if (!applyScaleFactors["muonTrigger"]) return 1.0;
+map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float eta, float pt) {
+  bool applyDefault = ShouldApplyScaleFactor("bTagging");
+  bool applyVariations = ShouldApplyVariation("bTagging");
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations) warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name << endl;
+    return {{"systematic", 1.0}};
+  }
+
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  if (!applyDefault) {
+    scaleFactors["systematic"] = 1.0;
+  } else {
+    vector<CorrectionArgType> args = {extraArgs["systematic"], extraArgs["workingPoint"], static_cast<int>(std::stol(extraArgs["flavour"])),
+                                      static_cast<double>(eta), static_cast<double>(pt)};
+    scaleFactors["systematic"] = TryToEvaluate(name, args);
+  }
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    vector<CorrectionArgType> args = {variation, extraArgs["workingPoint"], static_cast<int>(std::stol(extraArgs["flavour"])),
+                                      static_cast<double>(eta), static_cast<double>(pt)};
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, args);
+  }
+  return scaleFactors;
+}
+
+vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
+  vector<string> variations;
+  if (!ShouldApplyVariation("bTagging")) return variations;
 
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {fabs(eta), pt, extraArgs["ValType"]});
+  variations = GetScaleFactorVariations(extraArgs["variations"]);
+  return variations;
 }
 
-float ScaleFactorsManager::GetBTagScaleFactor(string name, float eta, float pt) {
-  if (!applyScaleFactors["b_tagging"]) return 1.0;
+map<string, float> ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
+  bool applyDefault = ShouldApplyScaleFactor("pileup");
+  bool applyVariations = ShouldApplyVariation("pileup");
 
+  map<string, float> scaleFactors;
   auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {extraArgs["systematic"], extraArgs["workingPoint"], stoi(extraArgs["jetID"]), eta, pt});
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(name, {nVertices, extraArgs["systematic"]});
+
+  if (!applyVariations) return scaleFactors;
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, {nVertices, variation});
+  }
+  return scaleFactors;
 }
 
-float ScaleFactorsManager::GetPileupScaleFactor(string name, float nVertices) {
-  if (!applyScaleFactors["pileup"]) return 1.0;
-
-  auto extraArgs = correctionsExtraArgs[name];
-  return TryToEvaluate(corrections[name], {nVertices, extraArgs["weights"]});
+float ScaleFactorsManager::TryToEvaluate(const std::string& name, const vector<CorrectionArgType>& args) {
+#ifndef USE_CORRECTIONLIB
+  return 1.0;
+#else
+  vector<correction::Variable::Type> correctionArgs;
+  correctionArgs.reserve(args.size());
+  for (const auto& arg : args) {
+    std::visit([&](const auto& value) { correctionArgs.emplace_back(MakeCorrectionArg(value)); }, arg);
+  }
+  return EvaluateCorrectionArgs(name, correctionArgs);
+#endif
 }
 
-float ScaleFactorsManager::TryToEvaluate(const correction::Correction::Ref &correction, const vector<std::variant<int, double, std::string>> &args) {
+#ifdef USE_CORRECTIONLIB
+float ScaleFactorsManager::EvaluateCorrectionArgs(const std::string& name, const vector<correction::Variable::Type>& args) {
   try {
-    return correction->evaluate(args);
-  } catch (std::runtime_error &e) {
-    string errorMessage = e.what();
-    error() << "Error while evaluating SF" << endl;
+    return corrections[name]->evaluate(args);
+  } catch (std::runtime_error& e) {
+    std::string msg = e.what();
 
-    if (errorMessage.find("inputs") != string::npos) {
-      fatal() << "Expected inputs: " << endl;
-      for (auto corr : correction->inputs()) fatal() << corr.name() << "\t" << corr.description() << endl;
-      exit(0);
-    } else if (errorMessage.find("bounds") != string::npos) {
-      warn() << "Encountered a value out of SF bounds. Will assume SF = 1.0 " << endl;
+    if (msg.find("inputs") != std::string::npos) {
+      fatal() << "Expected inputs:\n";
+      for (auto corr : corrections[name]->inputs()) fatal() << corr.name() << "\t" << corr.description() << "\n";
+      exit(1);
+    }
+
+    if (msg.find("bounds") == std::string::npos) {
+      fatal() << "Unhandled correctionlib error: " << msg << "\n";
+      exit(1);
+    }
+
+    auto clampedArgs = args;
+
+    if (!boundsPerInput.count(name)) {
+      warn() << "No stored bounds for SF " << name << ". Returning SF=1.\n";
       return 1.0;
-    } else {
-      fatal() << "Unhandled error while evaluating SF: " << errorMessage << endl;
-      exit(0);
+    }
+
+    const auto& bounds = boundsPerInput.at(name);
+    const auto& inputs = corrections[name]->inputs();
+
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      const std::string& varName = inputs[i].name();
+
+      if (!bounds.count(varName)) continue;
+
+      double min = bounds.at(varName).first;
+      double max = bounds.at(varName).second;
+
+      std::visit(
+          [&](auto& val) {
+            using ValueType = std::decay_t<decltype(val)>;
+            if constexpr (std::is_floating_point_v<ValueType>) {
+              if (val < min) val = min + 1e-6;
+              if (val >= max) val = max - 1e-6;
+            } else if constexpr (std::is_integral_v<ValueType>) {
+              if (val < min) val = static_cast<ValueType>(std::ceil(min));
+              if (val >= max) val = static_cast<ValueType>(std::floor(max - 1));
+            }
+          },
+          clampedArgs[i]);
+    }
+
+    try {
+      return corrections[name]->evaluate(clampedArgs);
+    } catch (const std::exception& e2) {
+      fatal() << "Clamped evaluation still failed. Original correction: " << name << " Error message: " << e2.what() << endl;
+      ;
+
+      fatal() << "After clamp:\n";
+      for (size_t j = 0; j < clampedArgs.size(); ++j)
+        std::visit([&](auto&& v) { fatal() << "  [" << j << "] = " << v << endl; }, clampedArgs[j]);
+
+      exit(1);
     }
   }
 }
+#endif
 
-float ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
-  if (!applyScaleFactors["pileup"]) return 1.0;
+map<string, float> ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
+  bool applyDefault = ShouldApplyScaleFactor("pileup");
+  bool applyVariations = ShouldApplyVariation("pileup");
 
-  if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
-    warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
-    return 1.0;
+  map<string, float> scaleFactors;
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else {
+    if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
+      warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
+      return scaleFactors;
+    }
+    if (nVertices > pileupSFvalues->GetXaxis()->GetBinUpEdge(pileupSFvalues->GetNbinsX())) {
+      warn() << "Number of vertices is higher than the highest bin edge in pileup SF histogram" << endl;
+      return scaleFactors;
+    }
+
+    scaleFactors["systematic"] = pileupSFvalues->GetBinContent(pileupSFvalues->FindFixBin(nVertices));
   }
-  if (nVertices > pileupSFvalues->GetXaxis()->GetBinUpEdge(pileupSFvalues->GetNbinsX())) {
-    warn() << "Number of vertices is higher than the highest bin edge in pileup SF histogram" << endl;
-    return 1.0;
-  }
 
-  float sf = pileupSFvalues->GetBinContent(pileupSFvalues->FindFixBin(nVertices));
-  return sf;
+  // if (!applyVariations) return scaleFactors; // No custom variations for pileup SFs?
+
+  return scaleFactors;
 }
 
+vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_str) {
+  vector<string> variations;
+  stringstream ss(variations_str);
+  string item;
 
+  while (getline(ss, item, ',')) {
+    variations.push_back(item);
+  }
+  return variations;
+}
+
+map<string, pair<double, double>> ScaleFactorsManager::GetInputBounds(map<string, string> extraArgs) {
+  map<string, pair<double, double>> inputBounds = {};
+  if (extraArgs.find("inputBounds") == extraArgs.end()) return inputBounds;
+  string bounds_str = extraArgs["inputBounds"];
+  istringstream ss(bounds_str);
+  string item;
+
+  while (getline(ss, item, ',')) {
+    auto sep = item.find(':');
+    if (sep == string::npos) continue;
+    string key = item.substr(0, sep);
+    string rangeStr = item.substr(sep + 1);
+    size_t valSep = rangeStr.find(';');
+    double minVal = -numeric_limits<double>::infinity();
+    double maxVal = numeric_limits<double>::infinity();
+    if (valSep != string::npos) {
+      string minStr = rangeStr.substr(0, valSep);
+      string maxStr = rangeStr.substr(valSep + 1);
+      if (!minStr.empty()) minVal = std::stod(minStr);
+      if (!maxStr.empty()) maxVal = std::stod(maxStr);
+    } else {
+      // Only one value provided → treat as max, min=-inf
+      maxVal = std::stod(rangeStr);
+    }
+
+    if (!inputBounds.count(key)) {
+      inputBounds[key] = {minVal, maxVal};
+    } else {
+      inputBounds[key].first = std::max(inputBounds[key].first, minVal);
+      inputBounds[key].second = std::min(inputBounds[key].second, maxVal);
+    }
+  }
+  return inputBounds;
+}
+
+map<string, float> ScaleFactorsManager::GetCustomScaleFactorsForCategory(string name, string category) {
+  bool applyDefault = ShouldApplyScaleFactor(name);
+  bool applyVariations = ShouldApplyVariation(name);
+
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  if (!applyDefault) scaleFactors["systematic"] = 1.0;
+  // handle empty category - needed to setup the scale factor names for the first event
+  else if (category == "")
+    scaleFactors["systematic"] = 1.0;
+  else
+    scaleFactors["systematic"] = TryToEvaluate(name, {category, extraArgs["systematic"]});
+
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    if (category == "") {
+      scaleFactors[name + "_" + variation] = 1.0;
+      continue;
+    }
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, {category, variation});
+  }
+  return scaleFactors;
+}
+
+map<string, float> ScaleFactorsManager::GetCustomScaleFactors(string name, const vector<CorrectionArgType>& args) {
+  bool applyDefault = ShouldApplyScaleFactor(name);
+  bool applyVariations = ShouldApplyVariation(name);
+
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else {
+    auto systematic_args = args;
+    systematic_args.push_back(extraArgs["systematic"]);
+    scaleFactors["systematic"] = TryToEvaluate(name, systematic_args);
+  }
+
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    auto variation_args = args;
+    variation_args.push_back(variation);
+    scaleFactors[name + "_" + variation] = TryToEvaluate(name, variation_args);
+  }
+  return scaleFactors;
+}
+
+map<string, float> ScaleFactorsManager::GetDimuonScaleFactors(string name, const vector<CorrectionArgType>& args) {
+  bool applyDefault = ShouldApplyScaleFactor(name);
+  bool applyVariations = ShouldApplyVariation(name);
+
+  map<string, float> scaleFactors;
+  auto extraArgs = correctionsExtraArgs[name];
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else {
+    auto systematic_args = args;
+    systematic_args.push_back(extraArgs["systematic"]);
+    scaleFactors["systematic"] = TryToEvaluate(name, systematic_args);
+  }
+
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs["variations"]);
+  for (auto variation : variations) {
+    auto variation_args = args;
+    variation_args.push_back(variation);
+    scaleFactors[name + variation] = TryToEvaluate(name, variation_args);
+  }
+  return scaleFactors;
+}
+
+map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::string, float> inputArguments) {
+  bool applyDefault = ShouldApplyScaleFactor("jec");
+  bool applyVariations = ShouldApplyVariation("jec");
+
+  map<string, float> scaleFactors;
+
+#ifndef USE_CORRECTIONLIB
+  if (applyDefault || applyVariations) {
+    warn() << "Requested jet energy corrections, but correctionlib is not available. Returning neutral corrections." << endl;
+  }
+  scaleFactors["systematic"] = 1.0;
+  return scaleFactors;
+#else
+  string name = "jecMC";
+  auto extraArgs = correctionsExtraArgs[name];
+
+  if (!applyDefault)
+    scaleFactors["systematic"] = 1.0;
+  else {
+    vector<correction::Variable::Type> inputs;
+    for (const correction::Variable& input : compoundCorrections[name]->inputs()) {
+      inputs.push_back(inputArguments.at(input.name()));
+    }
+    scaleFactors["systematic"] = compoundCorrections[name]->evaluate(inputs);
+  }
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> uncertainties = GetScaleFactorVariations(extraArgs["uncertainties"]);
+  for (auto uncertainty : uncertainties) {
+    string unc_name = name + "_" + uncertainty;
+    vector<correction::Variable::Type> unc_inputs;
+    for (const correction::Variable& input : corrections[unc_name]->inputs()) {
+      unc_inputs.push_back(inputArguments.at(input.name()));
+    }
+    float unc = TryToEvaluate(unc_name, unc_inputs);
+    scaleFactors[unc_name + "_up"] = 1 + unc;
+    scaleFactors[unc_name + "_down"] = 1 - unc;
+  }
+
+  return scaleFactors;
+#endif
+}
+
+map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho) {
+  bool applyDefault = ShouldApplyScaleFactor("jer");
+  bool applyVariations = ShouldApplyVariation("jer");
+
+  string name_sf = "jerMC_ScaleFactor";
+  string name_pt = "jerMC_PtResolution";
+
+  map<string, float> scaleFactors;
+  scaleFactors["systematic"] = 1.0;
+  scaleFactors["PtResolution"] = 1.0;
+
+  if (corrections.find(name_sf) == corrections.end()) {
+    if (applyDefault || applyVariations)
+      warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_sf << endl;
+    return scaleFactors;
+  }
+  if (corrections.find(name_pt) == corrections.end()) {
+    if (applyDefault || applyVariations)
+      warn() << "Requested bTag SF, which was not defined in the scale_factors_config: " << name_pt << endl;
+    return scaleFactors;
+  }
+
+  auto extraArgs_sf = correctionsExtraArgs[name_sf];
+  auto extraArgs_pt = correctionsExtraArgs[name_pt];
+
+  if (applyDefault) {
+    scaleFactors["systematic"] = TryToEvaluate(name_sf, {jetEta, extraArgs_sf["systematic"]});
+    scaleFactors["PtResolution"] = TryToEvaluate(name_pt, {jetEta, jetPt, rho});
+  }
+
+  if (!applyVariations) return scaleFactors;
+
+  vector<string> variations = GetScaleFactorVariations(extraArgs_sf["variations"]);
+  for (auto variation : variations) {
+    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(name_sf, {jetEta, variation});
+  }
+  return scaleFactors;
+}
+
+float ScaleFactorsManager::GetJetEnergyResolutionSmearingFactor(map<string, CorrectionArgType> inputArguments) {
+#ifndef USE_CORRECTIONLIB
+  warn() << "Requested jet energy resolution smearing, but correctionlib is not available. Returning neutral smearing." << endl;
+  return 1.0;
+#else
+  string name = "jerMC_smear";
+  vector<correction::Variable::Type> inputs;
+  for (const correction::Variable& input : corrections[name]->inputs()) {
+    std::visit([&](const auto& value) { inputs.emplace_back(MakeCorrectionArg(value)); }, inputArguments.at(input.name()));
+  }
+  float factor = EvaluateCorrectionArgs(name, inputs);
+  return factor;
+#endif
+}
+
+bool ScaleFactorsManager::IsJetVetoMapDefined(string name) { return (corrections.find(name) != corrections.end()); }
+
+bool ScaleFactorsManager::IsJetInBadRegion(string name, float eta, float phi) {
+  if (!IsJetVetoMapDefined(name)) {
+    error() << "Requested jet veto maps which was not defined in the scale_factors_config: " << name << endl;
+    return false;
+  }
+
+  float value = TryToEvaluate(name, {"jetvetomap", eta, phi});
+  return (value != 0.0);
+}

@@ -25,7 +25,7 @@ class CmsLabelsManager:
         if hasattr(self.config, "lumi_label_offset"):
             self.lumiTextOffset = self.config.lumi_label_offset
         else:
-            self.lumiTextOffset = -0.2
+            self.lumiTextOffset = -0.
 
         self.cmsTextSize = 0.75
         self.cmsTextOffset = 0.1
@@ -39,6 +39,9 @@ class CmsLabelsManager:
             self.relPosY = 0.070
             self.relExtraDY = 1.2
 
+        if hasattr(self.config, "label_x"):
+            self.relPosX = self.config.label_x
+            
         if hasattr(self.config, "label_y"):
             self.relPosY = self.config.label_y
 
@@ -59,6 +62,9 @@ class CmsLabelsManager:
             self.collision_energy = " (" + self.config.beam_label+")"
         else:
             self.collision_energy = " (13 TeV)"
+            year = getattr(self.config, "year", "")
+            if "2022" in year or "2023" in year:
+                self.collision_energy = " (13.6 TeV)"
 
         self.drawLogo = False
 
@@ -95,10 +101,10 @@ class CmsLabelsManager:
         latex.SetNDC()
         latex.SetTextAngle(0)
         latex.SetTextColor(ROOT.kBlack)
-        latex.SetTextFont(42)
+        latex.SetTextFont(43)
         latex.SetTextAlign(31)
 
-        latex.SetTextSize(self.lumiTextSize*self.top)
+        latex.SetTextSize(20)
         latex.DrawLatex(1-self.right, 1-self.top + self.lumiTextOffset * self.top, lumiText)
 
     def __drawLogo(self):
@@ -141,3 +147,39 @@ class CmsLabelsManager:
         latex.SetTextSize(extraTextSize*self.top)
         latex.DrawLatex(posX_, posY_ - self.relExtraDY *
                         self.cmsTextSize*self.top, self.extraText)
+
+    def drawLabels2D(self, canvas):
+        latex = ROOT.TLatex()
+        latex.SetTextFont(self.cmsTextFont)
+        latex.SetTextSize(self.cmsTextSize*self.top)
+
+        latex.SetTextAlign(13)
+        latex.SetNDC()
+        latex.DrawLatex(0.1, 0.99, self.cmsText)
+
+        canvas.Update()
+        cms_width = latex.GetTextSize()
+        print(f"cms width: {cms_width}")
+
+        if self.extraText is not None:
+
+            latex = ROOT.TLatex()
+            latex.SetTextFont(self.extraTextFont)
+            latex.SetTextAlign(13)
+            extraTextSize = self.extraOverCmsTextSize * self.cmsTextSize
+            latex.SetTextSize(extraTextSize*self.top)
+            latex.SetNDC()
+            posX_ = 0.1 + 2*cms_width + 0.01
+            posY_ = 0.99 - 0.01
+            latex.DrawLatex(posX_, posY_, self.extraText)
+            
+
+        lumiText = self.lumi + self.collision_energy
+        latex = ROOT.TLatex()
+        latex.SetNDC()
+        latex.SetTextAngle(0)
+        latex.SetTextColor(ROOT.kBlack)
+        latex.SetTextFont(43)
+        latex.SetTextAlign(31)
+        latex.SetTextSize(20)
+        latex.DrawLatex(1-self.right, 1-self.top + 2*self.lumiTextOffset * self.top + 0.01, lumiText)

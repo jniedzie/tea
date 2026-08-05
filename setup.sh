@@ -1,3 +1,4 @@
 #!/bin/bash
 
 export PYTHONPATH="$PYTHONPATH:$(pwd)/bin/"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$(pwd)/bin/"

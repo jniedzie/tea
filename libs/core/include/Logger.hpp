@@ -6,8 +6,36 @@
 #define Logger_hpp
 
 #include <stdexcept>
+#include <iostream>
+#include <string>
 
 #include "Helpers.hpp"
+
+// The progress bar is drawn on the terminal's current line.  Messages must
+// temporarily remove that line, otherwise their output is written over it.
+namespace Terminal {
+inline std::string progressLine;
+
+inline void SetProgress(const std::string& line) {
+  progressLine = line;
+  std::cerr << "\r\033[2K" << progressLine << std::flush;
+}
+
+inline void PrintMessage(const std::string& message) {
+  if (progressLine.empty()) {
+    std::cout << message << std::flush;
+    return;
+  }
+  std::cout << "\r\033[2K" << message;
+  std::cerr << "\r\033[2K" << progressLine << std::flush;
+}
+
+inline void FinishProgress() {
+  if (progressLine.empty()) return;
+  std::cerr << "\r\033[2K\n" << std::flush;
+  progressLine.clear();
+}
+}  // namespace Terminal
 
 class Logger {
  public:
@@ -53,14 +81,22 @@ class Logger {
   }
 
   void Print() {
+    Terminal::FinishProgress();
+    if (warnings.empty() && errors.empty() && fatals.empty()) return;
+
+    Terminal::PrintMessage("\033[0m\n========== Logs summary =========="
+                          "\033[0m\n");
     for (auto &[warning, count] : warnings) {
-      std::cout << "[occured " << count << " times] \033[1;33m" << warning << "\033[0m";
+      Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+                            "\033[1;33m" + warning + "\033[0m");
     }
     for (auto &[error, count] : errors) {
-      std::cout << "[occured " << count << " times] \033[1;31m" << error << "\033[0m";
+      Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+                            "\033[1;31m" + error + "\033[0m");
     }
     for (auto &[fatal, count] : fatals) {
-      std::cout << "[occured " << count << " times] \033[1;35m" << fatal << "\033[0m";
+      Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
+                            "\033[1;35m" + fatal + "\033[0m");
     }
   }
 
@@ -75,13 +111,16 @@ class Logger {
 };
 
 struct info {
+  std::ostringstream stream;
   template <class T>
   info &operator<<(const T &v) {
-    std::cout << v;
+    stream << v;
     return *this;
   }
   info &operator<<(std::ostream &(*os)(std::ostream &)) {
-    std::cout << os;
+    stream << os;
+    Terminal::PrintMessage(stream.str());
+    stream.str("");
     return *this;
   }
 };
@@ -97,7 +136,7 @@ struct warn {
     auto &logger = Logger::GetInstance();
     logger.currentWarningStream << os;
     if (!logger.addWarning()) {
-      std::cout << "[first occurence] \033[1;33m" << logger.currentWarningStream.str() << "\033[0m";
+      Terminal::PrintMessage("\033[0m[first occurence] \033[1;33m" + logger.currentWarningStream.str() + "\033[0m");
     }
     logger.currentWarningStream.str("");
     return *this;
@@ -115,7 +154,7 @@ struct error {
     auto &logger = Logger::GetInstance();
     logger.currentErrorStream << os;
     if (!logger.addError()) {
-      std::cout << "[first occurence] \033[1;31m" << logger.currentErrorStream.str() << "\033[0m";
+      Terminal::PrintMessage("[first occurence] \033[1;31m" + logger.currentErrorStream.str() + "\033[0m");
     }
     logger.currentErrorStream.str("");
     return *this;
@@ -147,7 +186,7 @@ struct fatal {
     logger.currentFatalStream << os << "\n" << errorDetails;
 
     if(!logger.addFatal()) {
-      std::cout << "[first occurrence] \033[1;35m" << logger.currentFatalStream.str() << "\033[0m" << std::endl;
+      Terminal::PrintMessage("[first occurrence] \033[1;35m" + logger.currentFatalStream.str() + "\033[0m\n");
     }
     logger.currentFatalStream.str("");
 
@@ -157,7 +196,7 @@ struct fatal {
 
 class Exception : public std::exception {
  public:
-  Exception(const char *message) { message_ = "\033[1;35m" + (std::string)message + "\033[0m"; }
+  Exception(const char *message) { message_ = message; }
   virtual const char *what() const throw() { return message_.c_str(); }
 
  private:

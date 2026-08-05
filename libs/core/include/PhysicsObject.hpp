@@ -16,7 +16,13 @@ class PhysicsObject {
  public:
   PhysicsObject(std::string originalCollection_, int index_ = -1);
   PhysicsObject() = default;
-  virtual ~PhysicsObject() = default;
+  // virtual ~PhysicsObject() = default;
+  virtual ~PhysicsObject() {
+    for (auto& [name, ptr] : customValuesFloat) {
+      delete ptr;
+    }
+    customValuesFloat.clear();
+  }
 
   void Reset();
 
@@ -25,41 +31,155 @@ class PhysicsObject {
   inline void SetIndex(int index_) { index = index_; }
   inline int GetIndex() { return index; }
 
-  inline auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
-                  int line = __builtin_LINE()) {
-    if (valuesTypes.count(branchName) == 0) {
+  inline auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
+                  const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
+    if (valuesTypes.count(branchName) == 0 && customValuesTypes.count(branchName) == 0 ) {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
 
-      fatal(file, function, line) << message << std::endl;
+      if (verbose) fatal(file, function, line) << message << std::endl;
       throw Exception(message.c_str());
     }
     return Multitype(this, branchName);
   }
 
-  float GetAsFloat(std::string branchName);
+  inline TLorentzVector GetFourVector() {
+    TLorentzVector vec;
+    vec.SetPtEtaPhiM(GetAs<float>("pt"), GetAs<float>("eta"), GetAs<float>("phi"), GetAs<float>("mass"));
+    return vec;
+  }
+
+  template <typename T>
+  T GetAs(std::string branchName) {
+    if (defaultCollectionsTypes.count(branchName)) {
+      std::string branchType = defaultCollectionsTypes[branchName];
+      if (branchType == "Int_t") {
+        Int_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Bool_t") {
+        Bool_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Float_t") {
+        Float_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Double_t") {
+        Double_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "UChar_t") {
+        UChar_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "UShort_t") {
+        UShort_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "Short_t") {
+        Short_t value = Get(branchName);
+        return value;
+      }
+      if (branchType == "UInt_t") {
+        UInt_t value = Get(branchName);
+        return value;
+      }
+    }
+
+    try {
+      Float_t value = Get(branchName);
+      defaultCollectionsTypes[branchName] = "Float_t";
+      return value;
+    } catch (BadTypeException &e) {
+      try {
+        Double_t value = Get(branchName);
+        defaultCollectionsTypes[branchName] = "Double_t";
+        return value;
+      } catch (BadTypeException &e) {
+        try {
+          Int_t value = Get(branchName);
+          defaultCollectionsTypes[branchName] = "Int_t";
+          return value;
+        } catch (BadTypeException &e) {
+          try {
+            UChar_t value = Get(branchName);
+            defaultCollectionsTypes[branchName] = "UChar_t";
+            return value;
+          } catch (BadTypeException &e) {
+            try {
+              UShort_t value = Get(branchName);
+              defaultCollectionsTypes[branchName] = "UShort_t";
+              return value;
+            } catch (BadTypeException &e) {
+              try {
+                Short_t value = Get(branchName);
+                defaultCollectionsTypes[branchName] = "Short_t";
+                return value;
+              } catch (BadTypeException &e) {
+                try {
+                  UInt_t value = Get(branchName);
+                  defaultCollectionsTypes[branchName] = "UInt_t";
+                  return value;
+                } catch (BadTypeException &e) {
+                  try {
+                    Bool_t value = Get(branchName);
+                    defaultCollectionsTypes[branchName] = "Bool_t";
+                    return value;
+                  } catch (BadTypeException &e) {
+                    error() << "Couldn't get value for branch " << branchName << std::endl;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return 0;
+  }
+
+  void SetFloat(std::string branchName, float value) {
+    auto it = customValuesFloat.find(branchName);
+    if (it != customValuesFloat.end()) {
+      delete it->second;
+    }
+    customValuesFloat[branchName] = new Float_t(value);
+    customValuesTypes[branchName] = "Float_t";
+  }
 
  private:
   inline UInt_t GetUint(std::string branchName) { return *valuesUint[branchName]; }
   inline Int_t GetInt(std::string branchName) { return *valuesInt[branchName]; }
   inline Bool_t GetBool(std::string branchName) { return *valuesBool[branchName]; }
-  inline Float_t GetFloat(std::string branchName) { return *valuesFloat[branchName]; }
+  inline Float_t GetFloat(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end())
+      return *valuesFloat[branchName];
+    return *customValuesFloat[branchName];
+  }
+  inline Double_t GetDouble(std::string branchName) { return *valuesDouble[branchName]; }
   inline ULong64_t GetULong(std::string branchName) { return *valuesUlong[branchName]; }
   inline UChar_t GetUChar(std::string branchName) { return *valuesUchar[branchName]; }
+  inline UChar_t GetChar(std::string branchName) { return *valuesChar[branchName]; }
   inline UShort_t GetUShort(std::string branchName) { return *valuesUshort[branchName]; }
   inline Short_t GetShort(std::string branchName) { return *valuesShort[branchName]; }
 
   // contains all branch names and corresponding types
   std::map<std::string, std::string> valuesTypes;
+  std::map<std::string, std::string> customValuesTypes;
 
   std::map<std::string, UInt_t *> valuesUint;
   std::map<std::string, Int_t *> valuesInt;
   std::map<std::string, Bool_t *> valuesBool;
   std::map<std::string, Float_t *> valuesFloat;
+  std::map<std::string, Double_t *> valuesDouble;
   std::map<std::string, ULong64_t *> valuesUlong;
   std::map<std::string, UChar_t *> valuesUchar;
+  std::map<std::string, Char_t *> valuesChar;
   std::map<std::string, UShort_t *> valuesUshort;
   std::map<std::string, Short_t *> valuesShort;
+
+  std::map<std::string, Float_t*> customValuesFloat;
 
   std::string originalCollection;
   int index;

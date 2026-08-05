@@ -16,10 +16,15 @@ public:
   ~EventWriter();
 
   void AddCurrentEvent(std::string treeName);
+  
+  // With HepMC events, you can specify which particles to keep.
+  void AddCurrentHepMCevent(std::string treeName, const std::vector<int> &keepIndices);
+
   void Save();
 
 private:
   TFile *outFile;
+  std::string outputFilePath;
   std::map<std::string, TTree *> outputTrees;
 
   std::shared_ptr<EventReader> eventReader;
@@ -27,7 +32,12 @@ private:
   std::vector<std::string> branchesToKeep;
   std::vector<std::string> branchesToRemove;
 
-  void SetupOutputTree(std::string outFileName);
+  std::map<std::string, std::vector<bool>> boolVectorBuffers;
+  std::map<std::string, std::vector<std::string>> boolVectorBranchesPerTree;
+
+  void SetupOutputTree();
+  void SetupBoolVectorBranches(std::string treeName);
+  void RepackBoolVectorBranches(std::string treeName);
 
   friend class CutFlowManager;
 };
