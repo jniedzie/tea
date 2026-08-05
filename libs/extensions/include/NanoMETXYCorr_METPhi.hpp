@@ -1,3 +1,12 @@
+#ifndef NanoMETXYCorr_METPhi_hpp
+#define NanoMETXYCorr_METPhi_hpp
+
+#include <cmath>
+#include <utility>
+
+#include "TMath.h"
+#include "TString.h"
+
 // Script taken from https://lathomas.web.cern.ch/METStuff/XYCorrections/XYMETCorrection_withUL17andUL18andUL16.h as recommended by JetMET
 // twiki here: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETRun2Corrections#Uncertainty_related_to_Uncluster
 // Taken March 2026 for Run 2 MET XY corrections (MET-phi modulation)
