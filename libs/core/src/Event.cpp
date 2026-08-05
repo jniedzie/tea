@@ -29,7 +29,10 @@ Event::Event() {
 
 Event::~Event() {}
 
-void Event::Reset() { extraCollections.clear(); }
+void Event::Reset() {
+  extraCollections.clear();
+  metUpdatedBranchName.clear();
+}
 
 void Event::UpdateMetVariables(string newBranchName, float pt, float phi) {
   SetFloat(newBranchName + "_pt", pt);
