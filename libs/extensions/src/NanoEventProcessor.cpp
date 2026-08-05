@@ -404,8 +404,8 @@ void NanoEventProcessor::ApplyPuppiMETEnergyScaleCorrections(shared_ptr<NanoEven
 
     float pt_noMuRaw = pt * (1. - muonSubtrFactor);
 
-    float pt_noMuL1 = pt_noMuRaw * corrections["jecL1"];
-    float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3"];
+    float pt_noMuL1 = pt_noMuRaw * corrections["jecL1"+dataStr];
+    float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3"+dataStr];
         
     if (pt_noMuL1L2L3 < 15)
       continue;
