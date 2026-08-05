@@ -289,13 +289,7 @@ inline std::pair<double,double> METXYCorr_Met_MetPhi(double uncormet, double unc
   double CorrectedMET_y = uncormet *sin( uncormet_phi)+METycorr;
 
   double CorrectedMET = sqrt(CorrectedMET_x*CorrectedMET_x+CorrectedMET_y*CorrectedMET_y);
-  double CorrectedMETPhi;
-  if(CorrectedMET_x==0 && CorrectedMET_y>0) CorrectedMETPhi = TMath::Pi();
-  else if(CorrectedMET_x==0 && CorrectedMET_y<0 )CorrectedMETPhi = -TMath::Pi();
-  else if(CorrectedMET_x >0) CorrectedMETPhi = TMath::ATan(CorrectedMET_y/CorrectedMET_x);
-  else if(CorrectedMET_x <0&& CorrectedMET_y>0) CorrectedMETPhi = TMath::ATan(CorrectedMET_y/CorrectedMET_x) + TMath::Pi();
-  else if(CorrectedMET_x <0&& CorrectedMET_y<0) CorrectedMETPhi = TMath::ATan(CorrectedMET_y/CorrectedMET_x) - TMath::Pi();
-  else CorrectedMETPhi =0;
+  double CorrectedMETPhi = TMath::ATan2(CorrectedMET_y, CorrectedMET_x);
 
   TheXYCorr_Met_MetPhi.first= CorrectedMET;
   TheXYCorr_Met_MetPhi.second= CorrectedMETPhi;
