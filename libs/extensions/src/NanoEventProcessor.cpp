@@ -166,6 +166,7 @@ map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const share
       weights[name] *= weight;
     }
   }
+  if (firstIteration) return {{"systematic", 1.0}};
   return weights;
 }
 
