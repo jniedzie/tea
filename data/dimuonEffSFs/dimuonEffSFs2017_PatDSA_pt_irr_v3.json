@@ -52,15 +52,15 @@
                                 "content": [
                                     {
                                         "key": "nominal",
-                                        "value": 1.74
+                                        "value": 1.54
                                     },
                                     {
                                         "key": "up",
-                                        "value": 1.8599999999999999
+                                        "value": 1.6300000000000001
                                     },
                                     {
                                         "key": "down",
-                                        "value": 1.62
+                                        "value": 1.45
                                     }
                                 ]
                             },
@@ -70,15 +70,15 @@
                                 "content": [
                                     {
                                         "key": "nominal",
-                                        "value": 1.39
+                                        "value": 1.13
                                     },
                                     {
                                         "key": "up",
-                                        "value": 1.5
+                                        "value": 1.21
                                     },
                                     {
                                         "key": "down",
-                                        "value": 1.2799999999999998
+                                        "value": 1.0499999999999998
                                     }
                                 ]
                             },
@@ -88,15 +88,15 @@
                                 "content": [
                                     {
                                         "key": "nominal",
-                                        "value": 1.31
+                                        "value": 1.1
                                     },
                                     {
                                         "key": "up",
-                                        "value": 1.44
+                                        "value": 1.1900000000000002
                                     },
                                     {
                                         "key": "down",
-                                        "value": 1.1800000000000002
+                                        "value": 1.01
                                     }
                                 ]
                             }
@@ -119,15 +119,15 @@
                                 "content": [
                                     {
                                         "key": "nominal",
-                                        "value": 0.87
+                                        "value": 0.8
                                     },
                                     {
                                         "key": "up",
-                                        "value": 0.95
+                                        "value": 0.8700000000000001
                                     },
                                     {
                                         "key": "down",
-                                        "value": 0.79
+                                        "value": 0.73
                                     }
                                 ]
                             },
@@ -137,33 +137,33 @@
                                 "content": [
                                     {
                                         "key": "nominal",
-                                        "value": 0.53
+                                        "value": 0.39
                                     },
                                     {
                                         "key": "up",
-                                        "value": 0.5900000000000001
-                                    },
-                                    {
-                                        "key": "down",
-                                        "value": 0.47000000000000003
-                                    }
-                                ]
-                            },
-                            {
-                                "nodetype": "category",
-                                "input": "scale_factors",
-                                "content": [
-                                    {
-                                        "key": "nominal",
                                         "value": 0.44
                                     },
                                     {
+                                        "key": "down",
+                                        "value": 0.34
+                                    }
+                                ]
+                            },
+                            {
+                                "nodetype": "category",
+                                "input": "scale_factors",
+                                "content": [
+                                    {
+                                        "key": "nominal",
+                                        "value": 0.36
+                                    },
+                                    {
                                         "key": "up",
-                                        "value": 0.52
+                                        "value": 0.42
                                     },
                                     {
                                         "key": "down",
-                                        "value": 0.36
+                                        "value": 0.3
                                     }
                                 ]
                             }
