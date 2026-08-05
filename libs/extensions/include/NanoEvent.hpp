@@ -96,7 +96,7 @@ class NanoEvent {
   std::shared_ptr<Event> event;
   std::map<std::string, float> muonTriggerSF;
 
-  std::string metBranchName = "MET";
+  // MET branch selection is owned by Event (see Event::GetMetBranchName()).
 
 };
 
