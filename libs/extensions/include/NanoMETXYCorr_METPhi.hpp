@@ -18,7 +18,7 @@ enum TheRunEra{
   yUL2018MC
 };
 
-std::pair<double,double> METXYCorr_Met_MetPhi(double uncormet, double uncormet_phi, int runnb, TString year, bool isMC, int npv, bool isUL =false,bool ispuppi=false){
+inline std::pair<double,double> METXYCorr_Met_MetPhi(double uncormet, double uncormet_phi, int runnb, const TString& year, bool isMC, int npv, bool isUL =false,bool ispuppi=false){
 
   std::pair<double,double>  TheXYCorr_Met_MetPhi(uncormet,uncormet_phi);
   
