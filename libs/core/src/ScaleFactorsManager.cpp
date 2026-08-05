@@ -711,7 +711,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrectionUncertainties(std:
   map<string, float> scaleFactors;
 
 #ifndef USE_CORRECTIONLIB
-  if (applyDefault || applyVariations) {
+  if (applyVariations) {
     warn() << "Requested jet energy corrections, but correctionlib is not available. Returning neutral corrections." << endl;
   }
   scaleFactors["systematic"] = 1.0;
@@ -719,7 +719,6 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrectionUncertainties(std:
 #else
   string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
-  map<string, float> scaleFactors;
   if (!applyVariations) return scaleFactors;
 
   vector<string> uncertainties = GetScaleFactorVariations(extraArgs["uncertainties"]);
@@ -748,6 +747,13 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(vector<string> j
     return scaleFactors;
   }
 
+#ifndef USE_CORRECTIONLIB
+  if (applyDefault) {
+    warn() << "Requested jet energy corrections, but correctionlib is not available. Returning neutral corrections." << endl;
+  }
+  scaleFactors["systematic"] = 1.0;
+  return scaleFactors;
+#else
   for (auto name : jecNames) {
     vector<correction::Variable::Type> inputs;
     if (compoundCorrections.count(name)) {
@@ -763,6 +769,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(vector<string> j
     }
   }
   return scaleFactors;
+#endif
 }
 
 map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho) {
@@ -798,7 +805,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
     extraArgs_sf["year"].find("2025") != string::npos ||
     extraArgs_sf["year"].find("2026") != string::npos;
 
-  vector<variant<int, double, string>> args_sfs;
+  vector<CorrectionArgType> args_sfs;
   args_sfs.push_back(jetEta);
   if (useJetPt)
     args_sfs.push_back(jetPt);
@@ -813,7 +820,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
 
   vector<string> variations = GetScaleFactorVariations(extraArgs_sf["variations"]);
   for (auto variation : variations) {
-    vector<variant<int, double, string>> args;
+    vector<CorrectionArgType> args;
     args.push_back(jetEta);
     if (useJetPt)
       args.push_back(jetPt);

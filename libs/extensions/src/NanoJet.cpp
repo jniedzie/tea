@@ -197,7 +197,7 @@ void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEv
       {"JetEta", (float)physicsObject->Get("eta")},
       {"GenPt", (double)genPt},
       {"Rho", (double)rho},
-      {"EventID", (long)eventID},
+      {"EventID", (double)eventID},
       {"JER", (double)jerSF["PtResolution"]},
       {"JERSF", (double)jerSF["systematic"]},
   };

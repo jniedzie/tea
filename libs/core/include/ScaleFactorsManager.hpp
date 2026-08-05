@@ -18,7 +18,7 @@ using CorrectionArgType = correction::Variable::Type;
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
 using CompoundCorrectionRef = DummyCorrectionRef;
-using CorrectionArgType = std::variant<long, double, std::string>;
+using CorrectionArgType = std::variant<int, double, std::string>;
 #endif
 
 struct MuonID;
