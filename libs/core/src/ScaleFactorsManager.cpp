@@ -53,7 +53,7 @@ ScaleFactorsManager::ScaleFactorsManager() {
     }
     info() << "------------------------------------\n" << endl;
   }
-  if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
+  // if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
   ReadJetEnergyCorrections();
 }
 
@@ -234,13 +234,19 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
 
     string type = values["type"] + "_" + values["level"] + "_" + values["algo"];
     try {
-      compoundCorrections[name] = cset->compound().at(type);
+      corrections[name] = cset->at(type);
       correctionsExtraArgs[name] = values;
     } catch (std::out_of_range& e) {
-      fatal() << "Incorrect correction type: " << type << endl;
-      fatal() << "Available corrections: " << endl;
-      for (auto& [name, corr] : *cset) fatal() << name << endl;
-      exit(1);
+      try {
+        compoundCorrections[name] = cset->compound().at(type);
+        correctionsExtraArgs[name] = values;
+      } catch (std::out_of_range& e) {
+        fatal() << "Incorrect correction type: " << type << endl;
+        fatal() << "Available corrections: " << endl;
+        for (auto& [name, corr] : cset->compound()) fatal() << name << endl;
+        fatal() << "2 " << endl;
+        exit(1);
+      }
     }
     vector<string> uncertainties = GetScaleFactorVariations(values["uncertainties"]);
     for (auto uncertainty : uncertainties) {
@@ -327,6 +333,14 @@ map<string, float> ScaleFactorsManager::GetMuonScaleFactors(string name, float e
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(name, {fabs(eta), pt, variation});
   }
+
+  if (extraArgs.find("statistical") != extraArgs.end()) {
+    string statistical = extraArgs["statistical"];
+    float statSF = TryToEvaluate(name, {fabs(eta), pt, statistical});
+    scaleFactors[name + "_" + statistical + "_up"] = scaleFactors["systematic"] + statSF;
+    scaleFactors[name + "_" + statistical + "_down"] = scaleFactors["systematic"] - statSF;
+  }
+
   return scaleFactors;
 }
 
@@ -381,6 +395,14 @@ map<string, float> ScaleFactorsManager::GetMuonTriggerScaleFactors(string name, 
   for (auto variation : variations) {
     scaleFactors[name + "_" + variation] = TryToEvaluate(name, {fabs(eta), pt, variation});
   }
+
+  if (extraArgs.find("statistical") != extraArgs.end()) {
+    string statistical = extraArgs["statistical"];
+    float statSF = TryToEvaluate(name, {fabs(eta), pt, statistical});
+    scaleFactors[name + "_" + statistical + "_up"] = scaleFactors["systematic"] + statSF;
+    scaleFactors[name + "_" + statistical + "_down"] = scaleFactors["systematic"] - statSF;
+  }
+  
   return scaleFactors;
 }
 
@@ -411,6 +433,22 @@ map<string, float> ScaleFactorsManager::GetBTagScaleFactors(string name, float e
     scaleFactors[name + "_" + variation] = TryToEvaluate(name, args);
   }
   return scaleFactors;
+}
+
+float ScaleFactorsManager::GetJetTagEfficiency(string name, string datasetName, float pt) {
+  bool applyDefault = ShouldApplyScaleFactor("bTagging");
+  bool applyVariations = ShouldApplyVariation("bTagging");
+  if (!applyDefault && !applyVariations) return 1.0;
+
+  if (corrections.find(name) == corrections.end()) {
+    if (applyDefault || applyVariations) warn() << "Requested bTag efficiency, which was not defined in the scale_factors_config: " << name << endl;
+    return 1.0;
+  }
+
+  auto extraArgs = correctionsExtraArgs[name];
+
+  float efficiency = TryToEvaluate(name, {datasetName, pt});
+  return efficiency;
 }
 
 vector<string> ScaleFactorsManager::GetBTagVariationNames(string name) {
@@ -667,8 +705,7 @@ map<string, float> ScaleFactorsManager::GetDimuonScaleFactors(string name, const
   return scaleFactors;
 }
 
-map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::string, float> inputArguments) {
-  bool applyDefault = ShouldApplyScaleFactor("jec");
+map<string, float> ScaleFactorsManager::GetJetEnergyCorrectionUncertainties(std::map<std::string, float> inputArguments) {
   bool applyVariations = ShouldApplyVariation("jec");
 
   map<string, float> scaleFactors;
@@ -682,16 +719,7 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
 #else
   string name = "jecMC";
   auto extraArgs = correctionsExtraArgs[name];
-
-  if (!applyDefault)
-    scaleFactors["systematic"] = 1.0;
-  else {
-    vector<correction::Variable::Type> inputs;
-    for (const correction::Variable& input : compoundCorrections[name]->inputs()) {
-      inputs.push_back(inputArguments.at(input.name()));
-    }
-    scaleFactors["systematic"] = compoundCorrections[name]->evaluate(inputs);
-  }
+  map<string, float> scaleFactors;
   if (!applyVariations) return scaleFactors;
 
   vector<string> uncertainties = GetScaleFactorVariations(extraArgs["uncertainties"]);
@@ -708,6 +736,33 @@ map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(std::map<std::st
 
   return scaleFactors;
 #endif
+}
+
+map<string, float> ScaleFactorsManager::GetJetEnergyCorrections(vector<string> jecNames, map<string, float> inputArguments) {
+  map<string, float> scaleFactors;
+  bool applyDefault = ShouldApplyScaleFactor("jec");
+  if (!applyDefault) {
+    for (auto name : jecNames) {
+      scaleFactors[name] = 1.0;
+    }
+    return scaleFactors;
+  }
+
+  for (auto name : jecNames) {
+    vector<correction::Variable::Type> inputs;
+    if (compoundCorrections.count(name)) {
+      for (const correction::Variable& input : compoundCorrections[name]->inputs()) {
+        inputs.push_back(inputArguments.at(input.name()));
+      }
+      scaleFactors[name] = compoundCorrections[name]->evaluate(inputs);
+    } else if (corrections.count(name)) {
+      for (const correction::Variable& input : corrections[name]->inputs()) {
+        inputs.push_back(inputArguments.at(input.name()));
+      }
+      scaleFactors[name] = TryToEvaluate(name, inputs);
+    }
+  }
+  return scaleFactors;
 }
 
 map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho) {
@@ -735,8 +790,22 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
   auto extraArgs_sf = correctionsExtraArgs[name_sf];
   auto extraArgs_pt = correctionsExtraArgs[name_pt];
 
+  // Run 2 only use jet eta as input, but Run 3 alos need jet pT
+  bool useJetPt =
+    extraArgs_sf["year"].find("2022") != string::npos ||
+    extraArgs_sf["year"].find("2023") != string::npos ||
+    extraArgs_sf["year"].find("2024") != string::npos ||
+    extraArgs_sf["year"].find("2025") != string::npos ||
+    extraArgs_sf["year"].find("2026") != string::npos;
+
+  vector<variant<int, double, string>> args_sfs;
+  args_sfs.push_back(jetEta);
+  if (useJetPt)
+    args_sfs.push_back(jetPt);
+  args_sfs.push_back(extraArgs_sf["systematic"]);
+  
   if (applyDefault) {
-    scaleFactors["systematic"] = TryToEvaluate(name_sf, {jetEta, extraArgs_sf["systematic"]});
+    scaleFactors["systematic"] = TryToEvaluate(name_sf, args_sfs);
     scaleFactors["PtResolution"] = TryToEvaluate(name_pt, {jetEta, jetPt, rho});
   }
 
@@ -744,7 +813,12 @@ map<string, float> ScaleFactorsManager::GetJetEnergyResolutionScaleFactorAndPtRe
 
   vector<string> variations = GetScaleFactorVariations(extraArgs_sf["variations"]);
   for (auto variation : variations) {
-    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(name_sf, {jetEta, variation});
+    vector<variant<int, double, string>> args;
+    args.push_back(jetEta);
+    if (useJetPt)
+      args.push_back(jetPt);
+    args.push_back(variation);
+    scaleFactors[name_sf + "_" + variation] = TryToEvaluate(name_sf, args);
   }
   return scaleFactors;
 }

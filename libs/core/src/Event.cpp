@@ -19,11 +19,44 @@ Event::Event() {
   } catch (const Exception& e) {
     hasExtraCollections = false;
   }
+  try {
+    config.GetValue("metBranchName", metBranchName);
+  } catch (const Exception &e) {
+    warn() << "MET branch not specified -- will assume MET" << endl;
+    metBranchName = "MET";
+  }
 }
 
 Event::~Event() {}
 
 void Event::Reset() { extraCollections.clear(); }
+
+void Event::UpdateMetVariables(string newBranchName, float pt, float phi) {
+  SetFloat(newBranchName + "_pt", pt);
+  SetFloat(newBranchName + "_phi", phi);
+  metUpdatedBranchName = newBranchName;
+}
+
+string Event::GetUpdatedMetBranchName() {
+  if (!metUpdatedBranchName.empty()) {
+    return metUpdatedBranchName;
+  }
+  return metBranchName; 
+}
+
+float Event::GetMetPt() { 
+  if (!metUpdatedBranchName.empty()) {
+    return GetFloat(metUpdatedBranchName + "_pt");
+  }
+  return GetFloat(metBranchName + "_pt"); 
+}
+
+float Event::GetMetPhi() { 
+  if (!metUpdatedBranchName.empty()) {
+    return GetFloat(metUpdatedBranchName + "_phi");
+  }
+  return GetFloat(metBranchName + "_phi"); 
+}
 
 template <typename First, typename... Rest>
 bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {
