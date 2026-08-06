@@ -57,19 +57,23 @@ HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
   for (auto& [title, params] : histParams) {
+    histogramDirectories[title] = params.directory;
     histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
   }
 
   for (auto& [title, params] : irregularHistParams) {
+    histogramDirectories[title] = params.directory;
     histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
   for (auto& [title, params] : histParams2D) {
+    histogramDirectories[title] = params.directory;
     histograms2D[make_pair(title, "")] =
         new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
   }
 
   for (auto& [title, params] : irregularHistParams2D) {
+    histogramDirectories[title] = params.directory;
     histograms2D[make_pair(title, "")] = new TH2D(title.c_str(), title.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0],
                                                   params.binEdgesY.size() - 1, &params.binEdgesY[0]);
   }
@@ -186,14 +190,25 @@ void HistogramsHandler::CheckHistogram2D(string name, string directory) {
 template <typename THist>
 void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outputFile) {
   string name = names.first;
-  string outputDir = names.second;
-  if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-
-  outputFile->cd(outputDir.c_str());
   if (!hist) {
     error() << "Histogram " << name << " is null" << endl;
     return;
   }
+
+  auto directoryIt = histogramDirectories.find(name);
+  string outputDir = directoryIt == histogramDirectories.end() ? "" : directoryIt->second;
+  if (outputDir.empty()) {
+    outputFile->cd();
+  } else {
+    TDirectory* directory = outputFile->GetDirectory(outputDir.c_str());
+    if (!directory) directory = outputFile->mkdir(outputDir.c_str());
+    if (!directory) {
+      error() << "Failed to create histogram output directory: " << outputDir << endl;
+      return;
+    }
+    directory->cd();
+  }
+
   if constexpr (std::is_same<THist, TH2D>::value) {
     if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
       warn() << "You're creating a very large 2D histogram: " << name << " with ";
