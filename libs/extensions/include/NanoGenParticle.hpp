@@ -57,6 +57,7 @@ class NanoGenParticle {
   bool IsJet();
   bool IsTop();
   bool IsMuon();
+  bool IsMotherJPsi(const std::shared_ptr<PhysicsObjects> genParticles);
 
   std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
 
