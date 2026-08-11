@@ -458,3 +458,23 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   }
   return currentEvent;
 }
+
+vector<string> EventReader::GetHLTbranchNames() {
+  if (!hltBranches.empty()) return hltBranches;
+  for (const auto& [branchName, branchType] : branchNamesAndTypes) {
+    if (branchName.find("HLT_") == 0) {
+      hltBranches.push_back(branchName);
+    }
+  }
+  return hltBranches;
+}
+
+vector<string> EventReader::GetL1branchNames() {
+  if (!l1Branches.empty()) return l1Branches;
+  for (const auto& [branchName, branchType] : branchNamesAndTypes) {
+    if (branchName.find("L1_") == 0) {
+      l1Branches.push_back(branchName);
+    }
+  }
+  return l1Branches;
+}
