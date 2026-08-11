@@ -21,28 +21,64 @@ const map<string, string> addedBranchTypeCodes = {
 template <typename T>
 void FillScalarAddedBranch(map<string, T> &buffer, const string &name, const shared_ptr<Event> &event) {
   if (event->HasCustomValue(name)) {
-    T value = event->Get(name);
-    buffer[name] = value;
+    try {
+      T value = event->Get(name);
+      buffer[name] = value;
+    } catch (BadTypeException &e) {
+      fatal() << "branchesToAdd: event-level branch \"" << name
+               << "\" was set with a type that doesn't match its declared branchesToAdd type: " << e.what() << endl;
+      exit(1);
+    }
   } else {
     buffer[name] = T(0);
-    warn() << "branchesToAdd: event-level branch \"" << name << "\" was never set for this event, writing default value" << endl;
-  }
-}
-
-template <typename T>
-void FillArrayAddedBranch(T *buffer, const string &variable, size_t previousSize, const shared_ptr<PhysicsObjects> &collection) {
-  for (size_t i = 0; i < previousSize; i++) buffer[i] = T(0);
-  for (size_t i = 0; i < collection->size(); i++) {
-    auto object = collection->at(i);
-    if (object->HasCustomValue(variable)) {
-      T value = object->Get(variable);
-      buffer[i] = value;
-    } else {
-      buffer[i] = T(0);
-      warn() << "branchesToAdd: per-object branch \"" << variable << "\" was never set for an object this event, writing default value"
+    // One event-level branch is set (or not) independently every event, so warning once per branch
+    // for the whole job -- rather than once per event -- avoids flooding the log on production runs.
+    static set<string> warnedBranches;
+    if (warnedBranches.insert(name).second) {
+      warn() << "branchesToAdd: event-level branch \"" << name
+             << "\" was never set for at least one event, writing default value (further occurrences for this branch won't be logged)"
              << endl;
     }
   }
+}
+
+// keepIndices, when non-null, restricts the fill to that subset of the collection (in that order),
+// mirroring the reindexing FilterBranch applies to the pre-existing HepMC Particle_* branches so the
+// two stay aligned. Returns the number of entries actually written (== collection->size() when
+// keepIndices is null).
+template <typename T>
+size_t FillArrayAddedBranch(T *buffer, const string &variable, size_t previousSize, const shared_ptr<PhysicsObjects> &collection,
+                            const vector<int> *keepIndices) {
+  static set<string> warnedBranches;
+
+  size_t writeIndex = 0;
+  auto fillOne = [&](const shared_ptr<PhysicsObject> &object) {
+    T value = T(0);
+    if (object->HasCustomValue(variable)) {
+      try {
+        value = object->Get(variable);
+      } catch (BadTypeException &e) {
+        fatal() << "branchesToAdd: per-object branch \"" << variable
+                 << "\" was set with a type that doesn't match its declared branchesToAdd type: " << e.what() << endl;
+        exit(1);
+      }
+    } else if (warnedBranches.insert(variable).second) {
+      warn() << "branchesToAdd: per-object branch \"" << variable
+             << "\" was never set for at least one object, writing default value (further occurrences for this branch won't be logged)"
+             << endl;
+    }
+    buffer[writeIndex++] = value;
+  };
+
+  if (keepIndices) {
+    for (int index : *keepIndices) fillOne(collection->at(index));
+  } else {
+    for (size_t i = 0; i < collection->size(); i++) fillOne(collection->at(i));
+  }
+  // Only the shrink remainder needs clearing -- entries already covered by the loop above were
+  // just written for real, so re-zeroing them first (as before) was pure duplicated work.
+  for (size_t i = writeIndex; i < previousSize; i++) buffer[i] = T(0);
+  return writeIndex;
 }
 }  // namespace
 
@@ -189,7 +225,19 @@ void EventWriter::SetupAddedBranches(string treeName) {
       else if (added.type == "UChar_t") outputTree->Branch(name.c_str(), &addedScalarUChar[name], leaflist.c_str());
       else if (added.type == "Short_t") outputTree->Branch(name.c_str(), &addedScalarShort[name], leaflist.c_str());
       else if (added.type == "UShort_t") outputTree->Branch(name.c_str(), &addedScalarUShort[name], leaflist.c_str());
+      else {
+        fatal() << "branchesToAdd: internal error - no scalar branch handler for type \"" << added.type << "\" (branch \"" << name
+                << "\"); addedBranchTypeCodes and the type-dispatch chain have drifted apart" << endl;
+        exit(1);
+      }
     } else {
+      try {
+        eventReader->currentEvent->GetCollection(added.collection);
+      } catch (const Exception &e) {
+        fatal() << "branchesToAdd: collection \"" << added.collection << "\" for branch \"" << name << "\" does not exist" << endl;
+        exit(1);
+      }
+
       string sizeBranch = eventReader->specialBranchSizes.count(added.collection) ? eventReader->specialBranchSizes[added.collection]
                                                                                    : "n" + added.collection;
       if (!outputTree->GetBranch(sizeBranch.c_str())) {
@@ -197,6 +245,8 @@ void EventWriter::SetupAddedBranches(string treeName) {
                 << treeName << " (it may have been pruned by branchesToRemove)" << endl;
         exit(1);
       }
+      added.sizeBranch = sizeBranch;
+
       string leaflist = name + "[" + sizeBranch + "]/" + typeCode;
       if (added.type == "Float_t") outputTree->Branch(name.c_str(), addedVectorFloat[name], leaflist.c_str());
       else if (added.type == "Double_t") outputTree->Branch(name.c_str(), addedVectorDouble[name], leaflist.c_str());
@@ -207,13 +257,18 @@ void EventWriter::SetupAddedBranches(string treeName) {
       else if (added.type == "UChar_t") outputTree->Branch(name.c_str(), addedVectorUChar[name], leaflist.c_str());
       else if (added.type == "Short_t") outputTree->Branch(name.c_str(), addedVectorShort[name], leaflist.c_str());
       else if (added.type == "UShort_t") outputTree->Branch(name.c_str(), addedVectorUShort[name], leaflist.c_str());
+      else {
+        fatal() << "branchesToAdd: internal error - no array branch handler for type \"" << added.type << "\" (branch \"" << name
+                << "\"); addedBranchTypeCodes and the type-dispatch chain have drifted apart" << endl;
+        exit(1);
+      }
     }
 
     addedBranchesPerTree[treeName].push_back(name);
   }
 }
 
-void EventWriter::FillAddedBranches(string treeName) {
+void EventWriter::FillAddedBranches(string treeName, const vector<int> *keepIndices) {
   auto it = addedBranchesPerTree.find(treeName);
   if (it == addedBranchesPerTree.end()) return;
 
@@ -232,21 +287,51 @@ void EventWriter::FillAddedBranches(string treeName) {
       else if (added.type == "UChar_t") FillScalarAddedBranch(addedScalarUChar, name, event);
       else if (added.type == "Short_t") FillScalarAddedBranch(addedScalarShort, name, event);
       else if (added.type == "UShort_t") FillScalarAddedBranch(addedScalarUShort, name, event);
+      else {
+        fatal() << "branchesToAdd: internal error - no scalar fill handler for type \"" << added.type << "\" (branch \"" << name << "\")"
+                << endl;
+        exit(1);
+      }
     } else {
-      auto collection = event->GetCollection(added.collection);
+      shared_ptr<PhysicsObjects> collection;
+      try {
+        collection = event->GetCollection(added.collection);
+      } catch (const Exception &e) {
+        fatal() << "branchesToAdd: collection \"" << added.collection << "\" for branch \"" << name
+                << "\" could not be retrieved for the current event: " << e.what() << endl;
+        exit(1);
+      }
+
+      // The leaflist declares name[sizeBranch], and sizeBranch is cloned verbatim from the input
+      // tree -- unlike collection->size() it is NOT capped at maxCollectionElements, so ROOT would
+      // read past our fixed-size buffer at Fill() time if a real event ever exceeds the cap.
+      Int_t rawSize = event->GetAs<Int_t>(added.sizeBranch);
+      if (rawSize > maxCollectionElements) {
+        fatal() << "branchesToAdd: collection \"" << added.collection << "\" has " << rawSize << " elements this event, exceeding "
+                << "maxCollectionElements (" << maxCollectionElements << "); cannot safely fill array branch \"" << name << "\"" << endl;
+        exit(1);
+      }
+
       size_t previousSize = addedVectorSizes[name];
+      const vector<int> *filterIndices = (keepIndices != nullptr && added.collection == "Particle") ? keepIndices : nullptr;
+      size_t writeIndex = 0;
 
-      if (added.type == "Float_t") FillArrayAddedBranch(addedVectorFloat[name], added.variable, previousSize, collection);
-      else if (added.type == "Double_t") FillArrayAddedBranch(addedVectorDouble[name], added.variable, previousSize, collection);
-      else if (added.type == "Int_t") FillArrayAddedBranch(addedVectorInt[name], added.variable, previousSize, collection);
-      else if (added.type == "UInt_t") FillArrayAddedBranch(addedVectorUInt[name], added.variable, previousSize, collection);
-      else if (added.type == "Bool_t") FillArrayAddedBranch(addedVectorBool[name], added.variable, previousSize, collection);
-      else if (added.type == "ULong64_t") FillArrayAddedBranch(addedVectorULong[name], added.variable, previousSize, collection);
-      else if (added.type == "UChar_t") FillArrayAddedBranch(addedVectorUChar[name], added.variable, previousSize, collection);
-      else if (added.type == "Short_t") FillArrayAddedBranch(addedVectorShort[name], added.variable, previousSize, collection);
-      else if (added.type == "UShort_t") FillArrayAddedBranch(addedVectorUShort[name], added.variable, previousSize, collection);
+      if (added.type == "Float_t") writeIndex = FillArrayAddedBranch(addedVectorFloat[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "Double_t") writeIndex = FillArrayAddedBranch(addedVectorDouble[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "Int_t") writeIndex = FillArrayAddedBranch(addedVectorInt[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "UInt_t") writeIndex = FillArrayAddedBranch(addedVectorUInt[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "Bool_t") writeIndex = FillArrayAddedBranch(addedVectorBool[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "ULong64_t") writeIndex = FillArrayAddedBranch(addedVectorULong[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "UChar_t") writeIndex = FillArrayAddedBranch(addedVectorUChar[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "Short_t") writeIndex = FillArrayAddedBranch(addedVectorShort[name], added.variable, previousSize, collection, filterIndices);
+      else if (added.type == "UShort_t") writeIndex = FillArrayAddedBranch(addedVectorUShort[name], added.variable, previousSize, collection, filterIndices);
+      else {
+        fatal() << "branchesToAdd: internal error - no array fill handler for type \"" << added.type << "\" (branch \"" << name << "\")"
+                << endl;
+        exit(1);
+      }
 
-      addedVectorSizes[name] = collection->size();
+      addedVectorSizes[name] = writeIndex;
     }
   }
 }
@@ -288,7 +373,7 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
   // Set the filtered number of particles for the branch before filling
   Int_t nParticles = static_cast<Int_t>(writeIndex);
   outputTrees[treeName]->SetBranchAddress("Event_numberP", &nParticles);
-  FillAddedBranches(treeName);
+  FillAddedBranches(treeName, &keepIndices);
   RepackBoolVectorBranches(treeName);
   outputTrees[treeName]->Fill();
 }

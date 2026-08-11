@@ -27,6 +27,7 @@ private:
     std::string type;
     std::string collection;
     std::string variable;
+    std::string sizeBranch;  // only set for array (per-collection) branches
   };
 
   TFile *outFile;
@@ -73,7 +74,9 @@ private:
   void RepackBoolVectorBranches(std::string treeName);
 
   void SetupAddedBranches(std::string treeName);
-  void FillAddedBranches(std::string treeName);
+  // keepIndices, when non-null, restricts array branches on the "Particle" collection to the same
+  // filtered/reindexed set that AddCurrentHepMCevent applies to the pre-existing Particle_* branches.
+  void FillAddedBranches(std::string treeName, const std::vector<int> *keepIndices = nullptr);
 
   friend class CutFlowManager;
 };

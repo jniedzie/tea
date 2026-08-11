@@ -149,67 +149,68 @@ class PhysicsObject {
     if (it != customValuesFloat.end()) delete it->second;
     customValuesFloat[branchName] = new Float_t(value);
     customValuesTypes[branchName] = "Float_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetDouble(std::string branchName, double value) {
     auto it = customValuesDouble.find(branchName);
     if (it != customValuesDouble.end()) delete it->second;
     customValuesDouble[branchName] = new Double_t(value);
     customValuesTypes[branchName] = "Double_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetInt(std::string branchName, int value) {
     auto it = customValuesInt.find(branchName);
     if (it != customValuesInt.end()) delete it->second;
     customValuesInt[branchName] = new Int_t(value);
     customValuesTypes[branchName] = "Int_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetUInt(std::string branchName, unsigned int value) {
     auto it = customValuesUint.find(branchName);
     if (it != customValuesUint.end()) delete it->second;
     customValuesUint[branchName] = new UInt_t(value);
     customValuesTypes[branchName] = "UInt_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetBool(std::string branchName, bool value) {
     auto it = customValuesBool.find(branchName);
     if (it != customValuesBool.end()) delete it->second;
     customValuesBool[branchName] = new Bool_t(value);
     customValuesTypes[branchName] = "Bool_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetULong(std::string branchName, ULong64_t value) {
     auto it = customValuesUlong.find(branchName);
     if (it != customValuesUlong.end()) delete it->second;
     customValuesUlong[branchName] = new ULong64_t(value);
     customValuesTypes[branchName] = "ULong64_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetUChar(std::string branchName, unsigned char value) {
     auto it = customValuesUchar.find(branchName);
     if (it != customValuesUchar.end()) delete it->second;
     customValuesUchar[branchName] = new UChar_t(value);
     customValuesTypes[branchName] = "UChar_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetShort(std::string branchName, short value) {
     auto it = customValuesShort.find(branchName);
     if (it != customValuesShort.end()) delete it->second;
     customValuesShort[branchName] = new Short_t(value);
     customValuesTypes[branchName] = "Short_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
   void SetUShort(std::string branchName, unsigned short value) {
     auto it = customValuesUshort.find(branchName);
     if (it != customValuesUshort.end()) delete it->second;
     customValuesUshort[branchName] = new UShort_t(value);
     customValuesTypes[branchName] = "UShort_t";
-    customValueEpoch = gCustomValueEpoch;
+    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
 
   bool HasCustomValue(const std::string &branchName) const {
-    return customValuesTypes.count(branchName) > 0 && customValueEpoch == gCustomValueEpoch;
+    auto it = customValuesEpoch.find(branchName);
+    return it != customValuesEpoch.end() && it->second == gCustomValueEpoch;
   }
 
  private:
@@ -255,7 +256,7 @@ class PhysicsObject {
   // contains all branch names and corresponding types
   std::map<std::string, std::string> valuesTypes;
   std::map<std::string, std::string> customValuesTypes;
-  unsigned long customValueEpoch = 0;
+  std::map<std::string, unsigned long> customValuesEpoch;
 
   std::map<std::string, UInt_t *> valuesUint;
   std::map<std::string, Int_t *> valuesInt;
