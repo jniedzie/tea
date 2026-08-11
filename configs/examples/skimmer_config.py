@@ -36,6 +36,13 @@ eventCuts = {
 #     "SubJet",
 # )
 
+# Branches to create on the output tree that do not exist in the input (see skimmer.cpp for
+# where these are set via Event::SetFloat / PhysicsObject::SetFloat).
+branchesToAdd = {
+    "dimuonMass": ("Float_t", ""),
+    "Muon_ptSquared": ("Float_t", "Muon"),
+}
+
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"
 

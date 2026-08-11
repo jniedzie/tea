@@ -34,4 +34,23 @@ for path in sys.argv[1:]:
     if not root_file.GetListOfKeys().GetSize():
         raise SystemExit(f"Smoke-test output is empty: {path}")
     root_file.Close()
+
+# branchesToAdd (skimmer_config.py): one event-level scalar, one per-object array.
+skim_file = ROOT.TFile.Open(sys.argv[2])
+events = skim_file.Get("Events")
+n_entries = events.GetEntries()
+if n_entries == 0:
+    raise SystemExit("Smoke-test skim tree has no entries")
+
+for branch_name in ("dimuonMass", "Muon_ptSquared"):
+    if not events.GetBranch(branch_name):
+        raise SystemExit(f"branchesToAdd branch missing from skim output: {branch_name}")
+
+for i in range(n_entries):
+    events.GetEntry(i)
+    if len(events.Muon_ptSquared) != events.nMuon:
+        raise SystemExit(
+            f"Muon_ptSquared length ({len(events.Muon_ptSquared)}) != nMuon ({events.nMuon}) at entry {i}"
+        )
+skim_file.Close()
 PY

@@ -23,7 +23,10 @@ Event::Event() {
 
 Event::~Event() {}
 
-void Event::Reset() { extraCollections.clear(); }
+void Event::Reset() {
+  extraCollections.clear();
+  ++gCustomValueEpoch;
+}
 
 template <typename First, typename... Rest>
 bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {

@@ -80,3 +80,17 @@ branchesToRemove = (
     "Flag*",
     "SubJet",
 )
+
+# Branches to create on the output tree that do not exist in the input, values pulled from
+# Event/PhysicsObject at fill time (Event::SetFloat/SetInt/..., PhysicsObject::SetFloat/SetInt/...).
+# Added *after* CloneTree(0), so they are exempt from branchesToKeep / branchesToRemove above.
+#   name: (ROOT type, collection)
+# An empty collection means an event-level scalar; otherwise the branch is a per-object array
+# indexed by that collection's size branch (must already exist on the output tree), and the value
+# is read from each object's custom value named "<name minus the "<collection>_" prefix>".
+# Supported types: Float_t, Double_t, Int_t, UInt_t, Bool_t, ULong64_t, UChar_t, Short_t, UShort_t.
+branchesToAdd = {
+    "dimuonMass": ("Float_t", ""),
+    "Muon_dEdx": ("Float_t", "Muon"),
+}
+# branchesToAdd = {}

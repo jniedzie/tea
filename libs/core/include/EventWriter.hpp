@@ -23,6 +23,12 @@ public:
   void Save();
 
 private:
+  struct AddedBranch {
+    std::string type;
+    std::string collection;
+    std::string variable;
+  };
+
   TFile *outFile;
   std::string outputFilePath;
   std::map<std::string, TTree *> outputTrees;
@@ -35,9 +41,39 @@ private:
   std::map<std::string, std::vector<bool>> boolVectorBuffers;
   std::map<std::string, std::vector<std::string>> boolVectorBranchesPerTree;
 
+  // Branches declared via the "branchesToAdd" config key, created in addition to whatever
+  // the input tree already has. std::map is node-based so the addresses handed to ROOT via
+  // TTree::Branch stay valid even as more entries are inserted (mirrors Event's own buffers).
+  std::map<std::string, AddedBranch> addedBranches;
+  std::map<std::string, std::vector<std::string>> addedBranchesPerTree;
+  std::map<std::string, size_t> addedVectorSizes;  // previous PhysicsObjects::size() per array branch
+
+  std::map<std::string, Float_t> addedScalarFloat;
+  std::map<std::string, Double_t> addedScalarDouble;
+  std::map<std::string, Int_t> addedScalarInt;
+  std::map<std::string, UInt_t> addedScalarUInt;
+  std::map<std::string, Bool_t> addedScalarBool;
+  std::map<std::string, ULong64_t> addedScalarULong;
+  std::map<std::string, UChar_t> addedScalarUChar;
+  std::map<std::string, Short_t> addedScalarShort;
+  std::map<std::string, UShort_t> addedScalarUShort;
+
+  std::map<std::string, Float_t[maxCollectionElements]> addedVectorFloat;
+  std::map<std::string, Double_t[maxCollectionElements]> addedVectorDouble;
+  std::map<std::string, Int_t[maxCollectionElements]> addedVectorInt;
+  std::map<std::string, UInt_t[maxCollectionElements]> addedVectorUInt;
+  std::map<std::string, Bool_t[maxCollectionElements]> addedVectorBool;
+  std::map<std::string, ULong64_t[maxCollectionElements]> addedVectorULong;
+  std::map<std::string, UChar_t[maxCollectionElements]> addedVectorUChar;
+  std::map<std::string, Short_t[maxCollectionElements]> addedVectorShort;
+  std::map<std::string, UShort_t[maxCollectionElements]> addedVectorUShort;
+
   void SetupOutputTree();
   void SetupBoolVectorBranches(std::string treeName);
   void RepackBoolVectorBranches(std::string treeName);
+
+  void SetupAddedBranches(std::string treeName);
+  void FillAddedBranches(std::string treeName);
 
   friend class CutFlowManager;
 };

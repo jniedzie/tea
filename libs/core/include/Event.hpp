@@ -153,29 +153,100 @@ class Event {
   void SetFloat(std::string branchName, float value) {
     customValuesFloat[branchName] = value;
     customValuesTypes[branchName] = "Float_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetDouble(std::string branchName, double value) {
+    customValuesDouble[branchName] = value;
+    customValuesTypes[branchName] = "Double_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetInt(std::string branchName, int value) {
+    customValuesInt[branchName] = value;
+    customValuesTypes[branchName] = "Int_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetUInt(std::string branchName, unsigned int value) {
+    customValuesUint[branchName] = value;
+    customValuesTypes[branchName] = "UInt_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetBool(std::string branchName, bool value) {
+    customValuesBool[branchName] = value;
+    customValuesTypes[branchName] = "Bool_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetULong(std::string branchName, ULong64_t value) {
+    customValuesUlong[branchName] = value;
+    customValuesTypes[branchName] = "ULong64_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetUChar(std::string branchName, unsigned char value) {
+    customValuesUchar[branchName] = value;
+    customValuesTypes[branchName] = "UChar_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetShort(std::string branchName, short value) {
+    customValuesShort[branchName] = value;
+    customValuesTypes[branchName] = "Short_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+  void SetUShort(std::string branchName, unsigned short value) {
+    customValuesUshort[branchName] = value;
+    customValuesTypes[branchName] = "UShort_t";
+    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+
+  bool HasCustomValue(const std::string &branchName) const {
+    auto it = customValuesEpoch.find(branchName);
+    return it != customValuesEpoch.end() && it->second == gCustomValueEpoch;
   }
 
  private:
   ConfigManager& config = ConfigManager::GetInstance();
 
-  inline UInt_t GetUint(std::string branchName) { return valuesUint[branchName]; }
-  inline Int_t GetInt(std::string branchName) { return valuesInt[branchName]; }
-  inline Bool_t GetBool(std::string branchName) { return valuesBool[branchName]; }
+  inline UInt_t GetUint(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUint[branchName];
+    return customValuesUint[branchName];
+  }
+  inline Int_t GetInt(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesInt[branchName];
+    return customValuesInt[branchName];
+  }
+  inline Bool_t GetBool(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesBool[branchName];
+    return customValuesBool[branchName];
+  }
   // inline Float_t GetFloat(std::string branchName) { return valuesFloat[branchName]; }
   inline Float_t GetFloat(std::string branchName) {
     if (valuesTypes.find(branchName) != valuesTypes.end())
       return valuesFloat[branchName];
     return customValuesFloat[branchName];
   }
-  inline Double_t GetDouble(std::string branchName) { return valuesDouble[branchName]; }
-  inline ULong64_t GetULong(std::string branchName) { return valuesUlong[branchName]; }
-  inline UChar_t GetUChar(std::string branchName) { return valuesUchar[branchName]; }
+  inline Double_t GetDouble(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesDouble[branchName];
+    return customValuesDouble[branchName];
+  }
+  inline ULong64_t GetULong(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUlong[branchName];
+    return customValuesUlong[branchName];
+  }
+  inline UChar_t GetUChar(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUchar[branchName];
+    return customValuesUchar[branchName];
+  }
   inline Char_t GetChar(std::string branchName) { return valuesChar[branchName]; }
-  inline UShort_t GetUShort(std::string branchName) { return valuesUshort[branchName]; }
-  inline Short_t GetShort(std::string branchName) { return valuesShort[branchName]; }
+  inline UShort_t GetUShort(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUshort[branchName];
+    return customValuesUshort[branchName];
+  }
+  inline Short_t GetShort(std::string branchName) {
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesShort[branchName];
+    return customValuesShort[branchName];
+  }
 
   std::map<std::string, std::string> valuesTypes;  /// contains all branch names and corresponding types
   std::map<std::string, std::string> customValuesTypes;
+  std::map<std::string, unsigned long> customValuesEpoch;
 
   std::map<std::string, UInt_t> valuesUint;
   std::map<std::string, Int_t> valuesInt;
@@ -183,6 +254,14 @@ class Event {
   std::map<std::string, Float_t> valuesFloat;
   std::map<std::string, Float_t> customValuesFloat;
   std::map<std::string, Double_t> valuesDouble;
+  std::map<std::string, Double_t> customValuesDouble;
+  std::map<std::string, Int_t> customValuesInt;
+  std::map<std::string, UInt_t> customValuesUint;
+  std::map<std::string, Bool_t> customValuesBool;
+  std::map<std::string, ULong64_t> customValuesUlong;
+  std::map<std::string, UChar_t> customValuesUchar;
+  std::map<std::string, Short_t> customValuesShort;
+  std::map<std::string, UShort_t> customValuesUshort;
   std::map<std::string, ULong64_t> valuesUlong;
   std::map<std::string, UChar_t> valuesUchar;
   std::map<std::string, Char_t> valuesChar;

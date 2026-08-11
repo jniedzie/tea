@@ -4,9 +4,47 @@
 
 #include "EventWriter.hpp"
 
+#include <algorithm>
+
 #include "Helpers.hpp"
 
 using namespace std;
+
+namespace {
+// Type-code table used both for the leaflist suffix ("F", "I", ...) and to validate that a
+// branchesToAdd entry declares one of the nine ROOT scalar types EventWriter knows how to buffer.
+const map<string, string> addedBranchTypeCodes = {
+    {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},     {"UInt_t", "i"},   {"Bool_t", "O"},
+    {"ULong64_t", "l"}, {"UChar_t", "b"}, {"Short_t", "S"}, {"UShort_t", "s"},
+};
+
+template <typename T>
+void FillScalarAddedBranch(map<string, T> &buffer, const string &name, const shared_ptr<Event> &event) {
+  if (event->HasCustomValue(name)) {
+    T value = event->Get(name);
+    buffer[name] = value;
+  } else {
+    buffer[name] = T(0);
+    warn() << "branchesToAdd: event-level branch \"" << name << "\" was never set for this event, writing default value" << endl;
+  }
+}
+
+template <typename T>
+void FillArrayAddedBranch(T *buffer, const string &variable, size_t previousSize, const shared_ptr<PhysicsObjects> &collection) {
+  for (size_t i = 0; i < previousSize; i++) buffer[i] = T(0);
+  for (size_t i = 0; i < collection->size(); i++) {
+    auto object = collection->at(i);
+    if (object->HasCustomValue(variable)) {
+      T value = object->Get(variable);
+      buffer[i] = value;
+    } else {
+      buffer[i] = T(0);
+      warn() << "branchesToAdd: per-object branch \"" << variable << "\" was never set for an object this event, writing default value"
+             << endl;
+    }
+  }
+}
+}  // namespace
 
 template<typename T>
 int FilterBranch(T* vec, const std::vector<int>& keepIndices) {
@@ -36,6 +74,31 @@ EventWriter::EventWriter(const shared_ptr<EventReader> &eventReader_) : eventRea
     branchesToRemove = {};  // Remove no branches by default
   }
 
+  map<string, vector<string>> branchesToAddConfig;
+  try {
+    config.GetMap("branchesToAdd", branchesToAddConfig);
+  } catch (const Exception &e) {
+    branchesToAddConfig = {};  // Add no branches by default
+  }
+  for (auto &[name, spec] : branchesToAddConfig) {
+    if (spec.size() != 2) {
+      fatal() << "branchesToAdd entry \"" << name << "\" must be (type, collection)" << endl;
+      exit(1);
+    }
+    AddedBranch added;
+    added.type = spec[0];
+    added.collection = spec[1];
+    if (!added.collection.empty()) {
+      string prefix = added.collection + "_";
+      if (name.rfind(prefix, 0) != 0) {
+        fatal() << "branchesToAdd entry \"" << name << "\" must start with \"" << prefix << "\"" << endl;
+        exit(1);
+      }
+      added.variable = name.substr(prefix.size());
+    }
+    addedBranches[name] = added;
+  }
+
   SetupOutputTree();
 }
 
@@ -61,6 +124,12 @@ void EventWriter::SetupOutputTree() {
     outputTrees[name] = tree->CloneTree(0);
     outputTrees[name]->Reset();
     SetupBoolVectorBranches(name);
+
+    // Only the events tree(s) carry per-event/per-object custom values; Runs/LuminosityBlocks
+    // (and any other auxiliary tree) have no corresponding Event/PhysicsObject state to pull from.
+    bool isEventsTree =
+        find(eventReader->eventsTreeNames.begin(), eventReader->eventsTreeNames.end(), name) != eventReader->eventsTreeNames.end();
+    if (isEventsTree) SetupAddedBranches(name);
 
     tree->SetBranchStatus("*", 1);
   }
@@ -94,7 +163,96 @@ void EventWriter::RepackBoolVectorBranches(string treeName) {
   }
 }
 
+void EventWriter::SetupAddedBranches(string treeName) {
+  auto outputTree = outputTrees[treeName];
+
+  for (auto &[name, added] : addedBranches) {
+    if (outputTree->GetBranch(name.c_str())) {
+      fatal() << "branchesToAdd: branch \"" << name << "\" already exists on tree " << treeName << endl;
+      exit(1);
+    }
+    auto typeCodeIt = addedBranchTypeCodes.find(added.type);
+    if (typeCodeIt == addedBranchTypeCodes.end()) {
+      fatal() << "branchesToAdd: unsupported type \"" << added.type << "\" for branch \"" << name << "\"" << endl;
+      exit(1);
+    }
+    string typeCode = typeCodeIt->second;
+
+    if (added.collection.empty()) {
+      string leaflist = name + "/" + typeCode;
+      if (added.type == "Float_t") outputTree->Branch(name.c_str(), &addedScalarFloat[name], leaflist.c_str());
+      else if (added.type == "Double_t") outputTree->Branch(name.c_str(), &addedScalarDouble[name], leaflist.c_str());
+      else if (added.type == "Int_t") outputTree->Branch(name.c_str(), &addedScalarInt[name], leaflist.c_str());
+      else if (added.type == "UInt_t") outputTree->Branch(name.c_str(), &addedScalarUInt[name], leaflist.c_str());
+      else if (added.type == "Bool_t") outputTree->Branch(name.c_str(), &addedScalarBool[name], leaflist.c_str());
+      else if (added.type == "ULong64_t") outputTree->Branch(name.c_str(), &addedScalarULong[name], leaflist.c_str());
+      else if (added.type == "UChar_t") outputTree->Branch(name.c_str(), &addedScalarUChar[name], leaflist.c_str());
+      else if (added.type == "Short_t") outputTree->Branch(name.c_str(), &addedScalarShort[name], leaflist.c_str());
+      else if (added.type == "UShort_t") outputTree->Branch(name.c_str(), &addedScalarUShort[name], leaflist.c_str());
+    } else {
+      string sizeBranch = eventReader->specialBranchSizes.count(added.collection) ? eventReader->specialBranchSizes[added.collection]
+                                                                                   : "n" + added.collection;
+      if (!outputTree->GetBranch(sizeBranch.c_str())) {
+        fatal() << "branchesToAdd: size branch \"" << sizeBranch << "\" for branch \"" << name << "\" not found on output tree "
+                << treeName << " (it may have been pruned by branchesToRemove)" << endl;
+        exit(1);
+      }
+      string leaflist = name + "[" + sizeBranch + "]/" + typeCode;
+      if (added.type == "Float_t") outputTree->Branch(name.c_str(), addedVectorFloat[name], leaflist.c_str());
+      else if (added.type == "Double_t") outputTree->Branch(name.c_str(), addedVectorDouble[name], leaflist.c_str());
+      else if (added.type == "Int_t") outputTree->Branch(name.c_str(), addedVectorInt[name], leaflist.c_str());
+      else if (added.type == "UInt_t") outputTree->Branch(name.c_str(), addedVectorUInt[name], leaflist.c_str());
+      else if (added.type == "Bool_t") outputTree->Branch(name.c_str(), addedVectorBool[name], leaflist.c_str());
+      else if (added.type == "ULong64_t") outputTree->Branch(name.c_str(), addedVectorULong[name], leaflist.c_str());
+      else if (added.type == "UChar_t") outputTree->Branch(name.c_str(), addedVectorUChar[name], leaflist.c_str());
+      else if (added.type == "Short_t") outputTree->Branch(name.c_str(), addedVectorShort[name], leaflist.c_str());
+      else if (added.type == "UShort_t") outputTree->Branch(name.c_str(), addedVectorUShort[name], leaflist.c_str());
+    }
+
+    addedBranchesPerTree[treeName].push_back(name);
+  }
+}
+
+void EventWriter::FillAddedBranches(string treeName) {
+  auto it = addedBranchesPerTree.find(treeName);
+  if (it == addedBranchesPerTree.end()) return;
+
+  auto &event = eventReader->currentEvent;
+
+  for (auto &name : it->second) {
+    auto &added = addedBranches.at(name);
+
+    if (added.collection.empty()) {
+      if (added.type == "Float_t") FillScalarAddedBranch(addedScalarFloat, name, event);
+      else if (added.type == "Double_t") FillScalarAddedBranch(addedScalarDouble, name, event);
+      else if (added.type == "Int_t") FillScalarAddedBranch(addedScalarInt, name, event);
+      else if (added.type == "UInt_t") FillScalarAddedBranch(addedScalarUInt, name, event);
+      else if (added.type == "Bool_t") FillScalarAddedBranch(addedScalarBool, name, event);
+      else if (added.type == "ULong64_t") FillScalarAddedBranch(addedScalarULong, name, event);
+      else if (added.type == "UChar_t") FillScalarAddedBranch(addedScalarUChar, name, event);
+      else if (added.type == "Short_t") FillScalarAddedBranch(addedScalarShort, name, event);
+      else if (added.type == "UShort_t") FillScalarAddedBranch(addedScalarUShort, name, event);
+    } else {
+      auto collection = event->GetCollection(added.collection);
+      size_t previousSize = addedVectorSizes[name];
+
+      if (added.type == "Float_t") FillArrayAddedBranch(addedVectorFloat[name], added.variable, previousSize, collection);
+      else if (added.type == "Double_t") FillArrayAddedBranch(addedVectorDouble[name], added.variable, previousSize, collection);
+      else if (added.type == "Int_t") FillArrayAddedBranch(addedVectorInt[name], added.variable, previousSize, collection);
+      else if (added.type == "UInt_t") FillArrayAddedBranch(addedVectorUInt[name], added.variable, previousSize, collection);
+      else if (added.type == "Bool_t") FillArrayAddedBranch(addedVectorBool[name], added.variable, previousSize, collection);
+      else if (added.type == "ULong64_t") FillArrayAddedBranch(addedVectorULong[name], added.variable, previousSize, collection);
+      else if (added.type == "UChar_t") FillArrayAddedBranch(addedVectorUChar[name], added.variable, previousSize, collection);
+      else if (added.type == "Short_t") FillArrayAddedBranch(addedVectorShort[name], added.variable, previousSize, collection);
+      else if (added.type == "UShort_t") FillArrayAddedBranch(addedVectorUShort[name], added.variable, previousSize, collection);
+
+      addedVectorSizes[name] = collection->size();
+    }
+  }
+}
+
 void EventWriter::AddCurrentEvent(string treeName) {
+  FillAddedBranches(treeName);
   RepackBoolVectorBranches(treeName);
   outputTrees[treeName]->Fill();
 }
@@ -130,6 +288,7 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
   // Set the filtered number of particles for the branch before filling
   Int_t nParticles = static_cast<Int_t>(writeIndex);
   outputTrees[treeName]->SetBranchAddress("Event_numberP", &nParticles);
+  FillAddedBranches(treeName);
   RepackBoolVectorBranches(treeName);
   outputTrees[treeName]->Fill();
 }

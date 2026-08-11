@@ -39,6 +39,20 @@ int main(int argc, char **argv) {
 
     if(!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
 
+    // Demonstrate branchesToAdd: an event-level scalar and a per-object array branch.
+    auto muons = event->GetCollection("Muon");
+    if (muons->size() >= 2) {
+      auto p1 = muons->at(0)->GetFourVector();
+      auto p2 = muons->at(1)->GetFourVector();
+      event->SetFloat("dimuonMass", static_cast<float>((p1 + p2).M()));
+    } else {
+      event->SetFloat("dimuonMass", -1.f);
+    }
+    for (auto muon : *muons) {
+      float pt = muon->GetAs<float>("pt");
+      muon->SetFloat("ptSquared", pt * pt);
+    }
+
     eventWriter->AddCurrentEvent("Events");
   }
   cutFlowManager->SaveCutFlow();
