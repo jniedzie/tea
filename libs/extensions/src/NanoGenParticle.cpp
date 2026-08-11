@@ -3,12 +3,14 @@
 //  Created by Jeremi Niedziela on 08/08/2023.
 
 #include "NanoGenParticle.hpp"
+#include <iomanip>
+#include <iostream>
 
 using namespace std;
 
 TLorentzVector NanoGenParticle::GetFourVector(float mass) {
     TLorentzVector v;
-    v.SetPtEtaPhiM(physicsObject->Get("pt"), physicsObject->Get("eta"), physicsObject->Get("phi"), mass);
+    v.SetPtEtaPhiM(physicsObject->GetAs<float>("pt"), physicsObject->GetAs<float>("eta"), physicsObject->GetAs<float>("phi"), mass);
     return v;
   }
 
@@ -76,8 +78,13 @@ shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObje
   return firstCopy;
 }
 
-#include <iostream>
-#include <iomanip>
+bool NanoGenParticle::IsMotherJPsi(const shared_ptr<PhysicsObjects> genParticles) {
+  Short_t motherIndex = Get("genPartIdxMother");
+  if (motherIndex < 0) return false;
+  auto mother = genParticles->at(motherIndex);
+  int motherPdgId = mother->Get("pdgId");
+  return (motherPdgId == 443);
+}
 
 void NanoGenParticle::Print() {
     const string cyan = "\033[36m";

@@ -97,6 +97,7 @@ file(GLOB_RECURSE USER_LIBS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/libs/*/*.cpp") # As
 message(STATUS "Found user libs: ${USER_LIBS_SRC}")
 if(USER_LIBS_SRC)
     add_library(user_libs ${USER_LIBS_SRC})
+    target_link_libraries(user_libs PUBLIC core extensions histogramming)
 endif()
 
 # add user-defined apps

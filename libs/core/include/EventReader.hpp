@@ -19,6 +19,9 @@ class EventReader {
 
   bool IsVectorBranch(TBranch *branch);
 
+  std::vector<std::string> GetHLTbranchNames();
+  std::vector<std::string> GetL1branchNames();
+
  private:
   int maxEvents;
 
@@ -45,6 +48,8 @@ class EventReader {
   std::map<std::string, std::string> specialBranchSizes;
   std::map<std::string, bool> isCollectionAnStdVector;
   std::map<std::string, std::string> branchNamesAndTypes;
+
+  std::vector<std::string> hltBranches, l1Branches;
 
   TLeaf *GetLeaf(TBranch *branch);
 

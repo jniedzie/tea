@@ -2,14 +2,14 @@
     "schema_version": 2,
     "corrections": [
         {
-            "name": "dimuonEff_Pat",
-            "description": "Scale factors for PAT-PAT dimuon efficiency given from ttbar + J/Psi CR dimuon pt distribution",
+            "name": "dimuonEff_DSA",
+            "description": "Scale factors for DSA-DSA dimuon efficiency given from ttbar + J/Psi CR dimuon pt distribution",
             "version": 1,
             "inputs": [
                 {
                     "name": "pt",
                     "type": "real",
-                    "description": "Dimuon pt of the PAT-PAT dimuon candidate"
+                    "description": "Dimuon pt of the DSA-DSA dimuon candidate"
                 },
                 {
                     "name": "scale_factors",
@@ -38,15 +38,15 @@
                         "content": [
                             {
                                 "key": "nominal",
-                                "value": 0.9669603168221067
+                                "value": 0.9327398613938231
                             },
                             {
                                 "key": "up",
-                                "value": 1.132451043990745
+                                "value": 1.1568228757065382
                             },
                             {
                                 "key": "down",
-                                "value": 0.8216412763337653
+                                "value": 0.7449520354207064
                             }
                         ]
                     },
@@ -56,15 +56,15 @@
                         "content": [
                             {
                                 "key": "nominal",
-                                "value": 0.6496699672980646
+                                "value": 0.5104107412669944
                             },
                             {
                                 "key": "up",
-                                "value": 0.7988431480036813
+                                "value": 0.6708916293507108
                             },
                             {
                                 "key": "down",
-                                "value": 0.5113676420535261
+                                "value": 0.3824811173395108
                             }
                         ]
                     },
@@ -74,15 +74,15 @@
                         "content": [
                             {
                                 "key": "nominal",
-                                "value": 0.8346468717594127
+                                "value": 0.6027860291486821
                             },
                             {
                                 "key": "up",
-                                "value": 1.0708091362861845
+                                "value": 1.0816032543877767
                             },
                             {
                                 "key": "down",
-                                "value": 0.6437495895064519
+                                "value": 0.3106791804016428
                             }
                         ]
                     }
