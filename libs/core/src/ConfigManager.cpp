@@ -476,11 +476,25 @@ void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, Extra
           extraCollection.inputCollections.push_back(PyUnicode_AsUTF8(item));
         }
       } else if (PyTuple_Check(pyValue)) {
-        PyObject *min = GetItem(pyValue, 0);
-        PyObject *max = GetItem(pyValue, 1);
+        if (PyTuple_Size(pyValue) != 2) {
+          fatal() << "Invalid range for '" << keyStr << "' in extra collection '" << PyUnicode_AsUTF8(collectionName)
+                  << "': expected exactly two values" << endl;
+          exit(1);
+        }
+        PyObject* min = GetItem(pyValue, 0);
+        PyObject* max = GetItem(pyValue, 1);
+        if (!(PyFloat_Check(min) || PyLong_Check(min)) || !(PyFloat_Check(max) || PyLong_Check(max))) {
+          fatal() << "Invalid range for '" << keyStr << "' in extra collection '" << PyUnicode_AsUTF8(collectionName)
+                  << "': both bounds must be numeric" << endl;
+          exit(1);
+        }
         extraCollection.allCuts[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
-      } else {
+      } else if (PyLong_Check(pyValue)) {
         extraCollection.flags[keyStr] = PyLong_AsLong(pyValue);
+      } else {
+        fatal() << "Invalid selector for '" << keyStr << "' in extra collection '" << PyUnicode_AsUTF8(collectionName)
+                << "': expected an integer or a two-value numeric tuple" << endl;
+        exit(1);
       }
     }
 
