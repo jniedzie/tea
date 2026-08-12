@@ -35,7 +35,8 @@ for path in sys.argv[1:]:
         raise SystemExit(f"Smoke-test output is empty: {path}")
     root_file.Close()
 
-# branchesToAdd (skimmer_config.py): one event-level scalar, one per-object array.
+# branchesToAdd (skimmer_config.py): one event-level scalar (app-set, "-1.0" varexp fallback),
+# one per-object array (config varexp "Muon_pt**2", overridden by skimmer.cpp for muon 0 only).
 skim_file = ROOT.TFile.Open(sys.argv[2])
 events = skim_file.Get("Events")
 n_entries = events.GetEntries()
@@ -48,9 +49,24 @@ for branch_name in ("dimuonMass", "Muon_ptSquared"):
 
 for i in range(n_entries):
     events.GetEntry(i)
-    if len(events.Muon_ptSquared) != events.nMuon:
+    n_muon = events.nMuon
+    if len(events.Muon_ptSquared) != n_muon:
         raise SystemExit(
-            f"Muon_ptSquared length ({len(events.Muon_ptSquared)}) != nMuon ({events.nMuon}) at entry {i}"
+            f"Muon_ptSquared length ({len(events.Muon_ptSquared)}) != nMuon ({n_muon}) at entry {i}"
         )
+
+    if n_muon < 2 and events.dimuonMass != -1:
+        raise SystemExit(
+            f"dimuonMass ({events.dimuonMass}) != -1 for entry {i} with only {n_muon} muon(s)"
+        )
+
+    for j in range(n_muon):
+        expected = events.Muon_pt[j] ** 2
+        if j == 0:
+            expected += 1  # skimmer.cpp overrides muon 0 to demonstrate app Set<T> precedence
+        if abs(events.Muon_ptSquared[j] - expected) > max(1e-3, abs(expected) * 1e-5):
+            raise SystemExit(
+                f"Muon_ptSquared[{j}] ({events.Muon_ptSquared[j]}) != expected ({expected}) at entry {i}"
+            )
 skim_file.Close()
 PY

@@ -11,15 +11,6 @@
 using namespace std;
 
 namespace {
-// Type-code table used both for the leaflist suffix ("F", "I", ...) and to
-// validate that a branchesToAdd entry declares one of the nine ROOT scalar
-// types EventWriter knows how to buffer.
-const map<string, string> addedBranchTypeCodes = {
-    {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},
-    {"UInt_t", "i"},  {"Bool_t", "O"},   {"ULong64_t", "l"},
-    {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
-};
-
 // The one collection AddCurrentHepMCevent is allowed to prune. Shared by its
 // own Particle_* branch-name matching and by FillAddedBranches' decision to
 // re-filter an added array branch, so the two can't drift apart the way two
@@ -28,8 +19,10 @@ const string prunedHepMCCollection = "Particle";
 
 template <typename T>
 void FillScalarAddedBranch(map<string, T> &buffer, const string &name,
-                           const shared_ptr<Event> &event) {
+                           const shared_ptr<Event> &event,
+                           map<string, bool> &everSetByApp) {
   if (event->HasCustomValue(name)) {
+    everSetByApp[name] = true;
     try {
       T value = event->Get(name);
       buffer[name] = value;
@@ -42,21 +35,19 @@ void FillScalarAddedBranch(map<string, T> &buffer, const string &name,
     }
   } else {
     buffer[name] = T(0);
-    warn() << "branchesToAdd: event-level branch \"" << name
-           << "\" was never set for at least one event, writing default value "
-              "(further occurrences for this branch won't be logged)"
-           << endl;
   }
 }
 
 template <typename T>
-size_t FillArrayAddedBranch(T *buffer, const string &variable,
-                            size_t previousSize,
-                            const shared_ptr<PhysicsObjects> &collection) {
+size_t FillArrayAddedBranch(T *buffer, const string &branchName,
+                            const string &variable, size_t previousSize,
+                            const shared_ptr<PhysicsObjects> &collection,
+                            map<string, bool> &everSetByApp) {
   size_t writeIndex = 0;
   for (auto &object : *collection) {
     T value = T(0);
     if (object->HasCustomValue(variable)) {
+      everSetByApp[branchName] = true;
       try {
         value = object->Get(variable);
       } catch (BadTypeException &e) {
@@ -66,11 +57,6 @@ size_t FillArrayAddedBranch(T *buffer, const string &variable,
                 << e.what() << endl;
         exit(1);
       }
-    } else {
-      warn() << "branchesToAdd: per-object branch \"" << variable
-             << "\" was never set for at least one object, writing default "
-                "value (further occurrences for this branch won't be logged)"
-             << endl;
     }
     buffer[writeIndex++] = value;
   }
@@ -125,31 +111,16 @@ EventWriter::EventWriter(const shared_ptr<EventReader> &eventReader_)
     branchesToRemove = {}; // Remove no branches by default
   }
 
-  map<string, vector<string>> branchesToAddConfig;
-  try {
-    config.GetMap("branchesToAdd", branchesToAddConfig);
-  } catch (const Exception &e) {
-    branchesToAddConfig = {}; // Add no branches by default
-  }
-  for (auto &[name, spec] : branchesToAddConfig) {
-    if (spec.size() != 2) {
-      fatal() << "branchesToAdd entry \"" << name
-              << "\" must be (type, collection)" << endl;
-      exit(1);
-    }
+  // branchesToAdd itself was already parsed (and its varexps compiled/validated) by
+  // eventReader's AddedBranches; just mirror the specs into our own per-type buffers below.
+  for (auto &spec : eventReader->addedBranches->GetSpecs()) {
     AddedBranch added;
-    added.type = spec[0];
-    added.collection = spec[1];
-    if (!added.collection.empty()) {
-      string prefix = added.collection + "_";
-      if (name.rfind(prefix, 0) != 0) {
-        fatal() << "branchesToAdd entry \"" << name << "\" must start with \""
-                << prefix << "\"" << endl;
-        exit(1);
-      }
-      added.variable = name.substr(prefix.size());
-    }
-    addedBranches[name] = added;
+    added.type = spec.type;
+    added.collection = spec.collection;
+    added.variable = spec.name;
+    added.hasVarexp = !spec.varexp.empty();
+    addedBranches[spec.BranchName()] = added;
+    everSetByApp[spec.BranchName()] = false;
   }
 
   SetupOutputTree();
@@ -232,8 +203,8 @@ void EventWriter::SetupAddedBranches(string treeName) {
               << "\" already exists on tree " << treeName << endl;
       exit(1);
     }
-    auto typeCodeIt = addedBranchTypeCodes.find(added.type);
-    if (typeCodeIt == addedBranchTypeCodes.end()) {
+    auto typeCodeIt = kAddedBranchTypeCodes.find(added.type);
+    if (typeCodeIt == kAddedBranchTypeCodes.end()) {
       fatal() << "branchesToAdd: unsupported type \"" << added.type
               << "\" for branch \"" << name << "\"" << endl;
       exit(1);
@@ -273,7 +244,7 @@ void EventWriter::SetupAddedBranches(string treeName) {
         fatal() << "branchesToAdd: internal error - no scalar branch handler "
                    "for type \""
                 << added.type << "\" (branch \"" << name
-                << "\"); addedBranchTypeCodes and the type-dispatch chain have "
+                << "\"); kAddedBranchTypeCodes and the type-dispatch chain have "
                    "drifted apart"
                 << endl;
         exit(1);
@@ -332,7 +303,7 @@ void EventWriter::SetupAddedBranches(string treeName) {
         fatal() << "branchesToAdd: internal error - no array branch handler "
                    "for type \""
                 << added.type << "\" (branch \"" << name
-                << "\"); addedBranchTypeCodes and the type-dispatch chain have "
+                << "\"); kAddedBranchTypeCodes and the type-dispatch chain have "
                    "drifted apart"
                 << endl;
         exit(1);
@@ -355,23 +326,23 @@ void EventWriter::FillAddedBranches(string treeName) {
 
     if (added.collection.empty()) {
       if (added.type == "Float_t")
-        FillScalarAddedBranch(addedScalarFloat, name, event);
+        FillScalarAddedBranch(addedScalarFloat, name, event, everSetByApp);
       else if (added.type == "Double_t")
-        FillScalarAddedBranch(addedScalarDouble, name, event);
+        FillScalarAddedBranch(addedScalarDouble, name, event, everSetByApp);
       else if (added.type == "Int_t")
-        FillScalarAddedBranch(addedScalarInt, name, event);
+        FillScalarAddedBranch(addedScalarInt, name, event, everSetByApp);
       else if (added.type == "UInt_t")
-        FillScalarAddedBranch(addedScalarUInt, name, event);
+        FillScalarAddedBranch(addedScalarUInt, name, event, everSetByApp);
       else if (added.type == "Bool_t")
-        FillScalarAddedBranch(addedScalarBool, name, event);
+        FillScalarAddedBranch(addedScalarBool, name, event, everSetByApp);
       else if (added.type == "ULong64_t")
-        FillScalarAddedBranch(addedScalarULong, name, event);
+        FillScalarAddedBranch(addedScalarULong, name, event, everSetByApp);
       else if (added.type == "UChar_t")
-        FillScalarAddedBranch(addedScalarUChar, name, event);
+        FillScalarAddedBranch(addedScalarUChar, name, event, everSetByApp);
       else if (added.type == "Short_t")
-        FillScalarAddedBranch(addedScalarShort, name, event);
+        FillScalarAddedBranch(addedScalarShort, name, event, everSetByApp);
       else if (added.type == "UShort_t")
-        FillScalarAddedBranch(addedScalarUShort, name, event);
+        FillScalarAddedBranch(addedScalarUShort, name, event, everSetByApp);
       else {
         fatal() << "branchesToAdd: internal error - no scalar fill handler for "
                    "type \""
@@ -408,65 +379,65 @@ void EventWriter::FillAddedBranches(string treeName) {
       size_t writeIndex = 0;
 
       if (added.type == "Float_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorFloat[name],
+        writeIndex = FillArrayAddedBranch(addedVectorFloat[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorFloat[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "Double_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorDouble[name],
+        writeIndex = FillArrayAddedBranch(addedVectorDouble[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorDouble[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "Int_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorInt[name],
+        writeIndex = FillArrayAddedBranch(addedVectorInt[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorInt[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "UInt_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorUInt[name],
+        writeIndex = FillArrayAddedBranch(addedVectorUInt[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorUInt[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "Bool_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorBool[name],
+        writeIndex = FillArrayAddedBranch(addedVectorBool[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorBool[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "ULong64_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorULong[name],
+        writeIndex = FillArrayAddedBranch(addedVectorULong[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorULong[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "UChar_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorUChar[name],
+        writeIndex = FillArrayAddedBranch(addedVectorUChar[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorUChar[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "Short_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorShort[name],
+        writeIndex = FillArrayAddedBranch(addedVectorShort[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorShort[name], writeIndex, added.collection,
             currentKeepIndices);
       } else if (added.type == "UShort_t") {
-        writeIndex = FillArrayAddedBranch(addedVectorUShort[name],
+        writeIndex = FillArrayAddedBranch(addedVectorUShort[name], name,
                                           added.variable, previousSize,
-                                          collection);
+                                          collection, everSetByApp);
         writeIndex = FilterAddedBranchIfPruned(
             addedVectorUShort[name], writeIndex, added.collection,
             currentKeepIndices);
@@ -532,6 +503,17 @@ void EventWriter::AddCurrentHepMCevent(string treeName,
 }
 
 void EventWriter::Save() {
+  // Branches with no varexp are app-set only; if the app never called Set<T> for one across the
+  // whole job, every entry silently holds the default value 0 -- worth a single end-of-job flag
+  // rather than a per-event warning (which would just be the same message N times over).
+  for (auto &[name, added] : addedBranches) {
+    if (added.hasVarexp || everSetByApp[name]) continue;
+    warn() << "branchesToAdd: branch \"" << name
+           << "\" has an empty varexp and was never set by the app for any event; every entry "
+              "holds the default value 0"
+           << endl;
+  }
+
   for (auto &[name, tree] : outputTrees) {
     tree->Write();
   }

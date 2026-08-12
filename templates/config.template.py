@@ -81,16 +81,21 @@ branchesToRemove = (
     "SubJet",
 )
 
-# Branches to create on the output tree that do not exist in the input, values pulled from
-# Event/PhysicsObject at fill time (Event::SetFloat/SetInt/..., PhysicsObject::SetFloat/SetInt/...).
-# Added *after* CloneTree(0), so they are exempt from branchesToKeep / branchesToRemove above.
-#   name: (ROOT type, collection)
+# Branches to create on the output tree that do not exist in the input. Added *after*
+# CloneTree(0), so they are exempt from branchesToKeep / branchesToRemove above.
+#   (collection, name, ROOT type, varexp)
 # An empty collection means an event-level scalar; otherwise the branch is a per-object array
-# indexed by that collection's size branch (must already exist on the output tree), and the value
-# is read from each object's custom value named "<name minus the "<collection>_" prefix>".
+# indexed by that collection's size branch (must already exist on the output tree). Branch name
+# on the output tree is "<collection>_<name>", or just "<name>" when collection is "".
+# varexp is a TTree::Draw-style expression over other input-tree branches (e.g. "Muon_pt**2"),
+# evaluated once per visited event and pre-filled onto Event/PhysicsObject before app code runs
+# (a plain constant like "-1.0" is just a degenerate varexp, i.e. a default value). An empty
+# varexp means the branch is app-set only (Event::Set<T> / PhysicsObject::Set<T>), zero-filled
+# for any event/object the app never sets. Either way an app Set<T> call for the current event
+# always wins over the varexp.
 # Supported types: Float_t, Double_t, Int_t, UInt_t, Bool_t, ULong64_t, UChar_t, Short_t, UShort_t.
-branchesToAdd = {
-    "dimuonMass": ("Float_t", ""),
-    "Muon_dEdx": ("Float_t", "Muon"),
-}
-# branchesToAdd = {}
+branchesToAdd = (
+    ("", "dimuonMass", "Float_t", "-1.0"),
+    ("Muon", "dEdx", "Float_t", ""),
+)
+# branchesToAdd = ()

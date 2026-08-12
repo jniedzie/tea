@@ -39,18 +39,18 @@ int main(int argc, char **argv) {
 
     if(!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
 
-    // Demonstrate branchesToAdd: an event-level scalar and a per-object array branch.
+    // Demonstrate branchesToAdd: dimuonMass is app-set only (config varexp "-1.0" is just the
+    // fallback default). Muon_ptSquared is config-computed via varexp "Muon_pt**2"; overriding
+    // it here for muon 0 only demonstrates that an app Set<T> call wins over the varexp.
     auto muons = event->GetCollection("Muon");
     if (muons->size() >= 2) {
       auto p1 = muons->at(0)->GetFourVector();
       auto p2 = muons->at(1)->GetFourVector();
-      event->SetFloat("dimuonMass", static_cast<float>((p1 + p2).M()));
-    } else {
-      event->SetFloat("dimuonMass", -1.f);
+      event->Set<float>("dimuonMass", static_cast<float>((p1 + p2).M()));
     }
-    for (auto muon : *muons) {
-      float pt = muon->GetAs<float>("pt");
-      muon->SetFloat("ptSquared", pt * pt);
+    if (!muons->empty()) {
+      float pt = muons->at(0)->GetAs<float>("pt");
+      muons->at(0)->Set<float>("ptSquared", pt * pt + 1.f);
     }
 
     eventWriter->AddCurrentEvent("Events");

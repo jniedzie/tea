@@ -186,49 +186,31 @@ public:
     return valuesStdUintVector.at(branchName);
   }
 
-  void SetFloat(std::string branchName, float value) {
-    customValuesFloat[branchName] = value;
-    customValuesTypes[branchName] = "Float_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetDouble(std::string branchName, double value) {
-    customValuesDouble[branchName] = value;
-    customValuesTypes[branchName] = "Double_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetInt(std::string branchName, int value) {
-    customValuesInt[branchName] = value;
-    customValuesTypes[branchName] = "Int_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetUInt(std::string branchName, unsigned int value) {
-    customValuesUint[branchName] = value;
-    customValuesTypes[branchName] = "UInt_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetBool(std::string branchName, bool value) {
-    customValuesBool[branchName] = value;
-    customValuesTypes[branchName] = "Bool_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetULong(std::string branchName, ULong64_t value) {
-    customValuesUlong[branchName] = value;
-    customValuesTypes[branchName] = "ULong64_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetUChar(std::string branchName, unsigned char value) {
-    customValuesUchar[branchName] = value;
-    customValuesTypes[branchName] = "UChar_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetShort(std::string branchName, short value) {
-    customValuesShort[branchName] = value;
-    customValuesTypes[branchName] = "Short_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetUShort(std::string branchName, unsigned short value) {
-    customValuesUshort[branchName] = value;
-    customValuesTypes[branchName] = "UShort_t";
+  // Sets a custom event-level value, stamping it with the epoch active for the current event
+  // (see gCustomValueEpoch). T must be one of the nine ROOT scalar types in RootTypeName<T>().
+  template <typename T> void Set(const std::string &branchName, T value) {
+    if constexpr (std::is_same_v<T, Float_t>)
+      customValuesFloat[branchName] = value;
+    else if constexpr (std::is_same_v<T, Double_t>)
+      customValuesDouble[branchName] = value;
+    else if constexpr (std::is_same_v<T, Int_t>)
+      customValuesInt[branchName] = value;
+    else if constexpr (std::is_same_v<T, UInt_t>)
+      customValuesUint[branchName] = value;
+    else if constexpr (std::is_same_v<T, Bool_t>)
+      customValuesBool[branchName] = value;
+    else if constexpr (std::is_same_v<T, ULong64_t>)
+      customValuesUlong[branchName] = value;
+    else if constexpr (std::is_same_v<T, UChar_t>)
+      customValuesUchar[branchName] = value;
+    else if constexpr (std::is_same_v<T, Short_t>)
+      customValuesShort[branchName] = value;
+    else if constexpr (std::is_same_v<T, UShort_t>)
+      customValuesUshort[branchName] = value;
+    else
+      static_assert(!sizeof(T), "Event::Set<T>: unsupported type");
+
+    customValuesTypes[branchName] = RootTypeName<T>();
     customValuesEpoch[branchName] = gCustomValueEpoch;
   }
 

@@ -46,6 +46,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -169,6 +170,64 @@ struct IrregularHistogramParams2D {
   std::vector<float> binEdgesX;
   std::vector<float> binEdgesY;
 };
+
+// One entry from the config's "branchesToAdd" tuple-of-tuples. An empty collection means an
+// event-level scalar; varexp is a TTree::Draw-style expression evaluated against the events
+// tree ("" means the branch is app-set only, via Event::Set<T> / PhysicsObject::Set<T>).
+struct AddedBranchParams {
+  std::string collection, name, type, varexp;
+  std::string BranchName() const { return collection.empty() ? name : collection + "_" + name; }
+};
+
+// The nine ROOT scalar types Event::Set<T>/PhysicsObject::Set<T> and branchesToAdd support,
+// mapped to their leaflist type code ("F", "I", ...). Also doubles as the membership check for
+// a declared branchesToAdd type string.
+inline const std::map<std::string, std::string> kAddedBranchTypeCodes = {
+    {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},
+    {"UInt_t", "i"},  {"Bool_t", "O"},   {"ULong64_t", "l"},
+    {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
+};
+
+// Maps a C++ type to its ROOT type name string, e.g. RootTypeName<Float_t>() == "Float_t".
+// Only specialized for the nine types in kAddedBranchTypeCodes above.
+template <typename T>
+inline const char *RootTypeName();
+template <>
+inline const char *RootTypeName<Float_t>() {
+  return "Float_t";
+}
+template <>
+inline const char *RootTypeName<Double_t>() {
+  return "Double_t";
+}
+template <>
+inline const char *RootTypeName<Int_t>() {
+  return "Int_t";
+}
+template <>
+inline const char *RootTypeName<UInt_t>() {
+  return "UInt_t";
+}
+template <>
+inline const char *RootTypeName<Bool_t>() {
+  return "Bool_t";
+}
+template <>
+inline const char *RootTypeName<ULong64_t>() {
+  return "ULong64_t";
+}
+template <>
+inline const char *RootTypeName<UChar_t>() {
+  return "UChar_t";
+}
+template <>
+inline const char *RootTypeName<Short_t>() {
+  return "Short_t";
+}
+template <>
+inline const char *RootTypeName<UShort_t>() {
+  return "UShort_t";
+}
 
 template <class T>
 double duration(T t0, T t1) {

@@ -558,6 +558,34 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple>&
   }
 }
 
+void ConfigManager::GetAddedBranchesParams(vector<AddedBranchParams>& addedBranchesParams) {
+  PyObject* pythonList = GetPythonList("branchesToAdd");
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject* entry = GetItem(pythonList, i);
+    auto nParams = GetCollectionSize(entry);
+
+    if (nParams != 4) {
+      error() << "Invalid number of arguments in branchesToAdd definition at index " << i
+              << " - expected (collection, name, type, varexp)" << endl;
+      continue;
+    }
+    if (!PyUnicode_Check(GetItem(entry, 0)) || !PyUnicode_Check(GetItem(entry, 1)) || !PyUnicode_Check(GetItem(entry, 2)) ||
+        !PyUnicode_Check(GetItem(entry, 3))) {
+      error() << "Invalid types in branchesToAdd definition at index " << i
+              << " (expected four strings: collection, name, type, varexp)" << endl;
+      continue;
+    }
+
+    AddedBranchParams addedBranch;
+    addedBranch.collection = PyUnicode_AsUTF8(GetItem(entry, 0));
+    addedBranch.name = PyUnicode_AsUTF8(GetItem(entry, 1));
+    addedBranch.type = PyUnicode_AsUTF8(GetItem(entry, 2));
+    addedBranch.varexp = PyUnicode_AsUTF8(GetItem(entry, 3));
+    addedBranchesParams.push_back(addedBranch);
+  }
+}
+
 void ConfigManager::GetHistogramsParams(map<string, HistogramParams>& histogramsParams, string collectionName) {
   PyObject* pythonList = GetPythonList(collectionName);
 

@@ -36,12 +36,14 @@ eventCuts = {
 #     "SubJet",
 # )
 
-# Branches to create on the output tree that do not exist in the input (see skimmer.cpp for
-# where these are set via Event::SetFloat / PhysicsObject::SetFloat).
-branchesToAdd = {
-    "dimuonMass": ("Float_t", ""),
-    "Muon_ptSquared": ("Float_t", "Muon"),
-}
+# Branches to create on the output tree that do not exist in the input: (collection, name, ROOT
+# type, varexp). dimuonMass is app-set only (see skimmer.cpp), "-1.0" is just its constant
+# fallback default. Muon_ptSquared is config-computed from Muon_pt via varexp, except skimmer.cpp
+# overrides it for muon 0 to demonstrate that an app Set<T> call wins over the varexp.
+branchesToAdd = (
+    ("", "dimuonMass", "Float_t", "-1.0"),
+    ("Muon", "ptSquared", "Float_t", "Muon_pt**2"),
+)
 
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"

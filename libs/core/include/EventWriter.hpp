@@ -28,6 +28,7 @@ private:
     std::string collection;
     std::string variable;
     std::string sizeBranch;  // only set for array (per-collection) branches
+    bool hasVarexp = false;  // config-computed (pre-filled by AddedBranches) vs app-set only
   };
 
   TFile *outFile;
@@ -48,6 +49,11 @@ private:
   std::map<std::string, AddedBranch> addedBranches;
   std::map<std::string, std::vector<std::string>> addedBranchesPerTree;
   std::map<std::string, size_t> addedVectorSizes;  // previous PhysicsObjects::size() per array branch
+
+  // True once a branch with an empty varexp has had a real (non-default) value observed via
+  // HasCustomValue, for at least one object/event across the whole job. Checked at Save() to
+  // emit a single end-of-job warning per branch that was declared but never actually set.
+  std::map<std::string, bool> everSetByApp;
 
   // Set by AddCurrentHepMCevent for the duration of one FillAddedBranches call, so an added
   // array branch on the pruned HepMC collection can be re-filtered to match; null otherwise

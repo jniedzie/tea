@@ -81,6 +81,9 @@ EventReader::EventReader() {
 
   SetupTrees();
   SetupBranches();
+
+  addedBranches = make_unique<AddedBranches>();
+  if (!addedBranches->Empty()) addedBranches->Setup(eventsTreeNames, inputTrees);
 }
 
 EventReader::~EventReader() {}
@@ -452,6 +455,8 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   }
 
   currentEvent->AddExtraCollections();
+
+  if (!addedBranches->Empty()) addedBranches->Evaluate(currentEvent);
 
   if (iEvent == nEvents - 1) {
     cerr << "\033[0m\n" << endl;

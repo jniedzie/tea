@@ -144,67 +144,50 @@ class PhysicsObject {
     return 0;
   }
 
-  void SetFloat(std::string branchName, float value) {
-    auto it = customValuesFloat.find(branchName);
-    if (it != customValuesFloat.end()) delete it->second;
-    customValuesFloat[branchName] = new Float_t(value);
-    customValuesTypes[branchName] = "Float_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetDouble(std::string branchName, double value) {
-    auto it = customValuesDouble.find(branchName);
-    if (it != customValuesDouble.end()) delete it->second;
-    customValuesDouble[branchName] = new Double_t(value);
-    customValuesTypes[branchName] = "Double_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetInt(std::string branchName, int value) {
-    auto it = customValuesInt.find(branchName);
-    if (it != customValuesInt.end()) delete it->second;
-    customValuesInt[branchName] = new Int_t(value);
-    customValuesTypes[branchName] = "Int_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetUInt(std::string branchName, unsigned int value) {
-    auto it = customValuesUint.find(branchName);
-    if (it != customValuesUint.end()) delete it->second;
-    customValuesUint[branchName] = new UInt_t(value);
-    customValuesTypes[branchName] = "UInt_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetBool(std::string branchName, bool value) {
-    auto it = customValuesBool.find(branchName);
-    if (it != customValuesBool.end()) delete it->second;
-    customValuesBool[branchName] = new Bool_t(value);
-    customValuesTypes[branchName] = "Bool_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetULong(std::string branchName, ULong64_t value) {
-    auto it = customValuesUlong.find(branchName);
-    if (it != customValuesUlong.end()) delete it->second;
-    customValuesUlong[branchName] = new ULong64_t(value);
-    customValuesTypes[branchName] = "ULong64_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetUChar(std::string branchName, unsigned char value) {
-    auto it = customValuesUchar.find(branchName);
-    if (it != customValuesUchar.end()) delete it->second;
-    customValuesUchar[branchName] = new UChar_t(value);
-    customValuesTypes[branchName] = "UChar_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetShort(std::string branchName, short value) {
-    auto it = customValuesShort.find(branchName);
-    if (it != customValuesShort.end()) delete it->second;
-    customValuesShort[branchName] = new Short_t(value);
-    customValuesTypes[branchName] = "Short_t";
-    customValuesEpoch[branchName] = gCustomValueEpoch;
-  }
-  void SetUShort(std::string branchName, unsigned short value) {
-    auto it = customValuesUshort.find(branchName);
-    if (it != customValuesUshort.end()) delete it->second;
-    customValuesUshort[branchName] = new UShort_t(value);
-    customValuesTypes[branchName] = "UShort_t";
+  // Sets a custom per-object value, stamping it with the epoch active for the current event (see
+  // gCustomValueEpoch). T must be one of the nine ROOT scalar types in RootTypeName<T>().
+  template <typename T> void Set(const std::string &branchName, T value) {
+    if constexpr (std::is_same_v<T, Float_t>) {
+      auto it = customValuesFloat.find(branchName);
+      if (it != customValuesFloat.end()) delete it->second;
+      customValuesFloat[branchName] = new Float_t(value);
+    } else if constexpr (std::is_same_v<T, Double_t>) {
+      auto it = customValuesDouble.find(branchName);
+      if (it != customValuesDouble.end()) delete it->second;
+      customValuesDouble[branchName] = new Double_t(value);
+    } else if constexpr (std::is_same_v<T, Int_t>) {
+      auto it = customValuesInt.find(branchName);
+      if (it != customValuesInt.end()) delete it->second;
+      customValuesInt[branchName] = new Int_t(value);
+    } else if constexpr (std::is_same_v<T, UInt_t>) {
+      auto it = customValuesUint.find(branchName);
+      if (it != customValuesUint.end()) delete it->second;
+      customValuesUint[branchName] = new UInt_t(value);
+    } else if constexpr (std::is_same_v<T, Bool_t>) {
+      auto it = customValuesBool.find(branchName);
+      if (it != customValuesBool.end()) delete it->second;
+      customValuesBool[branchName] = new Bool_t(value);
+    } else if constexpr (std::is_same_v<T, ULong64_t>) {
+      auto it = customValuesUlong.find(branchName);
+      if (it != customValuesUlong.end()) delete it->second;
+      customValuesUlong[branchName] = new ULong64_t(value);
+    } else if constexpr (std::is_same_v<T, UChar_t>) {
+      auto it = customValuesUchar.find(branchName);
+      if (it != customValuesUchar.end()) delete it->second;
+      customValuesUchar[branchName] = new UChar_t(value);
+    } else if constexpr (std::is_same_v<T, Short_t>) {
+      auto it = customValuesShort.find(branchName);
+      if (it != customValuesShort.end()) delete it->second;
+      customValuesShort[branchName] = new Short_t(value);
+    } else if constexpr (std::is_same_v<T, UShort_t>) {
+      auto it = customValuesUshort.find(branchName);
+      if (it != customValuesUshort.end()) delete it->second;
+      customValuesUshort[branchName] = new UShort_t(value);
+    } else {
+      static_assert(!sizeof(T), "PhysicsObject::Set<T>: unsupported type");
+    }
+
+    customValuesTypes[branchName] = RootTypeName<T>();
     customValuesEpoch[branchName] = gCustomValueEpoch;
   }
 

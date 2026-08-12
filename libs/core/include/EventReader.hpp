@@ -5,6 +5,7 @@
 #ifndef EventReader_hpp
 #define EventReader_hpp
 
+#include "AddedBranches.hpp"
 #include "ConfigManager.hpp"
 #include "Event.hpp"
 #include "Helpers.hpp"
@@ -50,6 +51,8 @@ class EventReader {
   std::map<std::string, std::string> branchNamesAndTypes;
 
   std::vector<std::string> hltBranches, l1Branches;
+
+  std::unique_ptr<AddedBranches> addedBranches;
 
   TLeaf *GetLeaf(TBranch *branch);
 
