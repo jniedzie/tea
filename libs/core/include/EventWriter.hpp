@@ -49,6 +49,11 @@ private:
   std::map<std::string, std::vector<std::string>> addedBranchesPerTree;
   std::map<std::string, size_t> addedVectorSizes;  // previous PhysicsObjects::size() per array branch
 
+  // Set by AddCurrentHepMCevent for the duration of one FillAddedBranches call, so an added
+  // array branch on the pruned HepMC collection can be re-filtered to match; null otherwise
+  // (including for AddCurrentEvent's plain writes).
+  const std::vector<int> *currentKeepIndices = nullptr;
+
   std::map<std::string, Float_t> addedScalarFloat;
   std::map<std::string, Double_t> addedScalarDouble;
   std::map<std::string, Int_t> addedScalarInt;
@@ -74,9 +79,7 @@ private:
   void RepackBoolVectorBranches(std::string treeName);
 
   void SetupAddedBranches(std::string treeName);
-  // keepIndices, when non-null, restricts array branches on the "Particle" collection to the same
-  // filtered/reindexed set that AddCurrentHepMCevent applies to the pre-existing Particle_* branches.
-  void FillAddedBranches(std::string treeName, const std::vector<int> *keepIndices = nullptr);
+  void FillAddedBranches(std::string treeName);
 
   friend class CutFlowManager;
 };

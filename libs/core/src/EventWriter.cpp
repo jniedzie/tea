@@ -20,6 +20,12 @@ const map<string, string> addedBranchTypeCodes = {
     {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
 };
 
+// The one collection AddCurrentHepMCevent is allowed to prune. Shared by its
+// own Particle_* branch-name matching and by FillAddedBranches' decision to
+// re-filter an added array branch, so the two can't drift apart the way two
+// independent "Particle" literals could.
+const string prunedHepMCCollection = "Particle";
+
 template <typename T>
 void FillScalarAddedBranch(map<string, T> &buffer, const string &name,
                            const shared_ptr<Event> &event) {
@@ -43,18 +49,12 @@ void FillScalarAddedBranch(map<string, T> &buffer, const string &name,
   }
 }
 
-// keepIndices, when non-null, restricts the fill to that subset of the
-// collection (in that order), mirroring the reindexing FilterBranch applies to
-// the pre-existing HepMC Particle_* branches so the two stay aligned. Returns
-// the number of entries actually written (== collection->size() when
-// keepIndices is null).
 template <typename T>
 size_t FillArrayAddedBranch(T *buffer, const string &variable,
                             size_t previousSize,
-                            const shared_ptr<PhysicsObjects> &collection,
-                            const vector<int> *keepIndices) {
+                            const shared_ptr<PhysicsObjects> &collection) {
   size_t writeIndex = 0;
-  auto fillOne = [&](const shared_ptr<PhysicsObject> &object) {
+  for (auto &object : *collection) {
     T value = T(0);
     if (object->HasCustomValue(variable)) {
       try {
@@ -73,14 +73,6 @@ size_t FillArrayAddedBranch(T *buffer, const string &variable,
              << endl;
     }
     buffer[writeIndex++] = value;
-  };
-
-  if (keepIndices) {
-    for (int index : *keepIndices)
-      fillOne(collection->at(index));
-  } else {
-    for (auto & i : *collection)
-      fillOne(i);
   }
   // Only the shrink remainder needs clearing -- entries already covered by the
   // loop above were just written for real, so re-zeroing them first (as before)
@@ -102,6 +94,19 @@ int FilterBranch(T *vec, const std::vector<int> &keepIndices) {
     vec[i] = (i < writeIndex) ? tmp[i] : 0;
   }
   return writeIndex;
+}
+
+// Re-applies FilterBranch's compaction to an added array branch that was just
+// filled with every object in its collection, when AddCurrentHepMCevent has
+// pruned that same collection -- keeping the added branch index-aligned with
+// the native Particle_* branches it shares a size leaf with.
+template <typename T>
+size_t FilterAddedBranchIfPruned(T *buffer, size_t writeIndex,
+                                 const string &collectionName,
+                                 const vector<int> *keepIndices) {
+  if (keepIndices == nullptr || collectionName != prunedHepMCCollection)
+    return writeIndex;
+  return FilterBranch(buffer, *keepIndices);
 }
 
 EventWriter::EventWriter(const shared_ptr<EventReader> &eventReader_)
@@ -338,8 +343,7 @@ void EventWriter::SetupAddedBranches(string treeName) {
   }
 }
 
-void EventWriter::FillAddedBranches(string treeName,
-                                    const vector<int> *keepIndices) {
+void EventWriter::FillAddedBranches(string treeName) {
   auto it = addedBranchesPerTree.find(treeName);
   if (it == addedBranchesPerTree.end())
     return;
@@ -401,49 +405,72 @@ void EventWriter::FillAddedBranches(string treeName,
       }
 
       size_t previousSize = addedVectorSizes[name];
-      const vector<int> *filterIndices =
-          (keepIndices != nullptr && added.collection == "Particle")
-              ? keepIndices
-              : nullptr;
       size_t writeIndex = 0;
 
-      if (added.type == "Float_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorFloat[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "Double_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorDouble[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "Int_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorInt[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "UInt_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorUInt[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "Bool_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorBool[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "ULong64_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorULong[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "UChar_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorUChar[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "Short_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorShort[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else if (added.type == "UShort_t")
-        writeIndex =
-            FillArrayAddedBranch(addedVectorUShort[name], added.variable,
-                                 previousSize, collection, filterIndices);
-      else {
+      if (added.type == "Float_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorFloat[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorFloat[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "Double_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorDouble[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorDouble[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "Int_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorInt[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorInt[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "UInt_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorUInt[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorUInt[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "Bool_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorBool[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorBool[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "ULong64_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorULong[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorULong[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "UChar_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorUChar[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorUChar[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "Short_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorShort[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorShort[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else if (added.type == "UShort_t") {
+        writeIndex = FillArrayAddedBranch(addedVectorUShort[name],
+                                          added.variable, previousSize,
+                                          collection);
+        writeIndex = FilterAddedBranchIfPruned(
+            addedVectorUShort[name], writeIndex, added.collection,
+            currentKeepIndices);
+      } else {
         fatal() << "branchesToAdd: internal error - no array fill handler for "
                    "type \""
                 << added.type << "\" (branch \"" << name << "\")" << endl;
@@ -474,7 +501,7 @@ void EventWriter::AddCurrentHepMCevent(string treeName,
       continue;
 
     string branchName = branchPtr->GetName();
-    if (branchName.rfind("Particle_", 0) != 0)
+    if (branchName.rfind(prunedHepMCCollection + "_", 0) != 0)
       continue;
 
     auto leaf = eventReader->GetLeaf(branchPtr);
@@ -497,7 +524,9 @@ void EventWriter::AddCurrentHepMCevent(string treeName,
   // Set the filtered number of particles for the branch before filling
   Int_t nParticles = static_cast<Int_t>(writeIndex);
   outputTrees[treeName]->SetBranchAddress("Event_numberP", &nParticles);
-  FillAddedBranches(treeName, &keepIndices);
+  currentKeepIndices = &keepIndices;
+  FillAddedBranches(treeName);
+  currentKeepIndices = nullptr;
   RepackBoolVectorBranches(treeName);
   outputTrees[treeName]->Fill();
 }
