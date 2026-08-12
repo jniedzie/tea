@@ -57,11 +57,6 @@ const int maxCollectionElements = 9999;
 const int maxNdaughters = 5;  // Number of daughters that will be considered for HEP MC particles.
                               // Heavily affects computing time. Max is 100.
 
-// Bumped once per event in Event::Reset(); Event and PhysicsObject stamp their custom values
-// with the epoch active when Set* was called, so HasCustomValue can detect values left over
-// from a previous event (PhysicsObjects are pre-allocated and reused across events).
-inline unsigned long gCustomValueEpoch = 0;
-
 inline std::vector<std::string> getListOfTrees(TFile* file) {
   auto keys = file->GetListOfKeys();
   std::vector<std::string> trees;
@@ -186,6 +181,14 @@ inline const std::map<std::string, std::string> kAddedBranchTypeCodes = {
     {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},
     {"UInt_t", "i"},  {"Bool_t", "O"},   {"ULong64_t", "l"},
     {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
+};
+
+// The four std::vector<T> element types Event::SetVector<T>/branchesToAdd support for a
+// free-standing, event-level vector branch (no collection linkage, no size cap) -- mirrors the
+// four std::vector element types EventReader already knows how to read from an input tree.
+inline const std::map<std::string, std::string> kAddedVectorBranchElementTypes = {
+    {"vector<Float_t>", "Float_t"}, {"vector<Double_t>", "Double_t"},
+    {"vector<Int_t>", "Int_t"},     {"vector<UInt_t>", "UInt_t"},
 };
 
 // Maps a C++ type to its ROOT type name string, e.g. RootTypeName<Float_t>() == "Float_t".

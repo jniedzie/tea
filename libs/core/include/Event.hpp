@@ -186,8 +186,8 @@ public:
     return valuesStdUintVector.at(branchName);
   }
 
-  // Sets a custom event-level value, stamping it with the epoch active for the current event
-  // (see gCustomValueEpoch). T must be one of the nine ROOT scalar types in RootTypeName<T>().
+  // Sets a custom event-level value. T must be one of the nine ROOT scalar types in
+  // RootTypeName<T>().
   template <typename T> void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>)
       customValuesFloat[branchName] = value;
@@ -211,12 +211,48 @@ public:
       static_assert(!sizeof(T), "Event::Set<T>: unsupported type");
 
     customValuesTypes[branchName] = RootTypeName<T>();
-    customValuesEpoch[branchName] = gCustomValueEpoch;
+  }
+
+  // Sets a custom, free-standing event-level vector value (not tied to any collection's size
+  // branch). T must be one of Float_t, Double_t, Int_t, UInt_t.
+  template <typename T> void SetVector(const std::string &branchName, std::vector<T> value) {
+    if constexpr (std::is_same_v<T, Float_t>)
+      customValuesVectorFloat[branchName] = std::move(value);
+    else if constexpr (std::is_same_v<T, Double_t>)
+      customValuesVectorDouble[branchName] = std::move(value);
+    else if constexpr (std::is_same_v<T, Int_t>)
+      customValuesVectorInt[branchName] = std::move(value);
+    else if constexpr (std::is_same_v<T, UInt_t>)
+      customValuesVectorUInt[branchName] = std::move(value);
+    else
+      static_assert(!sizeof(T), "Event::SetVector<T>: unsupported type (Float_t, Double_t, Int_t, UInt_t only)");
+
+    customValuesTypes[branchName] = "vector<" + std::string(RootTypeName<T>()) + ">";
+  }
+
+  template <typename T> const std::vector<T> &GetVector(const std::string &branchName) const {
+    std::string expectedType = "vector<" + std::string(RootTypeName<T>()) + ">";
+    auto typeIt = customValuesTypes.find(branchName);
+    if (typeIt == customValuesTypes.end() || typeIt->second != expectedType) {
+      std::string message = "Casting a custom vector branch " + branchName + " (" +
+          (typeIt == customValuesTypes.end() ? std::string("not set") : typeIt->second) +
+          ") to " + expectedType + "\n";
+      throw BadTypeException(message.c_str());
+    }
+    if constexpr (std::is_same_v<T, Float_t>)
+      return customValuesVectorFloat.at(branchName);
+    else if constexpr (std::is_same_v<T, Double_t>)
+      return customValuesVectorDouble.at(branchName);
+    else if constexpr (std::is_same_v<T, Int_t>)
+      return customValuesVectorInt.at(branchName);
+    else if constexpr (std::is_same_v<T, UInt_t>)
+      return customValuesVectorUInt.at(branchName);
+    else
+      static_assert(!sizeof(T), "Event::GetVector<T>: unsupported type (Float_t, Double_t, Int_t, UInt_t only)");
   }
 
   bool HasCustomValue(const std::string &branchName) const {
-    auto it = customValuesEpoch.find(branchName);
-    return it != customValuesEpoch.end() && it->second == gCustomValueEpoch;
+    return customValuesTypes.find(branchName) != customValuesTypes.end();
   }
 
 private:
@@ -274,7 +310,6 @@ private:
   std::map<std::string, std::string>
       valuesTypes; /// contains all branch names and corresponding types
   std::map<std::string, std::string> customValuesTypes;
-  std::map<std::string, unsigned long> customValuesEpoch;
 
   std::map<std::string, UInt_t> valuesUint;
   std::map<std::string, Int_t> valuesInt;
@@ -290,6 +325,10 @@ private:
   std::map<std::string, UChar_t> customValuesUchar;
   std::map<std::string, Short_t> customValuesShort;
   std::map<std::string, UShort_t> customValuesUshort;
+  std::map<std::string, std::vector<Float_t>> customValuesVectorFloat;
+  std::map<std::string, std::vector<Double_t>> customValuesVectorDouble;
+  std::map<std::string, std::vector<Int_t>> customValuesVectorInt;
+  std::map<std::string, std::vector<UInt_t>> customValuesVectorUInt;
   std::map<std::string, ULong64_t> valuesUlong;
   std::map<std::string, UChar_t> valuesUchar;
   std::map<std::string, Char_t> valuesChar;

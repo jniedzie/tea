@@ -43,6 +43,7 @@ eventCuts = {
 branchesToAdd = (
     ("", "dimuonMass", "Float_t", "-1.0"),
     ("Muon", "ptSquared", "Float_t", "Muon_pt**2"),
+    ("", "muonPt", "vector<Float_t>", ""),
 )
 
 # Uncomment if you want to specify event weights (e.g. from MC generator):

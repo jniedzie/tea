@@ -66,12 +66,10 @@ class Multitype {
 
   void checkType(std::string typeName) {
     std::string branchType;
-    bool isCustomValue = false;
     if (object->valuesTypes.find(branchName) != object->valuesTypes.end())
       branchType = object->valuesTypes.at(branchName);
     else if (object->customValuesTypes.find(branchName) != object->customValuesTypes.end()) {
       branchType = object->customValuesTypes.at(branchName);
-      isCustomValue = true;
     } else {
       std::string message = "Branch not found: " + branchName + "\n";
       throw BadTypeException(message.c_str());
@@ -79,14 +77,6 @@ class Multitype {
     if (branchType != typeName) {
       std::string message = "Casting a physics object-level branch " + branchName + " (" + branchType + ") to " + typeName + "\n";
       throw BadTypeException(message.c_str());
-    }
-    // Custom values are stamped with the epoch active when Set* was called. A mismatch here means
-    // this value was set on a previous event and never refreshed for the current one (PhysicsObjects
-    // and Events are reused across events) -- the caller is reading stale data.
-    if (isCustomValue && !object->HasCustomValue(branchName)) {
-      fatal() << "Reading custom value \"" << branchName << "\" that was not set for the current event (stale value left over from a previous event)"
-              << std::endl;
-      exit(1);
     }
   }
 };

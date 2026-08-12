@@ -144,8 +144,8 @@ class PhysicsObject {
     return 0;
   }
 
-  // Sets a custom per-object value, stamping it with the epoch active for the current event (see
-  // gCustomValueEpoch). T must be one of the nine ROOT scalar types in RootTypeName<T>().
+  // Sets a custom per-object value. T must be one of the nine ROOT scalar types in
+  // RootTypeName<T>().
   template <typename T> void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>) {
       auto it = customValuesFloat.find(branchName);
@@ -188,12 +188,10 @@ class PhysicsObject {
     }
 
     customValuesTypes[branchName] = RootTypeName<T>();
-    customValuesEpoch[branchName] = gCustomValueEpoch;
   }
 
   bool HasCustomValue(const std::string &branchName) const {
-    auto it = customValuesEpoch.find(branchName);
-    return it != customValuesEpoch.end() && it->second == gCustomValueEpoch;
+    return customValuesTypes.find(branchName) != customValuesTypes.end();
   }
 
  private:
@@ -239,7 +237,6 @@ class PhysicsObject {
   // contains all branch names and corresponding types
   std::map<std::string, std::string> valuesTypes;
   std::map<std::string, std::string> customValuesTypes;
-  std::map<std::string, unsigned long> customValuesEpoch;
 
   std::map<std::string, UInt_t *> valuesUint;
   std::map<std::string, Int_t *> valuesInt;

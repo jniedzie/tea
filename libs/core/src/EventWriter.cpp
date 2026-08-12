@@ -67,6 +67,24 @@ size_t FillArrayAddedBranch(T *buffer, const string &branchName,
     buffer[i] = T(0);
   return writeIndex;
 }
+
+template <typename T>
+void FillStdVectorAddedBranch(map<string, vector<T>> &buffer, const string &name,
+                              const shared_ptr<Event> &event, map<string, bool> &everSetByApp) {
+  if (event->HasCustomValue(name)) {
+    everSetByApp[name] = true;
+    try {
+      buffer[name] = event->GetVector<T>(name);
+    } catch (BadTypeException &e) {
+      fatal() << "branchesToAdd: event-level vector branch \"" << name
+              << "\" was set with a type that doesn't match its declared branchesToAdd type: "
+              << e.what() << endl;
+      exit(1);
+    }
+  } else {
+    buffer[name].clear();
+  }
+}
 }  // namespace
 
 template <typename T>
@@ -203,6 +221,29 @@ void EventWriter::SetupAddedBranches(string treeName) {
               << "\" already exists on tree " << treeName << endl;
       exit(1);
     }
+
+    if (kAddedVectorBranchElementTypes.count(added.type) > 0) {
+      // collection/varexp validity for vector types was already fatal-checked in
+      // AddedBranches::Setup, so no need to re-check here.
+      if (added.type == "vector<Float_t>")
+        outputTree->Branch(name.c_str(), &addedStdVectorFloat[name]);
+      else if (added.type == "vector<Double_t>")
+        outputTree->Branch(name.c_str(), &addedStdVectorDouble[name]);
+      else if (added.type == "vector<Int_t>")
+        outputTree->Branch(name.c_str(), &addedStdVectorInt[name]);
+      else if (added.type == "vector<UInt_t>")
+        outputTree->Branch(name.c_str(), &addedStdVectorUInt[name]);
+      else {
+        fatal() << "branchesToAdd: internal error - no vector branch handler for type \"" << added.type
+                << "\" (branch \"" << name
+                << "\"); kAddedVectorBranchElementTypes and the type-dispatch chain have drifted apart"
+                << endl;
+        exit(1);
+      }
+      addedBranchesPerTree[treeName].push_back(name);
+      continue;
+    }
+
     auto typeCodeIt = kAddedBranchTypeCodes.find(added.type);
     if (typeCodeIt == kAddedBranchTypeCodes.end()) {
       fatal() << "branchesToAdd: unsupported type \"" << added.type
@@ -323,6 +364,23 @@ void EventWriter::FillAddedBranches(string treeName) {
 
   for (auto &name : it->second) {
     auto &added = addedBranches.at(name);
+
+    if (kAddedVectorBranchElementTypes.count(added.type) > 0) {
+      if (added.type == "vector<Float_t>")
+        FillStdVectorAddedBranch(addedStdVectorFloat, name, event, everSetByApp);
+      else if (added.type == "vector<Double_t>")
+        FillStdVectorAddedBranch(addedStdVectorDouble, name, event, everSetByApp);
+      else if (added.type == "vector<Int_t>")
+        FillStdVectorAddedBranch(addedStdVectorInt, name, event, everSetByApp);
+      else if (added.type == "vector<UInt_t>")
+        FillStdVectorAddedBranch(addedStdVectorUInt, name, event, everSetByApp);
+      else {
+        fatal() << "branchesToAdd: internal error - no vector fill handler for type \"" << added.type
+                << "\" (branch \"" << name << "\")" << endl;
+        exit(1);
+      }
+      continue;
+    }
 
     if (added.collection.empty()) {
       if (added.type == "Float_t")

@@ -53,6 +53,12 @@ int main(int argc, char **argv) {
       muons->at(0)->Set<float>("ptSquared", pt * pt + 1.f);
     }
 
+    // Demonstrate a free-standing vector branch: not tied to any collection's size branch,
+    // so it's set unconditionally (even when empty) rather than skipped like the scalars above.
+    vector<float> muonPts;
+    for (auto &muon : *muons) muonPts.push_back(muon->GetAs<float>("pt"));
+    event->SetVector<float>("muonPt", muonPts);
+
     eventWriter->AddCurrentEvent("Events");
   }
   cutFlowManager->SaveCutFlow();

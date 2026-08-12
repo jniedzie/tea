@@ -80,6 +80,11 @@ private:
   std::map<std::string, Short_t[maxCollectionElements]> addedVectorShort;
   std::map<std::string, UShort_t[maxCollectionElements]> addedVectorUShort;
 
+  std::map<std::string, std::vector<Float_t>> addedStdVectorFloat;
+  std::map<std::string, std::vector<Double_t>> addedStdVectorDouble;
+  std::map<std::string, std::vector<Int_t>> addedStdVectorInt;
+  std::map<std::string, std::vector<UInt_t>> addedStdVectorUInt;
+
   void SetupOutputTree();
   void SetupBoolVectorBranches(std::string treeName);
   void RepackBoolVectorBranches(std::string treeName);

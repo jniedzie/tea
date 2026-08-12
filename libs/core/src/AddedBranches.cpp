@@ -83,9 +83,25 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
   static int formulaCounter = 0;
 
   for (auto &spec : specs) {
-    if (kAddedBranchTypeCodes.find(spec.type) == kAddedBranchTypeCodes.end()) {
+    bool isVectorType = kAddedVectorBranchElementTypes.count(spec.type) > 0;
+    if (!isVectorType && kAddedBranchTypeCodes.find(spec.type) == kAddedBranchTypeCodes.end()) {
       fatal() << "branchesToAdd: unsupported type \"" << spec.type << "\" for branch \"" << spec.BranchName() << "\"" << endl;
       exit(1);
+    }
+    if (isVectorType) {
+      if (!spec.collection.empty()) {
+        fatal() << "branchesToAdd: vector branch \"" << spec.BranchName() << "\" declares a collection (\""
+                << spec.collection << "\"); vector branches are event-level only" << endl;
+        exit(1);
+      }
+      if (!spec.varexp.empty()) {
+        fatal() << "branchesToAdd: vector branch \"" << spec.BranchName()
+                << "\" declares a varexp; vector branches don't support varexp yet, declare with an "
+                   "empty varexp and call Event::SetVector<T>"
+                << endl;
+        exit(1);
+      }
+      continue;  // app-set only, nothing to compile/pre-fill
     }
     if (spec.varexp.empty()) continue;  // app-set only, nothing to compile/pre-fill
 

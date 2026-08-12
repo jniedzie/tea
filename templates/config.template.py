@@ -94,8 +94,14 @@ branchesToRemove = (
 # for any event/object the app never sets. Either way an app Set<T> call for the current event
 # always wins over the varexp.
 # Supported types: Float_t, Double_t, Int_t, UInt_t, Bool_t, ULong64_t, UChar_t, Short_t, UShort_t.
+#
+# A type of "vector<Float_t>" / "vector<Double_t>" / "vector<Int_t>" / "vector<UInt_t>" declares a
+# free-standing, event-level std::vector<T> branch instead (its length is just value.size() each
+# event, not tied to any collection's size branch). Collection must be "" and varexp must be ""
+# for these -- they are app-set only, via Event::SetVector<T>.
 branchesToAdd = (
     ("", "dimuonMass", "Float_t", "-1.0"),
     ("Muon", "dEdx", "Float_t", ""),
+    ("", "looseMuonPt", "vector<Float_t>", ""),
 )
 # branchesToAdd = ()

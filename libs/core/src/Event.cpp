@@ -25,7 +25,6 @@ Event::~Event() {}
 
 void Event::Reset() {
   extraCollections.clear();
-  ++gCustomValueEpoch;
 }
 
 template <typename First, typename... Rest>
