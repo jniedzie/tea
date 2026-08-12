@@ -84,8 +84,9 @@ class Multitype {
     // this value was set on a previous event and never refreshed for the current one (PhysicsObjects
     // and Events are reused across events) -- the caller is reading stale data.
     if (isCustomValue && !object->HasCustomValue(branchName)) {
-      warn() << "Reading custom value \"" << branchName << "\" that was not set for the current event (stale value left over from a previous event)"
-             << std::endl;
+      fatal() << "Reading custom value \"" << branchName << "\" that was not set for the current event (stale value left over from a previous event)"
+              << std::endl;
+      exit(1);
     }
   }
 };
