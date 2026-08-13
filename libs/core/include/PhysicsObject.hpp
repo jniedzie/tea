@@ -18,6 +18,7 @@ class PhysicsObject {
   PhysicsObject() = default;
   // virtual ~PhysicsObject() = default;
   virtual ~PhysicsObject() {
+    ForgetCustomValues();
     for (auto& [name, ptr] : customValuesFloat) delete ptr;
     for (auto& [name, ptr] : customValuesDouble) delete ptr;
     for (auto& [name, ptr] : customValuesInt) delete ptr;
@@ -186,13 +187,26 @@ class PhysicsObject {
     }
 
     customValuesTypes[branchName] = RootTypeName<T>();
+    RememberCustomValues();
   }
 
   bool HasCustomValue(const std::string &branchName) const {
     return customValuesTypes.find(branchName) != customValuesTypes.end();
   }
 
+  /// Custom values describe the current event only, but physics objects are allocated once and reused for every event,
+  /// so a value set in one event would still look "set" in all following ones (and would be written out again by
+  /// EventWriter). Called from Event::Reset(), it clears the type markers of the objects that were set since the last
+  /// reset, which is all HasCustomValue() looks at.
+  static void ClearAllCustomValues();
+
  private:
+  /// Registers/unregisters this object in the list ClearAllCustomValues() walks
+  void RememberCustomValues();
+  void ForgetCustomValues();
+
+  bool hasCustomValues = false;
+
   inline UInt_t GetUint(std::string branchName) {
     if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesUint[branchName];
     return *customValuesUint[branchName];

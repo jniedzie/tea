@@ -41,7 +41,7 @@ n_entries = events.GetEntries()
 if n_entries == 0:
     raise SystemExit("Smoke-test skim tree has no entries")
 
-for branch_name in ("dimuonMass", "Muon_ptSquared", "muonPt"):
+for branch_name in ("dimuonMass", "Muon_ptSquared", "Muon_ptIfGood", "muonPt"):
     if not events.GetBranch(branch_name):
         raise SystemExit(f"branchesToAdd branch missing from skim output: {branch_name}")
 
@@ -63,6 +63,14 @@ for i in range(n_entries):
         if abs(events.Muon_ptSquared[j] - expected) > max(1e-3, abs(expected) * 1e-5):
             raise SystemExit(
                 f"Muon_ptSquared[{j}] ({events.Muon_ptSquared[j]}) != expected ({expected}) at entry {i}"
+            )
+
+    # Set by the app for good muons only - the rest must keep the default, not a value from a previous event
+    for j in range(n_muon):
+        expected = events.Muon_pt[j] if events.Muon_pt[j] > 30 else 0
+        if abs(events.Muon_ptIfGood[j] - expected) > max(1e-3, abs(expected) * 1e-5):
+            raise SystemExit(
+                f"Muon_ptIfGood[{j}] ({events.Muon_ptIfGood[j]}) != expected ({expected}) at entry {i}"
             )
 
     muon_pts = list(events.muonPt)

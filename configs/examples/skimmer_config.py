@@ -40,6 +40,7 @@ eventCuts = {
 branchesToAdd = (
     ("Event", "dimuonMass", "Float_t", "-1.0"),
     ("Muon", "ptSquared", "Float_t", "Muon_pt**2"),
+    ("Muon", "ptIfGood", "Float_t", ""),
     ("Event", "muonPt", "vector<Float_t>", ""),
 )
 

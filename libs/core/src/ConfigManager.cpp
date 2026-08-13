@@ -565,16 +565,17 @@ void ConfigManager::GetAddedBranchesParams(vector<AddedBranchParams>& addedBranc
     PyObject* entry = GetItem(pythonList, i);
     auto nParams = GetCollectionSize(entry);
 
+    // Skipping a malformed entry would silently drop the branch from the output tree, so rather stop here
     if (nParams != 4) {
-      error() << "Invalid number of arguments in branchesToAdd definition at index " << i
+      fatal() << "Invalid number of arguments in branchesToAdd definition at index " << i
               << " - expected (collection, name, type, varexp)" << endl;
-      continue;
+      exit(1);
     }
     if (!PyUnicode_Check(GetItem(entry, 0)) || !PyUnicode_Check(GetItem(entry, 1)) || !PyUnicode_Check(GetItem(entry, 2)) ||
         !PyUnicode_Check(GetItem(entry, 3))) {
-      error() << "Invalid types in branchesToAdd definition at index " << i
+      fatal() << "Invalid types in branchesToAdd definition at index " << i
               << " (expected four strings: collection, name, type, varexp)" << endl;
-      continue;
+      exit(1);
     }
 
     AddedBranchParams addedBranch;
