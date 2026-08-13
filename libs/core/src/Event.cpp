@@ -23,7 +23,15 @@ Event::Event() {
 
 Event::~Event() {}
 
-void Event::Reset() { extraCollections.clear(); }
+void Event::Reset() {
+  extraCollections.clear();
+  // Clearing just the type marker (not the value maps) is enough to hide a stale
+  // Set()/SetVector() from a previous event, since HasCustomValue() checks this map.
+  customValuesTypes.clear();
+  // Physics objects are reused across events just like the event itself, so their custom values
+  // have to be dropped here as well.
+  PhysicsObject::ClearAllCustomValues();
+}
 
 template <typename First, typename... Rest>
 bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, pair<float, float> cuts) {

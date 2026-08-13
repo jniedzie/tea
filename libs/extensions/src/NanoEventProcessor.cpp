@@ -466,7 +466,7 @@ void NanoEventProcessor::ApplyJetEnergyResolution(const shared_ptr<NanoEvent> ev
                                totalPxDifference, totalPyDifference);
   }
   float newMetPt = PropagateMET(event, totalPxDifference["met_jer"], totalPyDifference["met_jer"]);
-  event->GetEvent()->SetFloat("MET_pt_smeared", newMetPt);
+  event->GetEvent()->Set<float>("MET_pt_smeared", newMetPt);
 }
 
 tuple<map<string, float>,map<string, float>> NanoEventProcessor::GetJetMETEnergyResolutionUncertainties(const shared_ptr<NanoEvent> event, 
