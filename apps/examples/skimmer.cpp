@@ -40,8 +40,7 @@ int main(int argc, char **argv) {
     if(!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
 
     // Demonstrate branchesToAdd: dimuonMass is app-set only (config varexp "-1.0" is just the
-    // fallback default). Muon_ptSquared is config-computed via varexp "Muon_pt**2"; overriding
-    // it here for muon 0 only demonstrates that an app Set<T> call wins over the varexp.
+    // fallback default). Muon_ptSquared is config-computed via varexp "Muon_pt**2".
     auto muons = event->GetCollection("Muon");
     if (muons->size() >= 2) {
       auto p1 = muons->at(0)->GetFourVector();

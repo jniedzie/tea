@@ -36,7 +36,7 @@ for path in sys.argv[1:]:
     root_file.Close()
 
 # branchesToAdd (skimmer_config.py): one event-level scalar (app-set, "-1.0" varexp fallback),
-# one per-object array (config varexp "Muon_pt**2", overridden by skimmer.cpp for muon 0 only).
+# one per-object array (config varexp "Muon_pt**2").
 skim_file = ROOT.TFile.Open(sys.argv[2])
 events = skim_file.Get("Events")
 n_entries = events.GetEntries()
@@ -62,8 +62,6 @@ for i in range(n_entries):
 
     for j in range(n_muon):
         expected = events.Muon_pt[j] ** 2
-        if j == 0:
-            expected += 1  # skimmer.cpp overrides muon 0 to demonstrate app Set<T> precedence
         if abs(events.Muon_ptSquared[j] - expected) > max(1e-3, abs(expected) * 1e-5):
             raise SystemExit(
                 f"Muon_ptSquared[{j}] ({events.Muon_ptSquared[j]}) != expected ({expected}) at entry {i}"
