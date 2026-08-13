@@ -252,7 +252,7 @@ void EventWriter::SetupAddedBranches(string treeName) {
     }
     string typeCode = typeCodeIt->second;
 
-    if (added.collection.empty()) {
+    if (added.IsEventLevel()) {
       string leaflist = name + "/" + typeCode;
       if (added.type == "Float_t")
         outputTree->Branch(name.c_str(), &addedScalarFloat[name],
@@ -382,7 +382,7 @@ void EventWriter::FillAddedBranches(string treeName) {
       continue;
     }
 
-    if (added.collection.empty()) {
+    if (added.IsEventLevel()) {
       if (added.type == "Float_t")
         FillScalarAddedBranch(addedScalarFloat, name, event, everSetByApp);
       else if (added.type == "Double_t")

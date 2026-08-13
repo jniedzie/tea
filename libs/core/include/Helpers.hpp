@@ -166,12 +166,18 @@ struct IrregularHistogramParams2D {
   std::vector<float> binEdgesY;
 };
 
-// One entry from the config's "branchesToAdd" tuple-of-tuples. An empty collection means an
-// event-level scalar; varexp is a TTree::Draw-style expression evaluated against the events
-// tree ("" means the branch is app-set only, via Event::Set<T> / PhysicsObject::Set<T>).
+// Sentinel collection name for an event-level branchesToAdd entry (scalar or free-standing
+// vector), as opposed to a real collection name (e.g. "Muon") for a per-object array branch.
+inline const std::string kEventLevelBranchCollection = "Event";
+
+// One entry from the config's "branchesToAdd" tuple-of-tuples. collection ==
+// kEventLevelBranchCollection means an event-level scalar (or free-standing vector); varexp is a
+// TTree::Draw-style expression evaluated against the events tree ("" means the branch is app-set
+// only, via Event::Set<T> / PhysicsObject::Set<T>).
 struct AddedBranchParams {
   std::string collection, name, type, varexp;
-  std::string BranchName() const { return collection.empty() ? name : collection + "_" + name; }
+  bool IsEventLevel() const { return collection == kEventLevelBranchCollection; }
+  std::string BranchName() const { return IsEventLevel() ? name : collection + "_" + name; }
 };
 
 // The nine ROOT scalar types Event::Set<T>/PhysicsObject::Set<T> and branchesToAdd support,

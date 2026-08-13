@@ -11,7 +11,7 @@
 using namespace std;
 
 namespace {
-int GetExpectedMultiplicity(const AddedBranchParams &spec) { return spec.collection.empty() ? 0 : 1; }
+int GetExpectedMultiplicity(const AddedBranchParams &spec) { return spec.IsEventLevel() ? 0 : 1; }
 
 // Range bounds come from std::numeric_limits<T> of the actual ROOT typedef rather than
 // hard-coded literals, so this stays correct on platforms where e.g. Int_t isn't 32 bits.
@@ -96,7 +96,7 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
       exit(1);
     }
     if (isVectorType) {
-      if (!spec.collection.empty()) {
+      if (!spec.IsEventLevel()) {
         fatal() << "branchesToAdd: vector branch \"" << spec.BranchName() << "\" declares a collection (\""
                 << spec.collection << "\"); vector branches are event-level only" << endl;
         exit(1);
@@ -154,7 +154,7 @@ void AddedBranches::Evaluate(const shared_ptr<Event> &event) {
     if (spec.varexp.empty()) continue;  // app-set only, no pre-fill
 
     auto *formula = formulas.at(spec.BranchName());
-    if (spec.collection.empty())
+    if (spec.IsEventLevel())
       EvaluateScalar(spec, formula, event);
     else
       EvaluateArray(spec, formula, event);

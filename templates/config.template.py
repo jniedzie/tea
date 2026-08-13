@@ -84,9 +84,9 @@ branchesToRemove = (
 # Branches to create on the output tree that do not exist in the input. Added *after*
 # CloneTree(0), so they are exempt from branchesToKeep / branchesToRemove above.
 #   (collection, name, ROOT type, varexp)
-# An empty collection means an event-level scalar; otherwise the branch is a per-object array
+# A collection of "Event" means an event-level scalar; otherwise the branch is a per-object array
 # indexed by that collection's size branch (must already exist on the output tree). Branch name
-# on the output tree is "<collection>_<name>", or just "<name>" when collection is "".
+# on the output tree is "<collection>_<name>", or just "<name>" when collection is "Event".
 # varexp is a TTree::Draw-style expression over other input-tree branches (e.g. "Muon_pt**2"),
 # evaluated once per visited event and pre-filled onto Event/PhysicsObject before app code runs
 # (a plain constant like "-1.0" is just a degenerate varexp, i.e. a default value). An empty
@@ -97,11 +97,11 @@ branchesToRemove = (
 #
 # A type of "vector<Float_t>" / "vector<Double_t>" / "vector<Int_t>" / "vector<UInt_t>" declares a
 # free-standing, event-level std::vector<T> branch instead (its length is just value.size() each
-# event, not tied to any collection's size branch). Collection must be "" and varexp must be ""
-# for these -- they are app-set only, via Event::SetVector<T>.
+# event, not tied to any collection's size branch). Collection must be "Event" and varexp must be
+# "" for these -- they are app-set only, via Event::SetVector<T>.
 branchesToAdd = (
-    ("", "dimuonMass", "Float_t", "-1.0"),
+    ("Event", "dimuonMass", "Float_t", "-1.0"),
     ("Muon", "dEdx", "Float_t", ""),
-    ("", "looseMuonPt", "vector<Float_t>", ""),
+    ("Event", "looseMuonPt", "vector<Float_t>", ""),
 )
 # branchesToAdd = ()

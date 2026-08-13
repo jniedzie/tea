@@ -29,6 +29,7 @@ private:
     std::string variable;
     std::string sizeBranch;  // only set for array (per-collection) branches
     bool hasVarexp = false;  // config-computed (pre-filled by AddedBranches) vs app-set only
+    bool IsEventLevel() const { return collection == kEventLevelBranchCollection; }
   };
 
   TFile *outFile;
