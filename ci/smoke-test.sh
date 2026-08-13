@@ -35,8 +35,6 @@ for path in sys.argv[1:]:
         raise SystemExit(f"Smoke-test output is empty: {path}")
     root_file.Close()
 
-# branchesToAdd (skimmer_config.py): one event-level scalar (app-set, "-1.0" varexp fallback),
-# one per-object array (config varexp "Muon_pt**2").
 skim_file = ROOT.TFile.Open(sys.argv[2])
 events = skim_file.Get("Events")
 n_entries = events.GetEntries()
@@ -67,7 +65,6 @@ for i in range(n_entries):
                 f"Muon_ptSquared[{j}] ({events.Muon_ptSquared[j]}) != expected ({expected}) at entry {i}"
             )
 
-    # muonPt (free-standing vector<Float_t> branch): length and values must track Muon_pt exactly.
     muon_pts = list(events.muonPt)
     if len(muon_pts) != n_muon:
         raise SystemExit(f"muonPt length ({len(muon_pts)}) != nMuon ({n_muon}) at entry {i}")

@@ -13,8 +13,6 @@ using namespace std;
 namespace {
 int GetExpectedMultiplicity(const AddedBranchParams &spec) { return spec.IsEventLevel() ? 0 : 1; }
 
-// Range bounds come from std::numeric_limits<T> of the actual ROOT typedef rather than
-// hard-coded literals, so this stays correct on platforms where e.g. Int_t isn't 32 bits.
 template <typename T>
 void CheckRange(double value, const string &type, const string &branchName) {
   auto lo = static_cast<double>(numeric_limits<T>::lowest());
@@ -26,9 +24,6 @@ void CheckRange(double value, const string &type, const string &branchName) {
   }
 }
 
-// TTreeFormula evaluates in double; integral targets go through EvalInstance64 instead (exact
-// for a bare branch reference), but a declared narrower type (Bool_t, UChar_t, ...) can still
-// silently truncate a wider value, so range-check before casting rather than truncate.
 void ValidateIntegralRange(double value, const string &type, const string &branchName) {
   if (type == "Bool_t")
     CheckRange<Bool_t>(value, type, branchName);
@@ -42,10 +37,8 @@ void ValidateIntegralRange(double value, const string &type, const string &branc
     CheckRange<UInt_t>(value, type, branchName);
   else if (type == "Int_t")
     CheckRange<Int_t>(value, type, branchName);
-  // ULong64_t already comes out of EvalInstance64 at full integer width; nothing to narrow.
 }
 
-// Target is Event or PhysicsObject -- both expose the same template<typename T> Set(name, value).
 template <typename Target>
 void SetFormulaValue(Target &target, const string &name, const string &type, TTreeFormula *formula, int instance) {
   if (type == "Float_t") {
@@ -78,7 +71,7 @@ AddedBranches::AddedBranches() {
   try {
     config.GetAddedBranchesParams(specs);
   } catch (const Exception &e) {
-    specs = {};  // no branchesToAdd key in config: nothing to add
+    specs = {};
   }
 }
 
@@ -108,15 +101,13 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
                 << endl;
         exit(1);
       }
-      continue;  // app-set only, nothing to compile/pre-fill
+      continue;
     }
-    if (spec.varexp.empty()) continue;  // app-set only, nothing to compile/pre-fill
+    if (spec.varexp.empty()) continue;
 
     string formulaName = "AddedBranches_" + spec.BranchName() + "_" + to_string(formulaCounter++);
     TTreeFormula *formula = nullptr;
 
-    // A varexp must be compiled against the events tree that actually holds its branches; try
-    // each in turn (matters only when eventsTreeNames lists more than one tree).
     for (auto &eventsTreeName : eventsTreeNames) {
       auto *candidate = new TTreeFormula(formulaName.c_str(), spec.varexp.c_str(), inputTrees.at(eventsTreeName));
       if (candidate->GetNdim() == 0) {
@@ -133,9 +124,6 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
       exit(1);
     }
 
-    // Catches the wrong *class* of expression (an array varexp on an event-level branch or vice
-    // versa) statically. A same-class mismatch (e.g. Jet_pt*2 declared on a Muon_ branch) still
-    // has multiplicity 1 and only diverges at runtime -- see the GetNdata() check in EvaluateArray.
     int expectedMultiplicity = GetExpectedMultiplicity(spec);
     if (formula->GetMultiplicity() != expectedMultiplicity) {
       fatal() << "branchesToAdd: varexp \"" << spec.varexp << "\" for branch \"" << spec.BranchName() << "\" has multiplicity "
@@ -151,7 +139,7 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
 
 void AddedBranches::Evaluate(const shared_ptr<Event> &event) {
   for (auto &spec : specs) {
-    if (spec.varexp.empty()) continue;  // app-set only, no pre-fill
+    if (spec.varexp.empty()) continue;
 
     auto *formula = formulas.at(spec.BranchName());
     if (spec.IsEventLevel())
@@ -162,7 +150,7 @@ void AddedBranches::Evaluate(const shared_ptr<Event> &event) {
 }
 
 void AddedBranches::EvaluateScalar(const AddedBranchParams &spec, TTreeFormula *formula, const shared_ptr<Event> &event) {
-  formula->GetNdata();  // refreshes the formula's cached state for the current entry
+  formula->GetNdata();
   SetFormulaValue(*event, spec.name, spec.type, formula, 0);
 }
 

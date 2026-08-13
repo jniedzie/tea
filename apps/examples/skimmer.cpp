@@ -39,8 +39,6 @@ int main(int argc, char **argv) {
 
     if(!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
 
-    // Demonstrate branchesToAdd: dimuonMass is app-set only (config varexp "-1.0" is just the
-    // fallback default). Muon_ptSquared is config-computed via varexp "Muon_pt**2".
     auto muons = event->GetCollection("Muon");
     if (muons->size() >= 2) {
       auto p1 = muons->at(0)->GetFourVector();
@@ -48,8 +46,6 @@ int main(int argc, char **argv) {
       event->Set<float>("dimuonMass", static_cast<float>((p1 + p2).M()));
     }
 
-    // Demonstrate a free-standing vector branch: not tied to any collection's size branch,
-    // so it's set unconditionally (even when empty) rather than skipped like the scalars above.
     vector<float> muonPts;
     for (auto &muon : *muons) muonPts.push_back(muon->GetAs<float>("pt"));
     event->SetVector<float>("muonPt", muonPts);

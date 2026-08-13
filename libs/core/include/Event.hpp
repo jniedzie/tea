@@ -186,8 +186,6 @@ public:
     return valuesStdUintVector.at(branchName);
   }
 
-  // Sets a custom event-level value. T must be one of the nine ROOT scalar types in
-  // RootTypeName<T>().
   template <typename T> void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>)
       customValuesFloat[branchName] = value;
@@ -213,8 +211,6 @@ public:
     customValuesTypes[branchName] = RootTypeName<T>();
   }
 
-  // Sets a custom, free-standing event-level vector value (not tied to any collection's size
-  // branch). T must be one of Float_t, Double_t, Int_t, UInt_t.
   template <typename T> void SetVector(const std::string &branchName, std::vector<T> value) {
     if constexpr (std::is_same_v<T, Float_t>)
       customValuesVectorFloat[branchName] = std::move(value);

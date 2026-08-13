@@ -144,8 +144,6 @@ class PhysicsObject {
     return 0;
   }
 
-  // Sets a custom per-object value. T must be one of the nine ROOT scalar types in
-  // RootTypeName<T>().
   template <typename T> void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>) {
       auto it = customValuesFloat.find(branchName);

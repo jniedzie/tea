@@ -81,24 +81,8 @@ branchesToRemove = (
     "SubJet",
 )
 
-# Branches to create on the output tree that do not exist in the input. Added *after*
-# CloneTree(0), so they are exempt from branchesToKeep / branchesToRemove above.
-#   (collection, name, ROOT type, varexp)
-# A collection of "Event" means an event-level scalar; otherwise the branch is a per-object array
-# indexed by that collection's size branch (must already exist on the output tree). Branch name
-# on the output tree is "<collection>_<name>", or just "<name>" when collection is "Event".
-# varexp is a TTree::Draw-style expression over other input-tree branches (e.g. "Muon_pt**2"),
-# evaluated once per visited event and pre-filled onto Event/PhysicsObject before app code runs
-# (a plain constant like "-1.0" is just a degenerate varexp, i.e. a default value). An empty
-# varexp means the branch is app-set only (Event::Set<T> / PhysicsObject::Set<T>), zero-filled
-# for any event/object the app never sets. Either way an app Set<T> call for the current event
-# always wins over the varexp.
-# Supported types: Float_t, Double_t, Int_t, UInt_t, Bool_t, ULong64_t, UChar_t, Short_t, UShort_t.
-#
-# A type of "vector<Float_t>" / "vector<Double_t>" / "vector<Int_t>" / "vector<UInt_t>" declares a
-# free-standing, event-level std::vector<T> branch instead (its length is just value.size() each
-# event, not tied to any collection's size branch). Collection must be "Event" and varexp must be
-# "" for these -- they are app-set only, via Event::SetVector<T>.
+# Branches to create on the output tree that don't exist in the input: (collection, name, ROOT
+# type, varexp). Empty varexp means the branch is app-set only, via Event::Set<T>/PhysicsObject::Set<T>.
 branchesToAdd = (
     ("Event", "dimuonMass", "Float_t", "-1.0"),
     ("Muon", "dEdx", "Float_t", ""),

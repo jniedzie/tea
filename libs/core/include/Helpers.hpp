@@ -166,39 +166,25 @@ struct IrregularHistogramParams2D {
   std::vector<float> binEdgesY;
 };
 
-// Sentinel collection name for an event-level branchesToAdd entry (scalar or free-standing
-// vector), as opposed to a real collection name (e.g. "Muon") for a per-object array branch.
 inline const std::string kEventLevelBranchCollection = "Event";
 
-// One entry from the config's "branchesToAdd" tuple-of-tuples. collection ==
-// kEventLevelBranchCollection means an event-level scalar (or free-standing vector); varexp is a
-// TTree::Draw-style expression evaluated against the events tree ("" means the branch is app-set
-// only, via Event::Set<T> / PhysicsObject::Set<T>).
 struct AddedBranchParams {
   std::string collection, name, type, varexp;
   bool IsEventLevel() const { return collection == kEventLevelBranchCollection; }
   std::string BranchName() const { return IsEventLevel() ? name : collection + "_" + name; }
 };
 
-// The nine ROOT scalar types Event::Set<T>/PhysicsObject::Set<T> and branchesToAdd support,
-// mapped to their leaflist type code ("F", "I", ...). Also doubles as the membership check for
-// a declared branchesToAdd type string.
 inline const std::map<std::string, std::string> kAddedBranchTypeCodes = {
     {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},
     {"UInt_t", "i"},  {"Bool_t", "O"},   {"ULong64_t", "l"},
     {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
 };
 
-// The four std::vector<T> element types Event::SetVector<T>/branchesToAdd support for a
-// free-standing, event-level vector branch (no collection linkage, no size cap) -- mirrors the
-// four std::vector element types EventReader already knows how to read from an input tree.
 inline const std::map<std::string, std::string> kAddedVectorBranchElementTypes = {
     {"vector<Float_t>", "Float_t"}, {"vector<Double_t>", "Double_t"},
     {"vector<Int_t>", "Int_t"},     {"vector<UInt_t>", "UInt_t"},
 };
 
-// Maps a C++ type to its ROOT type name string, e.g. RootTypeName<Float_t>() == "Float_t".
-// Only specialized for the nine types in kAddedBranchTypeCodes above.
 template <typename T>
 inline const char *RootTypeName();
 template <>

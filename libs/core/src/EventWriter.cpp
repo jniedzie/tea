@@ -11,10 +11,6 @@
 using namespace std;
 
 namespace {
-// The one collection AddCurrentHepMCevent is allowed to prune. Shared by its
-// own Particle_* branch-name matching and by FillAddedBranches' decision to
-// re-filter an added array branch, so the two can't drift apart the way two
-// independent "Particle" literals could.
 const string prunedHepMCCollection = "Particle";
 
 template <typename T>
@@ -60,9 +56,6 @@ size_t FillArrayAddedBranch(T *buffer, const string &branchName,
     }
     buffer[writeIndex++] = value;
   }
-  // Only the shrink remainder needs clearing -- entries already covered by the
-  // loop above were just written for real, so re-zeroing them first (as before)
-  // was pure duplicated work.
   for (size_t i = writeIndex; i < previousSize; i++)
     buffer[i] = T(0);
   return writeIndex;
@@ -100,10 +93,6 @@ int FilterBranch(T *vec, const std::vector<int> &keepIndices) {
   return writeIndex;
 }
 
-// Re-applies FilterBranch's compaction to an added array branch that was just
-// filled with every object in its collection, when AddCurrentHepMCevent has
-// pruned that same collection -- keeping the added branch index-aligned with
-// the native Particle_* branches it shares a size leaf with.
 template <typename T>
 size_t FilterAddedBranchIfPruned(T *buffer, size_t writeIndex,
                                  const string &collectionName,
@@ -129,8 +118,6 @@ EventWriter::EventWriter(const shared_ptr<EventReader> &eventReader_)
     branchesToRemove = {}; // Remove no branches by default
   }
 
-  // branchesToAdd itself was already parsed (and its varexps compiled/validated) by
-  // eventReader's AddedBranches; just mirror the specs into our own per-type buffers below.
   for (auto &spec : eventReader->addedBranches->GetSpecs()) {
     AddedBranch added;
     added.type = spec.type;
@@ -167,9 +154,6 @@ void EventWriter::SetupOutputTree() {
     outputTrees[name]->Reset();
     SetupBoolVectorBranches(name);
 
-    // Only the events tree(s) carry per-event/per-object custom values;
-    // Runs/LuminosityBlocks (and any other auxiliary tree) have no
-    // corresponding Event/PhysicsObject state to pull from.
     bool isEventsTree = find(eventReader->eventsTreeNames.begin(),
                              eventReader->eventsTreeNames.end(),
                              name) != eventReader->eventsTreeNames.end();
@@ -223,8 +207,6 @@ void EventWriter::SetupAddedBranches(string treeName) {
     }
 
     if (kAddedVectorBranchElementTypes.count(added.type) > 0) {
-      // collection/varexp validity for vector types was already fatal-checked in
-      // AddedBranches::Setup, so no need to re-check here.
       if (added.type == "vector<Float_t>")
         outputTree->Branch(name.c_str(), &addedStdVectorFloat[name]);
       else if (added.type == "vector<Double_t>")
@@ -419,10 +401,8 @@ void EventWriter::FillAddedBranches(string treeName) {
         exit(1);
       }
 
-      // The leaflist declares name[sizeBranch], and sizeBranch is cloned
-      // verbatim from the input tree -- unlike collection->size() it is NOT
-      // capped at maxCollectionElements, so ROOT would read past our fixed-size
-      // buffer at Fill() time if a real event ever exceeds the cap.
+      // sizeBranch is cloned verbatim from the input tree, unlike collection->size() it is not
+      // capped at maxCollectionElements, so ROOT would read past our fixed-size buffer at Fill().
       auto rawSize = event->GetAs<Int_t>(added.sizeBranch);
       if (rawSize > maxCollectionElements) {
         fatal() << "branchesToAdd: collection \"" << added.collection
@@ -561,9 +541,6 @@ void EventWriter::AddCurrentHepMCevent(string treeName,
 }
 
 void EventWriter::Save() {
-  // Branches with no varexp are app-set only; if the app never called Set<T> for one across the
-  // whole job, every entry silently holds the default value 0 -- worth a single end-of-job flag
-  // rather than a per-event warning (which would just be the same message N times over).
   for (auto &[name, added] : addedBranches) {
     if (added.hasVarexp || everSetByApp[name]) continue;
     warn() << "branchesToAdd: branch \"" << name
