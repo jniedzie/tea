@@ -19,6 +19,7 @@ class HistogramsHandler {
 
   void Fill(std::string name, double value);
   void Fill(std::string name, double valueX, double valueY);
+  void FillUnweighted(std::string name, double value);
 
   void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
   TH1D *GetHistogram1D(HistNames names) { return histograms1D[names]; }
