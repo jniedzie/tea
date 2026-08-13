@@ -166,6 +166,12 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   }
 }
 
+void HistogramsHandler::FillUnweighted(string name, double value) {
+  CheckHistogram(name, "");
+  histograms1D[make_pair(name, "")]->Fill(value);
+  RemoveFromUnfilled(name);
+}
+
 void HistogramsHandler::RemoveFromUnfilled(string name) {
   auto it = find(unfilledHistograms.begin(), unfilledHistograms.end(), name);
   if (it != unfilledHistograms.end()) {
