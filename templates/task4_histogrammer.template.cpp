@@ -28,19 +28,11 @@ void FillHistograms(const shared_ptr<Event> &event, shared_ptr<HistogramsHandler
 }
 
 int main(int argc, char **argv) {
-  // ArgsManager helps to handle input parameters
-  auto args = make_unique<ArgsManager>(argc, argv);
-
-  // Config manager is our proxy to the python config
-  ConfigManager::Initialize(args->GetString("config").value());
-  auto &config = ConfigManager::GetInstance();
-
-  if (args->GetString("input_path").has_value()) {
-    config.SetInputPath(args->GetString("input_path").value());
-  }
-  if (args->GetString("output_hists_path").has_value()) {
-    config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());
-  }
+  // Initialize ConfigManager with the path passed as an argument to the app
+  vector<string> requiredArgs = {"config"};
+  vector<string> optionalArgs = {"input_path", "output_hists_path"};
+  auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
+  ConfigManager::Initialize(args);
 
   // Here we initialize a few objects that will help us read events, keep track of cuts, and fill histograms
   auto eventReader = make_shared<EventReader>();

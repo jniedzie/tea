@@ -71,6 +71,7 @@ class ScaleFactorsManager {
     return instance;
   }
   std::map<std::string, std::vector<bool>> applyScaleFactors;
+  bool scaleFactorsRead = false;
 
   std::map<std::string, CorrectionRef> corrections;
   std::map<std::string, CompoundCorrectionRef> compoundCorrections;

@@ -30,6 +30,7 @@ class HistogramsHandler {
  private:
   std::map<HistNames, TH1D*> histograms1D;
   std::map<HistNames, TH2D*> histograms2D;
+  std::map<std::string, std::string> histogramDirectories;
   std::vector<std::string> unfilledHistograms;
 
   std::map<std::string, HistogramParams> histParams;
@@ -43,6 +44,7 @@ class HistogramsHandler {
 
   void RemoveFromUnfilled(std::string name);
   void CheckHistogram(std::string name, std::string directory);
+  void CheckHistogram2D(std::string name, std::string directory);
   void SetupHistograms();
   void SetupSFvariationHistograms();
 

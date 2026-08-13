@@ -22,21 +22,32 @@ HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandl
 HistogramsFiller::~HistogramsFiller() {}
 
 void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) {
+  if (!event || !histogramsHandler) return;
+
   for (auto& [title, params] : defaultHistVariables) {
     string collectionName = params.collection;
     string branchName = params.variable;
 
+    if (branchName.empty()) {
+      warn() << "Skipping default histogram '" << title << "': empty variable name" << endl;
+      continue;
+    }
+
     if (collectionName == "Event") {
       float eventVariable;
       if (branchName[0] == 'n') {
-        eventVariable = event->GetCollection(branchName.substr(1))->size();
+        auto collection = event->GetCollection(branchName.substr(1));
+        if (!collection) continue;
+        eventVariable = collection->size();
       } else {
         eventVariable = event->GetAs<float>(branchName);
       }
       histogramsHandler->Fill(title, eventVariable);
     } else {
       auto collection = event->GetCollection(collectionName);
+      if (!collection) continue;
       for (auto object : *collection) {
+        if (!object) continue;
         histogramsHandler->Fill(title, object->GetAs<float>(branchName));
       }
     }

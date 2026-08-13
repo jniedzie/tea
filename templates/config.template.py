@@ -80,3 +80,13 @@ branchesToRemove = (
     "Flag*",
     "SubJet",
 )
+
+# Branches to create on the output tree that don't exist in the input: (collection, name, ROOT
+# type, varexp). Empty varexp means the branch is app-set only, via Event::Set<T>/PhysicsObject::Set<T>.
+# Custom values live for one event only, so anything the app doesn't set again is written as zero.
+branchesToAdd = (
+    ("Event", "dimuonMass", "Float_t", "-1.0"),
+    ("Muon", "dEdx", "Float_t", ""),
+    ("Event", "looseMuonPt", "vector<Float_t>", ""),
+)
+# branchesToAdd = ()

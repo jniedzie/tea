@@ -81,6 +81,9 @@ EventReader::EventReader() {
 
   SetupTrees();
   SetupBranches();
+
+  addedBranches = make_unique<AddedBranches>();
+  if (!addedBranches->Empty()) addedBranches->Setup(eventsTreeNames, inputTrees);
 }
 
 EventReader::~EventReader() {}
@@ -371,18 +374,20 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   int percentage = ((iEvent + 1) * 100) / nEvents;
   if (percentage != lastPrinted) {
     lastPrinted = percentage;
-    cerr << "\r\033[1;92m[";
+    std::ostringstream progress;
+    progress << "\033[1;92m[";
     int width = 50;
     int pos = (percentage * width) / 100;
     for (int i = 0; i < width; ++i) {
       if (i < pos)
-        cerr << "=";
+        progress << "=";
       else if (i == pos)
-        cerr << ">";
+        progress << ">";
       else
-        cerr << " ";
+        progress << " ";
     }
-    cerr << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")" << flush;
+    progress << "] " << percentage << "% (Event " << iEvent + 1 << "/" << nEvents << ")";
+    Terminal::SetProgress(progress.str());
   }
 
   currentEvent->Reset();
@@ -451,8 +456,30 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
 
   currentEvent->AddExtraCollections();
 
+  if (!addedBranches->Empty()) addedBranches->Evaluate(currentEvent);
+
   if (iEvent == nEvents - 1) {
     cerr << "\033[0m\n" << endl;
   }
   return currentEvent;
+}
+
+vector<string> EventReader::GetHLTbranchNames() {
+  if (!hltBranches.empty()) return hltBranches;
+  for (const auto& [branchName, branchType] : branchNamesAndTypes) {
+    if (branchName.find("HLT_") == 0) {
+      hltBranches.push_back(branchName);
+    }
+  }
+  return hltBranches;
+}
+
+vector<string> EventReader::GetL1branchNames() {
+  if (!l1Branches.empty()) return l1Branches;
+  for (const auto& [branchName, branchType] : branchNamesAndTypes) {
+    if (branchName.find("L1_") == 0) {
+      l1Branches.push_back(branchName);
+    }
+  }
+  return l1Branches;
 }

@@ -45,6 +45,14 @@ ScaleFactorsManager::ScaleFactorsManager() {
 
   ReadScaleFactorFlags();
   ReadScaleFactors();
+  if (scaleFactorsRead && !applyScaleFactors.empty()) {
+    info() << "\n------------------------------------" << endl;
+    info() << "Applying scale factors:" << endl;
+    for (auto& [name, applyVector] : applyScaleFactors) {
+      info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
+    }
+    info() << "------------------------------------\n" << endl;
+  }
   if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
   ReadJetEnergyCorrections();
 }
@@ -58,7 +66,7 @@ bool ScaleFactorsManager::ShouldApplyVariation(const std::string& name) {
 }
 
 void ScaleFactorsManager::ExtractBounds(const json& node, map<string, pair<double, double>>& bounds) {
-  if (!node.contains("nodetype")) return;
+  if (node.find("nodetype") == node.end()) return;
 
   string type = node["nodetype"];
 
@@ -126,6 +134,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
   map<string, map<string, string>> scaleFactors;
   try {
     config.GetMap("scaleFactors", scaleFactors);
+    scaleFactorsRead = !scaleFactors.empty();
   } catch (const Exception& e) {
     warn() << "Couldn't read scaleFactors from config (" << e.what() << ") -- no correctionlib scale factors will be loaded (weights default to 1.0)." << endl;
     return;
@@ -261,12 +270,6 @@ void ScaleFactorsManager::ReadScaleFactorFlags() {
     warn() << "Couldn't read applyScaleFactors from config." << endl;
   }
 
-  info() << "\n------------------------------------" << endl;
-  info() << "Applying scale factors:" << endl;
-  for (auto& [name, applyVector] : applyScaleFactors) {
-    info() << "  " << name << ": " << applyVector[0] << ", " << applyVector[1] << endl;
-  }
-  info() << "------------------------------------\n" << endl;
 }
 
 void ScaleFactorsManager::ReadPileupSFs() {
@@ -555,7 +558,7 @@ vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_s
 
 map<string, pair<double, double>> ScaleFactorsManager::GetInputBounds(map<string, string> extraArgs) {
   map<string, pair<double, double>> inputBounds = {};
-  if (!extraArgs.contains("inputBounds")) return inputBounds;
+  if (extraArgs.find("inputBounds") == extraArgs.end()) return inputBounds;
   string bounds_str = extraArgs["inputBounds"];
   istringstream ss(bounds_str);
   string item;

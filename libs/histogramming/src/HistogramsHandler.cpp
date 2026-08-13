@@ -4,6 +4,8 @@
 
 #include "HistogramsHandler.hpp"
 
+#include <filesystem>
+
 #include "ConfigManager.hpp"
 #include "ExtensionsHelpers.hpp"
 
@@ -15,13 +17,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(histParams, "defaultHistParams");
   } catch (const Exception& e) {
-    info() << "No defaultHistParams found in config file" << endl;
   }
 
   try {
     config.GetHistogramsParams(histParams, "histParams");
   } catch (const Exception& e) {
-    info() << "No histParams found in config file" << endl;
   }
 
   try {
@@ -37,13 +37,11 @@ HistogramsHandler::HistogramsHandler() {
   try {
     config.GetHistogramsParams(irregularHistParams2D, "irregularHistParams2D");
   } catch (const Exception& e) {
-    info() << "No irregularHistParams2D found in config file" << endl;
   }
 
   try {
     config.GetValue("histogramsOutputFilePath", outputPath);
   } catch (const Exception& e) {
-    info() << "No histogramsOutputFilePath found in config file" << endl;
   }
   try {
     config.GetVector("SFvariationVariables", SFvariationVariables);
@@ -59,19 +57,23 @@ HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
   for (auto& [title, params] : histParams) {
+    histogramDirectories[title] = params.directory;
     histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
   }
 
   for (auto& [title, params] : irregularHistParams) {
+    histogramDirectories[title] = params.directory;
     histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
   }
 
   for (auto& [title, params] : histParams2D) {
+    histogramDirectories[title] = params.directory;
     histograms2D[make_pair(title, "")] =
         new TH2D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY, params.maxY);
   }
 
   for (auto& [title, params] : irregularHistParams2D) {
+    histogramDirectories[title] = params.directory;
     histograms2D[make_pair(title, "")] = new TH2D(title.c_str(), title.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0],
                                                   params.binEdgesY.size() - 1, &params.binEdgesY[0]);
   }
@@ -151,7 +153,7 @@ void HistogramsHandler::Fill(string name, double value) {
 
 void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   double weight = eventWeights["default"];
-  CheckHistogram(name, "");
+  CheckHistogram2D(name, "");
   histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
 
   RemoveFromUnfilled(name);
@@ -159,7 +161,7 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
   for (auto& [sfName, weight] : eventWeights) {
     if (sfName == "default") continue;
-    CheckHistogram(name, sfName);
+    CheckHistogram2D(name, sfName);
     histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
   }
 }
@@ -172,8 +174,15 @@ void HistogramsHandler::RemoveFromUnfilled(string name) {
 }
 
 void HistogramsHandler::CheckHistogram(string name, string directory) {
-  if (!histograms1D.count(make_pair(name, directory)) && !histograms2D.count(make_pair(name, directory))) {
-    fatal() << "Couldn't find key: " << name << ", " << directory << " in histograms map" << endl;
+  if (!histograms1D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 1D histograms map" << endl;
+    exit(1);
+  }
+}
+
+void HistogramsHandler::CheckHistogram2D(string name, string directory) {
+  if (!histograms2D.count(make_pair(name, directory))) {
+    fatal() << "Couldn't find key: " << name << ", " << directory << " in 2D histograms map" << endl;
     exit(1);
   }
 }
@@ -181,14 +190,25 @@ void HistogramsHandler::CheckHistogram(string name, string directory) {
 template <typename THist>
 void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outputFile) {
   string name = names.first;
-  string outputDir = names.second;
-  if (!outputFile->Get(outputDir.c_str())) outputFile->mkdir(outputDir.c_str());
-
-  outputFile->cd(outputDir.c_str());
   if (!hist) {
     error() << "Histogram " << name << " is null" << endl;
     return;
   }
+
+  auto directoryIt = histogramDirectories.find(name);
+  string outputDir = directoryIt == histogramDirectories.end() ? "" : directoryIt->second;
+  if (outputDir.empty()) {
+    outputFile->cd();
+  } else {
+    TDirectory* directory = outputFile->GetDirectory(outputDir.c_str());
+    if (!directory) directory = outputFile->mkdir(outputDir.c_str());
+    if (!directory) {
+      error() << "Failed to create histogram output directory: " << outputDir << endl;
+      return;
+    }
+    directory->cd();
+  }
+
   if constexpr (std::is_same<THist, TH2D>::value) {
     if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
       warn() << "You're creating a very large 2D histogram: " << name << " with ";
@@ -201,13 +221,18 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist* hist, TFile* outpu
 }
 
 void HistogramsHandler::SaveHistograms() {
-  string path = outputPath.substr(0, outputPath.find_last_of("/"));
-  string filename = outputPath.substr(outputPath.find_last_of("/"));
-  if (path == "") path = "./";
-  string command = "mkdir -p " + path;
-  const int mkdir_status = system(command.c_str());
-  if (mkdir_status != 0) {
-    warn() << "Failed to create histogram output directory with command: " << command << endl;
+  const auto separator = outputPath.find_last_of("/");
+  string path = separator == string::npos ? "./" : outputPath.substr(0, separator);
+  string filename = separator == string::npos ? outputPath : outputPath.substr(separator + 1);
+  if (path.empty()) path = "./";
+  if (filename.empty()) {
+    error() << "Cannot save histograms: output path has no filename: " << outputPath << endl;
+    return;
+  }
+  std::error_code ec;
+  std::filesystem::create_directories(path, ec);
+  if (ec) {
+    warn() << "Failed to create histogram output directory: " << path << " (" << ec.message() << ")" << endl;
   }
 
   auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
