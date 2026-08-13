@@ -25,6 +25,10 @@ Event::~Event() {}
 
 void Event::Reset() {
   extraCollections.clear();
+  // HasCustomValue() must mean "set for the current event" -- clearing just the type
+  // marker (not the value maps) makes a stale Set()/SetVector() from a previous event
+  // invisible without needing to touch every per-type customValues* map.
+  customValuesTypes.clear();
 }
 
 template <typename First, typename... Rest>
