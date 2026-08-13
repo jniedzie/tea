@@ -3,6 +3,7 @@
 #include "AddedBranches.hpp"
 
 #include <algorithm>
+#include <limits>
 
 #include "ConfigManager.hpp"
 #include "TTreeFormula.h"
@@ -12,29 +13,35 @@ using namespace std;
 namespace {
 int GetExpectedMultiplicity(const AddedBranchParams &spec) { return spec.collection.empty() ? 0 : 1; }
 
+// Range bounds come from std::numeric_limits<T> of the actual ROOT typedef rather than
+// hard-coded literals, so this stays correct on platforms where e.g. Int_t isn't 32 bits.
+template <typename T>
+void CheckRange(double value, const string &type, const string &branchName) {
+  auto lo = static_cast<double>(numeric_limits<T>::lowest());
+  auto hi = static_cast<double>(numeric_limits<T>::max());
+  if (value < lo || value > hi) {
+    fatal() << "branchesToAdd: varexp value " << value << " for branch \"" << branchName << "\" overflows declared type " << type
+            << " (valid range [" << lo << ", " << hi << "])" << endl;
+    exit(1);
+  }
+}
+
 // TTreeFormula evaluates in double; integral targets go through EvalInstance64 instead (exact
 // for a bare branch reference), but a declared narrower type (Bool_t, UChar_t, ...) can still
 // silently truncate a wider value, so range-check before casting rather than truncate.
 void ValidateIntegralRange(double value, const string &type, const string &branchName) {
-  auto checkRange = [&](double lo, double hi) {
-    if (value < lo || value > hi) {
-      fatal() << "branchesToAdd: varexp value " << value << " for branch \"" << branchName << "\" overflows declared type "
-              << type << " (valid range [" << lo << ", " << hi << "])" << endl;
-      exit(1);
-    }
-  };
   if (type == "Bool_t")
-    checkRange(0, 1);
+    CheckRange<Bool_t>(value, type, branchName);
   else if (type == "UChar_t")
-    checkRange(0, 255);
+    CheckRange<UChar_t>(value, type, branchName);
   else if (type == "Short_t")
-    checkRange(-32768, 32767);
+    CheckRange<Short_t>(value, type, branchName);
   else if (type == "UShort_t")
-    checkRange(0, 65535);
+    CheckRange<UShort_t>(value, type, branchName);
   else if (type == "UInt_t")
-    checkRange(0, 4294967295.0);
+    CheckRange<UInt_t>(value, type, branchName);
   else if (type == "Int_t")
-    checkRange(-2147483648.0, 2147483647.0);
+    CheckRange<Int_t>(value, type, branchName);
   // ULong64_t already comes out of EvalInstance64 at full integer width; nothing to narrow.
 }
 
