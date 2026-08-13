@@ -48,10 +48,6 @@ int main(int argc, char **argv) {
       auto p2 = muons->at(1)->GetFourVector();
       event->Set<float>("dimuonMass", static_cast<float>((p1 + p2).M()));
     }
-    if (!muons->empty()) {
-      float pt = muons->at(0)->GetAs<float>("pt");
-      muons->at(0)->Set<float>("ptSquared", pt * pt + 1.f);
-    }
 
     // Demonstrate a free-standing vector branch: not tied to any collection's size branch,
     // so it's set unconditionally (even when empty) rather than skipped like the scalars above.
