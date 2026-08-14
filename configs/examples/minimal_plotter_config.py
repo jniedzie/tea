@@ -8,6 +8,7 @@ from CmsLabelsManager import CmsLabel
 year = "2018"
 show_cms_labels = True
 label_outside_axes = True
+# plot_margins = {"left": 0.16, "right": 0.17, "top": 0.09, "bottom": 0.2}
 
 # Allowed labels: paper, paper_sim, paper_supplementary, paper_sim_supplementary, pas, pas_sim, pas_supplementary,
 # pas_sim_supplementary, thesis, thesis_sim, private_data_sim, private_data, private_sim.

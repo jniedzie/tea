@@ -14,6 +14,20 @@ class Styler:
     self.leftMargin = 0.16
     self.rightMargin = 0.17
 
+    self.plotMargins = getattr(self.config, "plot_margins", None)
+    if self.plotMargins is not None:
+      if not isinstance(self.plotMargins, dict):
+        raise TypeError("plot_margins must be a dictionary")
+      unknown_margins = set(self.plotMargins) - {"left", "right", "top", "bottom"}
+      if unknown_margins:
+        raise ValueError(f"Unknown plot margins: {', '.join(sorted(unknown_margins))}")
+      if any(not 0 <= value < 1 for value in self.plotMargins.values()):
+        raise ValueError("plot_margins values must be between 0 and 1")
+      self.leftMargin = self.plotMargins.get("left", self.leftMargin)
+      self.rightMargin = self.plotMargins.get("right", self.rightMargin)
+      if self.leftMargin + self.rightMargin >= 1:
+        raise ValueError("left and right plot margins must sum to less than 1")
+
     self.labelFontSize = 26
     
     self.__setStyle()
@@ -22,20 +36,40 @@ class Styler:
     pad.SetPad(0, 0, 1, 0.3)
     self.__setupPadDefaults(pad)
     pad.SetTopMargin(0)
-    pad.SetBottomMargin(self.bottomMargin + 0.2)
+    if self.plotMargins is not None:
+      canvas_bottom_margin = self.plotMargins.get("bottom", 0.18)
+      if canvas_bottom_margin >= 0.3:
+        raise ValueError("bottom plot margin must be less than 0.3 for ratio plots")
+      bottom_margin = canvas_bottom_margin / 0.3
+    else:
+      bottom_margin = self.bottomMargin + 0.2
+    pad.SetBottomMargin(bottom_margin)
     pad.SetLogy(False)
 
   def setup_main_pad_with_ratio(self, pad):
     pad.SetPad(0, 0.3, 1, 1)
     self.__setupPadDefaults(pad)
     pad.SetBottomMargin(0.0)
-    pad.SetTopMargin(self.topMargin + 0.03)
+    if self.plotMargins is not None:
+      canvas_top_margin = self.plotMargins.get("top", 0.063)
+      if canvas_top_margin >= 0.7:
+        raise ValueError("top plot margin must be less than 0.7 for ratio plots")
+      top_margin = canvas_top_margin / 0.7
+    else:
+      top_margin = self.topMargin + 0.03
+    pad.SetTopMargin(top_margin)
 
   def setup_main_pad_without_ratio(self, pad):
     # pad.SetPad(0, 0.0, 1, 1)
     self.__setupPadDefaults(pad)
-    pad.SetBottomMargin(0.2)
-    pad.SetTopMargin(self.topMargin + 0.03)
+    bottom_margin = (self.plotMargins.get("bottom", 0.2)
+                     if self.plotMargins is not None else 0.2)
+    top_margin = (self.plotMargins.get("top", 0.09)
+                  if self.plotMargins is not None else self.topMargin + 0.03)
+    if top_margin + bottom_margin >= 1:
+      raise ValueError("top and bottom plot margins must sum to less than 1")
+    pad.SetBottomMargin(bottom_margin)
+    pad.SetTopMargin(top_margin)
 
   def __setupPadDefaults(self, pad):
     pad.SetLeftMargin(self.leftMargin)

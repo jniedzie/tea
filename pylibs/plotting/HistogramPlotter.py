@@ -327,30 +327,30 @@ class HistogramPlotter:
       self.legends[hist_ratio.getName()][key].AddEntry(
           hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
 
-  def __drawLineAtOne(self, canvas, hist):
-    if not self.show_ratios:
+  def __drawLineAtOne(self, canvas, ratio_stack):
+    if not self.show_ratios or ratio_stack is None:
       return
 
-    ratio_stack = self.__getRatioStack(hist)
-    if ratio_stack is None or not hasattr(ratio_stack, "GetHistogram"):
-      return
     ratio_histogram = ratio_stack.GetHistogram()
     if ratio_histogram is None:
       return
-    x_min = hist.x_min if hist.x_min is not None else ratio_histogram.GetXaxis().GetXmin()
-    x_max = hist.x_max if hist.x_max is not None else ratio_histogram.GetXaxis().GetXmax()
+    x_axis = ratio_histogram.GetXaxis()
+    x_min = x_axis.GetXmin()
+    x_max = x_axis.GetXmax()
 
     global line
-    line = ROOT.TLine(x_min, 1, x_max, 1)
+    line = ROOT.TGraph(
+        2, array('d', [x_min, x_max]), array('d', [1.0, 1.0]))
     line.SetLineColor(ROOT.kBlack)
     line.SetLineStyle(ROOT.kDashed)
+    line.SetBit(ROOT.TGraph.kClipFrame)
 
     canvas.cd(2)
-    line.Draw()
+    line.Draw("L same")
 
   def __drawRatioPlot(self, canvas, hist):
     if not self.show_ratios:
-      return
+      return None
 
     global ratio_hist
     ratio_hist = self.__getRatioStack(hist)
@@ -364,6 +364,7 @@ class HistogramPlotter:
                            else None)
       self.styler.setupFigure(
           ratio_hist, hist, is_ratio=True, source_histograms=source_histograms)
+    return ratio_hist
 
   def __drawUncertainties(self, canvas, hist):
     global background_uncertainty_hist
@@ -478,8 +479,8 @@ class HistogramPlotter:
       ), self.config.canvas_size[0], self.config.canvas_size[1])
       self.__setup_canvas(canvas, hist)
 
-      self.__drawRatioPlot(canvas, hist)
-      self.__drawLineAtOne(canvas, hist)
+      ratio_stack = self.__drawRatioPlot(canvas, hist)
+      self.__drawLineAtOne(canvas, ratio_stack)
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawLegends(canvas, hist)
