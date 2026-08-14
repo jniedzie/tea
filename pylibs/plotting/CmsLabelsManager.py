@@ -171,7 +171,7 @@ class CmsLabelsManager:
         latex.SetTextAlign(11 if self.label_outside_axes else 13)
         latex.SetTextSize(self.labelTextSize)
         extra_pos_y = posY_
-        if not self.label_outside_axes:
+        if not self.label_outside_axes and self.cmsText is not None:
             extra_pos_y -= (self.labelTextSize + 6.0)/self.height
         latex.DrawLatex(posX_, extra_pos_y, self.extraText)
 

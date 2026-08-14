@@ -47,4 +47,4 @@ plotting_options = {
 
 canvas_size = (800, 600)
 show_ratio_plots = False
-ratio_limits = (0.7, 1.3)
+# ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.

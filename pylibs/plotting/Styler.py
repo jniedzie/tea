@@ -120,6 +120,13 @@ class Styler:
     gStyle.SetPadTickX(1)  # To get tick marks on the opposite side of the frame
     gStyle.SetPadTickY(1)
 
+    # TGaxis, rather than the histogram's TAxis, controls the position of the
+    # automatically drawn scientific-notation exponent.
+    label_outside_axes = getattr(self.config, "label_outside_axes", False)
+    exponent_x_offset = -0.08 if label_outside_axes else 0.0
+    exponent_y_offset = 0.01 if label_outside_axes else 0.0
+    ROOT.TGaxis.SetExponentOffset(exponent_x_offset, exponent_y_offset, "y")
+
     gStyle.SetOptLogx(0)
     gStyle.SetOptLogy(0)
     gStyle.SetOptLogz(0)
@@ -131,8 +138,12 @@ class Styler:
       return
 
     if is_ratio:
-      plot.SetMinimum(self.config.ratio_limits[0])
-      plot.SetMaximum(self.config.ratio_limits[1])
+      ratio_limits = getattr(self.config, "ratio_limits", None)
+      if ratio_limits is None:
+        self.__setAutomaticLimits(plot, hist, source_histograms)
+      else:
+        plot.SetMinimum(ratio_limits[0])
+        plot.SetMaximum(ratio_limits[1])
     else:
       self.__setAutomaticLimits(plot, hist, source_histograms)
       if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):

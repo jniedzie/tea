@@ -9,11 +9,12 @@ from Sample import SampleType
 from Styler import Styler
 from HistogramNormalizer import HistogramNormalizer
 from CmsLabelsManager import CmsLabelsManager
-from Logger import info, warn, error, fatal
+from Logger import info, warn, error, fatal, install_root_warning_collector
 
 
 class HistogramPlotter:
   def __init__(self, config):
+    install_root_warning_collector()
     gStyle.SetOptStat(0)
 
     self.config = config
@@ -60,6 +61,15 @@ class HistogramPlotter:
 
     if not os.path.exists(self.config.output_path):
       os.makedirs(self.config.output_path)
+    info(f"Output directory: {os.path.abspath(self.config.output_path)}")
+
+  def __save_canvas(self, canvas, path):
+    original_error_level = ROOT.gErrorIgnoreLevel
+    ROOT.gErrorIgnoreLevel = ROOT.kError
+    try:
+      canvas.SaveAs(path)
+    finally:
+      ROOT.gErrorIgnoreLevel = original_error_level
 
   def __histosampleExists(self, hist, sample):
     for h, s in self.histosamples:
@@ -348,7 +358,12 @@ class HistogramPlotter:
 
       canvas.cd(2)
       ratio_hist.Draw("p e0")
-      self.styler.setupFigure(ratio_hist, hist, is_ratio=True)
+      ratio_histograms = ratio_hist.GetStack()
+      source_histograms = ([ratio_histograms.Last()]
+                           if ratio_histograms and ratio_histograms.GetSize() > 0
+                           else None)
+      self.styler.setupFigure(
+          ratio_hist, hist, is_ratio=True, source_histograms=source_histograms)
 
   def __drawUncertainties(self, canvas, hist):
     global background_uncertainty_hist
@@ -480,15 +495,9 @@ class HistogramPlotter:
       canvas.RedrawAxis()
       canvas.Update()
 
-      originalErrorLevel = ROOT.gErrorIgnoreLevel
-      ROOT.gErrorIgnoreLevel = ROOT.kError
-
       for output_format in self.output_formats:
         path = self.config.output_path+"/"+hist.getName()+"."+output_format
-        info(f"Saving file: {path}")
-        canvas.SaveAs(path)
-
-      ROOT.gErrorIgnoreLevel = originalErrorLevel
+        self.__save_canvas(canvas, path)
 
   def drawHists2D(self):
     if not hasattr(self.config, "histograms2D"):
@@ -512,7 +521,7 @@ class HistogramPlotter:
 
       canvas.SetLogz(hist.log_z)
       canvas.Update()
-      canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
+      self.__save_canvas(canvas, self.config.output_path+"/"+title+".pdf")
 
   def drawRatioStacks(self):
     if not hasattr(self.config, "histogramsRatio"):
@@ -530,12 +539,8 @@ class HistogramPlotter:
 
       canvas.Update()
 
-      originalErrorLevel = ROOT.gErrorIgnoreLevel
-      ROOT.gErrorIgnoreLevel = ROOT.kError
       path = self.config.output_path+"/"+hist_nom.getName()+".pdf"
-      info(f"Saving file: {path}")
-      canvas.SaveAs(path)
-      ROOT.gErrorIgnoreLevel = originalErrorLevel
+      self.__save_canvas(canvas, path)
 
   def __get_hists_sum(self, hist, doRatio=False):
     base_sample_type = SampleType.data if doRatio else SampleType.background

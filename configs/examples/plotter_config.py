@@ -16,6 +16,9 @@ luminosity = 63670. # pb^-1 (2018)
 # plot CMS labels and lumi
 show_cms_labels = True
 cms_label = CmsLabel.paper_sim_supplementary
+label_outside_axes = True
+
+ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.
 
 samples = (
   Sample(
@@ -123,4 +126,4 @@ output_formats = ["pdf", ".png"]
 
 canvas_size = (800, 600)
 show_ratio_plots = True
-ratio_limits = (0.7, 1.3)
+# ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.
