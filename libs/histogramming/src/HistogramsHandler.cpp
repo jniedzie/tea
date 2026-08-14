@@ -255,3 +255,14 @@ void HistogramsHandler::SaveHistograms() {
 void HistogramsHandler::Print() {
   for (auto &name : unfilledHistograms) { warn() << "Histogram defined but not filled: " << name << endl; }
 }
+
+void HistogramsHandler::SetHistogramLabels(string name, map<int, string> labels) {
+  auto hist1DIt = histograms1D.find(make_pair(name, ""));
+  if (hist1DIt == histograms1D.end()) {
+    error() << "Histogram " << name << " not found for SetHistogramLabels." << endl;
+    return;
+  }
+  for (auto& [bin, label] : labels) {
+    hist1DIt->second->GetXaxis()->SetBinLabel(bin + 1, label.c_str());
+  }
+}
