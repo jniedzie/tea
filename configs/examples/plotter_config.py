@@ -17,16 +17,9 @@ luminosity = 63670. # pb^-1 (2018)
 show_cms_labels = True
 cms_label = CmsLabel.paper_sim_supplementary
 label_outside_axes = False
-# plot_margins = {"left": 0.16, "right": 0.17, "top": 0.09, "bottom": 0.2}
 
+# plot_margins = {"left": 0.1, "right": 0.05, "top": 0.07, "bottom": 0.15}  # Optional override; margins are automatic by default.
 # ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.
-
-# plot_margins = {
-#   "left": 0.15,
-#   "right": 0.08,
-#   "top": 0.10,
-#   "bottom": 0.12,
-# }
 
 samples = (
   Sample(
