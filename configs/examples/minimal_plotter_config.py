@@ -3,6 +3,7 @@ from Sample import Sample, SampleType
 from Legend import Legend
 from Histogram import Histogram
 from HistogramNormalizer import NormalizationType
+from CmsLabelsManager import CmsLabel
 
 samples = (
   Sample(
@@ -21,8 +22,8 @@ output_path = "../plots"
 
 histograms = (
 #            name            title     logx   logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
-  Histogram("Muon_pt" , "Muon p_{T}",  False, True,   NormalizationType.to_lumi, 5,   0  , 150,  1,   1e3 , "p_{T} [GeV]", "# events (2018)"),
-  Histogram("Muon_eta", "Muon #eta",   False, False,  NormalizationType.to_lumi, 5,  -2.4, 2.4,  0,   70  , "#eta"       , "# events (2018)"),
+  Histogram("Muon_pt" , "Muon p_{T}",  False, True,   NormalizationType.to_lumi, 5,   None  , None,  None,   None , "p_{T} [GeV]", "# events (2018)"),
+  Histogram("Muon_eta", "Muon #eta",   False, False,  NormalizationType.to_lumi, 5,  None, None,  None,   None  , "#eta"       , "# events (2018)"),
 )
 luminosity = 63670.  # pb^-1 (2018)
 
@@ -38,4 +39,4 @@ plotting_options = {
 
 canvas_size = (800, 600)
 show_ratio_plots = False
-ratio_limits = (0.7, 1.3)
+# ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.

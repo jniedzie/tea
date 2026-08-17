@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from copy import deepcopy
 from array import array
+from typing import Optional
 import ROOT
 
 from Sample import SampleType
@@ -16,10 +17,10 @@ class Histogram:
   log_y: bool = False
   norm_type: int = NormalizationType.to_lumi
   rebin: int = 1
-  x_min: float = 0.0
-  x_max: float = 0.0
-  y_min: float = 0.0
-  y_max: float = 0.0
+  x_min: Optional[float] = None
+  x_max: Optional[float] = None
+  y_min: Optional[float] = None
+  y_max: Optional[float] = None
   x_label: str = ""
   y_label: str = ""
   suffix: str = ""
@@ -63,11 +64,13 @@ class Histogram:
     if not self.isGood():
       return
 
-    if self.x_max > 0 or self.x_min > 0:
+    if self.x_min is not None or self.x_max is not None:
       original_bins = [self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2)]
-      new_bin_edges = [x for x in original_bins if self.x_min <= x <= self.x_max]
-      if self.x_max not in new_bin_edges:
-        new_bin_edges.append(self.x_max)
+      x_min = self.x_min if self.x_min is not None else original_bins[0]
+      x_max = self.x_max if self.x_max is not None else original_bins[-1]
+      new_bin_edges = [x for x in original_bins if x_min <= x <= x_max]
+      if x_max not in new_bin_edges:
+        new_bin_edges.append(x_max)
 
       new_n_bins = len(new_bin_edges) - 1
       new_histogram = ROOT.TH1F(f"{self.hist.GetName()}_{self.rand.Integer(1000000)}",
@@ -128,12 +131,12 @@ class Histogram2D:
   norm_type: int = NormalizationType.to_lumi
   x_rebin: int = 1
   y_rebin: int = 1
-  x_min: float = 0.0
-  x_max: float = 0.0
-  y_min: float = 0.0
-  y_max: float = 0.0
-  z_min: float = 0.0
-  z_max: float = 0.0
+  x_min: Optional[float] = None
+  x_max: Optional[float] = None
+  y_min: Optional[float] = None
+  y_max: Optional[float] = None
+  z_min: Optional[float] = None
+  z_max: Optional[float] = None
   x_label: str = ""
   y_label: str = ""
   z_label: str = ""

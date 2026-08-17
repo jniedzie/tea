@@ -56,9 +56,11 @@ histParams = (
 # ]
 
 # You can uncomment this if the name of a branch containing the size of a collection has some non-standard name:
-# specialBranchSizes = {
-#     "Particle": "Event_numberP",
-# }
+specialBranchSizes = {
+    "Particle": "Event_numberP",
+    "Proton_multiRP": "nProton_multiRP",
+    "Proton_singleRP": "nProton_singleRP",
+}
 
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"
