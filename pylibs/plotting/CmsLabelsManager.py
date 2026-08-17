@@ -193,8 +193,9 @@ class CmsLabelsManager:
         top_tick_length = ROOT.gStyle.GetTickLength("X") * frame_height
         left_tick_length = ROOT.gStyle.GetTickLength("Y") * frame_width
         tick_gap = 6.0
-        default_x = self.left + (left_tick_length + tick_gap) / self.width
-        default_y = 1 - self.top - (top_tick_length + tick_gap) / self.height
+        axis_inset = max(top_tick_length, left_tick_length) + tick_gap
+        default_x = self.left + axis_inset / self.width
+        default_y = 1 - self.top - axis_inset / self.height
         label_x = (self.left + self.relPosX * (1-self.left-self.right)
                    if self.customLabelX else default_x)
         label_y = (1-self.top - self.relPosY * (1-self.top-self.bottom)
