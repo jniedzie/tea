@@ -798,22 +798,27 @@ def collect_jobs(
   provenance_tag,
   skip_no_keys,
   input_file_pattern="*.root",
+  explicit_input_files=None,
 ):
   jobs = []
   info(f"[{merge_kind}] base dir: {base_dir}")
 
   for sample in samples:
     input_dir = build_sample_dir(base_dir, sample)
-    input_pattern = os.path.join(input_dir, input_file_pattern)
     output_dir = f"{input_dir}_merged"
 
     info(f"[{merge_kind}] sample: {sample}")
     info(f"[{merge_kind}] deduced input dir: {input_dir}")
-    info(f"[{merge_kind}] deduced input pattern: {input_pattern}")
     info(f"[{merge_kind}] deduced output dir: {output_dir}")
 
-    input_files = sorted(glob.glob(input_pattern))
-    info(f"[{merge_kind}] found {len(input_files)} files for sample {sample}")
+    if explicit_input_files is not None:
+      input_files = list(explicit_input_files)
+      info(f"[{merge_kind}] using {len(input_files)} explicitly listed input files")
+    else:
+      input_pattern = os.path.join(input_dir, input_file_pattern)
+      info(f"[{merge_kind}] deduced input pattern: {input_pattern}")
+      input_files = sorted(glob.glob(input_pattern))
+      info(f"[{merge_kind}] found {len(input_files)} files for sample {sample}")
 
     if not input_files:
       continue
@@ -1020,9 +1025,27 @@ def main():
   input_file_pattern = getattr(files_config, "input_file_pattern", "*.root")
   if os.path.basename(input_file_pattern) != input_file_pattern:
     raise ValueError("input_file_pattern must be a basename glob, not a path")
+
+  explicit_input_files = getattr(files_config, "input_files", None)
+  if explicit_input_files is not None:
+    if hasattr(files_config, "samples") and list(files_config.samples) != [""]:
+      raise ValueError("input_files cannot be combined with an explicit samples list")
+    explicit_input_files = list(explicit_input_files)
+    if not explicit_input_files:
+      raise ValueError("input_files must be a non-empty list of file paths")
+    missing_files = [path for path in explicit_input_files if not os.path.isfile(path)]
+    if missing_files:
+      raise ValueError(
+        f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}"
+      )
+
   merge_targets = get_merge_targets(files_config)
   if not merge_targets:
     raise ValueError("files_config must define output_hists_dir and/or output_trees_dir")
+  if explicit_input_files is not None and len(merge_targets) != 1:
+    raise ValueError(
+      "input_files can only be combined with exactly one of output_hists_dir/output_trees_dir"
+    )
 
   jobs_by_kind = []
   for merge_kind, base_dir in merge_targets:
@@ -1034,6 +1057,7 @@ def main():
       provenance_tag,
       args.skip_no_keys,
       input_file_pattern,
+      explicit_input_files,
     )
     if jobs:
       jobs_by_kind.append((merge_kind, base_dir, jobs))
