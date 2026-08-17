@@ -19,14 +19,14 @@ cms_label = CmsLabel.paper_sim_supplementary
 label_outside_axes = True
 # plot_margins = {"left": 0.16, "right": 0.17, "top": 0.09, "bottom": 0.2}
 
-ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.
+# ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.
 
-plot_margins = {
-  "left": 0.12,
-  "right": 0.08,
-  "top": 0.10,
-  "bottom": 0.12,
-}
+# plot_margins = {
+#   "left": 0.15,
+#   "right": 0.08,
+#   "top": 0.10,
+#   "bottom": 0.12,
+# }
 
 samples = (
   Sample(
@@ -108,10 +108,10 @@ histograms2D = (
 
 legend_width = 0.15
 legend_min_x = 0.40
-legend_max_x = 0.80
+legend_max_x = 0.75
 
 legend_height = 0.05
-legend_max_y = 0.85
+legend_max_y = 0.80
 
 n_signal = len([s for s in samples if s.type == SampleType.signal and s.custom_legend is None])
 n_data = len([s for s in samples if s.type == SampleType.data and s.custom_legend is None])

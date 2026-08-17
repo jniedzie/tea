@@ -432,14 +432,7 @@ class HistogramPlotter:
     # Apply automatic limits only after every sample has been drawn.  A
     # THStack's axis is established by its first draw, while subsequent
     # stacks (signals/data) can contain larger contributions.
-    plotted_histograms = []
-    for sample_type in SampleType:
-      stack = self.stacks[sample_type][hist.getName()]
-      if stack.GetNhists() == 0:
-        continue
-      stack_histograms = stack.GetStack()
-      if stack_histograms and stack_histograms.GetSize() > 0:
-        plotted_histograms.append(stack_histograms.Last())
+    plotted_histograms = self.__getPlottedHistograms(hist)
 
     first_stack = next((self.stacks[sample_type][hist.getName()]
                         for sample_type in SampleType
@@ -473,7 +466,41 @@ class HistogramPlotter:
     canvas.GetPad(1).SetLogx(hist.log_x)
     canvas.GetPad(1).SetLogy(hist.log_y)
 
+  def __getPlottedHistograms(self, hist):
+    plotted_histograms = []
+    for sample_type in SampleType:
+      stack = self.stacks[sample_type][hist.getName()]
+      if stack.GetNhists() == 0:
+        continue
+      stack_histograms = stack.GetStack()
+      if stack_histograms and stack_histograms.GetSize() > 0:
+        plotted_histograms.append(stack_histograms.Last())
+    return plotted_histograms
+
+  def __configureAutomaticMargins(self):
+    if self.styler.plotMargins is not None:
+      return
+
+    y_ranges = []
+    for hist in self.config.histograms:
+      sources = self.__getPlottedHistograms(hist)
+      if sources:
+        y_ranges.append(
+            self.styler.getYAxisRangeForLayout(hist, sources))
+
+      if not self.show_ratios:
+        continue
+      ratio_stack = self.__getRatioStack(hist)
+      if ratio_stack is None or ratio_stack.GetNhists() == 0:
+        continue
+      ratio_sources = [item for item in ratio_stack.GetHists()]
+      y_ranges.append(self.styler.getYAxisRangeForLayout(
+          hist, ratio_sources, is_ratio=True))
+
+    self.styler.configureAutomaticMargins(y_ranges, self.config.canvas_size)
+
   def drawStacks(self):
+    self.__configureAutomaticMargins()
     for hist in self.config.histograms:
       canvas = TCanvas(hist.getName(), hist.getName(
       ), self.config.canvas_size[0], self.config.canvas_size[1])
@@ -486,14 +513,17 @@ class HistogramPlotter:
       self.__drawLegends(canvas, hist)
       self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
-      # make sure plot border is on top of everything else
-      canvas.GetPad(1).GetFrame().SetLineWidth(2)
-      canvas.GetPad(1).GetFrame().SetBorderSize(2)
-      canvas.GetPad(1).GetFrame().SetBorderMode(0)
-      canvas.GetPad(1).GetFrame().SetFillColor(0)
-      canvas.GetPad(1).GetFrame().SetFillStyle(0)
-      canvas.GetPad(1).RedrawAxis()
-      canvas.RedrawAxis()
+      # Keep every frame border identical and on top of plotted objects.
+      pad_count = 2 if self.show_ratios else 1
+      for pad_index in range(1, pad_count + 1):
+        pad = canvas.GetPad(pad_index)
+        frame = pad.GetFrame()
+        frame.SetLineWidth(1)
+        frame.SetBorderSize(1)
+        frame.SetBorderMode(0)
+        frame.SetFillColor(0)
+        frame.SetFillStyle(0)
+        pad.RedrawAxis()
       canvas.Update()
 
       for output_format in self.output_formats:
@@ -517,6 +547,8 @@ class HistogramPlotter:
       canvas = TCanvas(
           title, title, self.config.canvas_size_2Dhists[0], self.config.canvas_size_2Dhists[1])
       canvas.cd()
+      if self.styler.plotMargins is None:
+        canvas.SetRightMargin(0.14)
       hist_rebinned.Draw("colz")
       self.styler.setupFigure2D(hist_rebinned, hist)
 
