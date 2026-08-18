@@ -7,9 +7,9 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <map>
+#include <sstream>
 #include <string>
-
-#include "Helpers.hpp"
 
 // The progress bar is drawn on the terminal's current line.  Messages must
 // temporarily remove that line, otherwise their output is written over it.
