@@ -5,3 +5,6 @@ samples/histograms/*
 bin/*
 build/*
 *.pyc
+
+.ruff_cache/
+__pycache__/
