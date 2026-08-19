@@ -97,13 +97,13 @@ class SubmissionManager:
         command = f"condor_submit -spool {self.condor_config_name}"
       else:
         command = f"condor_submit {self.condor_config_name}"
-      
+
       info(f"Submitting to condor: {command}")
 
       if not args.dry:
         os.system(command)
 
-      return self.condor_run_script_name, effective_n_jobs
+      return self.condor_run_script_name, effective_n_jobs, self.submission_id
 
     if input_files is None and hasattr(self.files_config, "get_input_output_file_lists"):
       info("Getting input files from input_output_file_lists")
@@ -132,18 +132,22 @@ class SubmissionManager:
     finally:
       args.dry = dry
 
-    for script_name, n_jobs in submitted_jobs:
+    for script_name, n_jobs, submission_id in submitted_jobs:
       self.__run_condor_script_locally_parallel(
-          script_name, n_jobs, args.local_parallel_jobs, args.save_logs
+          script_name, n_jobs, args.local_parallel_jobs, args.save_logs, submission_id
       )
 
   def __run_condor_script_locally_parallel(
-      self, script_name, n_jobs, requested_max_workers, save_logs
+      self, script_name, n_jobs, requested_max_workers, save_logs, submission_id
   ):
     max_workers = self.__get_local_parallel_jobs(n_jobs, requested_max_workers)
     info(f"Executing {script_name} locally with {max_workers} parallel jobs")
+    output_dir = f"output/{submission_id}"
+    error_dir = f"error/{submission_id}"
     if save_logs:
-      info("Local job output will be stored in the output/ and error/ directories")
+      self.__create_dir_if_not_exists(output_dir)
+      self.__create_dir_if_not_exists(error_dir)
+      info(f"Local job output will be stored in {output_dir}/ and {error_dir}/")
 
     completed_jobs = 0
     failed_jobs = []
@@ -163,8 +167,8 @@ class SubmissionManager:
       error_file = None
       try:
         if save_logs:
-          output_file = open(f"output/{script_stem}.{job_number}.out", "w")
-          error_file = open(f"error/{script_stem}.{job_number}.err", "w")
+          output_file = open(f"{output_dir}/{script_stem}.{job_number}.out", "w")
+          error_file = open(f"{error_dir}/{script_stem}.{job_number}.err", "w")
           stdout = output_file
           stderr = error_file
         return subprocess.run(
@@ -233,6 +237,13 @@ class SubmissionManager:
   def __create_condor_directories(self):
     for path in ("error", "log", "output", "tmp"):
       self.__create_dir_if_not_exists(path)
+
+  def __create_submission_log_directories(self):
+    # Groups condor logs by submission (shares the hash already used for this
+    # submission's tmp config/script/input-list) instead of dumping every job's
+    # .out/.err/.log flat into output/, error/, log/ across all submissions.
+    for base in ("output", "error", "log"):
+      self.__create_dir_if_not_exists(f"{base}/{self.submission_id}")
 
   def __setup_files_config(self):
     if self.files_config_path is None:
@@ -420,6 +431,7 @@ class SubmissionManager:
 
   def __setup_temp_file_paths(self):
     hash_string = str(uuid.uuid4().hex[:6])
+    self.submission_id = hash_string
     self.condor_config_name = f"tmp/condor_config_{hash_string}.sub"
     self.condor_run_script_name = f"tmp/condor_run_{hash_string}.sh"
     self.input_files_list_file_name = f"tmp/input_files_{hash_string}.txt"
@@ -560,9 +572,11 @@ class SubmissionManager:
     os.system(f"{self.sed_command} 's{self.sed_char}<materialize_max>{self.sed_char}{self.materialize_max}{self.sed_char}g' {self.condor_config_name}")
 
     if self.save_logs:
-      os.system(f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}")
+      self.__create_submission_log_directories()
+      os.system(f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/{self.submission_id}\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}")
+      os.system(f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/{self.submission_id}\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}")
+      os.system(f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/{self.submission_id}\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}")
+      info(f"Condor logs for this submission will be stored under output/{self.submission_id}, error/{self.submission_id}, log/{self.submission_id}")
     else:
       os.system(f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
       os.system(
