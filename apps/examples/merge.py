@@ -18,12 +18,11 @@ import time
 import uuid
 
 from Logger import info
-from teaHelpers import get_facility
+from teaHelpers import get_facility, validate_root_file
 
 
 DEFAULT_HADD_WORKERS = min(16, os.cpu_count() or 1)
 SCRATCH_SPACE_FACTOR = 2.5
-ROOT_VALIDATION_LOCK = threading.Lock()
 FINAL_REDUCTION_WORK_FACTOR = 3.0
 ETA_MIN_SAMPLE_SECONDS = 5.0
 ETA_MIN_SAMPLE_FRACTION = 0.02
@@ -643,23 +642,6 @@ def eos_xrootd_url(file_path):
       f"{suffix or ''}"
     )
   return None
-
-
-def validate_root_file(file_path):
-  import ROOT
-
-  with ROOT_VALIDATION_LOCK:
-    previous_error_level = ROOT.gErrorIgnoreLevel
-    ROOT.gErrorIgnoreLevel = ROOT.kFatal
-    try:
-      root_file = ROOT.TFile.Open(file_path, "READ")
-      if not root_file or root_file.IsZombie() or root_file.GetNkeys() == 0:
-        if root_file:
-          root_file.Close()
-        raise RuntimeError(f"Merged ROOT file is invalid or contains no keys: {file_path}")
-      root_file.Close()
-    finally:
-      ROOT.gErrorIgnoreLevel = previous_error_level
 
 
 def contains_top_level_tree(file_path):

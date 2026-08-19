@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-from Logger import info
+from Logger import error, info, warn
 
 import argparse
-import os
 import ast
+import os
+import shlex
+import subprocess
+import sys
+
+from teaHelpers import STAGE_BACKENDS, get_facility, gfal_stage_output, validate_root_file
 
 
 def get_args():
@@ -76,6 +81,41 @@ def main():
   elif args.output_hists_dir != "":
     output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}"
 
+  # Captured before the flag-wrapping below overwrites these with "--output_..._path <path>".
+  final_trees_path = output_trees_file_path
+  final_hists_path = output_hists_file_path
+
+  # On a real condor worker node, write to local scratch first and stage the finished
+  # file out to its final (often pnfs/dCache) destination only after the app exits
+  # successfully -- writing straight to a heavily-contended dCache mount intermittently
+  # segfaults ROOT mid-write. --local_parallel runs this same script but never has
+  # _CONDOR_SCRATCH_DIR set, so it naturally falls through to the untouched behavior.
+  scratch_dir = os.environ.get("_CONDOR_SCRATCH_DIR", "")
+  scratch_usable = bool(scratch_dir) and os.path.isdir(scratch_dir) and os.access(scratch_dir, os.W_OK)
+  if scratch_dir and not scratch_usable:
+    warn(
+      f"_CONDOR_SCRATCH_DIR={scratch_dir} is set but not usable (missing or not "
+      f"writable); writing outputs directly to their final paths"
+    )
+  use_scratch = scratch_usable and get_facility() in STAGE_BACKENDS
+
+  staged_outputs = []
+
+  if use_scratch:
+    # Separate subdirectories per output kind: in the output_trees_dir/output_hists_dir
+    # shape both paths share the same basename, which would collide in a flat scratch dir.
+    if output_trees_file_path != "":
+      trees_scratch_dir = os.path.join(scratch_dir, "trees")
+      os.makedirs(trees_scratch_dir, exist_ok=True)
+      output_trees_file_path = os.path.join(trees_scratch_dir, os.path.basename(final_trees_path))
+      staged_outputs.append((output_trees_file_path, final_trees_path))
+
+    if output_hists_file_path != "":
+      hists_scratch_dir = os.path.join(scratch_dir, "hists")
+      os.makedirs(hists_scratch_dir, exist_ok=True)
+      output_hists_file_path = os.path.join(hists_scratch_dir, os.path.basename(final_hists_path))
+      staged_outputs.append((output_hists_file_path, final_hists_path))
+
   if output_trees_file_path != "":
     output_trees_file_path = f"--output_trees_path {output_trees_file_path}"
   if output_hists_file_path != "":
@@ -90,7 +130,19 @@ def main():
   command_for_file = f"{command} --input_path {input_file_path} {output_trees_file_path} {output_hists_file_path} {extra_args}"
 
   info(f"\n\nExecuting {command_for_file=}")
-  os.system(command_for_file)
+  result = subprocess.run(shlex.split(command_for_file), check=False)
+  returncode = result.returncode
+
+  if returncode == 0 and use_scratch:
+    for scratch_path, final_path in staged_outputs:
+      try:
+        validate_root_file(scratch_path)
+        gfal_stage_output(scratch_path, final_path)
+      except Exception as exception:
+        error(f"Failed to stage {scratch_path} -> {final_path}: {exception}")
+        returncode = 1
+
+  sys.exit(returncode)
 
 
 if __name__ == "__main__":
