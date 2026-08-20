@@ -198,6 +198,15 @@ class PhysicsObject {
     return customValuesTypes.find(branchName) != customValuesTypes.end();
   }
 
+  void SetFloat(std::string branchName, float value) {
+    if (!HasCustomValue(branchName)) {
+      customValuesFloat[branchName] = new float(value);
+      customValuesTypes[branchName] = "Float_t";
+    } else {
+      *customValuesFloat[branchName] = value;
+    }
+  }
+
   /// Custom values describe the current event only, but physics objects are allocated once and reused for every event,
   /// so a value set in one event would still look "set" in all following ones (and would be written out again by
   /// EventWriter). Called from Event::Reset(), it clears the type markers of the objects that were set since the last
