@@ -46,6 +46,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -164,6 +165,64 @@ struct IrregularHistogramParams2D {
   std::vector<float> binEdgesX;
   std::vector<float> binEdgesY;
 };
+
+inline const std::string kEventLevelBranchCollection = "Event";
+
+struct AddedBranchParams {
+  std::string collection, name, type, varexp;
+  bool IsEventLevel() const { return collection == kEventLevelBranchCollection; }
+  std::string BranchName() const { return IsEventLevel() ? name : collection + "_" + name; }
+};
+
+inline const std::map<std::string, std::string> kAddedBranchTypeCodes = {
+    {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},
+    {"UInt_t", "i"},  {"Bool_t", "O"},   {"ULong64_t", "l"},
+    {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
+};
+
+inline const std::map<std::string, std::string> kAddedVectorBranchElementTypes = {
+    {"vector<Float_t>", "Float_t"}, {"vector<Double_t>", "Double_t"},
+    {"vector<Int_t>", "Int_t"},     {"vector<UInt_t>", "UInt_t"},
+};
+
+template <typename T>
+inline const char *RootTypeName();
+template <>
+inline const char *RootTypeName<Float_t>() {
+  return "Float_t";
+}
+template <>
+inline const char *RootTypeName<Double_t>() {
+  return "Double_t";
+}
+template <>
+inline const char *RootTypeName<Int_t>() {
+  return "Int_t";
+}
+template <>
+inline const char *RootTypeName<UInt_t>() {
+  return "UInt_t";
+}
+template <>
+inline const char *RootTypeName<Bool_t>() {
+  return "Bool_t";
+}
+template <>
+inline const char *RootTypeName<ULong64_t>() {
+  return "ULong64_t";
+}
+template <>
+inline const char *RootTypeName<UChar_t>() {
+  return "UChar_t";
+}
+template <>
+inline const char *RootTypeName<Short_t>() {
+  return "Short_t";
+}
+template <>
+inline const char *RootTypeName<UShort_t>() {
+  return "UShort_t";
+}
 
 template <class T>
 double duration(T t0, T t1) {

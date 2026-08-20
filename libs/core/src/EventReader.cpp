@@ -81,6 +81,9 @@ EventReader::EventReader() {
 
   SetupTrees();
   SetupBranches();
+
+  addedBranches = make_unique<AddedBranches>();
+  if (!addedBranches->Empty()) addedBranches->Setup(eventsTreeNames, inputTrees);
 }
 
 EventReader::~EventReader() {}
@@ -453,8 +456,30 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
 
   currentEvent->AddExtraCollections();
 
+  if (!addedBranches->Empty()) addedBranches->Evaluate(currentEvent);
+
   if (iEvent == nEvents - 1) {
     cerr << "\033[0m\n" << endl;
   }
   return currentEvent;
+}
+
+vector<string> EventReader::GetHLTbranchNames() {
+  if (!hltBranches.empty()) return hltBranches;
+  for (const auto& [branchName, branchType] : branchNamesAndTypes) {
+    if (branchName.find("HLT_") == 0) {
+      hltBranches.push_back(branchName);
+    }
+  }
+  return hltBranches;
+}
+
+vector<string> EventReader::GetL1branchNames() {
+  if (!l1Branches.empty()) return l1Branches;
+  for (const auto& [branchName, branchType] : branchNamesAndTypes) {
+    if (branchName.find("L1_") == 0) {
+      l1Branches.push_back(branchName);
+    }
+  }
+  return l1Branches;
 }

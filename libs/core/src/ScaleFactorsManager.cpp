@@ -66,7 +66,7 @@ bool ScaleFactorsManager::ShouldApplyVariation(const std::string& name) {
 }
 
 void ScaleFactorsManager::ExtractBounds(const json& node, map<string, pair<double, double>>& bounds) {
-  if (!node.contains("nodetype")) return;
+  if (node.find("nodetype") == node.end()) return;
 
   string type = node["nodetype"];
 

@@ -4,5 +4,4 @@ samples/histograms/*
 
 bin/*
 build/*
-
 *.pyc

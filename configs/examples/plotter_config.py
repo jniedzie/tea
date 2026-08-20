@@ -4,6 +4,7 @@ from Sample import Sample, SampleType
 from Legend import Legend
 from Histogram import Histogram, Histogram2D
 from HistogramNormalizer import NormalizationType
+from CmsLabelsManager import CmsLabel
 
 base_path = "../samples/"
 skim = ""
@@ -11,6 +12,14 @@ skim = ""
 output_path = "../plots"
 
 luminosity = 63670. # pb^-1 (2018)
+
+# plot CMS labels and lumi
+show_cms_labels = True
+cms_label = CmsLabel.paper_sim_supplementary
+label_outside_axes = False
+
+# plot_margins = {"left": 0.1, "right": 0.05, "top": 0.07, "bottom": 0.15}  # Optional override; margins are automatic by default.
+# ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.
 
 samples = (
   Sample(
@@ -72,16 +81,16 @@ samples = (
 y_label = "# events (2018)"
 
 histograms = (
-#           name                  title logy    norm_type                       rebin xmin   xmax  ymin    ymax,    xlabel                ylabel            suffix
-  Histogram("Event_nMuon"         , "", False , NormalizationType.to_data, 1  ,   0   , 20  , 1e1   , 5e4   , "Number of muons"   , y_label           ),
-  Histogram("Event_nMuon"         , "", True  , NormalizationType.to_data, 1  ,   0   , 20  , 1e1   , 1e9   , "Number of muons"   , y_label          , "_log" ),
-  Histogram("Muon_pt"             , "", True  , NormalizationType.to_data, 5  ,   0   , 500 , 1e-2  , 1e3   , "p_{T}^{#mu} [GeV]" , y_label           ),
-  Histogram("Muon_eta"            , "", False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e3   , "#eta^{#mu}"        , y_label          , "_log" ),
-  Histogram("Muon_eta"            , "", True  , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e3   , "#eta^{#mu}"        , y_label           ),
-  Histogram("Event_nGoodLeptons"  , "", True  , NormalizationType.to_data, 1  ,   0   , 30  , 1e0   , 1e9   , "Number of jets"    , y_label           ),
-  Histogram("GoodLeptons_pt"      , "", True  , NormalizationType.to_data, 5  ,   0   , 500 , 10    , 1e8   , "p_{T}^{j} [GeV]"   , y_label           ),
-  Histogram("GoodLeptons_eta"     , "", True  , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e10  , "#eta^{j}"          , y_label           ),
-  Histogram("cutFlow"             , "", True  , NormalizationType.to_data, 1  ,   0   , 8   , 1e2   , 1e6   , "Selection"         , "#sum genWeight"  ),
+#           name                  title logx, logy    norm_type                       rebin xmin   xmax  ymin    ymax,    xlabel                ylabel            suffix
+  Histogram("Event_nMuon"         , "", False , False , NormalizationType.to_data, 1  ,   0   , 20  , 1e1   , 5e4   , "Number of muons"   , y_label           ),
+  Histogram("Event_nMuon"         , "", False , True  , NormalizationType.to_data, 1  ,   0   , 20  , 1e1   , 1e9   , "Number of muons"   , y_label          , "_log" ),
+  Histogram("Muon_pt"             , "", False , True  , NormalizationType.to_data, 5  ,   0   , 500 , 1e-2  , 1e3   , "p_{T}^{#mu} [GeV]" , y_label           ),
+  Histogram("Muon_eta"            , "", False , False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e3   , "#eta^{#mu}"        , y_label          , "_log" ),
+  Histogram("Muon_eta"            , "", True  , False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e3   , "#eta^{#mu}"        , y_label           ),
+  Histogram("Event_nGoodLeptons"  , "", True  , False , NormalizationType.to_data, 1  ,   0   , 30  , 1e0   , 1e9   , "Number of jets"    , y_label           ),
+  Histogram("GoodLeptons_pt"      , "", True  , False , NormalizationType.to_data, 5  ,   0   , 500 , 10    , 1e8   , "p_{T}^{j} [GeV]"   , y_label           ),
+  Histogram("GoodLeptons_eta"     , "", True  , False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e10  , "#eta^{j}"          , y_label           ),
+  Histogram("cutFlow"             , "", True  , False , NormalizationType.to_data, 1  ,   0   , 8   , 1e2   , 1e6   , "Selection"         , "#sum genWeight"  ),
 )
 
 histograms2D = (
@@ -92,10 +101,10 @@ histograms2D = (
 
 legend_width = 0.15
 legend_min_x = 0.40
-legend_max_x = 0.80
+legend_max_x = 0.75
 
 legend_height = 0.05
-legend_max_y = 0.85
+legend_max_y = 0.80
 
 n_signal = len([s for s in samples if s.type == SampleType.signal and s.custom_legend is None])
 n_data = len([s for s in samples if s.type == SampleType.data and s.custom_legend is None])
@@ -118,5 +127,4 @@ output_formats = ["pdf", ".png"]
 
 canvas_size = (800, 600)
 show_ratio_plots = True
-ratio_limits = (0.7, 1.3)
-
+# ratio_limits = (0.7, 1.3)  # Optional override; limits are automatic by default.

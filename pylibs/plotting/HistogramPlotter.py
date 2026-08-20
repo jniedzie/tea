@@ -9,11 +9,12 @@ from Sample import SampleType
 from Styler import Styler
 from HistogramNormalizer import HistogramNormalizer
 from CmsLabelsManager import CmsLabelsManager
-from Logger import info, warn, error, fatal
+from Logger import info, warn, error, fatal, install_root_warning_collector
 
 
 class HistogramPlotter:
   def __init__(self, config):
+    install_root_warning_collector()
     gStyle.SetOptStat(0)
 
     self.config = config
@@ -60,6 +61,15 @@ class HistogramPlotter:
 
     if not os.path.exists(self.config.output_path):
       os.makedirs(self.config.output_path)
+    info(f"Output directory: {os.path.abspath(self.config.output_path)}")
+
+  def __save_canvas(self, canvas, path):
+    original_error_level = ROOT.gErrorIgnoreLevel
+    ROOT.gErrorIgnoreLevel = ROOT.kError
+    try:
+      canvas.SaveAs(path)
+    finally:
+      ROOT.gErrorIgnoreLevel = original_error_level
 
   def __histosampleExists(self, hist, sample):
     for h, s in self.histosamples:
@@ -317,21 +327,30 @@ class HistogramPlotter:
       self.legends[hist_ratio.getName()][key].AddEntry(
           hist_ratio.hist, sample.legend_description, self.config.legends[sample.type].options)
 
-  def __drawLineAtOne(self, canvas, hist):
-    if not self.show_ratios:
+  def __drawLineAtOne(self, canvas, ratio_stack):
+    if not self.show_ratios or ratio_stack is None:
       return
 
+    ratio_histogram = ratio_stack.GetHistogram()
+    if ratio_histogram is None:
+      return
+    x_axis = ratio_histogram.GetXaxis()
+    x_min = x_axis.GetXmin()
+    x_max = x_axis.GetXmax()
+
     global line
-    line = ROOT.TLine(hist.x_min, 1, hist.x_max, 1)
+    line = ROOT.TGraph(
+        2, array('d', [x_min, x_max]), array('d', [1.0, 1.0]))
     line.SetLineColor(ROOT.kBlack)
     line.SetLineStyle(ROOT.kDashed)
+    line.SetBit(ROOT.TGraph.kClipFrame)
 
     canvas.cd(2)
-    line.Draw()
+    line.Draw("L same")
 
   def __drawRatioPlot(self, canvas, hist):
     if not self.show_ratios:
-      return
+      return None
 
     global ratio_hist
     ratio_hist = self.__getRatioStack(hist)
@@ -339,7 +358,13 @@ class HistogramPlotter:
 
       canvas.cd(2)
       ratio_hist.Draw("p e0")
-      self.styler.setupFigure(ratio_hist, hist, is_ratio=True)
+      ratio_histograms = ratio_hist.GetStack()
+      source_histograms = ([ratio_histograms.Last()]
+                           if ratio_histograms and ratio_histograms.GetSize() > 0
+                           else None)
+      self.styler.setupFigure(
+          ratio_hist, hist, is_ratio=True, source_histograms=source_histograms)
+    return ratio_hist
 
   def __drawUncertainties(self, canvas, hist):
     global background_uncertainty_hist
@@ -402,8 +427,18 @@ class HistogramPlotter:
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() > 0:
         stack.Draw(options)
-        self.styler.setupFigure(stack, hist)
         firstPlotted = True
+
+    # Apply automatic limits only after every sample has been drawn.  A
+    # THStack's axis is established by its first draw, while subsequent
+    # stacks (signals/data) can contain larger contributions.
+    plotted_histograms = self.__getPlottedHistograms(hist)
+
+    first_stack = next((self.stacks[sample_type][hist.getName()]
+                        for sample_type in SampleType
+                        if self.stacks[sample_type][hist.getName()].GetNhists() > 0), None)
+    if first_stack is not None:
+      self.styler.setupFigure(first_stack, hist, source_histograms=plotted_histograms)
 
   def __drawRatioHists(self, canvas, hist):
     canvas.cd(1)
@@ -431,38 +466,69 @@ class HistogramPlotter:
     canvas.GetPad(1).SetLogx(hist.log_x)
     canvas.GetPad(1).SetLogy(hist.log_y)
 
+  def __getPlottedHistograms(self, hist):
+    plotted_histograms = []
+    for sample_type in SampleType:
+      stack = self.stacks[sample_type][hist.getName()]
+      if stack.GetNhists() == 0:
+        continue
+      stack_histograms = stack.GetStack()
+      if stack_histograms and stack_histograms.GetSize() > 0:
+        plotted_histograms.append(stack_histograms.Last())
+    return plotted_histograms
+
+  def __configureAutomaticMargins(self):
+    if self.styler.plotMargins is not None:
+      return
+
+    y_ranges = []
+    for hist in self.config.histograms:
+      sources = self.__getPlottedHistograms(hist)
+      if sources:
+        y_ranges.append(
+            self.styler.getYAxisRangeForLayout(hist, sources))
+
+      if not self.show_ratios:
+        continue
+      ratio_stack = self.__getRatioStack(hist)
+      if ratio_stack is None or ratio_stack.GetNhists() == 0:
+        continue
+      ratio_sources = [item for item in ratio_stack.GetHists()]
+      y_ranges.append(self.styler.getYAxisRangeForLayout(
+          hist, ratio_sources, is_ratio=True))
+
+    self.styler.configureAutomaticMargins(y_ranges, self.config.canvas_size)
+
   def drawStacks(self):
+    self.__configureAutomaticMargins()
     for hist in self.config.histograms:
       canvas = TCanvas(hist.getName(), hist.getName(
       ), self.config.canvas_size[0], self.config.canvas_size[1])
       self.__setup_canvas(canvas, hist)
 
-      self.__drawRatioPlot(canvas, hist)
-      self.__drawLineAtOne(canvas, hist)
+      ratio_stack = self.__drawRatioPlot(canvas, hist)
+      self.__drawLineAtOne(canvas, ratio_stack)
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawLegends(canvas, hist)
-      self.cmsLabelsManager.drawLabels(canvas)
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
-      # make sure plot border is on top of everything else
-      canvas.GetPad(1).GetFrame().SetLineWidth(2)
-      canvas.GetPad(1).GetFrame().SetBorderSize(2)
-      canvas.GetPad(1).GetFrame().SetBorderMode(0)
-      canvas.GetPad(1).GetFrame().SetFillColor(0)
-      canvas.GetPad(1).GetFrame().SetFillStyle(0)
-      canvas.GetPad(1).RedrawAxis()
-      canvas.RedrawAxis()
+      # Keep every frame border identical and on top of plotted objects.
+      pad_count = 2 if self.show_ratios else 1
+      for pad_index in range(1, pad_count + 1):
+        pad = canvas.GetPad(pad_index)
+        frame = pad.GetFrame()
+        frame.SetLineWidth(1)
+        frame.SetBorderSize(1)
+        frame.SetBorderMode(0)
+        frame.SetFillColor(0)
+        frame.SetFillStyle(0)
+        pad.RedrawAxis()
       canvas.Update()
-
-      originalErrorLevel = ROOT.gErrorIgnoreLevel
-      ROOT.gErrorIgnoreLevel = ROOT.kError
 
       for output_format in self.output_formats:
         path = self.config.output_path+"/"+hist.getName()+"."+output_format
-        info(f"Saving file: {path}")
-        canvas.SaveAs(path)
-
-      ROOT.gErrorIgnoreLevel = originalErrorLevel
+        self.__save_canvas(canvas, path)
 
   def drawHists2D(self):
     if not hasattr(self.config, "histograms2D"):
@@ -481,12 +547,14 @@ class HistogramPlotter:
       canvas = TCanvas(
           title, title, self.config.canvas_size_2Dhists[0], self.config.canvas_size_2Dhists[1])
       canvas.cd()
+      if self.styler.plotMargins is None:
+        canvas.SetRightMargin(0.14)
       hist_rebinned.Draw("colz")
       self.styler.setupFigure2D(hist_rebinned, hist)
 
       canvas.SetLogz(hist.log_z)
       canvas.Update()
-      canvas.SaveAs(self.config.output_path+"/"+title+".pdf")
+      self.__save_canvas(canvas, self.config.output_path+"/"+title+".pdf")
 
   def drawRatioStacks(self):
     if not hasattr(self.config, "histogramsRatio"):
@@ -500,16 +568,12 @@ class HistogramPlotter:
 
       self.__drawRatioHists(canvas, hist_nom)
       self.__drawLegends(canvas, hist_nom)
-      self.cmsLabelsManager.drawLabels(canvas)
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       canvas.Update()
 
-      originalErrorLevel = ROOT.gErrorIgnoreLevel
-      ROOT.gErrorIgnoreLevel = ROOT.kError
       path = self.config.output_path+"/"+hist_nom.getName()+".pdf"
-      info(f"Saving file: {path}")
-      canvas.SaveAs(path)
-      ROOT.gErrorIgnoreLevel = originalErrorLevel
+      self.__save_canvas(canvas, path)
 
   def __get_hists_sum(self, hist, doRatio=False):
     base_sample_type = SampleType.data if doRatio else SampleType.background

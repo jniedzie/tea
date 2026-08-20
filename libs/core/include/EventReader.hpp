@@ -5,6 +5,7 @@
 #ifndef EventReader_hpp
 #define EventReader_hpp
 
+#include "AddedBranches.hpp"
 #include "ConfigManager.hpp"
 #include "Event.hpp"
 #include "Helpers.hpp"
@@ -18,6 +19,9 @@ class EventReader {
   std::shared_ptr<Event> GetEvent(int iEvent);
 
   bool IsVectorBranch(TBranch *branch);
+
+  std::vector<std::string> GetHLTbranchNames();
+  std::vector<std::string> GetL1branchNames();
 
  private:
   int maxEvents;
@@ -45,6 +49,10 @@ class EventReader {
   std::map<std::string, std::string> specialBranchSizes;
   std::map<std::string, bool> isCollectionAnStdVector;
   std::map<std::string, std::string> branchNamesAndTypes;
+
+  std::vector<std::string> hltBranches, l1Branches;
+
+  std::unique_ptr<AddedBranches> addedBranches;
 
   TLeaf *GetLeaf(TBranch *branch);
 

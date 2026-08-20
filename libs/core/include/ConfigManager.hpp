@@ -58,6 +58,8 @@ class ConfigManager {
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsMap>& scaleFactors);
   void GetScaleFactors(std::string name, std::map<std::string, ScaleFactorsTuple>& scaleFactors);
 
+  void GetAddedBranchesParams(std::vector<AddedBranchParams>& addedBranchesParams);
+
   void GetCuts(std::vector<std::pair<std::string, std::pair<float, float>>>& cuts);
 
   void SetInputPath(std::string path) { inputPath = path; }
