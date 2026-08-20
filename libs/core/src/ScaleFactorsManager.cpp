@@ -244,7 +244,6 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
         fatal() << "Incorrect correction type: " << type << endl;
         fatal() << "Available corrections: " << endl;
         for (auto& [name, corr] : cset->compound()) fatal() << name << endl;
-        fatal() << "2 " << endl;
         exit(1);
       }
     }

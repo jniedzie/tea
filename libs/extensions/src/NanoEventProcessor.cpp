@@ -166,6 +166,7 @@ map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const share
       weights[name] *= weight;
     }
   }
+  if (firstIteration) return {{"systematic", 1.0}};
   return weights;
 }
 
@@ -404,8 +405,8 @@ void NanoEventProcessor::ApplyPuppiMETEnergyScaleCorrections(shared_ptr<NanoEven
 
     float pt_noMuRaw = pt * (1. - muonSubtrFactor);
 
-    float pt_noMuL1 = pt_noMuRaw * corrections["jecL1"];
-    float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3"];
+    float pt_noMuL1 = pt_noMuRaw * corrections["jecL1"+dataStr];
+    float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3"+dataStr];
         
     if (pt_noMuL1L2L3 < 15)
       continue;
@@ -439,7 +440,6 @@ void NanoEventProcessor::ApplyJetEnergyScaleCorrections(const shared_ptr<NanoEve
   uint run = event->Get("run");
   
   for (auto jet : *jets) {
-    float pt_before = asNanoJet(jet)->GetPt();
     asNanoJet(jet)->UpdateJetEnergyScaleVariables(rho, isData, run);
   }
 }
@@ -669,8 +669,7 @@ void NanoEventProcessor::ApplyMETXYcorrections(const shared_ptr<NanoEvent> event
   
   float met_pt = event->GetMetPt();
   float met_phi = event->GetMetPhi();
-  float met_px = met_pt * cos(met_phi);
-  float met_py = met_pt * sin(met_phi);
+  // METXYCorr_Met_MetPhi operates on (pt, phi); no need to compute (px, py) here.
 
   int npv = event->GetAs<int>("PV_npvs");
   uint run = event->Get("run");

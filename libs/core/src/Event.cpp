@@ -37,6 +37,7 @@ void Event::Reset() {
   // Physics objects are reused across events just like the event itself, so their custom values
   // have to be dropped here as well.
   PhysicsObject::ClearAllCustomValues();
+  metUpdatedBranchName.clear();
 }
 
 void Event::UpdateMetVariables(string newBranchName, float pt, float phi) {
