@@ -53,7 +53,6 @@ ScaleFactorsManager::ScaleFactorsManager() {
     }
     info() << "------------------------------------\n" << endl;
   }
-  // if (ShouldApplyScaleFactor("pileup")) ReadPileupSFs();
   ReadJetEnergyCorrections();
 }
 
@@ -275,16 +274,6 @@ void ScaleFactorsManager::ReadScaleFactorFlags() {
     warn() << "Couldn't read applyScaleFactors from config." << endl;
   }
 
-}
-
-void ScaleFactorsManager::ReadPileupSFs() {
-  auto& config = ConfigManager::GetInstance();
-
-  string pileupScaleFactorsPath, pileupScaleFactorsHistName;
-  config.GetValue("pileupScaleFactorsPath", pileupScaleFactorsPath);
-  config.GetValue("pileupScaleFactorsHistName", pileupScaleFactorsHistName);
-  info() << "Reading pileup scale factors from file: " << pileupScaleFactorsPath << "\thistogram: " << pileupScaleFactorsHistName << endl;
-  pileupSFvalues = (TH1D*)TFile::Open(pileupScaleFactorsPath.c_str())->Get(pileupScaleFactorsHistName.c_str());
 }
 
 map<string, float> ScaleFactorsManager::GetPUJetIDScaleFactors(string name, float eta, float pt) {
@@ -556,31 +545,6 @@ float ScaleFactorsManager::EvaluateCorrectionArgs(const std::string& name, const
   }
 }
 #endif
-
-map<string, float> ScaleFactorsManager::GetPileupScaleFactorCustom(int nVertices) {
-  bool applyDefault = ShouldApplyScaleFactor("pileup");
-  bool applyVariations = ShouldApplyVariation("pileup");
-
-  map<string, float> scaleFactors;
-  if (!applyDefault)
-    scaleFactors["systematic"] = 1.0;
-  else {
-    if (nVertices < pileupSFvalues->GetXaxis()->GetBinLowEdge(1)) {
-      warn() << "Number of vertices is lower than the lowest bin edge in pileup SF histogram" << endl;
-      return scaleFactors;
-    }
-    if (nVertices > pileupSFvalues->GetXaxis()->GetBinUpEdge(pileupSFvalues->GetNbinsX())) {
-      warn() << "Number of vertices is higher than the highest bin edge in pileup SF histogram" << endl;
-      return scaleFactors;
-    }
-
-    scaleFactors["systematic"] = pileupSFvalues->GetBinContent(pileupSFvalues->FindFixBin(nVertices));
-  }
-
-  // if (!applyVariations) return scaleFactors; // No custom variations for pileup SFs?
-
-  return scaleFactors;
-}
 
 vector<string> ScaleFactorsManager::GetScaleFactorVariations(string variations_str) {
   vector<string> variations;

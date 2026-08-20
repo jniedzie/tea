@@ -18,7 +18,7 @@ using CorrectionArgType = correction::Variable::Type;
 struct DummyCorrectionRef {};
 using CorrectionRef = DummyCorrectionRef;
 using CompoundCorrectionRef = DummyCorrectionRef;
-using CorrectionArgType = std::variant<int, double, std::string>;
+using CorrectionArgType = std::variant<long, double, std::string>;
 #endif
 
 struct MuonID;
@@ -41,8 +41,6 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
   float GetJetTagEfficiency(std::string name, std::string datasetName, float pt);
 
-
-  std::map<std::string, float> GetPileupScaleFactorCustom(int nVertices);
   std::map<std::string, float> GetPileupScaleFactor(std::string name, float nVertices);
 
   std::vector<std::string> GetBTagVariationNames(std::string name);
@@ -82,13 +80,10 @@ class ScaleFactorsManager {
 
   std::map<std::string, std::map<std::string, std::pair<double, double>>> boundsPerInput;
 
-  TH1D* pileupSFvalues;
-
   void ExtractBounds(const nlohmann::json& node, std::map<std::string, std::pair<double, double>>& bounds);
 
   void ReadScaleFactorFlags();
   void ReadScaleFactors();
-  void ReadPileupSFs();
 
   float TryToEvaluate(const std::string& name, const std::vector<CorrectionArgType>& args);
 

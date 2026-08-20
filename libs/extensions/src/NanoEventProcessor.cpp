@@ -62,14 +62,8 @@ float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
 map<string, float> NanoEventProcessor::GetPileupScaleFactor(const std::shared_ptr<NanoEvent> event, string name) {
   auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
-  // TODO: implement custom pileup scale factor for other years?
-  if (year == "2018" && name == "custom") {
-    int nVertices = event->GetAs<int>("PV_npvsGood");
-    return scaleFactorsManager.GetPileupScaleFactorCustom(nVertices);
-  } else {
-    float nVertices = event->Get("Pileup_nTrueInt");
-    return scaleFactorsManager.GetPileupScaleFactor("pileup", nVertices);
-  }
+  float nVertices = event->Get("Pileup_nTrueInt");
+  return scaleFactorsManager.GetPileupScaleFactor("pileup", nVertices);
 }
 
 map<string, float> NanoEventProcessor::GetL1PreFiringWeight(const std::shared_ptr<NanoEvent> event, string name) {
