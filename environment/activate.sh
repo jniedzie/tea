@@ -232,7 +232,8 @@ tea_env_ensure() (
 )
 
 tea_env_activate() {
-  local activation_code prompt_base prompt_is_set prompt_modifier
+  local activation_code activation_status nounset_was_enabled
+  local prompt_base prompt_is_set prompt_modifier
 
   # Prefix activation normally makes micromamba use the full environment path
   # as its display name. Keep that content-addressed path internal and preserve
@@ -252,7 +253,22 @@ tea_env_activate() {
   tea_env_ensure || return 1
   activation_code="$(MAMBA_CHANGEPS1=false MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
     "${TEA_MICROMAMBA}" shell activate --shell bash --prefix "${TEA_ENV_PREFIX}")" || return 1
-  eval "${activation_code}"
+
+  # Conda-forge activation hooks are not consistently safe under `set -u`.
+  # Restore the caller's nounset setting immediately after evaluating them.
+  nounset_was_enabled=0
+  if [[ "$-" == *u* ]]; then
+    nounset_was_enabled=1
+    set +u
+  fi
+  activation_status=0
+  eval "${activation_code}" || activation_status=$?
+  if [[ "${nounset_was_enabled}" -eq 1 ]]; then
+    set -u
+  fi
+  if [[ "${activation_status}" -ne 0 ]]; then
+    return "${activation_status}"
+  fi
 
   TEA_ENV_NAME="tea"
   CONDA_DEFAULT_ENV="${TEA_ENV_NAME}"
