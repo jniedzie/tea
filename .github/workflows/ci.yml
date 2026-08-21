@@ -79,7 +79,7 @@ jobs:
     name: macOS (Apple Silicon)
     runs-on: macos-14
     env:
-      TEA_HOME: ${{ runner.temp }}/tea-home
+      TEA_HOME: /tmp/tea-home
     defaults:
       run:
         shell: bash -el {0}
