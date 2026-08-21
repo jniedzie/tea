@@ -29,11 +29,6 @@ and analysis paths with:
 source tea/setup.sh
 ```
 
-The environment appears as `(tea)` in an interactive Bash prompt. Tea keeps
-the existing prompt formatting, including colours and multiline layouts, and
-only prepends that short label; the internal lock hash remains part of the
-storage path rather than the displayed name.
-
 ## Run an application
 
 Applications are designed to run from `bin/`:
