@@ -117,11 +117,12 @@ cp tea/templates/gitignore.template .gitignore
 cp tea/templates/UserExtensionsHelpers.template.hpp libs/user_extensions/include/UserExtensionsHelpers.hpp
 rm install.sh
 
+git add .
+git commit -m "Initial commit"
+
 if [ "$SETUP_REMOTE" = true ]; then
     echo "Setting up remote"
     git remote add origin "${REMOTE_REPOSITORY}"
-    git add .
-    git commit -m "Initial commit"
 
     # take what's in the repo already (like gitignore, README, etc.) and push all other files
     git pull --rebase origin main
