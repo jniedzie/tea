@@ -186,17 +186,11 @@ public:
     return valuesStdUintVector.at(branchName);
   }
 
-  void SetFloat(std::string branchName, float value) {
-    customValuesFloat[branchName] = value;
-    customValuesTypes[branchName] = "Float_t";
-  }
-
   std::string GetMetBranchName() { return metBranchName; }
   std::string GetUpdatedMetBranchName();
   void UpdateMetVariables(std::string newBranchName, float pt, float phi);
   float GetMetPt();
   float GetMetPhi();
-
 
   template <typename T> void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>)

@@ -41,8 +41,8 @@ void Event::Reset() {
 }
 
 void Event::UpdateMetVariables(string newBranchName, float pt, float phi) {
-  SetFloat(newBranchName + "_pt", pt);
-  SetFloat(newBranchName + "_phi", phi);
+  Set<float>(newBranchName + "_pt", pt);
+  Set<float>(newBranchName + "_phi", phi);
   metUpdatedBranchName = newBranchName;
 }
 
