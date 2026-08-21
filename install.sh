@@ -1,7 +1,98 @@
-# !/bin/bash
+#!/bin/bash
+
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: ./install.sh [--tea-home ABSOLUTE_PATH] [GIT_REMOTE]
+
+--tea-home selects a persistent shared location for tea dependencies. The
+installer otherwise asks for a location and offers ~/.tea as the default.
+EOF
+}
+
+TEA_HOME_ARG=""
+TEA_HOME_EXPLICIT=false
+REMOTE_REPOSITORY=""
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --tea-home)
+            if [[ "$#" -lt 2 ]]; then
+                echo "Missing path after --tea-home" >&2
+                usage >&2
+                exit 2
+            fi
+            TEA_HOME_ARG="$2"
+            TEA_HOME_EXPLICIT=true
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --*)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+        *)
+            if [[ -n "${REMOTE_REPOSITORY}" ]]; then
+                echo "Only one Git remote may be provided" >&2
+                usage >&2
+                exit 2
+            fi
+            REMOTE_REPOSITORY="$1"
+            shift
+            ;;
+    esac
+done
+
+TEA_CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/tea"
+TEA_CONFIG_FILE="${TEA_CONFIG_DIR}/home"
+TEA_HOME_DEFAULT="${HOME}/.tea"
+
+if [[ -z "${TEA_HOME_ARG}" ]] && [[ -n "${TEA_HOME:-}" ]]; then
+    TEA_HOME_ARG="${TEA_HOME}"
+    TEA_HOME_EXPLICIT=true
+elif [[ -z "${TEA_HOME_ARG}" ]] && [[ -r "${TEA_CONFIG_FILE}" ]]; then
+    IFS= read -r TEA_HOME_ARG < "${TEA_CONFIG_FILE}"
+fi
+
+if [[ -z "${TEA_HOME_ARG}" ]]; then
+    TEA_HOME_ARG="${TEA_HOME_DEFAULT}"
+fi
+
+if [[ -t 0 ]] && [[ -t 1 ]] && [[ "${TEA_HOME_EXPLICIT}" == false ]]; then
+    read -r -p "Where should tea store its shared environment? [${TEA_HOME_ARG}] " TEA_HOME_INPUT
+    if [[ -n "${TEA_HOME_INPUT}" ]]; then
+        TEA_HOME_ARG="${TEA_HOME_INPUT}"
+    fi
+fi
+
+case "${TEA_HOME_ARG}" in
+    "~")
+        TEA_HOME_ARG="${HOME}"
+        ;;
+    "~/"*)
+        TEA_HOME_ARG="${HOME}/${TEA_HOME_ARG:2}"
+        ;;
+esac
+
+if [[ "${TEA_HOME_ARG}" != /* ]]; then
+    echo "The tea environment location must be an absolute path (or start with ~/)." >&2
+    exit 2
+fi
+
+mkdir -p "${TEA_HOME_ARG}"
+TEA_HOME_ARG="$(cd "${TEA_HOME_ARG}" && pwd)"
+mkdir -p "${TEA_CONFIG_DIR}"
+printf '%s\n' "${TEA_HOME_ARG}" > "${TEA_CONFIG_FILE}"
+export TEA_HOME="${TEA_HOME_ARG}"
+echo "Using shared tea home: ${TEA_HOME_ARG}"
+echo "Saved this choice in ${TEA_CONFIG_FILE}"
 
 SETUP_REMOTE=true
-if [ $# -eq 0 ]; then
+if [[ -z "${REMOTE_REPOSITORY}" ]]; then
     echo "No remote repository provided. Git setup will be skipped."
     SETUP_REMOTE=false
 fi
@@ -26,13 +117,21 @@ cp tea/templates/gitignore.template .gitignore
 cp tea/templates/UserExtensionsHelpers.template.hpp libs/user_extensions/include/UserExtensionsHelpers.hpp
 rm install.sh
 
+git add .
+git commit -m "Initial commit"
+
 if [ "$SETUP_REMOTE" = true ]; then
     echo "Setting up remote"
-    git remote add origin $1
-    git add .
-    git commit -m "Initial commit"
+    git remote add origin "${REMOTE_REPOSITORY}"
 
     # take what's in the repo already (like gitignore, README, etc.) and push all other files
     git pull --rebase origin main
     git push -u origin main
 fi
+
+echo "Creating the locked tea environment and building the analysis"
+./tea/build.sh
+
+echo
+echo "Installation complete. Activate this analysis in the current shell with:"
+echo "  source tea/setup.sh"

@@ -11,6 +11,20 @@ if [[ "${_build_sh_sourced}" -eq 1 && $- == *i* ]]; then
   fi
 fi
 
+_build_sh_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=environment/activate.sh
+source "${_build_sh_script_dir}/environment/activate.sh"
+if tea_env_activate; then
+  _build_sh_status=0
+else
+  _build_sh_status=$?
+  [[ "${_build_sh_restore_history}" -eq 1 ]] && set -o history
+  if [[ "${_build_sh_sourced}" -eq 1 ]]; then
+    return "${_build_sh_status}"
+  fi
+  exit "${_build_sh_status}"
+fi
+
 build_main() (
   set -euo pipefail
 
@@ -75,8 +89,7 @@ build_main() (
 
 if build_main "$@"; then
   _build_sh_status=0
-  _build_sh_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  export PYTHONPATH="${PYTHONPATH:-}:$(cd "${_build_sh_script_dir}/.." && pwd)/bin/"
+  export PYTHONPATH="$(cd "${_build_sh_script_dir}/.." && pwd)/bin${PYTHONPATH:+:${PYTHONPATH}}"
 else
   _build_sh_status=$?
 fi

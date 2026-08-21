@@ -14,6 +14,8 @@ jobs:
     name: Linux (EL9, correctionlib ${{ matrix.correctionlib }})
     runs-on: ubuntu-24.04
     container: almalinux:9
+    env:
+      TEA_HOME: /tmp/tea-home
     strategy:
       fail-fast: false
       matrix:
@@ -29,34 +31,31 @@ jobs:
         shell: bash -el {0}
     steps:
       - name: Install container prerequisites
-        run: dnf install -y findutils git gzip tar which
+        run: dnf install -y ca-certificates curl-minimal findutils git gzip tar which
 
       - uses: actions/checkout@v6
         with:
           submodules: false
 
-      - name: Create the build environment
-        uses: conda-incubator/setup-miniconda@v4
-        with:
-          activate-environment: tea-ci
-          environment-file: ci/environment-linux.yml
-          miniforge-version: latest
-          conda-solver: libmamba
-
-      - name: Install correctionlib
-        if: matrix.correctionlib == 'with'
-        run: python3 -m pip install correctionlib==2.8.0
-
-      - name: Record tool versions
+      - name: Create and inspect the locked build environment
         run: |
+          source environment/activate.sh
+          tea_env_activate
           cmake --version
           c++ --version
           python3 --version
           root-config --version
-          conda list
+          correction config --version
+          ci/collect-environment.sh el9 ci/tea-environment-el9.txt
+          cat ci/tea-environment-el9.txt
+
+      - name: Check shell prompt preservation
+        run: bash --noprofile --norc -i ci/test-shell-prompt.sh
 
       - name: Configure
         run: |
+          source environment/activate.sh
+          tea_env_activate
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
@@ -65,14 +64,22 @@ jobs:
           grep -F "TEA correctionlib support: ${{ matrix.expected_support }}" configure.log
 
       - name: Build and install
-        run: cmake --build build --parallel 2 --target install
+        run: |
+          source environment/activate.sh
+          tea_env_activate
+          cmake --build build --parallel 2 --target install
 
       - name: Run standalone example smoke tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          source environment/activate.sh
+          tea_env_activate
+          ctest --test-dir build --output-on-failure
 
   macos:
     name: macOS (Apple Silicon)
     runs-on: macos-14
+    env:
+      TEA_HOME: /tmp/tea-home
     defaults:
       run:
         shell: bash -el {0}
@@ -81,27 +88,35 @@ jobs:
         with:
           submodules: false
 
-      - name: Create the build environment
-        uses: conda-incubator/setup-miniconda@v4
-        with:
-          activate-environment: tea-ci
-          environment-file: ci/environment.yml
-          miniforge-version: latest
-          conda-solver: libmamba
-
-      - name: Record tool versions
+      - name: Create and inspect the locked build environment
         run: |
+          source environment/activate.sh
+          tea_env_activate
           cmake --version
           c++ --version
           python3 --version
           root-config --version
-          conda list
+          correction config --version
+          ci/collect-environment.sh macos-arm64 ci/tea-environment-macos-arm64.txt
+          cat ci/tea-environment-macos-arm64.txt
+
+      - name: Check shell prompt preservation
+        run: bash --noprofile --norc -i ci/test-shell-prompt.sh
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+        run: |
+          source environment/activate.sh
+          tea_env_activate
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 
       - name: Build and install
-        run: cmake --build build --parallel 2 --target install
+        run: |
+          source environment/activate.sh
+          tea_env_activate
+          cmake --build build --parallel 2 --target install
 
       - name: Run standalone example smoke tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          source environment/activate.sh
+          tea_env_activate
+          ctest --test-dir build --output-on-failure
