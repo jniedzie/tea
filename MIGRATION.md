@@ -43,9 +43,7 @@ contain these lines.
 
 ## 4. Select the environment location
 
-Tea environment location defaults to `~/.tea`, independently of the analysis repository's
-location. To use the default, no configuration is needed. To select a different
-location, save it explicitly (replace `/shared/path/.tea` below):
+Tea environment location defaults to `~/.tea`, independently of the analysis repository's location. To use the default, no configuration is needed. To select a different location, save it explicitly (replace `/shared/path/.tea` below):
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
@@ -72,5 +70,5 @@ cd bin
 python -c 'import ROOT, correctionlib; print(ROOT.gROOT.GetVersion(), correctionlib.__version__)'
 ```
 
-Then run one compiled application on a representative small input as the final migration check. 
+Then run one compiled application on a representative small input as the final migration check (e.g., `./histogrammer --config histogrammer_config.py`).
 On batch systems, confirm that `TEA_HOME` is mounted at the same path on worker nodes.
