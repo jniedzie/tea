@@ -19,6 +19,12 @@ Event::Event() {
   } catch (const Exception &e) {
     hasExtraCollections = false;
   }
+  try {
+    config.GetValue("metBranchName", metBranchName);
+  } catch (const Exception &e) {
+    warn() << "MET branch not specified -- will assume MET" << endl;
+    metBranchName = "MET";
+  }
 }
 
 Event::~Event() {}
@@ -31,6 +37,34 @@ void Event::Reset() {
   // Physics objects are reused across events just like the event itself, so their custom values
   // have to be dropped here as well.
   PhysicsObject::ClearAllCustomValues();
+  metUpdatedBranchName.clear();
+}
+
+void Event::UpdateMetVariables(string newBranchName, float pt, float phi) {
+  Set<float>(newBranchName + "_pt", pt);
+  Set<float>(newBranchName + "_phi", phi);
+  metUpdatedBranchName = newBranchName;
+}
+
+string Event::GetUpdatedMetBranchName() {
+  if (!metUpdatedBranchName.empty()) {
+    return metUpdatedBranchName;
+  }
+  return metBranchName; 
+}
+
+float Event::GetMetPt() { 
+  if (!metUpdatedBranchName.empty()) {
+    return GetFloat(metUpdatedBranchName + "_pt");
+  }
+  return GetFloat(metBranchName + "_pt"); 
+}
+
+float Event::GetMetPhi() { 
+  if (!metUpdatedBranchName.empty()) {
+    return GetFloat(metUpdatedBranchName + "_phi");
+  }
+  return GetFloat(metBranchName + "_phi"); 
 }
 
 template <typename First, typename... Rest>

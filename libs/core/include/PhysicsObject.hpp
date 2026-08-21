@@ -58,6 +58,10 @@ class PhysicsObject {
     return Multitype(this, branchName);
   }
 
+  inline bool HasBranch(std::string branchName) {
+    return valuesTypes.count(branchName) > 0 || customValuesTypes.count(branchName) > 0;
+  }
+
   inline TLorentzVector GetFourVector() {
     TLorentzVector vec;
     vec.SetPtEtaPhiM(GetAs<float>("pt"), GetAs<float>("eta"), GetAs<float>("phi"), GetAs<float>("mass"));
@@ -202,6 +206,15 @@ class PhysicsObject {
 
   bool HasCustomValue(const std::string &branchName) const {
     return customValuesTypes.find(branchName) != customValuesTypes.end();
+  }
+
+  void SetFloat(std::string branchName, float value) {
+    if (!HasCustomValue(branchName)) {
+      customValuesFloat[branchName] = new float(value);
+      customValuesTypes[branchName] = "Float_t";
+    } else {
+      *customValuesFloat[branchName] = value;
+    }
   }
 
   /// Custom values describe the current event only, but physics objects are allocated once and reused for every event,

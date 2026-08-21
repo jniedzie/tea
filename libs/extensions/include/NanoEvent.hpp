@@ -30,7 +30,10 @@ class NanoEvent {
   void AddExtraCollections() { event->AddExtraCollections(); }
 
   TLorentzVector GetMetFourVector();
-  float GetMetPt();
+  std::string GetMetBranchName() { return event->GetMetBranchName(); }
+  std::string GetUpdatedMetBranchName() { return event->GetUpdatedMetBranchName(); }
+  float GetMetPt() { return event->GetMetPt(); }
+  float GetMetPhi() { return event->GetMetPhi(); }
 
   std::shared_ptr<Event> GetEvent() { return event; }
 
@@ -89,6 +92,7 @@ class NanoEvent {
 
   bool PassesHEMveto(float affectedFraction);
   bool PassesJetVetoMaps();
+  bool IsData();
 
  private:
   ConfigManager &config = ConfigManager::GetInstance();
@@ -97,7 +101,8 @@ class NanoEvent {
   std::shared_ptr<Event> event;
   std::map<std::string, float> muonTriggerSF;
 
-  bool IsData();
+  // MET branch selection is owned by Event (see Event::GetMetBranchName()).
+
 };
 
 #endif /* NanoEvent_hpp */
