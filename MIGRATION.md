@@ -41,16 +41,18 @@ Delete both lines. The locked compiler toolchain now selects the correct macOS
 architecture. No equivalent change is needed in analysis files that do not
 contain these lines.
 
-## 4. Select the shared location, if needed
+## 4. Select the environment location
 
-Save the location where shared tea files should be installed (replace `/shared/path/.tea` in the command below):
+Tea environment location defaults to `~/.tea`, independently of the analysis repository's
+location. To use the default, no configuration is needed. To select a different
+location, save it explicitly (replace `/shared/path/.tea` below):
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
 printf '%s\n' /shared/path/.tea > "${XDG_CONFIG_HOME:-$HOME/.config}/tea/home"
 ```
 
-You can also store it in an env variable `TEA_HOME` if you prefer, which has precedence over the saved setting.
+You can instead export `TEA_HOME`; it takes precedence over the saved setting.
 
 ## 5. Rebuild once from a clean CMake state
 
@@ -59,8 +61,9 @@ source tea/build.sh --clean
 ```
 
 The first invocation downloads and creates the locked environment. Future
-builds and sibling analyses reuse it. The old external Conda environment is not
-deleted; remove it later only after the migrated analysis has been validated.
+builds and any other tea checkout using the same environment location reuse it.
+The old external Conda environment is not deleted; remove it later only after
+the migrated analysis has been validated.
 
 ## 6. Validate before submitting full jobs
 

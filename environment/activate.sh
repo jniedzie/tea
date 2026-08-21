@@ -36,23 +36,12 @@ tea_env_framework_dir() {
   cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
 }
 
-tea_env_analysis_root() {
-  local framework_dir superproject
-  framework_dir="$(tea_env_framework_dir)" || return 1
-  superproject="$(git -C "${framework_dir}" rev-parse --show-superproject-working-tree 2>/dev/null || true)"
-  if [[ -n "${superproject}" ]]; then
-    printf '%s\n' "${superproject}"
-  else
-    printf '%s\n' "${framework_dir}"
-  fi
-}
-
 tea_env_config_file() {
   printf '%s/tea/home\n' "${XDG_CONFIG_HOME:-${HOME}/.config}"
 }
 
 tea_env_resolve_home() {
-  local analysis_root config_file configured_home
+  local config_file configured_home
 
   if [[ -n "${TEA_HOME:-}" ]]; then
     configured_home="${TEA_HOME}"
@@ -61,8 +50,7 @@ tea_env_resolve_home() {
     if [[ -r "${config_file}" ]]; then
       IFS= read -r configured_home < "${config_file}"
     else
-      analysis_root="$(tea_env_analysis_root)" || return 1
-      configured_home="$(dirname "${analysis_root}")/.tea"
+      configured_home="${HOME}/.tea"
     fi
   fi
 
@@ -244,13 +232,36 @@ tea_env_ensure() (
 )
 
 tea_env_activate() {
-  local activation_code
+  local activation_code prompt_base prompt_is_set prompt_modifier
+
+  # Prefix activation normally makes micromamba use the full environment path
+  # as its display name. Keep that content-addressed path internal and preserve
+  # the user's prompt (including colour escapes and embedded newlines).
+  prompt_base=""
+  prompt_is_set=0
+  prompt_modifier="${CONDA_PROMPT_MODIFIER:-}"
+  if [[ "$-" == *i* ]] && [[ -n "${PS1+x}" ]]; then
+    prompt_base="${PS1}"
+    if [[ -n "${prompt_modifier}" ]] && [[ "${prompt_base}" == "${prompt_modifier}"* ]]; then
+      prompt_base="${prompt_base#"${prompt_modifier}"}"
+    fi
+    prompt_is_set=1
+  fi
 
   tea_env_prepare || return 1
   tea_env_ensure || return 1
-  activation_code="$(MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
+  activation_code="$(MAMBA_CHANGEPS1=false MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
     "${TEA_MICROMAMBA}" shell activate --shell bash --prefix "${TEA_ENV_PREFIX}")" || return 1
   eval "${activation_code}"
-  export TEA_ENV_PREFIX TEA_ENV_LOCK_HASH TEA_ENV_PLATFORM
+
+  TEA_ENV_NAME="tea"
+  CONDA_DEFAULT_ENV="${TEA_ENV_NAME}"
+  CONDA_PROMPT_MODIFIER="(${TEA_ENV_NAME}) "
+  if [[ "${prompt_is_set}" -eq 1 ]]; then
+    PS1="${CONDA_PROMPT_MODIFIER}${prompt_base}"
+  fi
+
+  export TEA_ENV_NAME TEA_ENV_PREFIX TEA_ENV_LOCK_HASH TEA_ENV_PLATFORM
+  export CONDA_DEFAULT_ENV CONDA_PROMPT_MODIFIER
   export PYTHONNOUSERSITE=1
 }

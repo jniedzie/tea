@@ -1,8 +1,8 @@
 # Installing tea
 
 Tea installs ROOT, correctionlib, Python, CMake, and the platform compiler from
-committed lock files. The resulting environment is shared by sibling analyses
-and is recreated automatically if it is removed.
+committed lock files. The environment is stored outside the analysis repository,
+can be reused by any tea checkout, and is recreated automatically if removed.
 
 ## New analysis
 
@@ -16,24 +16,25 @@ chmod 700 install.sh
 ./install.sh git@github.com:YOUR_ACCOUNT/my_analysis.git
 ```
 
-By default, an analysis at `/work/analyses/my_analysis` uses
-`/work/analyses/.tea`. Other analysis repositories under `/work/analyses`
-reuse the same environment when they use the same tea dependency lock.
+The installer asks where it should store the shared tea environment. Press
+Enter to use the default, `~/.tea`. The choice has no relationship to the
+location of the analysis repository.
 
-To choose another persistent location, pass an absolute path:
+For an unattended installation, or to bypass the question, pass an absolute
+path (a path beginning with `~/` is also accepted):
 
 ```bash
 ./install.sh --tea-home /shared/path/.tea \
   git@github.com:YOUR_ACCOUNT/my_analysis.git
 ```
 
-The installer stores this choice in `${XDG_CONFIG_HOME:-$HOME/.config}/tea/home`.
-Tea reads that file directly, so the installer does not need to edit
-`.bash_profile`, `.bashrc`, or `.zshrc`. An exported `TEA_HOME` overrides both
-the saved and default locations.
+The installer stores the answer in `${XDG_CONFIG_HOME:-$HOME/.config}/tea/home`.
+On later installations it offers that saved location as the default. Tea reads
+the file directly, so the installer does not edit `.bash_profile`, `.bashrc`,
+or `.zshrc`. An exported `TEA_HOME` overrides the saved location.
 
-The first installation downloads the locked packages and takes longer. Later
-analyses reuse the completed environment.
+The first installation downloads the locked packages and takes longer. Any
+later tea checkout configured with the same location reuses the environment.
 
 ## Use the analysis
 
@@ -42,6 +43,11 @@ In a new terminal, activate the environment and analysis paths:
 ```bash
 source tea/setup.sh
 ```
+
+The activated environment is shown as `(tea)`. Its packages still live in a
+versioned shared directory, but that internal path and lock hash are not used
+as the shell-facing name. Tea preserves the existing Bash prompt verbatim,
+including colours and multiline formatting, and only prepends `(tea) `.
 
 Build after changing C++ or adding files:
 

@@ -6,12 +6,13 @@ usage() {
     cat <<'EOF'
 Usage: ./install.sh [--tea-home ABSOLUTE_PATH] [GIT_REMOTE]
 
---tea-home selects a persistent shared location for tea dependencies. Without
-it, sibling analysis repositories automatically use ../.tea.
+--tea-home selects a persistent shared location for tea dependencies. The
+installer otherwise asks for a location and offers ~/.tea as the default.
 EOF
 }
 
 TEA_HOME_ARG=""
+TEA_HOME_EXPLICIT=false
 REMOTE_REPOSITORY=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -22,6 +23,7 @@ while [[ "$#" -gt 0 ]]; do
                 exit 2
             fi
             TEA_HOME_ARG="$2"
+            TEA_HOME_EXPLICIT=true
             shift 2
             ;;
         -h|--help)
@@ -45,20 +47,49 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
-if [[ -n "${TEA_HOME_ARG}" ]]; then
-    if [[ "${TEA_HOME_ARG}" != /* ]]; then
-        echo "--tea-home must be an absolute path" >&2
-        exit 2
-    fi
-    mkdir -p "${TEA_HOME_ARG}"
-    TEA_HOME_ARG="$(cd "${TEA_HOME_ARG}" && pwd)"
-    TEA_CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/tea"
-    mkdir -p "${TEA_CONFIG_DIR}"
-    printf '%s\n' "${TEA_HOME_ARG}" > "${TEA_CONFIG_DIR}/home"
-    export TEA_HOME="${TEA_HOME_ARG}"
-    echo "Using shared tea home: ${TEA_HOME_ARG}"
-    echo "Saved this choice in ${TEA_CONFIG_DIR}/home"
+TEA_CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/tea"
+TEA_CONFIG_FILE="${TEA_CONFIG_DIR}/home"
+TEA_HOME_DEFAULT="${HOME}/.tea"
+
+if [[ -z "${TEA_HOME_ARG}" ]] && [[ -n "${TEA_HOME:-}" ]]; then
+    TEA_HOME_ARG="${TEA_HOME}"
+    TEA_HOME_EXPLICIT=true
+elif [[ -z "${TEA_HOME_ARG}" ]] && [[ -r "${TEA_CONFIG_FILE}" ]]; then
+    IFS= read -r TEA_HOME_ARG < "${TEA_CONFIG_FILE}"
 fi
+
+if [[ -z "${TEA_HOME_ARG}" ]]; then
+    TEA_HOME_ARG="${TEA_HOME_DEFAULT}"
+fi
+
+if [[ -t 0 ]] && [[ -t 1 ]] && [[ "${TEA_HOME_EXPLICIT}" == false ]]; then
+    read -r -p "Where should tea store its shared environment? [${TEA_HOME_ARG}] " TEA_HOME_INPUT
+    if [[ -n "${TEA_HOME_INPUT}" ]]; then
+        TEA_HOME_ARG="${TEA_HOME_INPUT}"
+    fi
+fi
+
+case "${TEA_HOME_ARG}" in
+    "~")
+        TEA_HOME_ARG="${HOME}"
+        ;;
+    "~/"*)
+        TEA_HOME_ARG="${HOME}/${TEA_HOME_ARG:2}"
+        ;;
+esac
+
+if [[ "${TEA_HOME_ARG}" != /* ]]; then
+    echo "The tea environment location must be an absolute path (or start with ~/)." >&2
+    exit 2
+fi
+
+mkdir -p "${TEA_HOME_ARG}"
+TEA_HOME_ARG="$(cd "${TEA_HOME_ARG}" && pwd)"
+mkdir -p "${TEA_CONFIG_DIR}"
+printf '%s\n' "${TEA_HOME_ARG}" > "${TEA_CONFIG_FILE}"
+export TEA_HOME="${TEA_HOME_ARG}"
+echo "Using shared tea home: ${TEA_HOME_ARG}"
+echo "Saved this choice in ${TEA_CONFIG_FILE}"
 
 SETUP_REMOTE=true
 if [[ -z "${REMOTE_REPOSITORY}" ]]; then

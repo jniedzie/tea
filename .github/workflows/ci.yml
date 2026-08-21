@@ -49,6 +49,9 @@ jobs:
           ci/collect-environment.sh el9 ci/tea-environment-el9.txt
           cat ci/tea-environment-el9.txt
 
+      - name: Check shell prompt preservation
+        run: bash --noprofile --norc -i ci/test-shell-prompt.sh
+
       - name: Configure
         run: |
           source environment/activate.sh
@@ -96,6 +99,9 @@ jobs:
           correction config --version
           ci/collect-environment.sh macos-arm64 ci/tea-environment-macos-arm64.txt
           cat ci/tea-environment-macos-arm64.txt
+
+      - name: Check shell prompt preservation
+        run: bash --noprofile --norc -i ci/test-shell-prompt.sh
 
       - name: Configure
         run: |
