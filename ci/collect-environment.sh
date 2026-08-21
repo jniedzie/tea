@@ -81,35 +81,36 @@ PY
 
 printf 'Wrote %s\n' "${output}"
 
+write_environment_export() {
+  local destination temporary
+  destination="$1"
+  shift
+  temporary="$(mktemp "${destination}.tmp.XXXXXX")"
+  if "$@" > "${temporary}"; then
+    mv "${temporary}" "${destination}"
+    printf 'Wrote %s\n' "${destination}"
+  else
+    rm -f "${temporary}"
+    printf 'Could not write %s\n' "${destination}" >&2
+  fi
+}
+
 if command -v conda >/dev/null 2>&1; then
   conda_target=()
   if [[ -n "${CONDA_PREFIX:-}" ]]; then
     conda_target=(--prefix "${CONDA_PREFIX}")
   fi
 
-  write_conda_export() {
-    destination="$1"
-    shift
-    temporary="$(mktemp "${destination}.tmp.XXXXXX")"
-    if "$@" > "${temporary}"; then
-      mv "${temporary}" "${destination}"
-      printf 'Wrote %s\n' "${destination}"
-    else
-      rm -f "${temporary}"
-      printf 'Could not write %s\n' "${destination}" >&2
-    fi
-  }
-
-  write_conda_export \
+  write_environment_export \
     "${output_stem}.conda-explicit.txt" \
     conda list --explicit "${conda_target[@]}"
 
   if [[ "${#conda_target[@]}" -eq 0 ]]; then
-    write_conda_export \
+    write_environment_export \
       "${output_stem}.conda-environment.yml" \
       conda env export
   elif conda env export --help 2>&1 | grep -q -- '--prefix'; then
-    write_conda_export \
+    write_environment_export \
       "${output_stem}.conda-environment.yml" \
       conda env export "${conda_target[@]}"
   else
@@ -117,7 +118,7 @@ if command -v conda >/dev/null 2>&1; then
   fi
 
   if [[ -n "${CONDA_PREFIX:-}" && -d "${CONDA_PREFIX}/conda-meta" ]]; then
-    write_conda_export \
+    write_environment_export \
       "${output_stem}.conda-meta.json" \
       python3 - "${CONDA_PREFIX}/conda-meta" <<'PY'
 import glob
@@ -137,6 +138,7 @@ PY
 fi
 
 if [[ -n "${TEA_MICROMAMBA:-}" && -x "${TEA_MICROMAMBA}" && -n "${TEA_ENV_PREFIX:-}" ]]; then
-  "${TEA_MICROMAMBA}" list --prefix "${TEA_ENV_PREFIX}" > "${output_stem}.micromamba-list.txt"
-  printf 'Wrote %s\n' "${output_stem}.micromamba-list.txt"
+  write_environment_export \
+    "${output_stem}.micromamba-list.txt" \
+    "${TEA_MICROMAMBA}" list --prefix "${TEA_ENV_PREFIX}"
 fi
