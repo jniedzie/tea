@@ -186,6 +186,12 @@ public:
     return valuesStdUintVector.at(branchName);
   }
 
+  std::string GetMetBranchName() { return metBranchName; }
+  std::string GetUpdatedMetBranchName();
+  void UpdateMetVariables(std::string newBranchName, float pt, float phi);
+  float GetMetPt();
+  float GetMetPhi();
+
   template <typename T> void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>)
       customValuesFloat[branchName] = value;
@@ -252,8 +258,8 @@ public:
   }
 
 private:
-  ConfigManager &config = ConfigManager::GetInstance();
-
+  ConfigManager& config = ConfigManager::GetInstance();
+  
   inline UInt_t GetUint(std::string branchName) {
     if (valuesTypes.find(branchName) != valuesTypes.end())
       return valuesUint[branchName];
@@ -354,6 +360,9 @@ private:
       extraCollectionsDescriptions;
   std::map<std::string, std::string> defaultCollectionsTypes;
   std::map<std::string, std::pair<unsigned, unsigned>> runRangesPerEra;
+
+  std::string metBranchName;
+  std::string metUpdatedBranchName;
 
   friend class EventReader;
   template <typename T> friend class Multitype;

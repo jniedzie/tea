@@ -39,8 +39,8 @@ class ScaleFactorsManager {
   std::map<std::string, float> GetDSAMuonScaleFactors(std::string name, const std::vector<CorrectionArgType>& args);
   std::map<std::string, float> GetMuonTriggerScaleFactors(std::string name, float eta, float pt);
   std::map<std::string, float> GetBTagScaleFactors(std::string name, float eta, float pt);
+  float GetJetTagEfficiency(std::string name, std::string datasetName, float pt);
 
-  std::map<std::string, float> GetPileupScaleFactorCustom(int nVertices);
   std::map<std::string, float> GetPileupScaleFactor(std::string name, float nVertices);
 
   std::vector<std::string> GetBTagVariationNames(std::string name);
@@ -55,7 +55,8 @@ class ScaleFactorsManager {
 
   void ReadJetEnergyCorrections();
   bool ShouldApplyJetEnergyCorrections() { return ShouldApplyScaleFactor("jec") || ShouldApplyVariation("jec"); }
-  std::map<std::string, float> GetJetEnergyCorrections(std::map<std::string, float> inputArguments);
+  std::map<std::string, float> GetJetEnergyCorrectionUncertainties(std::map<std::string, float> inputArguments);
+  std::map<std::string, float> GetJetEnergyCorrections(std::vector<std::string> jecNames, std::map<std::string, float> inputArguments);
   std::map<std::string, float> GetJetEnergyResolutionScaleFactorAndPtResolution(float jetEta, float jetPt, float rho);
   float GetJetEnergyResolutionSmearingFactor(std::map<std::string, CorrectionArgType> inputArguments);
 
@@ -79,13 +80,10 @@ class ScaleFactorsManager {
 
   std::map<std::string, std::map<std::string, std::pair<double, double>>> boundsPerInput;
 
-  TH1D* pileupSFvalues;
-
   void ExtractBounds(const nlohmann::json& node, std::map<std::string, std::pair<double, double>>& bounds);
 
   void ReadScaleFactorFlags();
   void ReadScaleFactors();
-  void ReadPileupSFs();
 
   float TryToEvaluate(const std::string& name, const std::vector<CorrectionArgType>& args);
 
