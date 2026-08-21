@@ -50,21 +50,21 @@ string Event::GetUpdatedMetBranchName() {
   if (!metUpdatedBranchName.empty()) {
     return metUpdatedBranchName;
   }
-  return metBranchName; 
+  return metBranchName;
 }
 
-float Event::GetMetPt() { 
+float Event::GetMetPt() {
   if (!metUpdatedBranchName.empty()) {
     return GetFloat(metUpdatedBranchName + "_pt");
   }
-  return GetFloat(metBranchName + "_pt"); 
+  return GetFloat(metBranchName + "_pt");
 }
 
-float Event::GetMetPhi() { 
+float Event::GetMetPhi() {
   if (!metUpdatedBranchName.empty()) {
     return GetFloat(metUpdatedBranchName + "_phi");
   }
-  return GetFloat(metBranchName + "_phi"); 
+  return GetFloat(metBranchName + "_phi");
 }
 
 template <typename First, typename... Rest>

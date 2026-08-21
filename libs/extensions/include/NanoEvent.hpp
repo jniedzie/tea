@@ -102,7 +102,6 @@ class NanoEvent {
   std::map<std::string, float> muonTriggerSF;
 
   // MET branch selection is owned by Event (see Event::GetMetBranchName()).
-
 };
 
 #endif /* NanoEvent_hpp */
