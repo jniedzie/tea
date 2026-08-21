@@ -15,8 +15,7 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
 
   try {
     config.GetValue("weightsBranchName", weightsBranchName);
-  } catch (const Exception &e) {
-  }
+  } catch (const Exception &e) {}
 
   RegisterPreExistingCutFlows();
 
@@ -212,7 +211,8 @@ map<string, float> CutFlowManager::GetRawEventsCutFlow(string collectionName) {
 
 void CutFlowManager::Print(string collectionName) {
   map<string, float> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
-  map<string, float> rawEvents = collectionName == "" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
+  map<string, float> rawEvents =
+      collectionName == "" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
   map<int, pair<string, float>> sortedWeightsAfterCuts;
   map<int, pair<string, float>> sortedRawEventsAfterCuts;
   for (auto &[cutName, sumOfWeights] : weights) {
@@ -222,11 +222,12 @@ void CutFlowManager::Print(string collectionName) {
     sortedRawEventsAfterCuts[index] = {cutName, rawEvents[cutName]};
   }
 
+  // clang-format off
   cout << "\n\033[1;36m"  // Bright cyan
        << "╔═════════════════════════════════════════════════════════════════════════╗\n"
        << "║                               Cut Flow Table                            ║\n"
        << "╠═════════════════════════════╤═══════════════════════╤═══════════════════╣\n"
-       << "║ " << setw(27) << left << "Cut name"
+       << "║ " << setw(27) << left  << "Cut name"
        << " │ " << setw(21) << right << "Gen-weights sum"
        << " │ " << setw(17) << right << "Raw events" << " ║\n";
   cout << "╠═════════════════════════════╪═══════════════════════╪═══════════════════╣\n";
@@ -235,12 +236,13 @@ void CutFlowManager::Print(string collectionName) {
     string cutName = get<0>(values);
     float genWeight = get<1>(values);
     float rawEvents = get<1>(sortedRawEventsAfterCuts[index]);
-    cout << "║ " << setw(27) << left << cutName
+    cout << "║ " << setw(27) << left  << cutName
          << " │ " << setw(21) << right << genWeight
          << " │ " << setw(17) << right << rawEvents << " ║\n";
   }
 
   cout << "╚═════════════════════════════╧═══════════════════════╧═══════════════════╝\033[0m\n\n";
+  // clang-format on
 }
 
 bool CutFlowManager::isEmpty(string collectionName) {

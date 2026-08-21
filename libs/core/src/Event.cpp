@@ -16,7 +16,7 @@ using namespace std;
 Event::Event() {
   try {
     config.GetExtraEventCollections(extraCollectionsDescriptions);
-  } catch (const Exception& e) {
+  } catch (const Exception &e) {
     hasExtraCollections = false;
   }
 }
@@ -38,7 +38,7 @@ bool Event::tryGet(shared_ptr<PhysicsObject> physicsObject, string branchName, p
   try {
     First value = physicsObject->Get(branchName);
     return value >= cuts.first && value <= cuts.second;
-  } catch (BadTypeException& e) {
+  } catch (BadTypeException &e) {
     if constexpr (sizeof...(Rest) > 0) {
       return tryGet<Rest...>(physicsObject, branchName, cuts);
     } else {
@@ -62,7 +62,7 @@ bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName
 void Event::AddExtraCollections() {
   if (!hasExtraCollections) return;
 
-  for (auto& [name, extraCollection] : extraCollectionsDescriptions) {
+  for (auto &[name, extraCollection] : extraCollectionsDescriptions) {
     auto newCollection = make_shared<PhysicsObjects>();
 
     for (auto inputCollectionName : extraCollection.inputCollections) {
@@ -70,7 +70,7 @@ void Event::AddExtraCollections() {
 
       try {
         inputCollection = GetCollection(inputCollectionName);
-      } catch (const Exception& e) {
+      } catch (const Exception &e) {
         error() << "Couldn't find collection " << inputCollectionName << " for extra collection " << name << endl;
         continue;
       }
@@ -78,13 +78,13 @@ void Event::AddExtraCollections() {
       for (auto physicsObject : *inputCollection) {
         bool passes = true;
 
-        for (auto& [branchName, flag] : extraCollection.flags) {
+        for (auto &[branchName, flag] : extraCollection.flags) {
           passes = checkCuts(physicsObject, branchName, {flag, flag});
           if (!passes) break;
         }
         if (!passes) continue;
 
-        for (auto& [branchName, cuts] : extraCollection.allCuts) {
+        for (auto &[branchName, cuts] : extraCollection.allCuts) {
           passes = checkCuts(physicsObject, branchName, cuts);
           if (!passes) break;
         }

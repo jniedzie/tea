@@ -75,7 +75,8 @@ class Multitype {
       throw BadTypeException(message.c_str());
     }
     if (branchType != typeName) {
-      std::string message = "Casting a physics object-level branch " + branchName + " (" + branchType + ") to " + typeName + "\n";
+      std::string message =
+          "Casting a physics object-level branch " + branchName + " (" + branchType + ") to " + typeName + "\n";
       throw BadTypeException(message.c_str());
     }
   }

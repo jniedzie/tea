@@ -9,8 +9,8 @@
 
 class Profiler {
  public:
-  Profiler(const Profiler&) = delete;
-  void operator=(const Profiler&) = delete;
+  Profiler(const Profiler &) = delete;
+  void operator=(const Profiler &) = delete;
 
   void Start(std::string name) { startTimes[name] = now(); }
 
@@ -21,11 +21,13 @@ class Profiler {
 
   void Print() {
     std::vector<std::pair<std::string, float>> sortedTimes(times.begin(), times.end());
-    std::sort(sortedTimes.begin(), sortedTimes.end(), [](const auto& pair1, const auto& pair2) { return pair1.second > pair2.second; });
-    for (auto& [name, t] : sortedTimes) info() << name << ": " << t << " (s)" << std::endl;
+    std::sort(sortedTimes.begin(), sortedTimes.end(),
+              [](const auto &pair1, const auto &pair2) { return pair1.second > pair2.second; });
+    for (auto &[name, t] : sortedTimes)
+      info() << name << ": " << t << " (s)" << std::endl;
   }
 
-  static Profiler& GetInstance();
+  static Profiler &GetInstance();
 
  private:
   Profiler() {}
@@ -33,7 +35,7 @@ class Profiler {
   std::map<std::string, float> times;
   std::map<std::string, std::chrono::time_point<std::chrono::steady_clock>> startTimes;
 
-  bool compareByValue(const std::pair<std::string, float>& pair1, const std::pair<std::string, float>& pair2) {
+  bool compareByValue(const std::pair<std::string, float> &pair1, const std::pair<std::string, float> &pair2) {
     return pair1.second < pair2.second;
   }
 };

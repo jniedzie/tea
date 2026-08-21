@@ -5,7 +5,7 @@
 
 class ArgsManager {
  public:
-  ArgsManager(int argc, char** argv, std::vector<std::string> _requiredArgs, std::vector<std::string> _optionalArgs);
+  ArgsManager(int argc, char **argv, std::vector<std::string> _requiredArgs, std::vector<std::string> _optionalArgs);
   ~ArgsManager() {}
 
   inline std::optional<std::string> GetString(std::string key) {

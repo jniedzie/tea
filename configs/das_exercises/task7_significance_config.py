@@ -16,7 +16,7 @@ results_output_path = "../significance/results/"
 add_uncertainties_on_zero = False
 
 # Integrated luminosity for 2018 data-taking period.
-luminosity = 2300000.
+luminosity = 2300000.0
 
 # If True, shapes (histograms) will be included in the datacards. This typically improves the sensitivity of the analysis.
 include_shapes = True
@@ -55,10 +55,10 @@ histogram = Histogram(name="Dimuon_minvAfterCut", norm_type=NormalizationType.to
 
 # List uncertainties (nuisance parameters) to be included in the datacard.
 nuisances = {
-    "lumi": {
-        "data_obs": 1.017,  # arxiv.org/abs/2503.03946
-        "tt_semi": 1.017,
-    }
+  "lumi": {
+    "data_obs": 1.017,  # arxiv.org/abs/2503.03946
+    "tt_semi": 1.017,
+  }
 }
 
 # Plotting parameters for the limit plot (brazil plot).

@@ -11,15 +11,17 @@
 using namespace std;
 
 namespace {
-int GetExpectedMultiplicity(const AddedBranchParams &spec) { return spec.IsEventLevel() ? 0 : 1; }
+int GetExpectedMultiplicity(const AddedBranchParams &spec) {
+  return spec.IsEventLevel() ? 0 : 1;
+}
 
 template <typename T>
 void CheckRange(double value, const string &type, const string &branchName) {
   auto lo = static_cast<double>(numeric_limits<T>::lowest());
   auto hi = static_cast<double>(numeric_limits<T>::max());
   if (value < lo || value > hi) {
-    fatal() << "branchesToAdd: varexp value " << value << " for branch \"" << branchName << "\" overflows declared type " << type
-            << " (valid range [" << lo << ", " << hi << "])" << endl;
+    fatal() << "branchesToAdd: varexp value " << value << " for branch \"" << branchName
+            << "\" overflows declared type " << type << " (valid range [" << lo << ", " << hi << "])" << endl;
     exit(1);
   }
 }
@@ -76,7 +78,8 @@ AddedBranches::AddedBranches() {
 }
 
 AddedBranches::~AddedBranches() {
-  for (auto &[name, formula] : formulas) delete formula;
+  for (auto &[name, formula] : formulas)
+    delete formula;
 }
 
 void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<string, TTree *> &inputTrees) {
@@ -85,7 +88,8 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
   for (auto &spec : specs) {
     bool isVectorType = kAddedVectorBranchElementTypes.count(spec.type) > 0;
     if (!isVectorType && kAddedBranchTypeCodes.find(spec.type) == kAddedBranchTypeCodes.end()) {
-      fatal() << "branchesToAdd: unsupported type \"" << spec.type << "\" for branch \"" << spec.BranchName() << "\"" << endl;
+      fatal() << "branchesToAdd: unsupported type \"" << spec.type << "\" for branch \"" << spec.BranchName() << "\""
+              << endl;
       exit(1);
     }
     if (isVectorType) {
@@ -126,9 +130,9 @@ void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<strin
 
     int expectedMultiplicity = GetExpectedMultiplicity(spec);
     if (formula->GetMultiplicity() != expectedMultiplicity) {
-      fatal() << "branchesToAdd: varexp \"" << spec.varexp << "\" for branch \"" << spec.BranchName() << "\" has multiplicity "
-              << formula->GetMultiplicity() << ", expected " << expectedMultiplicity << " for a "
-              << (expectedMultiplicity == 0 ? "scalar" : "per-object") << " branch" << endl;
+      fatal() << "branchesToAdd: varexp \"" << spec.varexp << "\" for branch \"" << spec.BranchName()
+              << "\" has multiplicity " << formula->GetMultiplicity() << ", expected " << expectedMultiplicity
+              << " for a " << (expectedMultiplicity == 0 ? "scalar" : "per-object") << " branch" << endl;
       exit(1);
     }
 
@@ -149,19 +153,21 @@ void AddedBranches::Evaluate(const shared_ptr<Event> &event) {
   }
 }
 
-void AddedBranches::EvaluateScalar(const AddedBranchParams &spec, TTreeFormula *formula, const shared_ptr<Event> &event) {
+void AddedBranches::EvaluateScalar(const AddedBranchParams &spec, TTreeFormula *formula,
+                                   const shared_ptr<Event> &event) {
   formula->GetNdata();
   SetFormulaValue(*event, spec.name, spec.type, formula, 0);
 }
 
-void AddedBranches::EvaluateArray(const AddedBranchParams &spec, TTreeFormula *formula, const shared_ptr<Event> &event) {
+void AddedBranches::EvaluateArray(const AddedBranchParams &spec, TTreeFormula *formula,
+                                  const shared_ptr<Event> &event) {
   auto collection = event->GetCollection(spec.collection);
 
   int nData = formula->GetNdata();
   if (nData < 0 || static_cast<size_t>(nData) != collection->size()) {
-    fatal() << "branchesToAdd: varexp \"" << spec.varexp << "\" for branch \"" << spec.BranchName() << "\" produced " << nData
-            << " values but collection \"" << spec.collection << "\" has " << collection->size() << " objects this event"
-            << endl;
+    fatal() << "branchesToAdd: varexp \"" << spec.varexp << "\" for branch \"" << spec.BranchName() << "\" produced "
+            << nData << " values but collection \"" << spec.collection << "\" has " << collection->size()
+            << " objects this event" << endl;
     exit(1);
   }
 

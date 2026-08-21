@@ -22,8 +22,14 @@ class DatacardsProcessor:
     self.normalizer = HistogramNormalizer(config)
 
   def create_new_datacard(
-      self, hist_name, obs_histosample, bkg_histosamples, signal_histosample,
-      nuisances, input_files, add_uncertainties_on_zero=False
+    self,
+    hist_name,
+    obs_histosample,
+    bkg_histosamples,
+    signal_histosample,
+    nuisances,
+    input_files,
+    add_uncertainties_on_zero=False,
   ):
     self.datacard = ""
 
@@ -65,7 +71,8 @@ class DatacardsProcessor:
 
       self.__insert_background_sum_hist()
       nuisances_varations = self.__fill_in_variation_nuisances(
-          hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files)
+        hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files
+      )
       for k, v in nuisances_varations.items():
         nuisances_updated[k] = v
 
@@ -131,10 +138,10 @@ class DatacardsProcessor:
       hist, sample = self.histosamples["signal"]
 
       variation_hist = Histogram2D(
-          name=f"{variation_name}/{hist_name}_{variation_name}",
-          norm_type=NormalizationType.to_lumi,
-          x_rebin=self.config.rebin_2D,
-          y_rebin=self.config.rebin_2D,
+        name=f"{variation_name}/{hist_name}_{variation_name}",
+        norm_type=NormalizationType.to_lumi,
+        x_rebin=self.config.rebin_2D,
+        y_rebin=self.config.rebin_2D,
       )
 
       variation_hist.load(input_files[sample_name])
@@ -158,8 +165,8 @@ class DatacardsProcessor:
         warn(f"Histogram {hist_name} has no events in the signal bin. Setting variation to 0.")
 
       if cms_variation_name not in nuisances_updated:
-        nuisances_updated[cms_variation_name] = {"signal": [0.0,0.0]}
-      
+        nuisances_updated[cms_variation_name] = {"signal": [0.0, 0.0]}
+
       idx = 1
       if "down" in variation_name or "Dn" in variation_name:
         idx = 0
@@ -171,7 +178,7 @@ class DatacardsProcessor:
 
   def __fill_closure_nuisance(self, nuisances):
     nuisances_updated = {}
-    
+
     if "abcd_nonClosure" not in nuisances:
       return nuisances_updated
 
@@ -190,17 +197,17 @@ class DatacardsProcessor:
     for key, value_tuple in nuisances.items():
       if value_tuple[0] == "closure":
         cms_variation_name = value_tuple[1]
-        nuisances_updated[cms_variation_name] = {"bkg": [1+closure]}
-    
+        nuisances_updated[cms_variation_name] = {"bkg": [1 + closure]}
+
     return nuisances_updated
 
   def __fill_abcd_nuisance(self, nuisances):
     nuisances_updated = {}
-    
+
     if "abcd_unc" not in nuisances:
       info(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
       return nuisances_updated
-    
+
     max_rel_unc = -1
     for bkg_name in ("bkg_xup", "bkg_xdown", "bkg_yup", "bkg_ydown"):
       bkg_hist = self.histosamples[bkg_name][0].hist
@@ -217,7 +224,7 @@ class DatacardsProcessor:
       rel_unc = prediction_err / prediction
       if rel_unc > max_rel_unc:
         max_rel_unc = rel_unc
-    
+
     # nominal value
     bkg_hist = self.histosamples["bkg"][0].hist
     b = bkg_hist.GetBinContent(1, 1)
@@ -233,20 +240,20 @@ class DatacardsProcessor:
 
     abcd_unc = 1.0
     if rel_unc_nom < max_rel_unc:
-      abcd_unc = (max_rel_unc - rel_unc_nom)
+      abcd_unc = max_rel_unc - rel_unc_nom
 
     info(f"---- abcd_unc: {abcd_unc:.3f}")
-    
+
     for key, value_tuple in nuisances.items():
       if not isinstance(value_tuple, tuple):
         continue
       if value_tuple[0] == "abcd":
         cms_variation_name = value_tuple[1]
-        nuisances_updated[cms_variation_name] = {"bkg": [1+abcd_unc]}
-    
+        nuisances_updated[cms_variation_name] = {"bkg": [1 + abcd_unc]}
+
     return nuisances_updated
 
-  def __insert_background_sum_hist(self, abcd_point = None, histosample_name = "bkg"):
+  def __insert_background_sum_hist(self, abcd_point=None, histosample_name="bkg"):
     background_sum_a = 0
     background_sum_b = 0
     background_sum_c = 0
@@ -272,7 +279,7 @@ class DatacardsProcessor:
         hist_sum = hist.hist.Clone()
       else:
         hist_sum.Add(hist.hist)
-      
+
       a = abcd_values[0]
       d = abcd_values[3]
       a_raw = a / hist.norm_scale if hist.norm_scale != 0 else 0
@@ -317,10 +324,10 @@ class DatacardsProcessor:
     hist.SetBinError(2, 1, d_err)
 
     histogram = Histogram2D(
-        name=histosample_name,
-        norm_type=None,
-        x_rebin=self.config.rebin_2D,
-        y_rebin=self.config.rebin_2D,
+      name=histosample_name,
+      norm_type=None,
+      x_rebin=self.config.rebin_2D,
+      y_rebin=self.config.rebin_2D,
     )
     histogram.set_hist(hist)
     self.histosamples[histosample_name] = (histogram, sample)
@@ -353,7 +360,7 @@ class DatacardsProcessor:
     # point to the root file for shapes
     if self.config.include_shapes:
       # get file name from the full path:
-      
+
       if ".txt" not in self.datacard_file_name:
         file_name = self.datacard_file_name + ".root"
       else:
@@ -374,7 +381,7 @@ class DatacardsProcessor:
         c_err = bkg_hist.GetBinError(2, 2)
         d_err = bkg_hist.GetBinError(2, 1)
 
-        obs_rate, _= self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
+        obs_rate, _ = self.abcd_helper.get_prediction(b, c, d, b_err, c_err, d_err)
       else:
         obs_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
     else:
@@ -440,10 +447,10 @@ class DatacardsProcessor:
         rate, rate_err = a, a**0.5
 
       rate = rate if rate > 0 else 1e-99
-      rate_err = 1 + rate_err/rate if rate > 0 else 1.0
+      rate_err = 1 + rate_err / rate if rate > 0 else 1.0
 
       signal_rate = signal_rate if signal_rate > 0 else 1e-99
-      signal_rate_err = 1 + signal_rate_err/signal_rate if signal_rate > 0 else 1.0
+      signal_rate_err = 1 + signal_rate_err / signal_rate if signal_rate > 0 else 1.0
 
       self.datacard += f" {signal_rate} {rate}"
       statistical_errors["signal"] = signal_rate_err
@@ -458,7 +465,7 @@ class DatacardsProcessor:
         rate = hist.hist.IntegralAndError(1, hist.hist.GetNbinsX(), rate_err)
 
         self.datacard += f" {rate}"
-        statistical_errors[name] = 1 + rate_err.value/rate
+        statistical_errors[name] = 1 + rate_err.value / rate
 
     self.datacard += "\n"
 
@@ -492,13 +499,12 @@ class DatacardsProcessor:
     first_background_name = self.__get_first_background_name()
 
     for param_name, values in nuisances.items():
-
       get_max_variation = False
       for symmetric_variation in self.config.symmetric_variations:
-          if symmetric_variation in param_name:
-            get_max_variation = True
+        if symmetric_variation in param_name:
+          get_max_variation = True
 
-      self.datacard += f"{param_name} lnN"    
+      self.datacard += f"{param_name} lnN"
 
       if self.do_abcd:
         signal_unc = "-"
@@ -515,7 +521,7 @@ class DatacardsProcessor:
         elif first_background_name in values:
           bkg_unc_ = values[first_background_name]
           bkg_unc = self.__get_variation_string(bkg_unc_, get_max_variation)
-          
+
         self.datacard += f" {signal_unc} {bkg_unc}"
 
       else:

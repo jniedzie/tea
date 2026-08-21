@@ -13,9 +13,9 @@ treeOutputFilePath = f"../trees/{process}/skimmed.root"
 extraEventCollections = {
   "TightMuons": {
     "inputCollections": ["Muon"],
-    "pt": (30., 9999999.),
+    "pt": (30.0, 9999999.0),
     "eta": (-2.4, 2.4),
-    "pfRelIso04_all": (0., 0.15),
+    "pfRelIso04_all": (0.0, 0.15),
     "tightId": True,
   },
 }

@@ -1,4 +1,3 @@
-
 # scale_factors_config.py
 #
 # Provides the `scaleFactors` dictionary consumed by ScaleFactorsManager.
@@ -112,179 +111,168 @@ def get_scale_factors(year):
     tight_muon_iso_type = "NUM_TightPFIso_DEN_TightID"
 
   scaleFactors = {
-
-      # b-tagging
-      # systematic options: "central", "up/down_correlated" or "up/down_uncorrelated"
-      "bTaggingMedium": {
-          "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
-          "type": "deepJet_mujets",
-          "systematic": "central",
-          "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
-          "workingPoint": "M",
-          "flavour": "5", # 5 = b
-      },
-      "bTaggingTight": {
-          "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
-          "type": "deepJet_mujets",
-          "systematic": "central",
-          "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
-          "workingPoint": "T",
-          "flavour": "5", # 5 = b
-      },
-
-      # Muon ID
-      "muonIDLoose": {
-          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-          "type": "NUM_LooseID_DEN_TrackerMuons",
-          "systematic": "nominal",
-          "variations": "systup,systdown",
-      },
-      "muonIDMedium": {
-          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-          "type": "NUM_MediumID_DEN_TrackerMuons",
-          "systematic": "nominal",
-          "variations": "systup,systdown",
-      },
-      "muonIDTight": {
-          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-          "type": "NUM_TightID_DEN_TrackerMuons",
-          "systematic": "nominal",
-          "variations": "systup,systdown",
-      },
-
-      # Muon Iso
-      "muonIsoLoose": {
-          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-          "type": loose_muon_iso_type,
-          "systematic": "nominal",
-          "variations": "systup,systdown",
-      },
-      "muonIsoTight": {
-          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-          "type": tight_muon_iso_type,
-          "systematic": "nominal",
-          "variations": "systup,systdown",
-      },
-
-      # Pileup
-      "pileup": {
-          "path": f"../tea/jsonPOG/POG/LUM/{year_path}/puWeights.json.gz",
-          "type": f"{pu_type}",
-          "systematic": "nominal",
-          "variations": "up,down",
-      },
-
-      "dimuonEff_Pat": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_Pat_pt_irr2_v3.json", 
-          "type": "dimuonEff_Pat",
-          "systematic": "nominal",
-          "variations": "up,down",
-      },
-      "dimuonEff_PatDSA": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_PatDSA_pt_irr2_v3.json", 
-          "type": "dimuonEff_PatDSA",
-          "systematic": "nominal",
-          "variations": "up,down",
-      },
-      "dimuonEff_DSA": {
-          "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_DSA_pt_irr2_v3.json", 
-          "type": "dimuonEff_DSA",
-          "systematic": "nominal",
-          "variations": "up,down",
-      },
-
-      # Muon trigger
-      "muonTrigger": {
-          "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-          "type": muon_trigger_type,
-          "systematic": "nominal",
-          "variations": "systup,systdown",
-      },
-
-      # DSA Muon SFs
-      "dsamuonID": {
-          "path": f"../tea/DSAMuonSF/{dsaYear}_Jpsi/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
-          "type": "NUM_DisplacedID_DEN_dSAMuons",
-          "systematic": "nominal",
-          "variations": "up_syst,down_syst",
-      },
-      "dsamuonID_cosmic": {
-          "path": "../tea/DSAMuonSF/id_cosmic/NUM_DisplacedID_DEN_dSAMuons_absdxy.json.gz",
-          "type": "NUM_DisplacedID_DEN_dSAMuons_absdxy",
-          "systematic": "nominal",
-          "variations": "up_syst,down_syst",
-      },
-      "dsamuonReco_cosmic": {
-          "path": "../tea/DSAMuonSF/reco_cosmic/NUM_RECO_DEN_dSAMuons.json.gz",
-          "type": "NUM_RECO_DEN_dSAMuons",
-          "systematic": "nominal",
-          "variations": "up,down",
-      },
-
-      # L1 Pre-firing weights
-      "L1PreFiringWeight": {
-          "systematic": "Nom",
-          "variations": "Up,Dn",
-      },
-
-      # Jet veto maps (only apply to Run 3)
-      "jetVetoMaps_2022preEE": {
-          "path": "../tea/jsonPOG/POG/JME/2022_Summer22/jetvetomaps.json.gz",
-          "type": "Summer22_23Sep2023_RunCD_V1",
-      },
-      "jetVetoMaps_2022postEE": {
-          "path": "../tea/jsonPOG/POG/JME/2022_Summer22EE/jetvetomaps.json.gz",
-          "type": "Summer22EE_23Sep2023_RunEFG_V1",
-      },
-      "jetVetoMaps_2023preBPix": {
-          "path": "../tea/jsonPOG/POG/JME/2023_Summer23/jetvetomaps.json.gz",
-          "type": "Summer23Prompt23_RunC_V1",
-      },
-      "jetVetoMaps_2023postBPix": {
-          "path": "../tea/jsonPOG/POG/JME/2023_Summer23BPix/jetvetomaps.json.gz",
-          "type": "Summer23BPixPrompt23_RunD_V1",
-      },
-
-      # Jet Energy Correction uncertainties
-      "jecMC": {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": f"{jecType}",
-        "level": "L1L2L3Res",
-        "algo": f"{jecAlgo}",
-        "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{jecYear},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{jecYear},Regrouped_EC2,Regrouped_EC2_{jecYear},Regrouped_HF,Regrouped_HF_{jecYear},Regrouped_RelativeBal,Regrouped_RelativeSample_{jecYear}",
-      },
-
-      # Jet Energy Resolution variables
-      "jerMC_ScaleFactor": {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": f"{jerType}_ScaleFactor_{jecAlgo}",
-        "systematic": "nom",
-        "variations": "up,down",
-      },
-      "jerMC_PtResolution": {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
-        "type": f"{jerType}_PtResolution_{jecAlgo}",
-      },
-      "jerMC_smear": {
-        "path": f"../tea/jsonPOG/POG/JME/jer_smear.json.gz",
-        "type": "JERSmear",
-        "systematic": "nom",
-        "variations": "up,down",
-      },
+    # b-tagging
+    # systematic options: "central", "up/down_correlated" or "up/down_uncorrelated"
+    "bTaggingMedium": {
+      "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+      "type": "deepJet_mujets",
+      "systematic": "central",
+      "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
+      "workingPoint": "M",
+      "flavour": "5",  # 5 = b
+    },
+    "bTaggingTight": {
+      "path": f"../tea/jsonPOG/POG/BTV/{year_path}/btagging.json.gz",
+      "type": "deepJet_mujets",
+      "systematic": "central",
+      "variations": "up_correlated,down_correlated,up_uncorrelated,down_uncorrelated",
+      "workingPoint": "T",
+      "flavour": "5",  # 5 = b
+    },
+    # Muon ID
+    "muonIDLoose": {
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": "NUM_LooseID_DEN_TrackerMuons",
+      "systematic": "nominal",
+      "variations": "systup,systdown",
+    },
+    "muonIDMedium": {
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": "NUM_MediumID_DEN_TrackerMuons",
+      "systematic": "nominal",
+      "variations": "systup,systdown",
+    },
+    "muonIDTight": {
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": "NUM_TightID_DEN_TrackerMuons",
+      "systematic": "nominal",
+      "variations": "systup,systdown",
+    },
+    # Muon Iso
+    "muonIsoLoose": {
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": loose_muon_iso_type,
+      "systematic": "nominal",
+      "variations": "systup,systdown",
+    },
+    "muonIsoTight": {
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": tight_muon_iso_type,
+      "systematic": "nominal",
+      "variations": "systup,systdown",
+    },
+    # Pileup
+    "pileup": {
+      "path": f"../tea/jsonPOG/POG/LUM/{year_path}/puWeights.json.gz",
+      "type": f"{pu_type}",
+      "systematic": "nominal",
+      "variations": "up,down",
+    },
+    "dimuonEff_Pat": {
+      "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_Pat_pt_irr2_v3.json",
+      "type": "dimuonEff_Pat",
+      "systematic": "nominal",
+      "variations": "up,down",
+    },
+    "dimuonEff_PatDSA": {
+      "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_PatDSA_pt_irr2_v3.json",
+      "type": "dimuonEff_PatDSA",
+      "systematic": "nominal",
+      "variations": "up,down",
+    },
+    "dimuonEff_DSA": {
+      "path": f"../tea/data/dimuonEffSFs/dimuonEffSFs{year}_DSA_pt_irr2_v3.json",
+      "type": "dimuonEff_DSA",
+      "systematic": "nominal",
+      "variations": "up,down",
+    },
+    # Muon trigger
+    "muonTrigger": {
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": muon_trigger_type,
+      "systematic": "nominal",
+      "variations": "systup,systdown",
+    },
+    # DSA Muon SFs
+    "dsamuonID": {
+      "path": f"../tea/DSAMuonSF/{dsaYear}_Jpsi/NUM_DisplacedID_DEN_dSAMuons_abseta_pt_schemaV2.json.gz",
+      "type": "NUM_DisplacedID_DEN_dSAMuons",
+      "systematic": "nominal",
+      "variations": "up_syst,down_syst",
+    },
+    "dsamuonID_cosmic": {
+      "path": "../tea/DSAMuonSF/id_cosmic/NUM_DisplacedID_DEN_dSAMuons_absdxy.json.gz",
+      "type": "NUM_DisplacedID_DEN_dSAMuons_absdxy",
+      "systematic": "nominal",
+      "variations": "up_syst,down_syst",
+    },
+    "dsamuonReco_cosmic": {
+      "path": "../tea/DSAMuonSF/reco_cosmic/NUM_RECO_DEN_dSAMuons.json.gz",
+      "type": "NUM_RECO_DEN_dSAMuons",
+      "systematic": "nominal",
+      "variations": "up,down",
+    },
+    # L1 Pre-firing weights
+    "L1PreFiringWeight": {
+      "systematic": "Nom",
+      "variations": "Up,Dn",
+    },
+    # Jet veto maps (only apply to Run 3)
+    "jetVetoMaps_2022preEE": {
+      "path": "../tea/jsonPOG/POG/JME/2022_Summer22/jetvetomaps.json.gz",
+      "type": "Summer22_23Sep2023_RunCD_V1",
+    },
+    "jetVetoMaps_2022postEE": {
+      "path": "../tea/jsonPOG/POG/JME/2022_Summer22EE/jetvetomaps.json.gz",
+      "type": "Summer22EE_23Sep2023_RunEFG_V1",
+    },
+    "jetVetoMaps_2023preBPix": {
+      "path": "../tea/jsonPOG/POG/JME/2023_Summer23/jetvetomaps.json.gz",
+      "type": "Summer23Prompt23_RunC_V1",
+    },
+    "jetVetoMaps_2023postBPix": {
+      "path": "../tea/jsonPOG/POG/JME/2023_Summer23BPix/jetvetomaps.json.gz",
+      "type": "Summer23BPixPrompt23_RunD_V1",
+    },
+    # Jet Energy Correction uncertainties
+    "jecMC": {
+      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+      "type": f"{jecType}",
+      "level": "L1L2L3Res",
+      "algo": f"{jecAlgo}",
+      "uncertainties": f"Regrouped_Absolute,Regrouped_Absolute_{jecYear},Regrouped_FlavorQCD,Regrouped_BBEC1,Regrouped_BBEC1_{jecYear},Regrouped_EC2,Regrouped_EC2_{jecYear},Regrouped_HF,Regrouped_HF_{jecYear},Regrouped_RelativeBal,Regrouped_RelativeSample_{jecYear}",
+    },
+    # Jet Energy Resolution variables
+    "jerMC_ScaleFactor": {
+      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+      "type": f"{jerType}_ScaleFactor_{jecAlgo}",
+      "systematic": "nom",
+      "variations": "up,down",
+    },
+    "jerMC_PtResolution": {
+      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jet_jerc.json.gz",
+      "type": f"{jerType}_PtResolution_{jecAlgo}",
+    },
+    "jerMC_smear": {
+      "path": f"../tea/jsonPOG/POG/JME/jer_smear.json.gz",
+      "type": "JERSmear",
+      "systematic": "nom",
+      "variations": "up,down",
+    },
   }
   if run2:  # No Run3 PUjetID SF yet
     scaleFactors["PUjetIDtight"] = {
-        "path": f"../tea/jsonPOG/POG/JME/{year_path}/jmar.json.gz",
-        "type": "PUJetID_eff",
-        "systematic": "nom",
-        "variations": "up,down",
-        "workingPoint": "T",
+      "path": f"../tea/jsonPOG/POG/JME/{year_path}/jmar.json.gz",
+      "type": "PUJetID_eff",
+      "systematic": "nom",
+      "variations": "up,down",
+      "workingPoint": "T",
     }
     #  Muon Reco no medium pt RECO SF for Run 3
     scaleFactors["muonReco"] = {
-        "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
-        "type": "NUM_TrackerMuons_DEN_genTracks",
-        "systematic": "nominal",
-        "variations": "systup,systdown",
+      "path": f"../tea/jsonPOG/POG/MUO/{year_path}/muon_Z.json.gz",
+      "type": "NUM_TrackerMuons_DEN_genTracks",
+      "systematic": "nominal",
+      "variations": "systup,systdown",
     }
   return scaleFactors

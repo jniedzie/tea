@@ -73,11 +73,15 @@ class Histogram:
         new_bin_edges.append(x_max)
 
       new_n_bins = len(new_bin_edges) - 1
-      new_histogram = ROOT.TH1F(f"{self.hist.GetName()}_{self.rand.Integer(1000000)}",
-                                self.hist.GetTitle(), new_n_bins, array('d', new_bin_edges))
+      new_histogram = ROOT.TH1F(
+        f"{self.hist.GetName()}_{self.rand.Integer(1000000)}",
+        self.hist.GetTitle(),
+        new_n_bins,
+        array("d", new_bin_edges),
+      )
 
       for i in range(1, new_n_bins + 1):
-        original_bin = self.hist.FindBin(new_bin_edges[i-1])
+        original_bin = self.hist.FindBin(new_bin_edges[i - 1])
         new_histogram.SetBinContent(i, self.hist.GetBinContent(original_bin))
         new_histogram.SetBinError(i, self.hist.GetBinError(original_bin))
         original_label = self.hist.GetXaxis().GetBinLabel(original_bin)
@@ -110,7 +114,7 @@ class Histogram:
     self.hist.Rebin(self.rebin)
     self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
     if self.scale_bin:
-      self.hist.Scale(1./self.rebin)
+      self.hist.Scale(1.0 / self.rebin)
 
   def setupRatio(self, sample):
     if sample.type == SampleType.background:
@@ -178,7 +182,7 @@ class Histogram2D:
     if self.hist is None or type(self.hist) is ROOT.TObject:
       error(f"Could not find histogram: {self.name}")
       return
-    
+
     self.hist.Rebin2D(self.x_rebin, self.y_rebin)
 
   def getName(self):

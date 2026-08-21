@@ -15,13 +15,15 @@ class NanoGenParticle {
  public:
   NanoGenParticle(std::shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
-  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
-           int line = __builtin_LINE()) {
+  auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
+           const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
     return physicsObject->Get(branchName, verbose, file, function, line);
   }
 
   template <typename T>
-  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
+  T GetAs(std::string branchName) {
+    return physicsObject->GetAs<T>(branchName);
+  }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 

@@ -14,17 +14,17 @@ TLorentzVector NanoJet::GetFourVector() {
 }
 
 map<string, float> NanoJet::GetBtaggingScaleFactors(string workingPoint) {
-  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   return scaleFactorsManager.GetBTagScaleFactors(workingPoint, GetAbsEta(), GetPt());
 }
 
 map<string, float> NanoJet::GetPUJetIDScaleFactors(string name) {
-  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   return scaleFactorsManager.GetPUJetIDScaleFactors(name, GetEta(), GetPt());
 }
 
 map<string, float> NanoJet::GetJetEnergyCorrections(float rho) {
-  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   float pt = GetPt();
   float rawFactor = Get("rawFactor");
@@ -40,11 +40,11 @@ map<string, float> NanoJet::GetJetEnergyCorrections(float rho) {
 }
 
 void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEvent> event) {
-  auto& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   // ScaleFactor
-  map<string, float> jerSF =
-      scaleFactorsManager.GetJetEnergyResolutionScaleFactorAndPtResolution((float)physicsObject->Get("eta"), GetPt(), rho);
+  map<string, float> jerSF = scaleFactorsManager.GetJetEnergyResolutionScaleFactorAndPtResolution(
+      (float)physicsObject->Get("eta"), GetPt(), rho);
 
   float genPt = -1;
   auto genJet = GetGenJetAsRecommendedForJER(event, jerSF["PtResolution"]);
@@ -74,7 +74,8 @@ void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEv
   physicsObject->Set<float>("mass_smeared_down", GetMass() * jetPt_factor_down);
 }
 
-shared_ptr<PhysicsObject> NanoJet::GetGenJetAsRecommendedForJER(shared_ptr<NanoEvent> event, float sigma_JER, float R_cone) {
+shared_ptr<PhysicsObject> NanoJet::GetGenJetAsRecommendedForJER(shared_ptr<NanoEvent> event, float sigma_JER,
+                                                                float R_cone) {
   shared_ptr<PhysicsObjects> genJets = event->GetCollection("GenJet");
   float eta = physicsObject->Get("eta");
   float phi = physicsObject->Get("phi");
