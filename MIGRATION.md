@@ -43,21 +43,14 @@ contain these lines.
 
 ## 4. Select the shared location, if needed
 
-No configuration is required when sibling analyses should share the `.tea`
-directory next to them. For a different absolute location, either export it:
-
-```bash
-export TEA_HOME=/shared/path/.tea
-```
-
-or save it without editing a shell startup file:
+Save the location where shared tea files should be installed (replace `/shared/path/.tea` in the command below):
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
 printf '%s\n' /shared/path/.tea > "${XDG_CONFIG_HOME:-$HOME/.config}/tea/home"
 ```
 
-An exported value has precedence over the saved setting.
+You can also store it in an env variable `TEA_HOME` if you prefer, which has precedence over the saved setting.
 
 ## 5. Rebuild once from a clean CMake state
 
@@ -76,6 +69,5 @@ cd bin
 python -c 'import ROOT, correctionlib; print(ROOT.gROOT.GetVersion(), correctionlib.__version__)'
 ```
 
-Then run one compiled application on a representative small input as the final
-migration check. On batch
-systems, confirm that `TEA_HOME` is mounted at the same path on worker nodes.
+Then run one compiled application on a representative small input as the final migration check. 
+On batch systems, confirm that `TEA_HOME` is mounted at the same path on worker nodes.
