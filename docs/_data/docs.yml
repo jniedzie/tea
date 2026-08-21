@@ -2,6 +2,7 @@
   docs:
     - home
     - installation
+    - migration
     - first_analysis
     - project_structure
     - build

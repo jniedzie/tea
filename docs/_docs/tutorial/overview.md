@@ -11,7 +11,8 @@ This tutorial adapts the CMS DAS 2025 Hamburg LLP exercise sequence to the curre
 You need:
 
 - an installed and built analysis project; see [Installation]({{ "/docs/installation/" | relative_url }});
-- ROOT, CMake, a C++17 compiler, and Python;
+- `source tea/setup.sh` run in the current terminal so the locked ROOT,
+  compiler, CMake, and Python environment is active;
 - access to `/eos/cms/store/group/committee_schools/2025-cmsdas-hamburg/llp/` for the DAS samples;
 - an lxplus environment for the EOS and HTCondor steps;
 - CMS Combine only for the optional limits step.

@@ -24,6 +24,11 @@ An analysis keeps its code outside the `tea` submodule. This makes framework upd
 
 Both are generated. Do not store analysis results or source files in them.
 
+Dependency environments are stored outside the analysis repository. Sibling
+analyses use `<parent>/.tea` by default, or the persistent `TEA_HOME` selected
+during installation. An environment is identified by its platform and lock
+hash, allowing old and new tea dependency sets to coexist.
+
 ## Framework extension points
 
 Reusable framework code lives under `tea/libs/`:

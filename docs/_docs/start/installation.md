@@ -6,7 +6,10 @@ redirect_from:
   - /docs/prerequisites/
 ---
 
-`tea` is normally installed as a Git submodule inside an analysis repository. You need Git, CMake 3.14 or newer, a C++17 compiler, Python 3 with development headers, and ROOT. `correctionlib` is optional unless your analysis applies CMS corrections.
+`tea` is normally installed as a Git submodule inside an analysis repository.
+You need Git, Bash, and either `curl` or `wget`. The installer obtains the
+tested versions of CMake, the platform compiler, Python, ROOT, correctionlib,
+and their dependencies from version-controlled lock files.
 
 ## Prepare the environment
 
@@ -16,19 +19,8 @@ On CERN lxplus, use an EL9 host:
 ssh -Y USERNAME@lxplus9.cern.ch
 ```
 
-Use a ROOT installation compatible with your compiler and Python. Confirm the main tools before installing:
-
-```bash
-root-config --version
-cmake --version
-python3 --version
-```
-
-For CMS corrections, install `correctionlib` in the same Python environment:
-
-```bash
-python3 -m pip install correctionlib --no-binary=correctionlib
-```
+Do not load a separate ROOT or Conda environment first. Tea activates a
+self-consistent toolchain while it builds.
 
 ## Create the GitHub repository
 
@@ -56,9 +48,44 @@ chmod 700 install.sh
 ```
 
 The installer initializes the local analysis repository, adds `tea/` as a
-submodule, connects the GitHub repository, and pushes the initial project.
-Installing without a linked GitHub repository is not part of the recommended
-setup.
+submodule, connects the GitHub repository, pushes the initial project, creates
+the locked dependency environment, and performs the first build. Installing
+without a linked GitHub repository is not part of the recommended setup.
+
+## Shared dependency location
+
+For an analysis at `/work/analyses/YOUR_ANALYSIS`, tea uses
+`/work/analyses/.tea` by default. Analyses in sibling directories reuse the
+same environment when their tea lock files match. The shared directory remains
+when an analysis repository is removed, and tea recreates it automatically if
+it disappears.
+
+Use an absolute path when the default is unsuitable or is not visible on batch
+worker nodes:
+
+```bash
+./install.sh --tea-home /shared/path/.tea \
+  git@github.com:YOUR_ACCOUNT/YOUR_ANALYSIS.git
+```
+
+The installer records this choice in
+`${XDG_CONFIG_HOME:-$HOME/.config}/tea/home`. It does not modify shell startup
+files. Setting `TEA_HOME` in the shell overrides both the recorded location and
+the default.
+
+The first analysis downloads the locked packages. Later sibling analyses reuse
+the completed environment. Prepare it on a login node before submitting batch
+jobs; `TEA_HOME` must be mounted at the same absolute path on workers.
+
+## Supported systems
+
+The committed environments cover Linux x86-64 with a glibc 2.17 compatibility
+floor, Apple Silicon macOS 13 or newer, and Intel macOS 13 or newer. CI tests
+AlmaLinux 9 and Apple Silicon macOS. The Linux lock is intended for lxplus,
+NAF, and T2B, but access to the chosen shared path and the worker-node OS must
+still be qualified at each site. After sourcing `tea/setup.sh`, run
+`tea/ci/collect-environment.sh SITE_NAME` on a login or representative worker
+node to capture the relevant platform, glibc, filesystem, and tool versions.
 
 ## Verify the checkout
 

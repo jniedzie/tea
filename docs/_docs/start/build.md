@@ -18,6 +18,17 @@ The script configures CMake, builds and installs the project into `bin/`, links 
 source tea/build.sh --clean
 ```
 
+Both `build.sh` and `setup.sh` select the exact dependency lock for the current
+platform. If its shared environment is missing, they recreate it. Dependency
+versions are not resolved or updated during an ordinary build.
+
+In a new terminal where no rebuild is needed, activate the same environment
+and analysis paths with:
+
+```bash
+source tea/setup.sh
+```
+
 ## Run an application
 
 Applications are designed to run from `bin/`:
@@ -34,6 +45,9 @@ applications provide `--help`; for compiled C++ applications, follow the
 command shown on the relevant documentation page. Run the applications from
 `bin/` so that relative paths in the example configs resolve correctly.
 
+No environment-specific runner is needed. After sourcing `build.sh` or
+`setup.sh`, continue to use `python app_name.py` and `./app_name` directly.
+
 ## Build after changes
 
 Run the same build command after adding generated code, adding a Python config,
@@ -46,3 +60,7 @@ source tea/build.sh
 The script reuses the existing build when it can, so there is no separate
 incremental-build command to remember. Python configs and scripts are linked
 into `bin/`; editing an existing Python file does not require another build.
+
+When a tea update changes the dependency lock, the shared environment path also
+changes. `build.sh` detects the new compiler and library paths and clears stale
+CMake state automatically.
