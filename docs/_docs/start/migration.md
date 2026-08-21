@@ -45,9 +45,9 @@ lines need no CMake edit.
 
 ## Select storage
 
-Sibling analyses automatically share the `.tea` directory next to them. To use
-a different absolute path for an existing installation, save it without
-editing a shell startup file:
+Tea uses `~/.tea` by default, independently of the analysis repository's
+location. To use a different absolute path for an existing installation, save
+it without editing a shell startup file:
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
@@ -67,7 +67,8 @@ source tea/build.sh --clean
 ```
 
 The first invocation downloads the locked environment. Later builds and other
-analyses with the same lock reuse it. Confirm the active versions:
+tea checkouts using the same storage location and lock reuse it. Confirm the
+active versions:
 
 ```bash
 cd bin
