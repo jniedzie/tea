@@ -123,8 +123,13 @@ def cmssw_src_from_workflow():
   clean_environment = {key: value for key, value in os.environ.items() if key != "BASH_ENV"}
   result = subprocess.run(
     [
-      "bash", "--noprofile", "--norc", "-c",
-      'source "$1" >/dev/null && printf "%s" "$CMSSW_SRC"', "bash", str(workflow_env),
+      "bash",
+      "--noprofile",
+      "--norc",
+      "-c",
+      'source "$1" >/dev/null && printf "%s" "$CMSSW_SRC"',
+      "bash",
+      str(workflow_env),
     ],
     check=False,
     capture_output=True,
@@ -174,7 +179,7 @@ def load_files_config(config_path):
 
 
 def chunk_files(file_paths, chunk_size):
-  return [file_paths[index:index + chunk_size] for index in range(0, len(file_paths), chunk_size)]
+  return [file_paths[index : index + chunk_size] for index in range(0, len(file_paths), chunk_size)]
 
 
 def format_duration(seconds):
@@ -379,10 +384,7 @@ class MergeProgress:
 
         if output_file in self.reducing_outputs:
           current_size += output_size
-          output_work = (
-            expected_size
-            + FINAL_REDUCTION_WORK_FACTOR * min(output_size, expected_size)
-          )
+          output_work = expected_size + FINAL_REDUCTION_WORK_FACTOR * min(output_size, expected_size)
           phases.add("Final reduction")
         else:
           current_size += partial_size
@@ -400,10 +402,7 @@ class MergeProgress:
     return current_size, phase, completed_work, total_work
 
   def _update_time_estimate(self, current_time, completed_work, total_work):
-    new_sample = (
-      not self.throughput_samples
-      or completed_work > self.throughput_samples[-1][1]
-    )
+    new_sample = not self.throughput_samples or completed_work > self.throughput_samples[-1][1]
     if new_sample:
       self.throughput_samples.append((current_time, completed_work))
     if not new_sample:
@@ -429,9 +428,7 @@ class MergeProgress:
     # A cumulative rate is deliberately stable. Limit each correction as well,
     # so a newly observed phase changes the ETA over several refreshes instead
     # of producing a large one-second jump.
-    blended_duration = (
-      0.9 * self.estimated_total_duration + 0.1 * candidate_duration
-    )
+    blended_duration = 0.9 * self.estimated_total_duration + 0.1 * candidate_duration
     maximum_adjustment = max(
       1.0,
       ETA_ADJUSTMENT_FRACTION * self.estimated_total_duration,
@@ -473,8 +470,7 @@ class MergeProgress:
       percentage = min(self._smooth_percentage(current_time, target_percentage), 99)
     print_merge_progress(
       percentage,
-      f"{phase}: {format_file_size(current_size)} / ~{format_file_size(self.expected_output_size)} "
-      f"| ETA {eta}",
+      f"{phase}: {format_file_size(current_size)} / ~{format_file_size(self.expected_output_size)} | ETA {eta}",
     )
 
   def _refresh_eta(self):
@@ -510,10 +506,7 @@ class MergeProgress:
     elapsed = time.monotonic() - self.start_time
     info("\033[0m")
     if self.warning_count or self.error_count:
-      info(
-        f"ROOT/hadd diagnostics: {self.warning_count} warning(s), "
-        f"{self.error_count} error(s)"
-      )
+      info(f"ROOT/hadd diagnostics: {self.warning_count} warning(s), {self.error_count} error(s)")
     if succeeded:
       info(f"Merge finished in {format_duration(elapsed)}")
 
@@ -561,8 +554,7 @@ def skip_files_without_keys(file_paths):
     info(f"Skipping ROOT file with no keys: {file_path}")
   elapsed = time.monotonic() - start_time
   info(
-    f"Key check finished in {elapsed:.1f} s: "
-    f"kept {len(files_with_keys)} files and skipped {len(skipped_files)} files"
+    f"Key check finished in {elapsed:.1f} s: kept {len(files_with_keys)} files and skipped {len(skipped_files)} files"
   )
   return files_with_keys
 
@@ -630,18 +622,12 @@ def eos_xrootd_url(file_path):
   home_match = re.fullmatch(r"/eos/home-([^/]+)/([^/]+)(/.*)?", normalized_path)
   if home_match:
     instance, username, suffix = home_match.groups()
-    return (
-      f"root://eoshome-{instance}.cern.ch//eos/user/{username[0]}/{username}"
-      f"{suffix or ''}"
-    )
+    return f"root://eoshome-{instance}.cern.ch//eos/user/{username[0]}/{username}{suffix or ''}"
 
   user_match = re.fullmatch(r"/eos/user/([^/]+)/([^/]+)(/.*)?", normalized_path)
   if user_match:
     initial, username, suffix = user_match.groups()
-    return (
-      f"root://eoshome-{initial}.cern.ch//eos/user/{initial}/{username}"
-      f"{suffix or ''}"
-    )
+    return f"root://eoshome-{initial}.cern.ch//eos/user/{initial}/{username}{suffix or ''}"
   return None
 
 
@@ -706,8 +692,7 @@ def stage_output(local_output, output_file):
       if not staged_with_xrootd:
         details = (result.stderr or result.stdout).strip()
         info(
-          "xrdcp stage-out failed; falling back to a sequential filesystem copy"
-          + (f": {details}" if details else "")
+          "xrdcp stage-out failed; falling back to a sequential filesystem copy" + (f": {details}" if details else "")
         )
 
     if not staged_with_xrootd:
@@ -872,14 +857,16 @@ def create_condor_job(
     hadd_workers,
   )
 
-  script_content = "\n".join([
-    "#!/bin/bash",
-    "set -e",
-    "touch condor_dummy.out",
-    f"mkdir -p {shlex.quote(os.path.dirname(output_file))}",
-    shlex.join(hadd_command),
-    "",
-  ])
+  script_content = "\n".join(
+    [
+      "#!/bin/bash",
+      "set -e",
+      "touch condor_dummy.out",
+      f"mkdir -p {shlex.quote(os.path.dirname(output_file))}",
+      shlex.join(hadd_command),
+      "",
+    ]
+  )
   write_file(script_path, script_content)
   os.chmod(script_path, 0o755)
   return script_path
@@ -921,20 +908,24 @@ def submit_condor_jobs(
   ]
 
   if facility == "lxplus":
-    submit_lines.extend([
-      "should_transfer_files = YES",
-      "when_to_transfer_output = ON_EXIT",
-      "transfer_output_files = condor_dummy.out",
-    ])
+    submit_lines.extend(
+      [
+        "should_transfer_files = YES",
+        "when_to_transfer_output = ON_EXIT",
+        "transfer_output_files = condor_dummy.out",
+      ]
+    )
   else:
     submit_lines.append("should_transfer_files = NO")
 
-  submit_lines.extend([
-    "queue script from (",
-    *executable_paths,
-    ")",
-    "",
-  ])
+  submit_lines.extend(
+    [
+      "queue script from (",
+      *executable_paths,
+      ")",
+      "",
+    ]
+  )
 
   submit_path = os.path.join(condor_dir, "merge.sub")
   submit_content = "\n".join(submit_lines)
@@ -1063,30 +1054,21 @@ def main():
     return
 
   input_files = [input_file for job in jobs for input_file in job[-1]]
-  job_input_sizes = {
-    job[5]: sum(os.path.getsize(input_file) for input_file in job[-1])
-    for job in jobs
-  }
+  job_input_sizes = {job[5]: sum(os.path.getsize(input_file) for input_file in job[-1]) for job in jobs}
   output_expected_sizes = {}
   for _, _, merge_jobs in jobs_by_kind:
     contains_trees = contains_top_level_tree(merge_jobs[0][-1][0])
     for job in merge_jobs:
       output_expected_sizes[job[5]] = (
-        job_input_sizes[job[5]]
-        if contains_trees
-        else max(os.path.getsize(input_file) for input_file in job[-1])
+        job_input_sizes[job[5]] if contains_trees else max(os.path.getsize(input_file) for input_file in job[-1])
       )
   expected_output_size = sum(output_expected_sizes.values())
-  peak_input_size = sum(
-    max(job_input_sizes[job[5]] for job in merge_jobs)
-    for _, _, merge_jobs in jobs_by_kind
-  )
+  peak_input_size = sum(max(job_input_sizes[job[5]] for job in merge_jobs) for _, _, merge_jobs in jobs_by_kind)
   required_scratch_bytes = int(SCRATCH_SPACE_FACTOR * peak_input_size)
   scratch_root = choose_scratch_root(required_scratch_bytes)
   if scratch_root:
     info(
-      f"Using local merge scratch: {scratch_root} "
-      f"({format_file_size(required_scratch_bytes)} estimated requirement)"
+      f"Using local merge scratch: {scratch_root} ({format_file_size(required_scratch_bytes)} estimated requirement)"
     )
   else:
     info("Local scratch is unavailable or too small; merging in the output directory")

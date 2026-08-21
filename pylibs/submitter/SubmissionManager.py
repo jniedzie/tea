@@ -28,7 +28,7 @@ class SubmissionManager:
     self.input_output_file_lists = None
 
     # detect if it's macos or not
-    if os.name == 'posix' and os.uname().sysname == 'Darwin':
+    if os.name == "posix" and os.uname().sysname == "Darwin":
       info("Detected macOS")
       self.sed_command = "sed -i ''"
       self.sed_char = "|"
@@ -97,7 +97,7 @@ class SubmissionManager:
         command = f"condor_submit -spool {self.condor_config_name}"
       else:
         command = f"condor_submit {self.condor_config_name}"
-      
+
       info(f"Submitting to condor: {command}")
 
       if not args.dry:
@@ -133,13 +133,9 @@ class SubmissionManager:
       args.dry = dry
 
     for script_name, n_jobs in submitted_jobs:
-      self.__run_condor_script_locally_parallel(
-          script_name, n_jobs, args.local_parallel_jobs, args.save_logs
-      )
+      self.__run_condor_script_locally_parallel(script_name, n_jobs, args.local_parallel_jobs, args.save_logs)
 
-  def __run_condor_script_locally_parallel(
-      self, script_name, n_jobs, requested_max_workers, save_logs
-  ):
+  def __run_condor_script_locally_parallel(self, script_name, n_jobs, requested_max_workers, save_logs):
     max_workers = self.__get_local_parallel_jobs(n_jobs, requested_max_workers)
     info(f"Executing {script_name} locally with {max_workers} parallel jobs")
     if save_logs:
@@ -153,10 +149,7 @@ class SubmissionManager:
     def run_job(job_number):
       nonlocal started_jobs
       started_jobs += 1
-      print(
-          f"\rStarted {started_jobs}/{n_jobs}; completed {completed_jobs}/{n_jobs}",
-          end="", flush=True
-      )
+      print(f"\rStarted {started_jobs}/{n_jobs}; completed {completed_jobs}/{n_jobs}", end="", flush=True)
       stdout = subprocess.DEVNULL
       stderr = subprocess.DEVNULL
       output_file = None
@@ -168,10 +161,10 @@ class SubmissionManager:
           stdout = output_file
           stderr = error_file
         return subprocess.run(
-            [f"./{script_name}", str(job_number)],
-            stdout=stdout,
-            stderr=stderr,
-            check=False,
+          [f"./{script_name}", str(job_number)],
+          stdout=stdout,
+          stderr=stderr,
+          check=False,
         ).returncode
       finally:
         if output_file is not None:
@@ -181,10 +174,7 @@ class SubmissionManager:
 
     print(f"Started 0/{n_jobs}; completed 0/{n_jobs}", end="", flush=True)
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-      futures = {
-          executor.submit(run_job, job_number): job_number
-          for job_number in range(n_jobs)
-      }
+      futures = {executor.submit(run_job, job_number): job_number for job_number in range(n_jobs)}
       for future in as_completed(futures):
         job_number = futures[future]
         try:
@@ -195,10 +185,7 @@ class SubmissionManager:
         completed_jobs += 1
         if returncode != 0:
           failed_jobs.append((job_number, returncode))
-        print(
-            f"\rStarted {started_jobs}/{n_jobs}; completed {completed_jobs}/{n_jobs}",
-            end="", flush=True
-        )
+        print(f"\rStarted {started_jobs}/{n_jobs}; completed {completed_jobs}/{n_jobs}", end="", flush=True)
     print()
 
     if failed_jobs:
@@ -263,10 +250,9 @@ class SubmissionManager:
 
   def __get_das_files_from_list(self, dasfilelist):
     if not os.path.exists(dasfilelist):
-
       fatal(f"File not found: {dasfilelist}")
       exit()
-    with open(dasfilelist, 'r') as file:
+    with open(dasfilelist, "r") as file:
       files = [line.strip() for line in file if line.strip()]
     return files
 
@@ -287,9 +273,7 @@ class SubmissionManager:
         fatal(f"xrdfs not found while listing input directory: {input_directory}. Error: {e}")
         exit()
       except subprocess.CalledProcessError as e:
-        fatal(
-          f"Could not list input directory with xrdfs: {input_directory}. Output:\n{e.output}"
-        )
+        fatal(f"Could not list input directory with xrdfs: {input_directory}. Output:\n{e.output}")
         exit()
       return [file_path for file_path in files if file_path.endswith(".root")]
 
@@ -461,8 +445,10 @@ class SubmissionManager:
       progress_bar += f"] {percentage}% (File {i}/{n_lines})"
       info(progress_bar, end="")
       entry = ast.literal_eval(line) if line.startswith("(") else line
-      input_path, tree_path, hist_path = (entry if isinstance(entry, tuple) else (entry, None, None))
-      input_name = self.files_config.file_name if hasattr(self.files_config, "file_name") else input_path.strip().split("/")[-1]
+      input_path, tree_path, hist_path = entry if isinstance(entry, tuple) else (entry, None, None)
+      input_name = (
+        self.files_config.file_name if hasattr(self.files_config, "file_name") else input_path.strip().split("/")[-1]
+      )
       outputs = []
       if tree_path or (hasattr(self.files_config, "output_trees_dir") and self.files_config.output_trees_dir != ""):
         outputs.append(tree_path if tree_path else f"{self.files_config.output_trees_dir}/{input_name}")
@@ -477,7 +463,9 @@ class SubmissionManager:
           root_file = ROOT.TFile.Open(path, "READ") if os.path.exists(path) else None
         except OSError:
           root_file = None
-        is_healthy = is_healthy and root_file and not root_file.IsZombie() and not root_file.TestBit(ROOT.TFile.kRecovered)
+        is_healthy = (
+          is_healthy and root_file and not root_file.IsZombie() and not root_file.TestBit(ROOT.TFile.kRecovered)
+        )
         if root_file:
           root_file.Close()
       if not is_healthy:
@@ -495,39 +483,54 @@ class SubmissionManager:
     if voms_proxy_path:
       os.system(f"cp {voms_proxy_path} voms_proxy")
       voms_proxy_path = voms_proxy_path.replace("/", "\\/")
-      os.system(f"{self.sed_command} 's{self.sed_char}<voms_proxy>{self.sed_char}{voms_proxy_path}{self.sed_char}g' {self.condor_run_script_name}")
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<voms_proxy>{self.sed_char}{voms_proxy_path}{self.sed_char}g' {self.condor_run_script_name}"
+      )
     else:
       warn("VOMS proxy not found. VOMS authentication will not be available.")
 
   def __set_python_executable(self):
     python_executable = os.popen("which python3").read().strip()
     python_executable = python_executable.replace("/", "\\/")
-    os.system(f"{self.sed_command} 's{self.sed_char}<python_path>{self.sed_char}{python_executable}{self.sed_char}g' {self.condor_run_script_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<python_path>{self.sed_char}{python_executable}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
   def __set_run_script_variables(self):
     self.__setup_voms_proxy()
 
     # set file name
     if hasattr(self.files_config, "file_name"):
-      os.system(f"{self.sed_command} 's{self.sed_char}<file_name>{self.sed_char}--file_name {self.files_config.file_name}{self.sed_char}g' {self.condor_run_script_name}")
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<file_name>{self.sed_char}--file_name {self.files_config.file_name}{self.sed_char}g' {self.condor_run_script_name}"
+      )
     else:
-      os.system(f"{self.sed_command} 's{self.sed_char}<file_name>{self.sed_char}{self.sed_char}g' {self.condor_run_script_name}")
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<file_name>{self.sed_char}{self.sed_char}g' {self.condor_run_script_name}"
+      )
 
     # set working directory
     workDir = os.getcwd().replace("/", "\\/")
-    os.system(f"{self.sed_command} 's{self.sed_char}<work_dir>{self.sed_char}{workDir}{self.sed_char}g' {self.condor_run_script_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<work_dir>{self.sed_char}{workDir}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
     self.__set_python_executable()
 
     # set the app and app config to execute
-    os.system(f"{self.sed_command} 's{self.sed_char}<app>{self.sed_char}{self.app_name}{self.sed_char}g' {self.condor_run_script_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<app>{self.sed_char}{self.app_name}{self.sed_char}g' {self.condor_run_script_name}"
+    )
     config_path_escaped = self.config_path.replace("/", "\\/")
-    os.system(f"{self.sed_command} 's{self.sed_char}<config>{self.sed_char}{config_path_escaped}{self.sed_char}g' {self.condor_run_script_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<config>{self.sed_char}{config_path_escaped}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
     # set path to the list of input files
     input_files_list_file_name_escaped = self.input_files_list_file_name.replace("/", "\\/")
     os.system(
-        f"{self.sed_command} 's{self.sed_char}<input_files_list_file_name>{self.sed_char}{input_files_list_file_name_escaped}{self.sed_char}g' {self.condor_run_script_name}")
+      f"{self.sed_command} 's{self.sed_char}<input_files_list_file_name>{self.sed_char}{input_files_list_file_name_escaped}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
     # set output directory
     output_trees_dir = ""
@@ -538,8 +541,12 @@ class SubmissionManager:
     if hasattr(self.files_config, "output_hists_dir"):
       if self.files_config.output_hists_dir != "":
         output_hists_dir = "--output_hists_dir " + self.files_config.output_hists_dir.replace("/", "\\/")
-    os.system(f"{self.sed_command} 's{self.sed_char}<output_trees_dir>{self.sed_char}{output_trees_dir}{self.sed_char}g' {self.condor_run_script_name}")
-    os.system(f"{self.sed_command} 's{self.sed_char}<output_hists_dir>{self.sed_char}{output_hists_dir}{self.sed_char}g' {self.condor_run_script_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<output_trees_dir>{self.sed_char}{output_trees_dir}{self.sed_char}g' {self.condor_run_script_name}"
+    )
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<output_hists_dir>{self.sed_char}{output_hists_dir}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
     extra_args = ""
     if self.extra_args is not None:
@@ -550,31 +557,55 @@ class SubmissionManager:
 
     print(f"{extra_args=}")
 
-    os.system(f"{self.sed_command} 's{self.sed_char}<extra_args>{self.sed_char}{extra_args}{self.sed_char}g' {self.condor_run_script_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<extra_args>{self.sed_char}{extra_args}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
   def __set_condor_script_variables(self, n_files):
     condor_run_script_name_escaped = self.condor_run_script_name.replace("/", "\\/")
-    os.system(f"{self.sed_command} 's{self.sed_char}<executable>{self.sed_char}{condor_run_script_name_escaped}{self.sed_char}g' {self.condor_config_name}")
-    os.system(f"{self.sed_command} 's{self.sed_char}<memory_request>{self.sed_char}{self.memory_request}{self.sed_char}g' {self.condor_config_name}")
-    os.system(f"{self.sed_command} 's{self.sed_char}<job_flavour>{self.sed_char}{self.job_flavour}{self.sed_char}g' {self.condor_config_name}")
-    os.system(f"{self.sed_command} 's{self.sed_char}<materialize_max>{self.sed_char}{self.materialize_max}{self.sed_char}g' {self.condor_config_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<executable>{self.sed_char}{condor_run_script_name_escaped}{self.sed_char}g' {self.condor_config_name}"
+    )
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<memory_request>{self.sed_char}{self.memory_request}{self.sed_char}g' {self.condor_config_name}"
+    )
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<job_flavour>{self.sed_char}{self.job_flavour}{self.sed_char}g' {self.condor_config_name}"
+    )
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<materialize_max>{self.sed_char}{self.materialize_max}{self.sed_char}g' {self.condor_config_name}"
+    )
 
     if self.save_logs:
-      os.system(f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}")
-      os.system(f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}")
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}"
+      )
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}"
+      )
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}"
+      )
     else:
-      os.system(f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
       os.system(
-          f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
+        f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
+      )
       os.system(
-          f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}")
+        f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
+      )
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
+      )
 
     if self.resubmit_job is not None:
-      os.system(f"{self.sed_command} 's{self.sed_char}$(ProcId){self.sed_char}{self.resubmit_job}{self.sed_char}g' {self.condor_config_name}")
+      os.system(
+        f"{self.sed_command} 's{self.sed_char}$(ProcId){self.sed_char}{self.resubmit_job}{self.sed_char}g' {self.condor_config_name}"
+      )
 
     n_jobs = self.__get_effective_n_jobs(n_files)
-    os.system(f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}{n_jobs}{self.sed_char}g' {self.condor_config_name}")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}{n_jobs}{self.sed_char}g' {self.condor_config_name}"
+    )
     return n_jobs
 
   def __get_effective_n_jobs(self, n_files):

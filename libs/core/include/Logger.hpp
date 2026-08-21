@@ -5,23 +5,23 @@
 #ifndef Logger_hpp
 #define Logger_hpp
 
-#include <stdexcept>
 #include <iostream>
+#include <map>
+#include <sstream>
+#include <stdexcept>
 #include <string>
-
-#include "Helpers.hpp"
 
 // The progress bar is drawn on the terminal's current line.  Messages must
 // temporarily remove that line, otherwise their output is written over it.
 namespace Terminal {
 inline std::string progressLine;
 
-inline void SetProgress(const std::string& line) {
+inline void SetProgress(const std::string &line) {
   progressLine = line;
   std::cerr << "\r\033[2K" << progressLine << std::flush;
 }
 
-inline void PrintMessage(const std::string& message) {
+inline void PrintMessage(const std::string &message) {
   if (progressLine.empty()) {
     std::cout << message << std::flush;
     return;
@@ -84,19 +84,20 @@ class Logger {
     Terminal::FinishProgress();
     if (warnings.empty() && errors.empty() && fatals.empty()) return;
 
-    Terminal::PrintMessage("\033[0m\n========== Logs summary =========="
-                          "\033[0m\n");
+    Terminal::PrintMessage(
+        "\033[0m\n========== Logs summary =========="
+        "\033[0m\n");
     for (auto &[warning, count] : warnings) {
       Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
-                            "\033[1;33m" + warning + "\033[0m");
+                             "\033[1;33m" + warning + "\033[0m");
     }
     for (auto &[error, count] : errors) {
       Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
-                            "\033[1;31m" + error + "\033[0m");
+                             "\033[1;31m" + error + "\033[0m");
     }
     for (auto &[fatal, count] : fatals) {
       Terminal::PrintMessage("\033[0m[occurred " + std::to_string(count) + (count == 1 ? " time] " : " times] ") +
-                            "\033[1;35m" + fatal + "\033[0m");
+                             "\033[1;35m" + fatal + "\033[0m");
     }
   }
 
@@ -106,7 +107,7 @@ class Logger {
   Logger &operator=(Logger const &) = delete;
 
  private:
-  Logger(){};
+  Logger() {};
   std::map<std::string, int> warnings, errors, fatals;
 };
 
@@ -185,7 +186,7 @@ struct fatal {
     auto &logger = Logger::GetInstance();
     logger.currentFatalStream << os << "\n" << errorDetails;
 
-    if(!logger.addFatal()) {
+    if (!logger.addFatal()) {
       Terminal::PrintMessage("[first occurrence] \033[1;35m" + logger.currentFatalStream.str() + "\033[0m\n");
     }
     logger.currentFatalStream.str("");

@@ -29,13 +29,13 @@ histogramsOutputFilePath = "../samples/histograms/background_dy.root"
 extraEventCollections = {
   "GoodLeptons": {
     "inputCollections": ("Muon", "Electron"),
-    "pt": (30., 9999999.),
+    "pt": (30.0, 9999999.0),
     "eta": (-2.4, 2.4),
   },
 }
 
 defaultHistParams = (
-  #  collection      variable          bins    xmin     xmax     dir
+  # (collection, variable, bins, xmin, xmax, dir)
   ("Event", "nMuon", 50, 0, 50, ""),
   ("Muon", "pt", 400, 0, 200, ""),
   ("Muon", "eta", 100, -2.5, 2.5, ""),
@@ -57,9 +57,9 @@ histParams = (
 
 # You can uncomment this if the name of a branch containing the size of a collection has some non-standard name:
 specialBranchSizes = {
-    "Particle": "Event_numberP",
-    "Proton_multiRP": "nProton_multiRP",
-    "Proton_singleRP": "nProton_singleRP",
+  "Particle": "Event_numberP",
+  "Proton_multiRP": "nProton_multiRP",
+  "Proton_singleRP": "nProton_singleRP",
 }
 
 # Uncomment if you want to specify event weights (e.g. from MC generator):

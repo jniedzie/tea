@@ -7,23 +7,21 @@
 using namespace std;
 
 EventProcessor::EventProcessor() {
-  auto& config = ConfigManager::GetInstance();
+  auto &config = ConfigManager::GetInstance();
 
   try {
     config.GetVector("triggerSelection", triggerNames);
-  } catch (const Exception& e) {
-  }
+  } catch (const Exception &e) {}
 
   try {
     config.GetCuts(eventCuts);
-  } catch (const Exception& e) {
+  } catch (const Exception &e) {
     warn() << "Couldn't read eventCuts from config file " << endl;
   }
 
   try {
     config.GetVector("requiredFlags", requiredFlags);
-  } catch (const Exception& e) {
-  }
+  } catch (const Exception &e) {}
 
   try {
     config.GetMap("goldenJson", goldenJson);
@@ -32,8 +30,7 @@ EventProcessor::EventProcessor() {
       exit(1);
     }
 
-  } catch (const Exception& e) {
-  }
+  } catch (const Exception &e) {}
 }
 
 bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
@@ -46,7 +43,7 @@ bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
 
   if (goldenJson.find(run) == goldenJson.end()) return false;
 
-  for (auto& lumiRange : goldenJson[run]) {
+  for (auto &lumiRange : goldenJson[run]) {
     if (lumi >= lumiRange[0] && lumi <= lumiRange[1]) {
       return true;
     }
@@ -56,11 +53,11 @@ bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
 
 bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
   bool passes = true;
-  for (auto& triggerName : triggerNames) {
+  for (auto &triggerName : triggerNames) {
     passes = false;
     try {
       passes = event->GetAs<bool>(triggerName);
-    } catch (Exception&) {
+    } catch (Exception &) {
       warn() << "Trigger not present: " << triggerName << endl;
     }
     if (passes) return true;
@@ -77,20 +74,19 @@ bool EventProcessor::PassesMetFilters(const shared_ptr<Event> event) {
 }
 
 void EventProcessor::RegisterCuts(shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto& [cutName, cutValues] : eventCuts) {
+  for (auto &[cutName, cutValues] : eventCuts) {
     cutFlowManager->RegisterCut(cutName);
   }
 }
 
 bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto& [cutName, cutValues] : eventCuts) {
+  for (auto &[cutName, cutValues] : eventCuts) {
     if (cutName.substr(0, 5) == "nano_") continue;
 
     try {
       auto collection = event->GetCollection(cutName.substr(1));
       if (!inRange(collection->size(), cutValues)) return false;
-    }
-    catch (Exception&) {
+    } catch (Exception &) {
       float variable = event->Get(cutName);
       if (!inRange(variable, cutValues)) return false;
     }
@@ -112,7 +108,8 @@ shared_ptr<PhysicsObject> EventProcessor::GetMaxPtObject(shared_ptr<Event> event
   return GetMaxPtObject(event, collection);
 }
 
-shared_ptr<PhysicsObject> EventProcessor::GetMaxPtObject(shared_ptr<Event> event, shared_ptr<PhysicsObjects> collection) {
+shared_ptr<PhysicsObject> EventProcessor::GetMaxPtObject(shared_ptr<Event> event,
+                                                         shared_ptr<PhysicsObjects> collection) {
   float maxPt = -1;
   shared_ptr<PhysicsObject> maxPtObject = nullptr;
   for (auto element : *collection) {
@@ -141,7 +138,8 @@ shared_ptr<PhysicsObject> EventProcessor::GetSubleadingPtObject(shared_ptr<Event
   return subleadingPtObject;
 }
 
-shared_ptr<PhysicsObjects> EventProcessor::GetLeadingObjects(shared_ptr<Event> event, string collectionName, size_t numObjects) {
+shared_ptr<PhysicsObjects> EventProcessor::GetLeadingObjects(shared_ptr<Event> event, string collectionName,
+                                                             size_t numObjects) {
   auto collection = event->GetCollection(collectionName);
   auto leadingObjects = make_shared<PhysicsObjects>();
 

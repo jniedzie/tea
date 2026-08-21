@@ -6,8 +6,8 @@
 #define Jet_hpp
 
 #include "Helpers.hpp"
-#include "PhysicsObject.hpp"
 #include "NanoEvent.hpp"
+#include "PhysicsObject.hpp"
 
 class NanoJet;
 typedef Collection<std::shared_ptr<NanoJet>> NanoJets;
@@ -16,13 +16,15 @@ class NanoJet {
  public:
   NanoJet(std::shared_ptr<PhysicsObject> physicsObject_);
 
-  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
-           int line = __builtin_LINE()) {
+  auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
+           const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
     return physicsObject->Get(branchName, verbose, file, function, line);
   }
 
   template <typename T>
-  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
+  T GetAs(std::string branchName) {
+    return physicsObject->GetAs<T>(branchName);
+  }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
@@ -43,10 +45,10 @@ class NanoJet {
 
   TLorentzVector GetFourVector();
 
-  std::map<std::string,float> GetBtaggingScaleFactors(std::string workingPoint, bool isBJet, std::string datasetName);
-  std::map<std::string,float> GetPUJetIDScaleFactors(std::string name);
-  std::map<std::string,float> GetJetEnergyCorrectionUncertainties(float rho);
-  std::map<std::string,float> GetJetEnergyCorrections(std::vector<std::string> jecNames, float rho, uint run);
+  std::map<std::string, float> GetBtaggingScaleFactors(std::string workingPoint, bool isBJet, std::string datasetName);
+  std::map<std::string, float> GetPUJetIDScaleFactors(std::string name);
+  std::map<std::string, float> GetJetEnergyCorrectionUncertainties(float rho);
+  std::map<std::string, float> GetJetEnergyCorrections(std::vector<std::string> jecNames, float rho, uint run);
   void UpdateJetEnergyScaleVariables(float rho, bool isData, uint run);
   void AddSmearedPtByResolution(float rho, int eventID, std::shared_ptr<NanoEvent> event);
 
@@ -58,8 +60,8 @@ class NanoJet {
  private:
   std::shared_ptr<PhysicsObject> physicsObject;
 
-  std::shared_ptr<PhysicsObject> GetGenJetAsRecommendedForJER(std::shared_ptr<NanoEvent> event, float sigma_JER, float R_cone = 0.4);
-
+  std::shared_ptr<PhysicsObject> GetGenJetAsRecommendedForJER(std::shared_ptr<NanoEvent> event, float sigma_JER,
+                                                              float R_cone = 0.4);
 };
 
 #endif /* Jet_hpp */

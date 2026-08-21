@@ -10,7 +10,7 @@ inputFilePath = f"{base_path}/{process}/output_0.root"
 histogramsOutputFilePath = f"../histograms/{process}/ttCR.root"
 
 defaultHistParams = (
-  #  collection      variable          bins    xmin     xmax     dir
+  # (collection, variable, bins, xmin, xmax, dir)
   ("Event", "nMuon", 50, 0, 50, ""),
   # TODO: add histograms for tight muon and good jet eta and pt
 )
@@ -19,20 +19,20 @@ defaultHistParams = (
 extraEventCollections = {
   "TightMuons": {
     "inputCollections": ["Muon"],
-    "pt": (30., 9999999.),
+    "pt": (30.0, 9999999.0),
     "eta": (-2.4, 2.4),
-    "pfRelIso04_all": (0., 0.15),
+    "pfRelIso04_all": (0.0, 0.15),
     "tightId": True,
   },
   "LooseElectrons": {
     "inputCollections": ["Electron"],
-    "pt": (15., 9999999.),
+    "pt": (15.0, 9999999.0),
     "eta": (-2.5, 2.5),
     "mvaFall17V2Iso_WPL": True,
   },
   "GoodJets": {
     "inputCollections": ["Jet"],
-    "pt": (30., 9999999.),
+    "pt": (30.0, 9999999.0),
     "eta": (-2.4, 2.4),
     "jetId": 6,
   },
@@ -49,6 +49,6 @@ eventsTreeNames = ["Events"]
 
 # We add these lines to handle special branches in data nanoAOD that don't follow the convention
 specialBranchSizes = {
-    "Proton_multiRP": "nProton_multiRP",
-    "Proton_singleRP": "nProton_singleRP",
+  "Proton_multiRP": "nProton_multiRP",
+  "Proton_singleRP": "nProton_singleRP",
 }

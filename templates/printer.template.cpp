@@ -23,9 +23,8 @@ int main(int argc, char **argv) {
 
   // Start the event loop
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
-    
-    auto event = eventReader->GetEvent(iEvent); // Get the event
-    auto physicsObjects = event->GetCollection("Particle"); // Extract a collection from the event
+    auto event = eventReader->GetEvent(iEvent);              // Get the event
+    auto physicsObjects = event->GetCollection("Particle");  // Extract a collection from the event
 
     // Loop over the collection
     for (auto physicsObject : *physicsObjects) {

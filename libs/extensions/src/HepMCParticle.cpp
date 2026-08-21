@@ -6,8 +6,8 @@ using namespace std;
 
 HepMCParticle::HepMCParticle(shared_ptr<PhysicsObject> physicsObject_, int index_)
     : physicsObject(physicsObject_), index(index_) {
-  
-  for (int i = 0; i < maxNdaughters; i++) daughters.emplace_back(-1);
+  for (int i = 0; i < maxNdaughters; i++)
+    daughters.emplace_back(-1);
   SetupDaughters();
 }
 

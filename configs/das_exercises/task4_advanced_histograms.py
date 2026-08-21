@@ -10,7 +10,7 @@ inputFilePath = f"{base_path}/{process}/output_0.root"
 histogramsOutputFilePath = f"../histograms/{process}/after_selections.root"
 
 defaultHistParams = (
-  #  collection      variable          bins    xmin     xmax     dir
+  # (collection, variable, bins, xmin, xmax, dir)
   ("Event", "nMuon", 50, 0, 50, ""),
   ("Muon", "pt", 400, 0, 200, ""),
   ("Muon", "eta", 100, -2.5, 2.5, ""),
@@ -19,7 +19,7 @@ defaultHistParams = (
 # Here, we define a custom histogram for the invariant mass of the best dimuon candidate.
 # Dimuon_minv is not a standard nanoAOD collection, so we will have to fill this one manually in a C++ program.
 histParams = (
-  # collection      variable          bins    xmin     xmax     dir
+  # (collection, variable, bins, xmin, xmax, dir)
   # TODO: create a histogram for the invariant mass of the best dimuon candidate
   # TODO: add other needed histograms
 )
@@ -28,9 +28,9 @@ histParams = (
 extraEventCollections = {
   "TightMuons": {
     "inputCollections": ["Muon"],
-    "pt": (30., 9999999.),
+    "pt": (30.0, 9999999.0),
     "eta": (-2.4, 2.4),
-    "pfRelIso04_all": (0., 0.15),
+    "pfRelIso04_all": (0.0, 0.15),
     "tightId": True,
   },
   "LooseMuons": {
@@ -38,8 +38,8 @@ extraEventCollections = {
     # TODO: define selection criteria for loose muons.
   },
   "LooseElectrons": {
-    "inputCollections": ("Electron", ),
-    "pt": (15., 9999999.),
+    "inputCollections": ("Electron",),
+    "pt": (15.0, 9999999.0),
     "eta": (-2.5, 2.5),
     "mvaFall17V2Iso_WPL": True,
   },
@@ -56,6 +56,6 @@ weightsBranchName = "genWeight"
 eventsTreeNames = ["Events"]
 
 specialBranchSizes = {
-    "Proton_multiRP": "nProton_multiRP",
-    "Proton_singleRP": "nProton_singleRP",
+  "Proton_multiRP": "nProton_multiRP",
+  "Proton_singleRP": "nProton_singleRP",
 }

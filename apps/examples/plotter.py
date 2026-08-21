@@ -35,9 +35,7 @@ def main():
 
     if hasattr(config, "histogramsRatio"):
       for histpair in config.histogramsRatio:
-        plotter.addHistosampleRatio(
-          histpair[0], histpair[1], sample, input_files[sample.name]
-        )
+        plotter.addHistosampleRatio(histpair[0], histpair[1], sample, input_files[sample.name])
 
   plotter.setupLegends()
   plotter.buildStacks()

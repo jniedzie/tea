@@ -5,9 +5,9 @@
 #ifndef Collection_hpp
 #define Collection_hpp
 
-#include <vector>
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
+#include <vector>
 
 template <typename T>
 class Collection : public std::vector<T> {

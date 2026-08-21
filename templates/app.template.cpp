@@ -1,13 +1,13 @@
+#include "ArgsManager.hpp"
 #include "ConfigManager.hpp"
 #include "CutFlowManager.hpp"
 #include "EventReader.hpp"
 #include "EventWriter.hpp"
 #include "ExtensionsHelpers.hpp"
-#include "UserExtensionsHelpers.hpp"
+#include "HistogramsFiller.hpp"
 #include "HistogramsHandler.hpp"
 #include "Profiler.hpp"
-#include "HistogramsFiller.hpp"
-#include "ArgsManager.hpp"
+#include "UserExtensionsHelpers.hpp"
 
 // If you also created a histogram filler, you can include it here
 // #include "MyHistogramsFiller.hpp"
@@ -22,22 +22,22 @@ int main(int argc, char **argv) {
   // Initialize the config with the arguments
   auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
   ConfigManager::Initialize(args);
-  auto& config = ConfigManager::GetInstance();
+  auto &config = ConfigManager::GetInstance();
 
   // Create event reader and writer, which will handle input/output trees for you
   auto eventReader = make_shared<EventReader>();
   auto eventWriter = make_shared<EventWriter>(eventReader);
-  
+
   // Create a CutFlowManager to keep track of how many events passed cuts
   auto cutFlowManager = make_shared<CutFlowManager>(eventReader, eventWriter);
 
   // If you want to fill some histograms, use HistogramsHandler to automatically create histograms
   // you need based on the config file, make them accessible to your HistogramFiller and save them at the end
   auto histogramsHandler = make_shared<HistogramsHandler>();
-  
+
   // Create a HistogramFiller to fill default histograms
   auto histogramsFiller = make_unique<HistogramsFiller>(histogramsHandler);
-  
+
   // If you also created your custom HistogramFiller, construct it here to use it later on in the event loop
   // auto histogramsFiller = make_unique<MyHistogramsFiller>(histogramsHandler);
 
@@ -92,11 +92,11 @@ int main(int argc, char **argv) {
     cutFlowManager->UpdateCutFlow("initial");
 
     bool passesTrigger = event->Get("HLT_IsoMu27");
-    if(!passesTrigger) continue;
+    if (!passesTrigger) continue;
     cutFlowManager->UpdateCutFlow("trigger");
 
     int nMuons = event->GetCollection("Muon")->size();
-    if(nMuons < 2) continue;
+    if (nMuons < 2) continue;
     cutFlowManager->UpdateCutFlow("nMuons");
 
     // If you want to store this event in the output tree, add it to the eventWriter

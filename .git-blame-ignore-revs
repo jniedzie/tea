@@ -1,0 +1,13 @@
+# Revisions listed here are ignored by `git blame`.
+#
+# GitHub honours this file automatically. To use it locally, run once:
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only add commits that are purely mechanical reformats, never ones that
+# change behaviour.
+
+# Apply repo-wide formatting (issue #118)
+80dfe66a08a39bc280d88d8670637a6cf8987376
+
+# Re-apply repo-wide formatting after merging main (issue #118)
+86a9fc0e832c08c02b3a48570d39fe1e83388735

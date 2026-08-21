@@ -11,7 +11,7 @@ skim = ""
 
 output_path = "../plots"
 
-luminosity = 63670. # pb^-1 (2018)
+luminosity = 63670.0  # pb^-1 (2018)
 
 # plot CMS labels and lumi
 show_cms_labels = True
@@ -23,10 +23,10 @@ label_outside_axes = False
 
 samples = (
   Sample(
-    name="DY", 
-    file_path=f"{base_path}/histograms/background_dy.root", 
+    name="DY",
+    file_path=f"{base_path}/histograms/background_dy.root",
     type=SampleType.background,
-    cross_section=1976.0, 
+    cross_section=1976.0,
     line_alpha=0.0,
     fill_color=41,
     fill_alpha=0.7,
@@ -36,10 +36,10 @@ samples = (
     # custom_legend = Legend(0.5, 0.5, 0.7, 0.8, "f"),
   ),
   Sample(
-    name="tt", 
-    file_path=f"{base_path}/histograms/background_tt.root", 
+    name="tt",
+    file_path=f"{base_path}/histograms/background_tt.root",
     type=SampleType.background,
-    cross_section=687.1, 
+    cross_section=687.1,
     line_alpha=0.0,
     fill_color=42,
     fill_alpha=0.7,
@@ -48,30 +48,30 @@ samples = (
     # custom_legend = Legend(0.7, 0.5, 0.9, 0.8, "f"),
   ),
   Sample(
-    name="ttZ", 
-    file_path=f"{base_path}/histograms/signal_ttz.root", 
+    name="ttZ",
+    file_path=f"{base_path}/histograms/signal_ttz.root",
     type=SampleType.signal,
-    cross_section=0.5407, 
+    cross_section=0.5407,
     # line_alpha=0.0,
-    line_color=TColor.GetColor(230, 159, 0), 
+    line_color=TColor.GetColor(230, 159, 0),
     line_style=ROOT.kSolid,
-    # fill_color=TColor.GetColor(230, 159, 0), 
+    # fill_color=TColor.GetColor(230, 159, 0),
     fill_alpha=0.0,
     marker_size=0.0,
-    legend_description="ttZ+jets (2018)"
+    legend_description="ttZ+jets (2018)",
   ),
   Sample(
-    name="data", 
-    file_path=f"{base_path}/histograms/data.root", 
+    name="data",
+    file_path=f"{base_path}/histograms/data.root",
     type=SampleType.data,
-    cross_section=1, 
+    cross_section=1,
     line_color=ROOT.kBlack,
     line_style=ROOT.kSolid,
     marker_style=20,
     marker_size=1.0,
     marker_color=ROOT.kBlack,
     fill_alpha=0.0,
-    legend_description="data (2018)"
+    legend_description="data (2018)",
   ),
 )
 
@@ -81,20 +81,30 @@ samples = (
 y_label = "# events (2018)"
 
 histograms = (
-#           name                  title logx, logy    norm_type                       rebin xmin   xmax  ymin    ymax,    xlabel                ylabel            suffix
-  Histogram("Event_nMuon"         , "", False , False , NormalizationType.to_data, 1  ,   0   , 20  , 1e1   , 5e4   , "Number of muons"   , y_label           ),
-  Histogram("Event_nMuon"         , "", False , True  , NormalizationType.to_data, 1  ,   0   , 20  , 1e1   , 1e9   , "Number of muons"   , y_label          , "_log" ),
-  Histogram("Muon_pt"             , "", False , True  , NormalizationType.to_data, 5  ,   0   , 500 , 1e-2  , 1e3   , "p_{T}^{#mu} [GeV]" , y_label           ),
-  Histogram("Muon_eta"            , "", False , False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e3   , "#eta^{#mu}"        , y_label          , "_log" ),
-  Histogram("Muon_eta"            , "", True  , False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e3   , "#eta^{#mu}"        , y_label           ),
-  Histogram("Event_nGoodLeptons"  , "", True  , False , NormalizationType.to_data, 1  ,   0   , 30  , 1e0   , 1e9   , "Number of jets"    , y_label           ),
-  Histogram("GoodLeptons_pt"      , "", True  , False , NormalizationType.to_data, 5  ,   0   , 500 , 10    , 1e8   , "p_{T}^{j} [GeV]"   , y_label           ),
-  Histogram("GoodLeptons_eta"     , "", True  , False , NormalizationType.to_data, 10 , -3.5  , 3.5 , 1e0   , 1e10  , "#eta^{j}"          , y_label           ),
-  Histogram("cutFlow"             , "", True  , False , NormalizationType.to_data, 1  ,   0   , 8   , 1e2   , 1e6   , "Selection"         , "#sum genWeight"  ),
+  #           name                  title logx, logy    norm_type                       rebin xmin   xmax  ymin    ymax,    xlabel                ylabel            suffix
+  Histogram("Event_nMuon", "", False, False, NormalizationType.to_data, 1, 0, 20, 1e1, 5e4, "Number of muons", y_label),
+  Histogram(
+    "Event_nMuon", "", False, True, NormalizationType.to_data, 1, 0, 20, 1e1, 1e9, "Number of muons", y_label, "_log"
+  ),
+  Histogram("Muon_pt", "", False, True, NormalizationType.to_data, 5, 0, 500, 1e-2, 1e3, "p_{T}^{#mu} [GeV]", y_label),
+  Histogram(
+    "Muon_eta", "", False, False, NormalizationType.to_data, 10, -3.5, 3.5, 1e0, 1e3, "#eta^{#mu}", y_label, "_log"
+  ),
+  Histogram("Muon_eta", "", True, False, NormalizationType.to_data, 10, -3.5, 3.5, 1e0, 1e3, "#eta^{#mu}", y_label),
+  Histogram(
+    "Event_nGoodLeptons", "", True, False, NormalizationType.to_data, 1, 0, 30, 1e0, 1e9, "Number of jets", y_label
+  ),
+  Histogram(
+    "GoodLeptons_pt", "", True, False, NormalizationType.to_data, 5, 0, 500, 10, 1e8, "p_{T}^{j} [GeV]", y_label
+  ),
+  Histogram(
+    "GoodLeptons_eta", "", True, False, NormalizationType.to_data, 10, -3.5, 3.5, 1e0, 1e10, "#eta^{j}", y_label
+  ),
+  Histogram("cutFlow", "", True, False, NormalizationType.to_data, 1, 0, 8, 1e2, 1e6, "Selection", "#sum genWeight"),
 )
 
 histograms2D = (
-#           name              title                rebin  xmin    xmax       ymin   ymax     zmin zmax xlabel               ylabel                        zlabel
+  #           name              title                rebin  xmin    xmax       ymin   ymax     zmin zmax xlabel               ylabel                        zlabel
   # Histogram2D("hit_xy",         "hit_xy"          , 1, 1, -15     , 15      , -15   , 15    , 0,  1e5, "x"             , "y"                         , "Counts"),
   # Histogram2D("time_vs_toa",    "time_vs_toa"     , 1, 1, -10     , 100     , -10   , 2000  , 0,  1e3, "Time (ns)"     , "Time of Arrival (ToA)"     , "Counts"),
 )
@@ -112,9 +122,19 @@ n_background = len([s for s in samples if s.type == SampleType.background and s.
 
 # here default legends per sample type are defined. If you want to override them, specify custom_legend in the sample
 legends = {
-  SampleType.signal     : Legend(legend_min_x               , legend_max_y - n_signal*legend_height           , legend_min_x+legend_width , legend_max_y                        , "l" ),
-  SampleType.data       : Legend(legend_min_x               , legend_max_y - (n_signal+n_data)*legend_height  , legend_min_x+legend_width , legend_max_y-n_signal*legend_height , "pl"),
-  SampleType.background : Legend(legend_max_x-legend_width  , legend_max_y - n_background*legend_height       , legend_max_x              , legend_max_y                        , "f" ),
+  SampleType.signal: Legend(
+    legend_min_x, legend_max_y - n_signal * legend_height, legend_min_x + legend_width, legend_max_y, "l"
+  ),
+  SampleType.data: Legend(
+    legend_min_x,
+    legend_max_y - (n_signal + n_data) * legend_height,
+    legend_min_x + legend_width,
+    legend_max_y - n_signal * legend_height,
+    "pl",
+  ),
+  SampleType.background: Legend(
+    legend_max_x - legend_width, legend_max_y - n_background * legend_height, legend_max_x, legend_max_y, "f"
+  ),
 }
 
 plotting_options = {

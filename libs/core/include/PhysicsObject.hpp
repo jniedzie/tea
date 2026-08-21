@@ -19,15 +19,24 @@ class PhysicsObject {
   // virtual ~PhysicsObject() = default;
   virtual ~PhysicsObject() {
     ForgetCustomValues();
-    for (auto& [name, ptr] : customValuesFloat) delete ptr;
-    for (auto& [name, ptr] : customValuesDouble) delete ptr;
-    for (auto& [name, ptr] : customValuesInt) delete ptr;
-    for (auto& [name, ptr] : customValuesUint) delete ptr;
-    for (auto& [name, ptr] : customValuesBool) delete ptr;
-    for (auto& [name, ptr] : customValuesUlong) delete ptr;
-    for (auto& [name, ptr] : customValuesUchar) delete ptr;
-    for (auto& [name, ptr] : customValuesShort) delete ptr;
-    for (auto& [name, ptr] : customValuesUshort) delete ptr;
+    for (auto &[name, ptr] : customValuesFloat)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesDouble)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesInt)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesUint)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesBool)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesUlong)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesUchar)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesShort)
+      delete ptr;
+    for (auto &[name, ptr] : customValuesUshort)
+      delete ptr;
   }
 
   void Reset();
@@ -39,7 +48,7 @@ class PhysicsObject {
 
   inline auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
                   const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
-    if (valuesTypes.count(branchName) == 0 && customValuesTypes.count(branchName) == 0 ) {
+    if (valuesTypes.count(branchName) == 0 && customValuesTypes.count(branchName) == 0) {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
 
@@ -149,7 +158,8 @@ class PhysicsObject {
     return 0;
   }
 
-  template <typename T> void Set(const std::string &branchName, T value) {
+  template <typename T>
+  void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>) {
       auto it = customValuesFloat.find(branchName);
       if (it != customValuesFloat.end()) delete it->second;
@@ -233,8 +243,7 @@ class PhysicsObject {
     return *customValuesBool[branchName];
   }
   inline Float_t GetFloat(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end())
-      return *valuesFloat[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesFloat[branchName];
     return *customValuesFloat[branchName];
   }
   inline Double_t GetDouble(std::string branchName) {
@@ -274,15 +283,15 @@ class PhysicsObject {
   std::map<std::string, UShort_t *> valuesUshort;
   std::map<std::string, Short_t *> valuesShort;
 
-  std::map<std::string, Float_t*> customValuesFloat;
-  std::map<std::string, Double_t*> customValuesDouble;
-  std::map<std::string, Int_t*> customValuesInt;
-  std::map<std::string, UInt_t*> customValuesUint;
-  std::map<std::string, Bool_t*> customValuesBool;
-  std::map<std::string, ULong64_t*> customValuesUlong;
-  std::map<std::string, UChar_t*> customValuesUchar;
-  std::map<std::string, Short_t*> customValuesShort;
-  std::map<std::string, UShort_t*> customValuesUshort;
+  std::map<std::string, Float_t *> customValuesFloat;
+  std::map<std::string, Double_t *> customValuesDouble;
+  std::map<std::string, Int_t *> customValuesInt;
+  std::map<std::string, UInt_t *> customValuesUint;
+  std::map<std::string, Bool_t *> customValuesBool;
+  std::map<std::string, ULong64_t *> customValuesUlong;
+  std::map<std::string, UChar_t *> customValuesUchar;
+  std::map<std::string, Short_t *> customValuesShort;
+  std::map<std::string, UShort_t *> customValuesUshort;
 
   std::string originalCollection;
   int index;

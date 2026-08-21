@@ -2,11 +2,14 @@ name: tea-ci
 channels:
   - conda-forge
 dependencies:
+  - clang-format
   - cmake=3.31.8
   - gcc=14.3.0
   - gxx=14.3.0
   - make
   - pip
+  - pre-commit
   - python=3.9.23
   - root=6.34.10
+  - ruff
   - zlib=1.3.2

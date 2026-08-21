@@ -40,7 +40,7 @@ class ABCDHelper:
     if background_hist is None or type(background_hist) is ROOT.TObject:
       warn("ABCDHelper.__find_signal_bin: background_hist is None")
       return "A"
-    
+
     background_mean_x = background_hist.GetMean(1)
     background_mean_y = background_hist.GetMean(2)
 
@@ -48,12 +48,7 @@ class ABCDHelper:
     # -------
     # B  |  D
 
-    signal_region_count = {
-        "A": 0,
-        "B": 0,
-        "C": 0,
-        "D": 0
-    }
+    signal_region_count = {"A": 0, "B": 0, "C": 0, "D": 0}
 
     for signal_hist in signal_hists.values():
       if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
@@ -83,14 +78,21 @@ class ABCDHelper:
     if hist is None:
       return None
 
-    flipped_hist = ROOT.TH2F(hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}", hist.GetTitle(),
-                             hist.GetNbinsX(), hist.GetXaxis().GetXmin(), hist.GetXaxis().GetXmax(),
-                             hist.GetNbinsY(), -hist.GetYaxis().GetXmax(), -hist.GetYaxis().GetXmin())
+    flipped_hist = ROOT.TH2F(
+      hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}",
+      hist.GetTitle(),
+      hist.GetNbinsX(),
+      hist.GetXaxis().GetXmin(),
+      hist.GetXaxis().GetXmax(),
+      hist.GetNbinsY(),
+      -hist.GetYaxis().GetXmax(),
+      -hist.GetYaxis().GetXmin(),
+    )
 
     for i in range(1, hist.GetNbinsX() + 1):
       for j in range(1, hist.GetNbinsY() + 1):
-        flipped_hist.SetBinContent(i, hist.GetNbinsY()+1-j, hist.GetBinContent(i, j))
-        flipped_hist.SetBinError(i,  hist.GetNbinsY()+1-j, hist.GetBinError(i, j))
+        flipped_hist.SetBinContent(i, hist.GetNbinsY() + 1 - j, hist.GetBinContent(i, j))
+        flipped_hist.SetBinError(i, hist.GetNbinsY() + 1 - j, hist.GetBinError(i, j))
 
     flipped_hist.GetXaxis().SetTitle(hist.GetXaxis().GetTitle())
     flipped_hist.GetYaxis().SetTitle("-")
@@ -106,14 +108,21 @@ class ABCDHelper:
     if hist is None:
       return None
 
-    flipped_hist = ROOT.TH2F(hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}", hist.GetTitle(),
-                             hist.GetNbinsX(), -hist.GetXaxis().GetXmax(), -hist.GetXaxis().GetXmin(),
-                             hist.GetNbinsY(), hist.GetYaxis().GetXmin(), hist.GetYaxis().GetXmax())
+    flipped_hist = ROOT.TH2F(
+      hist.GetName() + f"_flipped_{ROOT.gRandom.Rndm()}",
+      hist.GetTitle(),
+      hist.GetNbinsX(),
+      -hist.GetXaxis().GetXmax(),
+      -hist.GetXaxis().GetXmin(),
+      hist.GetNbinsY(),
+      hist.GetYaxis().GetXmin(),
+      hist.GetYaxis().GetXmax(),
+    )
 
     for i in range(1, hist.GetNbinsX() + 1):
       for j in range(1, hist.GetNbinsY() + 1):
-        flipped_hist.SetBinContent(hist.GetNbinsX()+1-i, j, hist.GetBinContent(i, j))
-        flipped_hist.SetBinError(hist.GetNbinsX()+1-i, j, hist.GetBinError(i, j))
+        flipped_hist.SetBinContent(hist.GetNbinsX() + 1 - i, j, hist.GetBinContent(i, j))
+        flipped_hist.SetBinError(hist.GetNbinsX() + 1 - i, j, hist.GetBinError(i, j))
 
     flipped_hist.GetXaxis().SetTitle("-")
     flipped_hist.GetYaxis().SetTitle(hist.GetYaxis().GetTitle())
@@ -136,12 +145,12 @@ class ABCDHelper:
     d_err = c_double(0)
 
     x_min_bin = 1
-    x_pre_bin = point[0]-1
+    x_pre_bin = point[0] - 1
     x_post_bin = point[0]
     x_max_bin = hist.GetNbinsX()
 
     y_min_bin = 1
-    y_pre_bin = point[1]-1
+    y_pre_bin = point[1] - 1
     y_post_bin = point[1]
     y_max_bin = hist.GetNbinsY()
 
@@ -194,7 +203,7 @@ class ABCDHelper:
     background_hist = background_hist.Clone()
     signal_hist = signal_hist.Clone()
     background_hist.Scale(1.0 / background_hist.Integral())
-    
+
     if signal_hist.Integral() != 0:
       signal_hist.Scale(1.0 / signal_hist.Integral())
 
@@ -204,18 +213,17 @@ class ABCDHelper:
 
     for i in range(1, background_hist.GetNbinsX() + 1):
       for j in range(1, background_hist.GetNbinsY() + 1):
-
         bck = background_hist.GetBinContent(i, j)
         sig = signal_hist.GetBinContent(i, j)
 
         if sig <= 0 or bck <= 0:  # in some corner cases, MC histograms can have negative-content bins
           continue
 
-        numerator += sig*bck
+        numerator += sig * bck
         sig_norm += sig * sig
         bck_norm += bck * bck
 
-    coeff = numerator / math.sqrt(sig_norm*bck_norm) if sig_norm > 0 and bck_norm > 0 else 0.0
+    coeff = numerator / math.sqrt(sig_norm * bck_norm) if sig_norm > 0 and bck_norm > 0 else 0.0
     self.signal_overlap[(mass, ctau)] = coeff
     return coeff  # 1 = identical, 0 = no overlap
 
@@ -238,9 +246,8 @@ class ABCDHelper:
 
     for i in range(1, significance_hist.GetNbinsX() + 1):
       for j in range(1, significance_hist.GetNbinsY() + 1):
-
         x_pre_bin = i
-        y_post_bin = j+1
+        y_post_bin = j + 1
 
         n_signal = signal_hist.Integral(x_min_bin, x_pre_bin, y_post_bin, y_max_bin)
         n_background = background_hist.Integral(x_min_bin, x_pre_bin, y_post_bin, y_max_bin)
@@ -266,11 +273,10 @@ class ABCDHelper:
 
     for i in range(1, signal_contamination_hist.GetNbinsX() + 1):
       for j in range(1, signal_contamination_hist.GetNbinsY() + 1):
-
         x_pre_bin = i
-        x_post_bin = i+1
+        x_post_bin = i + 1
         y_pre_bin = j
-        y_post_bin = j+1
+        y_post_bin = j + 1
 
         n_signal_b = signal_hist.Integral(x_min_bin, x_pre_bin, y_min_bin, y_pre_bin)
         n_signal_c = signal_hist.Integral(x_post_bin, x_max_bin, y_post_bin, y_max_bin)
@@ -298,8 +304,7 @@ class ABCDHelper:
     #   of the ABCD plane.
 
     optimization_params = ("closure", "error", "min_n_events")
-    optimization_hists = {name: self.__get_optimization_hist(
-        background_hist, name) for name in optimization_params}
+    optimization_hists = {name: self.__get_optimization_hist(background_hist, name) for name in optimization_params}
 
     return optimization_hists
 
@@ -321,7 +326,7 @@ class ABCDHelper:
       first_hist = next(iter(significance_hists.values()))
     except StopIteration:
       first_hist = None
-    
+
     if first_hist is None or not isinstance(first_hist, ROOT.TH2):
       warn("ABCDHelper.get_optimal_point_for_significance: first_hist is None")
       return None
@@ -370,8 +375,9 @@ class ABCDHelper:
 
     return best_point
 
-  def is_point_good_for_signal(self, signal_hist, background_hist, ctau, mass,
-                               signal_contamination_hist, optimization_hists, point):
+  def is_point_good_for_signal(
+    self, signal_hist, background_hist, ctau, mass, signal_contamination_hist, optimization_hists, point
+  ):
     if point is None:
       return False
 
@@ -417,13 +423,13 @@ class ABCDHelper:
         optimization_value = optimization_hist.GetBinContent(i, j)
 
         if not self.is_point_good_for_signal(
-            signal_hist=None,
-            background_hist=None,
-            ctau=None,
-            mass=None,
-            signal_contamination_hist=None,
-            optimization_hists=optimization_hists,
-            point=(i, j)
+          signal_hist=None,
+          background_hist=None,
+          ctau=None,
+          mass=None,
+          signal_contamination_hist=None,
+          optimization_hists=optimization_hists,
+          point=(i, j),
         ):
           continue
 
@@ -459,7 +465,7 @@ class ABCDHelper:
     hist_prediction = hist_clone.ProjectionY("projection_c", self.config.abcd_point[0], hist_clone.GetNbinsX())
 
     _, b, _, d, _, _, _, _ = self.get_abcd(hist, self.config.abcd_point)
-    abcd_ratio = b/d if d > 0 else 1
+    abcd_ratio = b / d if d > 0 else 1
     hist_prediction.Scale(abcd_ratio)
 
     return hist_prediction
@@ -476,7 +482,7 @@ class ABCDHelper:
 
     if prediction_err != 0 and a_err != 0:
       error = abs(a - prediction)
-      error /= (prediction_err**2 + a_err**2)**0.5
+      error /= (prediction_err**2 + a_err**2) ** 0.5
 
     return error
 
@@ -489,8 +495,8 @@ class ABCDHelper:
       warn("ABCDHelper.get_prediction: b, c or d is less than or equal to 0")
       return 0, 0
 
-    prediction = c/d * b
-    prediction_err = ((b_err/b)**2 + (c_err/c) ** 2 + (d_err/d)**2)**0.5
+    prediction = c / d * b
+    prediction_err = ((b_err / b) ** 2 + (c_err / c) ** 2 + (d_err / d) ** 2) ** 0.5
     prediction_err *= prediction
 
     return prediction, prediction_err
@@ -502,7 +508,6 @@ class ABCDHelper:
 
     for i in range(1, optimization_hist.GetNbinsX() + 1):
       for j in range(1, optimization_hist.GetNbinsY() + 1):
-
         values = self.get_abcd(background_hist, (i, j))
         a, b, c, d, _, _, _, _ = values
         a_err = a**0.5
@@ -543,7 +548,7 @@ class ABCDHelper:
   def __get_significance(self, n_signal, n_background):
     significance = 0.0
     if n_background > 0:
-      significance = float(n_signal) / (n_signal + n_background)**0.5
+      significance = float(n_signal) / (n_signal + n_background) ** 0.5
     return significance
 
   def __replace_default_values(self, hist, default):

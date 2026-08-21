@@ -39,17 +39,17 @@ class CutFlowManager {
 
   std::map<std::string, float> weightsAfterCuts;
   std::map<std::string, float> rawEventsAfterCuts;
-  std::map<std::string,std::map<std::string, float>> weightsAfterCollectionCuts;
-  std::map<std::string,std::map<std::string, float>> rawEventsAfterCollectionCuts;
+  std::map<std::string, std::map<std::string, float>> weightsAfterCollectionCuts;
+  std::map<std::string, std::map<std::string, float>> rawEventsAfterCollectionCuts;
   float eventWeight = 0;
 
   int currentIndex;
-  std::map<std::string,int> currentCollectionIndex;
+  std::map<std::string, int> currentCollectionIndex;
   bool inputContainsInitial;
-  std::map<std::string,bool> inputCollectionContainsInitial;
+  std::map<std::string, bool> inputCollectionContainsInitial;
 
   std::vector<std::string> existingCuts;
-  std::map<std::string,std::vector<std::string>> existingCollectionCuts;
+  std::map<std::string, std::vector<std::string>> existingCollectionCuts;
   bool weightsBranchWarningPrinted = false;
 
   float GetCurrentEventWeight();
@@ -57,7 +57,6 @@ class CutFlowManager {
   void RegisterPreExistingCutFlows();
   void SaveSingleCutFlow(std::string collectionName = "");
   void WriteCutFlow(std::map<std::string, float> weights, std::string cutFlowName);
-
 };
 
 #endif /* CutFlowManager_hpp */
