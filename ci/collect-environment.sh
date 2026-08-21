@@ -10,6 +10,11 @@ output_stem="${output%.txt}"
   printf 'captured_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf '\n[operating system]\n'
   uname -a
+  printf 'architecture: %s\n' "$(uname -m)"
+  if command -v getconf >/dev/null 2>&1; then
+    printf 'libc: '
+    getconf GNU_LIBC_VERSION 2>/dev/null || printf 'not reported\n'
+  fi
   if [[ -r /etc/os-release ]]; then
     cat /etc/os-release
   elif command -v sw_vers >/dev/null 2>&1; then
@@ -17,7 +22,7 @@ output_stem="${output%.txt}"
   fi
 
   printf '\n[commands]\n'
-  for command_name in bash cmake c++ gcc g++ clang clang++ python3 root root-config conda mamba micromamba; do
+  for command_name in bash cmake c++ gcc g++ clang clang++ python3 root root-config correction conda mamba micromamba; do
     command_path="$(command -v "${command_name}" 2>/dev/null || true)"
     printf '%-12s %s\n' "${command_name}" "${command_path:-not found}"
   done
@@ -30,6 +35,16 @@ output_stem="${output%.txt}"
   root-config --version 2>/dev/null || true
   root-config --features 2>/dev/null || true
   root-config --cxxstandard 2>/dev/null || true
+  correction config --version 2>/dev/null || true
+
+  printf '\n[tea environment]\n'
+  printf 'TEA_HOME=%s\n' "${TEA_HOME:-not set}"
+  printf 'TEA_ENV_PLATFORM=%s\n' "${TEA_ENV_PLATFORM:-not set}"
+  printf 'TEA_ENV_PREFIX=%s\n' "${TEA_ENV_PREFIX:-not set}"
+  printf 'TEA_ENV_LOCK_HASH=%s\n' "${TEA_ENV_LOCK_HASH:-not set}"
+  if [[ -n "${TEA_HOME:-}" ]]; then
+    df -P "${TEA_HOME}" 2>/dev/null || true
+  fi
 
   printf '\n[root]\n'
   for root_option in --prefix --incdir --libdir --libs; do
@@ -119,4 +134,9 @@ json.dump(records, sys.stdout, indent=2, sort_keys=True)
 sys.stdout.write("\n")
 PY
   fi
+fi
+
+if [[ -n "${TEA_MICROMAMBA:-}" && -x "${TEA_MICROMAMBA}" && -n "${TEA_ENV_PREFIX:-}" ]]; then
+  "${TEA_MICROMAMBA}" list --prefix "${TEA_ENV_PREFIX}" > "${output_stem}.micromamba-list.txt"
+  printf 'Wrote %s\n' "${output_stem}.micromamba-list.txt"
 fi
