@@ -203,21 +203,18 @@ map<string, float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr
 
     if (muon->IsDSA()) {
       auto weights_dsa = muon->GetDSAScaleFactors("dsamuonID", "dsamuonReco_cosmic");
-      for (auto &[name, weight] : weights_dsa)
-        weights[name] *= weight;
+      for (auto &[name, weight] : weights_dsa) weights[name] *= weight;
       // update all other variations with new systematic
       UpdateVariationWeights(weights, weights_dsa);
     } else {
       if (muon->IsTight()) {
         auto weights_tight = muon->GetScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
-        for (auto &[name, weight] : weights_tight)
-          weights[name] *= weight;
+        for (auto &[name, weight] : weights_tight) weights[name] *= weight;
         // update all other variations with new systematic
         UpdateVariationWeights(weights, weights_tight);
       } else {
         auto weights_loose = muon->GetScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
-        for (auto &[name, weight] : weights_loose)
-          weights[name] *= weight;
+        for (auto &[name, weight] : weights_loose) weights[name] *= weight;
         // update all other variations with new systematic
         UpdateVariationWeights(weights, weights_loose);
       }
@@ -246,8 +243,7 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
     // vector<CorrectionArgType> args = {(double)muon->Get("pt"), (double)fabs(muon->GetAs<float>("dxyPVTraj"))};
     if (firstIteration) {
       auto weights_setup = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
-      for (auto &[name, weight] : weights_setup)
-        weights[name] = 1.0;
+      for (auto &[name, weight] : weights_setup) weights[name] = 1.0;
       firstIteration = false;
     }
 
@@ -255,8 +251,7 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
       continue;
     }
     auto weights_ = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
-    for (auto &[name, weight] : weights_)
-      weights[name] *= weight;
+    for (auto &[name, weight] : weights_) weights[name] *= weight;
   }
   return weights;
 }

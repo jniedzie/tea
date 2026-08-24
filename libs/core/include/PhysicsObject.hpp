@@ -19,24 +19,15 @@ class PhysicsObject {
   // virtual ~PhysicsObject() = default;
   virtual ~PhysicsObject() {
     ForgetCustomValues();
-    for (auto &[name, ptr] : customValuesFloat)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesDouble)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesInt)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesUint)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesBool)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesUlong)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesUchar)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesShort)
-      delete ptr;
-    for (auto &[name, ptr] : customValuesUshort)
-      delete ptr;
+    for (auto &[name, ptr] : customValuesFloat) delete ptr;
+    for (auto &[name, ptr] : customValuesDouble) delete ptr;
+    for (auto &[name, ptr] : customValuesInt) delete ptr;
+    for (auto &[name, ptr] : customValuesUint) delete ptr;
+    for (auto &[name, ptr] : customValuesBool) delete ptr;
+    for (auto &[name, ptr] : customValuesUlong) delete ptr;
+    for (auto &[name, ptr] : customValuesUchar) delete ptr;
+    for (auto &[name, ptr] : customValuesShort) delete ptr;
+    for (auto &[name, ptr] : customValuesUshort) delete ptr;
   }
 
   void Reset();

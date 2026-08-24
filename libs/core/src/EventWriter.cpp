@@ -53,8 +53,7 @@ size_t FillArrayAddedBranch(T *buffer, const string &branchName, const string &v
     }
     buffer[writeIndex++] = value;
   }
-  for (size_t i = writeIndex; i < previousSize; i++)
-    buffer[i] = T(0);
+  for (size_t i = writeIndex; i < previousSize; i++) buffer[i] = T(0);
   return writeIndex;
 }
 

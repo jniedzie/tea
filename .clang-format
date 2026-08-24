@@ -14,5 +14,5 @@ DerivePointerAlignment: false
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortBlocksOnASingleLine: Empty
-AllowShortLoopsOnASingleLine: false
+AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: false

@@ -93,11 +93,9 @@ void ScaleFactorsManager::ExtractBounds(const json &node, map<string, pair<doubl
     bounds[input] = {min, max};
 
     // recurse into content
-    for (const auto &subnode : node["content"])
-      ExtractBounds(subnode, bounds);
+    for (const auto &subnode : node["content"]) ExtractBounds(subnode, bounds);
   } else if (type == "category") {
-    for (const auto &item : node["content"])
-      ExtractBounds(item["value"], bounds);
+    for (const auto &item : node["content"]) ExtractBounds(item["value"], bounds);
   } else if (type == "multibinning") {
     const auto &inputs = node["inputs"];
     const auto &edges = node["edges"];
@@ -118,8 +116,7 @@ void ScaleFactorsManager::ExtractBounds(const json &node, map<string, pair<doubl
     }
 
     // recurse into content
-    for (const auto &subnode : node["content"])
-      ExtractBounds(subnode, bounds);
+    for (const auto &subnode : node["content"]) ExtractBounds(subnode, bounds);
   } else if (type == "transform") {
     // recurse into content only
     ExtractBounds(node["content"], bounds);
@@ -162,8 +159,7 @@ void ScaleFactorsManager::ReadScaleFactors() {
     } catch (out_of_range &e) {
       fatal() << "Incorrect correction type: " << values["type"] << endl;
       fatal() << "Available corrections: " << endl;
-      for (auto &[name, corr] : *cset)
-        fatal() << name << endl;
+      for (auto &[name, corr] : *cset) fatal() << name << endl;
       exit(1);
     }
 
@@ -248,8 +244,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
       } catch (std::out_of_range &e) {
         fatal() << "Incorrect correction type: " << type << endl;
         fatal() << "Available corrections: " << endl;
-        for (auto &[name, corr] : cset->compound())
-          fatal() << name << endl;
+        for (auto &[name, corr] : cset->compound()) fatal() << name << endl;
         exit(1);
       }
     }
@@ -264,8 +259,7 @@ void ScaleFactorsManager::ReadJetEnergyCorrections() {
       } catch (std::out_of_range &e) {
         fatal() << "Incorrect correction type: " << unc_type << endl;
         fatal() << "Available corrections: " << endl;
-        for (auto &[name, corr] : *cset)
-          fatal() << name << endl;
+        for (auto &[name, corr] : *cset) fatal() << name << endl;
         exit(1);
       }
     }
@@ -502,8 +496,7 @@ float ScaleFactorsManager::EvaluateCorrectionArgs(const std::string &name,
 
     if (msg.find("inputs") != std::string::npos) {
       fatal() << "Expected inputs:\n";
-      for (auto corr : corrections[name]->inputs())
-        fatal() << corr.name() << "\t" << corr.description() << "\n";
+      for (auto corr : corrections[name]->inputs()) fatal() << corr.name() << "\t" << corr.description() << "\n";
       exit(1);
     }
 

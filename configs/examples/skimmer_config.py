@@ -3,11 +3,7 @@ nEvents = -1
 inputFilePath = "../tea/samples/background_dy.root"
 treeOutputFilePath = "../samples/skimmed/background_dy.root"
 
-# fmt: off
-triggerSelection = (
-  "HLT_IsoMu24",
-)
-# fmt: on
+triggerSelection = ("HLT_IsoMu24",)
 
 extraEventCollections = {
   "GoodLeptons": {

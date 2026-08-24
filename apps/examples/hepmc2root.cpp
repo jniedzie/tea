@@ -227,8 +227,7 @@ class hepmc2root {
     tokens.clear();
     istringstream iss(line);
     string tmp;
-    while (iss >> tmp)
-      tokens.push_back(tmp);
+    while (iss >> tmp) tokens.push_back(tmp);
   }
 
   void set_event_variables() {

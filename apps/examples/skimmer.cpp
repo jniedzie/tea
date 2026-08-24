@@ -47,8 +47,7 @@ int main(int argc, char **argv) {
     }
 
     vector<float> muonPts;
-    for (auto &muon : *muons)
-      muonPts.push_back(muon->GetAs<float>("pt"));
+    for (auto &muon : *muons) muonPts.push_back(muon->GetAs<float>("pt"));
     event->SetVector<float>("muonPt", muonPts);
 
     // Branches declared without a varexp are only filled where the app sets them, and get a default

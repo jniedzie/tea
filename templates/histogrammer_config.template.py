@@ -16,7 +16,7 @@ defaultHistParams = (
 
 # define custom histograms (you will have to fill them in your HistogramsFiller)
 histParams = (
-#    collection variable         bins  xmin    xmax    dir
+#  collection variable    bins  xmin    xmax    dir
   ("Dimuon", "mInv",      1000,  0,      10,     "kinematics"),
   ("Dimuon", "deltaPhi",  1000, -3.5,    3.5,    "kinematics"),
 )

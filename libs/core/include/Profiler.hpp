@@ -23,8 +23,7 @@ class Profiler {
     std::vector<std::pair<std::string, float>> sortedTimes(times.begin(), times.end());
     std::sort(sortedTimes.begin(), sortedTimes.end(),
               [](const auto &pair1, const auto &pair2) { return pair1.second > pair2.second; });
-    for (auto &[name, t] : sortedTimes)
-      info() << name << ": " << t << " (s)" << std::endl;
+    for (auto &[name, t] : sortedTimes) info() << name << ": " << t << " (s)" << std::endl;
   }
 
   static Profiler &GetInstance();

@@ -405,8 +405,7 @@ shared_ptr<Event> EventReader::GetEvent(int iEvent) {
   currentEvent->Reset();
 
   // Move to desired entry in all trees
-  for (auto &[name, tree] : inputTrees)
-    tree->GetEntry(iEvent);
+  for (auto &[name, tree] : inputTrees) tree->GetEntry(iEvent);
 
   // Tell collections where to stop in loops, without actually changing their size in memory
   for (auto &[name, collection] : currentEvent->collections) {

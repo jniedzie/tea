@@ -78,8 +78,7 @@ AddedBranches::AddedBranches() {
 }
 
 AddedBranches::~AddedBranches() {
-  for (auto &[name, formula] : formulas)
-    delete formula;
+  for (auto &[name, formula] : formulas) delete formula;
 }
 
 void AddedBranches::Setup(const vector<string> &eventsTreeNames, const map<string, TTree *> &inputTrees) {

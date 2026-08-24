@@ -74,8 +74,7 @@ inline std::vector<std::string> split(std::string input, char splitBy) {
   std::istringstream iss(input);
   std::string part;
 
-  while (std::getline(iss, part, splitBy))
-    parts.push_back(part);
+  while (std::getline(iss, part, splitBy)) parts.push_back(part);
   return parts;
 }
 
@@ -121,8 +120,7 @@ struct ExtraCollection {
 
   void Print() {
     info() << "Input collections: " << std::endl;
-    for (std::string name : inputCollections)
-      info() << name << std::endl;
+    for (std::string name : inputCollections) info() << name << std::endl;
 
     info() << "All cuts: " << std::endl;
     for (auto &[name, cuts] : allCuts) {
