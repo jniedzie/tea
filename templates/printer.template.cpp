@@ -14,18 +14,15 @@ int main(int argc, char **argv) {
 
   // If input path was provided as an argument, set it in the config.
   // Otherwise, it will be set to the value from the config file.
-  if (args->GetString("input_path").has_value()) {
-    config.SetInputPath(args->GetString("input_path").value());
-  }
+  if (args->GetString("input_path").has_value()) { config.SetInputPath(args->GetString("input_path").value()); }
 
   // Create event reader and writer, which will handle input/output trees for you
   auto eventReader = make_shared<EventReader>();
 
   // Start the event loop
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
-    
-    auto event = eventReader->GetEvent(iEvent); // Get the event
-    auto physicsObjects = event->GetCollection("Particle"); // Extract a collection from the event
+    auto event = eventReader->GetEvent(iEvent);              // Get the event
+    auto physicsObjects = event->GetCollection("Particle");  // Extract a collection from the event
 
     // Loop over the collection
     for (auto physicsObject : *physicsObjects) {

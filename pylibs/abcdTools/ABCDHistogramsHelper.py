@@ -26,10 +26,7 @@ class ABCDHistogramsHelper:
         return None, None
 
     hist_new = ROOT.TH1D(
-        hist.GetName() + "_rebin",
-        hist.GetTitle() + "_rebin",
-        len(binning) - 1,
-        array.array('d', binning)
+      hist.GetName() + "_rebin", hist.GetTitle() + "_rebin", len(binning) - 1, array.array("d", binning)
     )
 
     for i in range(1, hist.GetNbinsX() + 1):
@@ -42,8 +39,7 @@ class ABCDHistogramsHelper:
 
       # Accumulate content and error in the new bin
       new_content = hist_new.GetBinContent(new_bin) + content
-      new_error2 = hist_new.GetBinError(
-          new_bin)**2 + error**2  # Sum of squares
+      new_error2 = hist_new.GetBinError(new_bin) ** 2 + error**2  # Sum of squares
 
       hist_new.SetBinContent(new_bin, new_content)
       hist_new.SetBinError(new_bin, new_error2**0.5)
@@ -75,7 +71,7 @@ class ABCDHistogramsHelper:
       current_error2 += error**2
 
       #  if error is small enough, add the bin edge and start a new bin (reset)
-      if current_sum > 0 and current_error2**0.5/current_sum < self.config.smart_rebin_max_error:
+      if current_sum > 0 and current_error2**0.5 / current_sum < self.config.smart_rebin_max_error:
         bin_edges.append(hist.GetBinLowEdge(i))
         current_sum = content
         current_error2 = error**2

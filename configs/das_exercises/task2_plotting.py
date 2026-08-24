@@ -4,7 +4,7 @@ from Legend import Legend
 from Histogram import Histogram
 from HistogramNormalizer import NormalizationType
 
-luminosity = 63670.  # pb^-1 (2018)
+luminosity = 63670.0  # pb^-1 (2018)
 
 samples = (
   Sample(
@@ -37,8 +37,8 @@ output_path = "../plots/"
 
 histograms = (
   #         name      title logx   logy   norm_type                  rebin  xmin  xmax ymin   ymax xlabel         ylabel
-  Histogram("Muon_pt" , "", False, True , NormalizationType.to_lumi, 1,     0   , 200, 1    , 1e3, "x axis", "y axis"),
-  Histogram("Muon_eta", "", False, False, NormalizationType.to_lumi, 1,     -2.4, 2.4, 0    , 250, "x axis", "y axis"),
+  Histogram("Muon_pt", "", False, True, NormalizationType.to_lumi, 1, 0, 200, 1, 1e3, "x axis", "y axis"),
+  Histogram("Muon_eta", "", False, False, NormalizationType.to_lumi, 1, -2.4, 2.4, 0, 250, "x axis", "y axis"),
 )
 
 legends = {

@@ -17,29 +17,39 @@ def get_args():
   parser.add_argument("--files_config", type=str, default=None, help="Python config with a list of input/output paths.")
   parser.add_argument("--local", action="store_true", default=False, help="Run locally.")
   parser.add_argument("--condor", action="store_true", default=False, help="Run on condor.")
-  parser.add_argument("--local_parallel", action="store_true", default=False, help="Run condor-style jobs locally in parallel.")
-  parser.add_argument("--local_parallel_jobs", type=int, default=None,
-                      help=(
-                          "Number of parallel local jobs. Defaults to the CPUs available "
-                          "to this process, capped at 4 on lxplus."
-                      ))
+  parser.add_argument(
+    "--local_parallel", action="store_true", default=False, help="Run condor-style jobs locally in parallel."
+  )
+  parser.add_argument(
+    "--local_parallel_jobs",
+    type=int,
+    default=None,
+    help=("Number of parallel local jobs. Defaults to the CPUs available to this process, capped at 4 on lxplus."),
+  )
   parser.add_argument("--save_logs", action="store_true", default=False, help="Save condor logs.")
-  parser.add_argument("--job_flavour", type=str, default="espresso",
-                      help=(
-                          "Condor job flavour: espresso (20 min), microcentury (1h), longlunch (2h), workday (8h), "
-                          "tomorrow (1d), testmatch (3d), nextweek (1w)."
-                      )
-                      )
+  parser.add_argument(
+    "--job_flavour",
+    type=str,
+    default="espresso",
+    help=(
+      "Condor job flavour: espresso (20 min), microcentury (1h), longlunch (2h), workday (8h), "
+      "tomorrow (1d), testmatch (3d), nextweek (1w)."
+    ),
+  )
   parser.add_argument("--resubmit_job", type=int, default=None, help="Resubmitt a specific job.")
-  parser.add_argument("--resubmit_failed", action="store_true", default=False,
-                      help="Resubmit only jobs whose output ROOT files are missing or corrupted.")
+  parser.add_argument(
+    "--resubmit_failed",
+    action="store_true",
+    default=False,
+    help="Resubmit only jobs whose output ROOT files are missing or corrupted.",
+  )
   parser.add_argument("--memory", type=float, default=1.0, help="Requested memory in GB.")
-  parser.add_argument("--max_materialize", type=int, default=5000,
-                      help=(
-                          "An overall limit on the number of jobs that can be materialized "
-                          "in the condor_schedd at any one time."
-                      )
-                      )
+  parser.add_argument(
+    "--max_materialize",
+    type=int,
+    default=5000,
+    help=("An overall limit on the number of jobs that can be materialized in the condor_schedd at any one time."),
+  )
 
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")
 
@@ -77,7 +87,7 @@ def replace_files_config_path(path, value):
   new_module = value.replace("/", ".").replace(".py", "")
 
   file_config_str = "files_config"
-  pattern = re.compile(rf'\b\w*{file_config_str}\b')
+  pattern = re.compile(rf"\b\w*{file_config_str}\b")
 
   with open(path, "r") as f:
     lines = f.readlines()
@@ -136,13 +146,15 @@ def main():
         applyDefault = applyPair[0]
         applyVariation = applyPair[1]
         update_config(
-            tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n")
-      update_config(tmp_files_config_path, "sample_path = ", f"\"{sample}\"\n")
+          tmp_config_path,
+          f'  "{name}":',
+          "(False, False),\n" if "collision" in sample else f"({applyDefault}, {applyVariation}),\n",
+        )
+      update_config(tmp_files_config_path, "sample_path = ", f'"{sample}"\n')
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
-  elif (
-      hasattr(files_config, "datasets_and_output_trees_dirs") or
-      hasattr(files_config, "datasets_and_output_hists_dirs")
+  elif hasattr(files_config, "datasets_and_output_trees_dirs") or hasattr(
+    files_config, "datasets_and_output_hists_dirs"
   ):
     datasets_and_output_dirs = {}
     if hasattr(files_config, "datasets_and_output_trees_dirs"):
@@ -161,10 +173,13 @@ def main():
         applyDefault = applyPair[0]
         applyVariation = applyPair[1]
         update_config(
-            tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in dataset else f"({applyDefault}, {applyVariation}),\n")
+          tmp_config_path,
+          f'  "{name}":',
+          "(False, False),\n" if "collision" in dataset else f"({applyDefault}, {applyVariation}),\n",
+        )
 
-      update_config(tmp_files_config_path, "dataset = ", f"\"{dataset}\"\n")
-      update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
+      update_config(tmp_files_config_path, "dataset = ", f'"{dataset}"\n')
+      update_config(tmp_files_config_path, f"{output_dir_name} = ", f'"{output_dir}"\n')
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   elif hasattr(files_config, "input_dasfiles_and_output_trees_dirs"):
@@ -180,10 +195,13 @@ def main():
         applyDefault = applyPair[0]
         applyVariation = applyPair[1]
         update_config(
-            tmp_config_path, f"  \"{name}\":", "(False, False),\n" if "collision" in input_dasfiles else f"({applyDefault}, {applyVariation}),\n")
+          tmp_config_path,
+          f'  "{name}":',
+          "(False, False),\n" if "collision" in input_dasfiles else f"({applyDefault}, {applyVariation}),\n",
+        )
 
-      update_config(tmp_files_config_path, "input_dasfiles = ", f"\"{input_dasfiles}\"\n")
-      update_config(tmp_files_config_path, f"{output_dir_name} = ", f"\"{output_dir}\"\n")
+      update_config(tmp_files_config_path, "input_dasfiles = ", f'"{input_dasfiles}"\n')
+      update_config(tmp_files_config_path, f"{output_dir_name} = ", f'"{output_dir}"\n')
 
       tmp_configs_paths.append((tmp_config_path, tmp_files_config_path))
   else:

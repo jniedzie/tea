@@ -7,9 +7,9 @@
 
 #include "Event.hpp"
 #include "Helpers.hpp"
+#include "NanoMuon.hpp"
 #include "PhysicsObject.hpp"
 #include "ScaleFactorsManager.hpp"
-#include "NanoMuon.hpp"
 
 class NanoDimuonVertex;
 typedef Collection<std::shared_ptr<NanoDimuonVertex>> NanoDimuonVertices;
@@ -18,13 +18,15 @@ class NanoDimuonVertex {
  public:
   NanoDimuonVertex(std::shared_ptr<PhysicsObject> physicsObject_, const std::shared_ptr<Event> event);
 
-  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
-           int line = __builtin_LINE()) {
+  auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
+           const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
     return physicsObject->Get(branchName, verbose, file, function, line);
   }
 
   template <typename T>
-  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
+  T GetAs(std::string branchName) {
+    return physicsObject->GetAs<T>(branchName);
+  }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
@@ -90,10 +92,13 @@ class NanoDimuonVertex {
 
   bool HasMuonIndices(int muonIdx1, int muonIdx2);
 
-  std::string GetGenMotherResonanceCategory(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
-  std::string GetGenMotherBackgroundCategory(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
+  std::string GetGenMotherResonanceCategory(std::shared_ptr<PhysicsObjects> genMuonCollection,
+                                            const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
+  std::string GetGenMotherBackgroundCategory(std::shared_ptr<PhysicsObjects> genMuonCollection,
+                                             const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
   std::string GetGenMotherCategory(std::shared_ptr<PhysicsObjects> genMuonCollection);
-  std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection, const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
+  std::shared_ptr<PhysicsObjects> GetGenMothers(std::shared_ptr<PhysicsObjects> genMuonCollection,
+                                                const std::shared_ptr<Event> event, float maxDeltaR = 0.1);
 
  private:
   std::shared_ptr<PhysicsObject> physicsObject;

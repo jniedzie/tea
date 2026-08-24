@@ -9,12 +9,13 @@
 
 using namespace std;
 
-HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandler_) : histogramsHandler(histogramsHandler_) {
-  auto& config = ConfigManager::GetInstance();
+HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandler_)
+    : histogramsHandler(histogramsHandler_) {
+  auto &config = ConfigManager::GetInstance();
 
   try {
     config.GetHistogramsParams(defaultHistVariables, "defaultHistParams");
-  } catch (const Exception& e) {
+  } catch (const Exception &e) {
     warn() << "Couldn't read defaultHistParams from config file - no default histograms will be included" << endl;
   }
 }
@@ -22,9 +23,9 @@ HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandl
 HistogramsFiller::~HistogramsFiller() {}
 
 void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) {
-  if (!event || !histogramsHandler) return;
+  if (!event || !histogramsHandler) { return; }
 
-  for (auto& [title, params] : defaultHistVariables) {
+  for (auto &[title, params] : defaultHistVariables) {
     string collectionName = params.collection;
     string branchName = params.variable;
 
@@ -37,7 +38,7 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       float eventVariable;
       if (branchName[0] == 'n') {
         auto collection = event->GetCollection(branchName.substr(1));
-        if (!collection) continue;
+        if (!collection) { continue; }
         eventVariable = collection->size();
       } else {
         eventVariable = event->GetAs<float>(branchName);
@@ -45,9 +46,9 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       histogramsHandler->Fill(title, eventVariable);
     } else {
       auto collection = event->GetCollection(collectionName);
-      if (!collection) continue;
+      if (!collection) { continue; }
       for (auto object : *collection) {
-        if (!object) continue;
+        if (!object) { continue; }
         histogramsHandler->Fill(title, object->GetAs<float>(branchName));
       }
     }
@@ -63,7 +64,7 @@ void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlow
   map<int, pair<string, float>> sortedRawEventsAfterCuts;
   auto cutFlow = cutFlowManager->GetCutFlow();
   auto rawEventsCutFlow = cutFlowManager->GetRawEventsCutFlow();
-  for (auto& [cutName, sumOfWeights] : cutFlow) {
+  for (auto &[cutName, sumOfWeights] : cutFlow) {
     string number = cutName.substr(0, cutName.find("_"));
     int index = stoi(number);
     sortedWeightsAfterCuts[index] = {cutName, sumOfWeights};
@@ -71,13 +72,13 @@ void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlow
   }
 
   int bin = 1;
-  for (auto& [index, values] : sortedWeightsAfterCuts) {
+  for (auto &[index, values] : sortedWeightsAfterCuts) {
     cutFlowHist->SetBinContent(bin, get<1>(values));
     rawEventsCutFlowHist->SetBinContent(bin, get<1>(sortedRawEventsAfterCuts[index]));
     cutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(values).c_str());
     rawEventsCutFlowHist->GetXaxis()->SetBinLabel(bin, get<0>(sortedRawEventsAfterCuts[index]).c_str());
     bin++;
   }
-  histogramsHandler->SetHistogram1D(make_pair("cutFlow",""), cutFlowHist);
-  histogramsHandler->SetHistogram1D(make_pair("rawEventsCutFlow",""), rawEventsCutFlowHist);
+  histogramsHandler->SetHistogram1D(make_pair("cutFlow", ""), cutFlowHist);
+  histogramsHandler->SetHistogram1D(make_pair("rawEventsCutFlow", ""), rawEventsCutFlowHist);
 }

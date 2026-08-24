@@ -21,9 +21,7 @@ shared_ptr<NanoMuons> NanoEvent::GetDRMatchedMuons(shared_ptr<NanoMuons> muonCol
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<NanoMuons>();
-  for (auto muon : *loosePATMuons) {
-    allMuons->push_back(muon);
-  }
+  for (auto muon : *loosePATMuons) { allMuons->push_back(muon); }
   for (auto dsaMuon : *looseDSAMuons) {
     auto dsaMuonP4 = dsaMuon->GetFourVector();
     bool matchFound = false;
@@ -34,14 +32,14 @@ shared_ptr<NanoMuons> NanoEvent::GetDRMatchedMuons(shared_ptr<NanoMuons> muonCol
         break;
       }
     }
-    if (matchFound == false) allMuons->push_back(dsaMuon);
+    if (matchFound == false) { allMuons->push_back(dsaMuon); }
   }
 
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
-                                                     float matchingDeltaR) {
+NanoMuonMatches NanoEvent::GetRevertedDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons,
+                                                     shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -70,9 +68,7 @@ shared_ptr<NanoMuons> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<NanoMuons> mu
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<NanoMuons>();
-  for (auto muon : *loosePATMuons) {
-    allMuons->push_back(muon);
-  }
+  for (auto muon : *loosePATMuons) { allMuons->push_back(muon); }
   for (auto dsaMuon : *looseDSAMuons) {
     bool matchFound = false;
     for (auto muon : *loosePATMuons) {
@@ -81,14 +77,14 @@ shared_ptr<NanoMuons> NanoEvent::GetOuterDRMatchedMuons(shared_ptr<NanoMuons> mu
         break;
       }
     }
-    if (matchFound == false) allMuons->push_back(dsaMuon);
+    if (matchFound == false) { allMuons->push_back(dsaMuon); }
   }
 
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
-                                                          float matchingDeltaR) {
+NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons,
+                                                          shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -110,14 +106,13 @@ NanoMuonMatches NanoEvent::GetRevertedOuterDRMatchedMuons(shared_ptr<NanoMuons> 
   return make_pair(matchedDSAMuons, matchedPATMuons);
 }
 
-shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons> muonCollection, float matchingDeltaR) {
+shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons> muonCollection,
+                                                            float matchingDeltaR) {
   auto loosePATMuons = GetPATMuonsFromCollection(muonCollection);
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<NanoMuons>();
-  for (auto muon : *loosePATMuons) {
-    allMuons->push_back(muon);
-  }
+  for (auto muon : *loosePATMuons) { allMuons->push_back(muon); }
   for (auto dsaMuon : *looseDSAMuons) {
     bool matchFound = false;
     for (auto muon : *loosePATMuons) {
@@ -127,13 +122,14 @@ shared_ptr<NanoMuons> NanoEvent::GetProximityDRMatchedMuons(shared_ptr<NanoMuons
         break;
       }
     }
-    if (matchFound == false) allMuons->push_back(dsaMuon);
+    if (matchFound == false) { allMuons->push_back(dsaMuon); }
   }
 
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedProximityDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
+NanoMuonMatches NanoEvent::GetRevertedProximityDRMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons,
+                                                              shared_ptr<NanoMuons> loosePATMuons,
                                                               float matchingDeltaR) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
@@ -161,19 +157,17 @@ shared_ptr<NanoMuons> NanoEvent::GetSegmentMatchedMuons(shared_ptr<NanoMuons> mu
   auto looseDSAMuons = GetDSAMuonsFromCollection(muonCollection);
 
   auto allMuons = make_shared<NanoMuons>();
-  for (auto muon : *loosePATMuons) {
-    allMuons->push_back(muon);
-  }
+  for (auto muon : *loosePATMuons) { allMuons->push_back(muon); }
   for (auto dsaMuon : *looseDSAMuons) {
     bool matchFound = dsaMuon->HasPATSegmentMatch(loosePATMuons, event, minMatchRatio);
-    if (matchFound == false) allMuons->push_back(dsaMuon);
+    if (matchFound == false) { allMuons->push_back(dsaMuon); }
   }
 
   return allMuons;
 }
 
-NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons, shared_ptr<NanoMuons> loosePATMuons,
-                                                          float minMatchRatio) {
+NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> looseDSAMuons,
+                                                          shared_ptr<NanoMuons> loosePATMuons, float minMatchRatio) {
   auto matchedDSAMuons = make_shared<NanoMuons>();
   auto matchedPATMuons = make_shared<NanoMuons>();
   for (auto dsaMuon : *looseDSAMuons) {
@@ -199,22 +193,18 @@ NanoMuonMatches NanoEvent::GetRevertedSegmentMatchedMuons(shared_ptr<NanoMuons> 
   return make_pair(matchedDSAMuons, matchedPATMuons);
 }
 
-shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared_ptr<NanoDimuonVertex> bestVertex,
-                                                                          shared_ptr<NanoDimuonVertices> goodVerticesCollection,
-                                                                          float minMatchRatio) {
+shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(
+    shared_ptr<NanoDimuonVertex> bestVertex, shared_ptr<NanoDimuonVertices> goodVerticesCollection,
+    float minMatchRatio) {
   // auto nanoVertex = asNanoDimuonVertex(bestVertex,event);
   // PAT-PAT dimuon vertex
-  if (bestVertex->IsPatDimuon()) return bestVertex;
+  if (bestVertex->IsPatDimuon()) { return bestVertex; }
 
   auto patVertexCollection = make_shared<NanoDimuonVertices>();
   auto patDSAVertexCollection = make_shared<NanoDimuonVertices>();
   for (auto goodVertex : *goodVerticesCollection) {
-    if (goodVertex->IsPatDimuon()) {
-      patVertexCollection->push_back(goodVertex);
-    }
-    if (goodVertex->IsPatDSADimuon()) {
-      patDSAVertexCollection->push_back(goodVertex);
-    }
+    if (goodVertex->IsPatDimuon()) { patVertexCollection->push_back(goodVertex); }
+    if (goodVertex->IsPatDSADimuon()) { patDSAVertexCollection->push_back(goodVertex); }
   }
   // DSA-DSA dimuon vertex
   if (bestVertex->IsDSADimuon()) {
@@ -228,10 +218,11 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
     // If more than one vertex we select the one with lowest chi2
     for (auto matchIndex1 : patMatchIndices1) {
       for (auto matchIndex2 : patMatchIndices2) {
-        if (matchIndex1 == matchIndex2) continue;
+        if (matchIndex1 == matchIndex2) { continue; }
         for (int i = 0; i < patVertexCollection->size(); i++) {
           auto patVertex = patVertexCollection->at(i);
-          if (patVertex->HasMuonIndices(matchIndex1, matchIndex2) || patVertex->HasMuonIndices(matchIndex2, matchIndex1)) {
+          if (patVertex->HasMuonIndices(matchIndex1, matchIndex2) ||
+              patVertex->HasMuonIndices(matchIndex2, matchIndex1)) {
             if ((float)patVertex->Get("normChi2") < minChi2) {
               matchedVertexIdx = i;
               minChi2 = (float)patVertex->Get("normChi2");
@@ -289,10 +280,11 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
     int matchedVertexIdx = -1;
     float minChi2 = 9999.;
     for (auto matchIndex2 : patMatchIndices2) {
-      if (patMatchIndex1 == matchIndex2) continue;
+      if (patMatchIndex1 == matchIndex2) { continue; }
       for (int i = 0; i < patVertexCollection->size(); i++) {
         auto patVertex = patVertexCollection->at(i);
-        if (patVertex->HasMuonIndices(patMatchIndex1, matchIndex2) || patVertex->HasMuonIndices(matchIndex2, patMatchIndex1)) {
+        if (patVertex->HasMuonIndices(patMatchIndex1, matchIndex2) ||
+            patVertex->HasMuonIndices(matchIndex2, patMatchIndex1)) {
           if ((float)patVertex->Get("normChi2") < minChi2) {
             matchedVertexIdx = i;
             minChi2 = (float)patVertex->Get("normChi2");
@@ -309,15 +301,19 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetSegmentMatchedBestDimuonVertex(shared
   return bestVertex;
 }
 
-bool NanoEvent::DSAMuonIndexExist(shared_ptr<NanoMuons> muons, float index) { return MuonIndexExist(muons, index, true); }
+bool NanoEvent::DSAMuonIndexExist(shared_ptr<NanoMuons> muons, float index) {
+  return MuonIndexExist(muons, index, true);
+}
 
-bool NanoEvent::PATMuonIndexExist(shared_ptr<NanoMuons> muons, float index) { return MuonIndexExist(muons, index, false); }
+bool NanoEvent::PATMuonIndexExist(shared_ptr<NanoMuons> muons, float index) {
+  return MuonIndexExist(muons, index, false);
+}
 
 bool NanoEvent::MuonIndexExist(shared_ptr<NanoMuons> muons, float index, bool isDSAMuon) {
   for (auto muon : *muons) {
     if (float(muon->Get("idx")) == index) {
-      if (isDSAMuon && muon->IsDSA()) return true;
-      if (!isDSAMuon && !muon->IsDSA()) return true;
+      if (isDSAMuon && muon->IsDSA()) { return true; }
+      if (!isDSAMuon && !muon->IsDSA()) { return true; }
     }
   }
   return false;
@@ -336,15 +332,9 @@ shared_ptr<PhysicsObjects> NanoEvent::GetAllMuonVerticesCollection() {
 
   auto muonVertices = make_shared<PhysicsObjects>();
 
-  for (auto vertex : *patVertices) {
-    muonVertices->push_back(vertex);
-  }
-  for (auto vertex : *patDsaVertices) {
-    muonVertices->push_back(vertex);
-  }
-  for (auto vertex : *dsaVertices) {
-    muonVertices->push_back(vertex);
-  }
+  for (auto vertex : *patVertices) { muonVertices->push_back(vertex); }
+  for (auto vertex : *patDsaVertices) { muonVertices->push_back(vertex); }
+  for (auto vertex : *dsaVertices) { muonVertices->push_back(vertex); }
   return muonVertices;
 }
 
@@ -366,7 +356,7 @@ shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForMuons(shared_ptr<NanoMuons> 
       foundMuon1 |= (isDSAMuon1 == isDSAMuon) && (muonIndex == muonIndex1);
       foundMuon2 |= (isDSAMuon2 == isDSAMuon) && (muonIndex == muonIndex2);
     }
-    if (foundMuon1 && foundMuon2) muonVertices->push_back(vertex);
+    if (foundMuon1 && foundMuon2) { muonVertices->push_back(vertex); }
   }
   return muonVertices;
 }
@@ -376,7 +366,7 @@ shared_ptr<PhysicsObject> NanoEvent::GetVertexForDimuon(shared_ptr<NanoMuon> muo
   muons->push_back(muon1);
   muons->push_back(muon2);
   auto dimuonVertex = GetVerticesForMuons(muons);
-  if (dimuonVertex->size() < 1) return nullptr;
+  if (dimuonVertex->size() < 1) { return nullptr; }
   return dimuonVertex->at(0);
 }
 
@@ -384,7 +374,7 @@ std::shared_ptr<PhysicsObjects> NanoEvent::GetVerticesForDimuons(shared_ptr<Nano
   auto muonVertices = make_shared<PhysicsObjects>();
   for (auto dimuon : *dimuons) {
     auto vertex = GetVertexForDimuon(dimuon.first, dimuon.second);
-    if (vertex) muonVertices->push_back(vertex);
+    if (vertex) { muonVertices->push_back(vertex); }
   }
   return muonVertices;
 }
@@ -394,7 +384,7 @@ float NanoEvent::GetNDSAMuon(string collectionName) {
 
   float nDSAMuon = 0;
   for (auto object : *collection) {
-    if (asNanoMuon(object)->IsDSA()) nDSAMuon++;
+    if (asNanoMuon(object)->IsDSA()) { nDSAMuon++; }
   }
   return nDSAMuon;
 }
@@ -404,7 +394,7 @@ float NanoEvent::GetNMuon(string collectionName) {
 
   float nMuon = 0;
   for (auto object : *collection) {
-    if (!asNanoMuon(object)->IsDSA()) nMuon++;
+    if (!asNanoMuon(object)->IsDSA()) { nMuon++; }
   }
   return nMuon;
 }
@@ -423,13 +413,14 @@ shared_ptr<NanoMuon> NanoEvent::GetPATMuonWithIndex(int muon_idx, shared_ptr<Nan
   return GetPATorDSAMuonWithIndex(muon_idx, collection, false);
 }
 
-shared_ptr<NanoMuon> NanoEvent::GetPATorDSAMuonWithIndex(int muon_idx, shared_ptr<NanoMuons> collection, bool doDSAMuons) {
+shared_ptr<NanoMuon> NanoEvent::GetPATorDSAMuonWithIndex(int muon_idx, shared_ptr<NanoMuons> collection,
+                                                         bool doDSAMuons) {
   for (auto muon : *collection) {
     float idx = muon->Get("idx");
     bool isDSAmuon = muon->IsDSA();
-    if (idx != muon_idx) continue;
-    if (isDSAmuon && doDSAMuons) return muon;
-    if (!isDSAmuon && !doDSAMuons) return muon;
+    if (idx != muon_idx) { continue; }
+    if (isDSAmuon && doDSAMuons) { return muon; }
+    if (!isDSAmuon && !doDSAMuons) { return muon; }
   }
   return nullptr;
 }
@@ -462,7 +453,7 @@ shared_ptr<NanoMuons> NanoEvent::GetDSAMuonsFromCollection(string muonCollection
 shared_ptr<NanoMuons> NanoEvent::GetDSAMuonsFromCollection(shared_ptr<NanoMuons> muonCollection) {
   auto dsaMuons = make_shared<NanoMuons>();
   for (auto muon : *muonCollection) {
-    if (muon->IsDSA()) dsaMuons->push_back(muon);
+    if (muon->IsDSA()) { dsaMuons->push_back(muon); }
   }
   return dsaMuons;
 }
@@ -475,7 +466,7 @@ shared_ptr<NanoMuons> NanoEvent::GetPATMuonsFromCollection(string muonCollection
 shared_ptr<NanoMuons> NanoEvent::GetPATMuonsFromCollection(shared_ptr<NanoMuons> muonCollection) {
   auto patMuons = make_shared<NanoMuons>();
   for (auto muon : *muonCollection) {
-    if (!muon->IsDSA()) patMuons->push_back(muon);
+    if (!muon->IsDSA()) { patMuons->push_back(muon); }
   }
   return patMuons;
 }
@@ -484,9 +475,7 @@ shared_ptr<NanoMuons> NanoEvent::GetAllCommonMuonsInCollections(shared_ptr<NanoM
                                                                 shared_ptr<NanoMuons> muonCollection2) {
   auto muonCollection = make_shared<NanoMuons>();
   for (auto muon : *muonCollection1) {
-    if (MuonIndexExist(muonCollection2, muon->Get("idx"), muon->IsDSA())) {
-      muonCollection->push_back(muon);
-    }
+    if (MuonIndexExist(muonCollection2, muon->Get("idx"), muon->IsDSA())) { muonCollection->push_back(muon); }
   }
   return muonCollection;
 }
@@ -498,8 +487,8 @@ shared_ptr<NanoDimuonVertex> NanoEvent::GetBestDimuonVertex() {
   float minChi2 = 9999.;
   for (auto dimuonVertex : *dimuonCollection) {
     // if (dimuonVertex->GetDimuonChargeProduct() > -0.1) continue;
-    // float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"), (float)dimuonVertex->Get("hitsInFrontOfVert2"));
-    // if (maxHits > 3.0) {
+    // float maxHits = max((float)dimuonVertex->Get("hitsInFrontOfVert1"),
+    // (float)dimuonVertex->Get("hitsInFrontOfVert2")); if (maxHits > 3.0) {
     //   warn() << "Skipping dimuon vertex with too many hits in front of vertex" << endl;
     //   continue;
     // }
@@ -528,13 +517,13 @@ bool NanoEvent::PassesHEMveto(float affectedFraction) {
   // Implemented based on the recommendations from:
   // https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654?u=gagarwal
 
-  if (config.GetYear() != "2018") return true;  // HEM veto only applies to 2018 data/MC
+  if (config.GetYear() != "2018") {
+    return true;  // HEM veto only applies to 2018 data/MC
+  }
 
   if (!IsData()) {
     float randNum = randFloat();
-    if (randNum > affectedFraction) {
-      return true;
-    }
+    if (randNum > affectedFraction) { return true; }
   } else {
     unsigned runNumber = Get("run");
     if (runNumber < 319077) {
@@ -545,18 +534,19 @@ bool NanoEvent::PassesHEMveto(float affectedFraction) {
   auto jets = GetCollection("Jet");
   auto muons = GetCollection("Muon");
 
-  for (auto& jet : *jets) {
+  for (auto &jet : *jets) {
     // jet pT > 15 GeV
     float jetPt = asNanoJet(jet)->GetPt();
-    if (jetPt < 15) continue;
+    if (jetPt < 15) { continue; }
 
-    // tight jet ID with lep veto OR [tight jet ID & (jet EM fraction < 0.9) & (jets that don’t overlap with PF muon (dR < 0.2)]
+    // tight jet ID with lep veto OR [tight jet ID & (jet EM fraction < 0.9) & (jets that don’t overlap with PF muon (dR
+    // < 0.2)]
     int jetID = jet->Get("jetId");
 
     bool overlapsWithMuon = false;
     auto jetVector = jet->GetFourVector();
 
-    for (auto& muon : *muons) {
+    for (auto &muon : *muons) {
       auto muonVector = muon->GetFourVector();
       float dR = jetVector.DeltaR(muonVector);
       if (dR < 0.2) {
@@ -568,11 +558,11 @@ bool NanoEvent::PassesHEMveto(float affectedFraction) {
 
     // bit1 is loose (always false in 2017 since it does not exist), bit2 is tight, bit3 is tightLepVeto*
     bool passesID = (jetID & 0b100) || ((jetID & 0b010) && (jetEmEF < 0.9) && !overlapsWithMuon);
-    if (!passesID) continue;
+    if (!passesID) { continue; }
 
     // PU jet ID for AK4chs jets with pT < 50 GeV (No PUjetID required for PUPPI jets)
     int jetPUid = jet->Get("puId");
-    if (jetPt < 50 && jetPUid == 0) continue;
+    if (jetPt < 50 && jetPUid == 0) { continue; }
 
     // check if jet is in HEM region
     // jets with -1.57 <phi< -0.87 and -2.5<eta<-1.3
@@ -590,28 +580,28 @@ bool NanoEvent::PassesJetVetoMaps() {
   // https://cms-jerc.web.cern.ch/Recommendations/#jet-veto-maps
 
   string year = config.GetYear();
-  if (!scaleFactorsManager.IsJetVetoMapDefined("jetVetoMaps_" + year)) return true;
+  if (!scaleFactorsManager.IsJetVetoMapDefined("jetVetoMaps_" + year)) { return true; }
 
   auto jets = GetCollection("Jet");
 
-  for (auto& jet : *jets) {
+  for (auto &jet : *jets) {
     // jet pT > 15 GeV
     float jetPt = asNanoJet(jet)->GetPt();
-    if (jetPt < 15) continue;
+    if (jetPt < 15) { continue; }
 
     // tightLepVeto jet ID
     unsigned char jetID = jet->Get("jetId");
     bool passesID = (jetID & 0b100);
-    if (!passesID) continue;
+    if (!passesID) { continue; }
 
     // (jet charged EM fraction + jet neutral EM fraction) < 0.9
     float jetEmEF = jet->GetAs<float>("chEmEF") + jet->GetAs<float>("neEmEF");
-    if (jetEmEF >= 0.9) continue;
+    if (jetEmEF >= 0.9) { continue; }
 
     float jetEta = jet->Get("eta");
     float jetPhi = jet->Get("phi");
 
-    if (scaleFactorsManager.IsJetInBadRegion("jetVetoMaps_" + year, jetEta, jetPhi)) return false;
+    if (scaleFactorsManager.IsJetInBadRegion("jetVetoMaps_" + year, jetEta, jetPhi)) { return false; }
   }
   return true;
 }
@@ -623,9 +613,7 @@ bool NanoEvent::IsData() {
   config.GetValue("weightsBranchName", weightsBranchName);
   try {
     Get(weightsBranchName);
-  } catch (const Exception& e) {
-    isData_weights = true;
-  }
+  } catch (const Exception &e) { isData_weights = true; }
 
   // Test 2: run = 1 for MC
   unsigned run = Get("run");

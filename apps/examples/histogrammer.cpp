@@ -1,13 +1,13 @@
+#include "ArgsManager.hpp"
 #include "ConfigManager.hpp"
 #include "CutFlowManager.hpp"
+#include "EventProcessor.hpp"
 #include "EventReader.hpp"
 #include "ExtensionsHelpers.hpp"
 #include "HistogramsFiller.hpp"
 #include "HistogramsHandler.hpp"
 #include "Logger.hpp"
-#include "ArgsManager.hpp"
 #include "NanoEvent.hpp"
-#include "EventProcessor.hpp"
 #include "NanoEventProcessor.hpp"
 
 using namespace std;
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
   vector<string> optionalArgs = {"input_path", "output_hists_path"};
   auto args = make_unique<ArgsManager>(argc, argv, requiredArgs, optionalArgs);
   ConfigManager::Initialize(args);
-  
+
   auto eventReader = make_shared<EventReader>();
   auto histogramsHandler = make_shared<HistogramsHandler>();
   auto cutFlowManager = make_shared<CutFlowManager>(eventReader);

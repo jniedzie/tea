@@ -20,4 +20,3 @@ foreach(PYTHON_FILE ${PYTHON_CONFIGS})
     get_filename_component(PYTHON_FILENAME ${PYTHON_FILE} NAME)
     install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink \"${PYTHON_FILE}\" \"${PYTHON_INSTALL_DIR}/${PYTHON_FILENAME}\")")
 endforeach()
-

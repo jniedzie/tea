@@ -18,14 +18,14 @@ results_output_path = "../limits/results/"
 add_uncertainties_on_zero = False
 
 # Integrated luminosity for 2018 data-taking period.
-luminosity = 63670.  # pb^-1 (2018)
+luminosity = 63670.0  # pb^-1 (2018)
 
 # If True, shapes (histograms) will be included in the datacards. This typically improves the sensitivity of the analysis.
 include_shapes = True
 
 # This is an arbitrary reference value. The actual limit will be calculated relative to this.
 # The only important thing is that it's not crazy small or crazy large - in such case combine may run into numerical issues.
-# In general, adjust it such that the signal strength reported from combine is around 1 
+# In general, adjust it such that the signal strength reported from combine is around 1
 # (0.01 or 100 is still fine, but 1e-10 or 1e6 may cause problems).
 reference_cross_section = 1e-4
 
@@ -54,18 +54,18 @@ samples = signal_samples + background_samples
 
 # Decide which histogram to use for the limit calculation.
 histogram = Histogram(
-  name="", # TODO: pick the histogram to use
-  norm_type=NormalizationType.to_lumi, 
-  x_max=100, 
-  rebin=1
+  name="",  # TODO: pick the histogram to use
+  norm_type=NormalizationType.to_lumi,
+  x_max=100,
+  rebin=1,
 )
 
 # List uncertainties (nuisance parameters) to be included in the datacard.
 nuisances = {
-    "lumi": {
-        "signal": 1.017,  # arxiv.org/abs/2503.03946
-        "tt_semi": 1.017,
-    }
+  "lumi": {
+    "signal": 1.017,  # arxiv.org/abs/2503.03946
+    "tt_semi": 1.017,
+  }
 }
 
 # Plotting parameters for the limit plot (brazil plot).

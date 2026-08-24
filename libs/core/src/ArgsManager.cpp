@@ -4,7 +4,8 @@
 
 using namespace std;
 
-ArgsManager::ArgsManager(int argc, char** argv, std::vector<std::string> _requiredArgs, std::vector<std::string> _optionalArgs)
+ArgsManager::ArgsManager(int argc, char **argv, std::vector<std::string> _requiredArgs,
+                         std::vector<std::string> _optionalArgs)
     : requiredArgs(_requiredArgs), optionalArgs(_optionalArgs) {
   for (int i = 1; i < argc; i += 2) {
     string key = argv[i];
@@ -21,7 +22,7 @@ ArgsManager::ArgsManager(int argc, char** argv, std::vector<std::string> _requir
 }
 
 void ArgsManager::ValidateArgs() {
-  for (const auto& [key, value] : args) {
+  for (const auto &[key, value] : args) {
     if (std::find(requiredArgs.begin(), requiredArgs.end(), key) == requiredArgs.end() &&
         std::find(optionalArgs.begin(), optionalArgs.end(), key) == optionalArgs.end()) {
       fatal() << "ArgsManager -- Unknown argument provided: " << key << endl;

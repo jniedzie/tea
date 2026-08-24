@@ -11,27 +11,29 @@ config = importlib.import_module(args.config.replace(".py", "").replace("/", "."
 
 input_path = f"{config.results_output_path}/limits_{config.histogram.getName()}.txt"
 
+
 def load_limits():
   data = {}
-  
+
   patterns = [
     re.compile(r"signal_tta_mAlp-(\d+p?\d*)GeV_ctau-(\S+)mm: \[(.*?)\]"),
     re.compile(r"mass_(\d+p?\d*)_ctau_([-\deEpP\.]+): \[(.*?)\]"),
     re.compile(r"alp_(\d+p?\d*)_(\S+): \[(.*?)\]"),
   ]
 
-  with open(input_path, 'r') as f:
+  with open(input_path, "r") as f:
     for line in f:
       for pattern in patterns:
         match = pattern.match(line.strip())
         if match:
           break
-      
+
       mass_str, _, values_str = match.groups()
-      mass = float(mass_str.replace('p', '.'))
-      values = list(map(float, values_str.replace("'", "").split(', ')))
+      mass = float(mass_str.replace("p", "."))
+      values = list(map(float, values_str.replace("'", "").split(", ")))
       data[mass] = values
   return data
+
 
 def draw_legend(graphs):
   legend = ROOT.TLegend(0.60, 0.60, 0.9, 0.75)
@@ -44,6 +46,7 @@ def draw_legend(graphs):
     legend.AddEntry(graph, title, "L")
   legend.DrawClone()
 
+
 def draw_cms_label():
   tex = ROOT.TLatex(0.15, 0.92, "#bf{CMS} #it{Preliminary}")
   tex.SetNDC()
@@ -52,17 +55,19 @@ def draw_cms_label():
   tex.SetLineWidth(2)
   tex.DrawClone()
 
+
 def draw_lumi_label():
-  tex = ROOT.TLatex(0.60, 0.92, f"#scale[0.8]{{pp, {config.luminosity/1000:.0f} fb^{{-1}} (#sqrt{{s}} = 13 TeV)}}")
+  tex = ROOT.TLatex(0.60, 0.92, f"#scale[0.8]{{pp, {config.luminosity / 1000:.0f} fb^{{-1}} (#sqrt{{s}} = 13 TeV)}}")
   tex.SetNDC()
   tex.SetTextFont(42)
   tex.SetTextSize(0.045)
   tex.SetLineWidth(2)
   tex.DrawClone()
 
+
 class BrazilGraph:
   def __init__(self, config, show_obs=False):
-    
+
     self.obs_graph = self.__get_central_graph()
     self.exp_graph = self.__get_central_graph(expected=True)
     self.exp_graph_1sigma = self.__get_band_graph()
@@ -81,11 +86,11 @@ class BrazilGraph:
     graph.SetLineWidth(2)
     graph.SetLineStyle(2 if expected else 1)
     return graph
-  
+
   def __get_band_graph(self, x_title="", y_title="", two_sigma=False):
     graph = ROOT.TGraphAsymmErrors()
     graph.SetLineWidth(0)
-    graph.SetFillColorAlpha(ROOT.kYellow+1 if two_sigma else ROOT.kGreen+1, 1.0)
+    graph.SetFillColorAlpha(ROOT.kYellow + 1 if two_sigma else ROOT.kGreen + 1, 1.0)
     graph.GetXaxis().SetTitleSize(0.05)
     graph.GetYaxis().SetTitleSize(0.05)
     graph.GetXaxis().SetLabelSize(0.04)
@@ -98,14 +103,14 @@ class BrazilGraph:
     return graph
 
   def set_point(self, i, x_value, r_value, scale):
-    self.obs_graph.SetPoint(i, x_value, r_value[0]*scale)
-    self.exp_graph.SetPoint(i, x_value, r_value[3]*scale)
+    self.obs_graph.SetPoint(i, x_value, r_value[0] * scale)
+    self.exp_graph.SetPoint(i, x_value, r_value[3] * scale)
 
-    self.exp_graph_1sigma.SetPoint(i, x_value, r_value[3]*scale)
-    self.exp_graph_1sigma.SetPointError(i, 0, 0, (r_value[3] - r_value[2])*scale, (r_value[4] - r_value[3])*scale)
+    self.exp_graph_1sigma.SetPoint(i, x_value, r_value[3] * scale)
+    self.exp_graph_1sigma.SetPointError(i, 0, 0, (r_value[3] - r_value[2]) * scale, (r_value[4] - r_value[3]) * scale)
 
-    self.exp_graph_2sigma.SetPoint(i, x_value, r_value[3]*scale)
-    self.exp_graph_2sigma.SetPointError(i, 0, 0, (r_value[3] - r_value[1])*scale, (r_value[5] - r_value[3])*scale)
+    self.exp_graph_2sigma.SetPoint(i, x_value, r_value[3] * scale)
+    self.exp_graph_2sigma.SetPointError(i, 0, 0, (r_value[3] - r_value[1]) * scale, (r_value[5] - r_value[3]) * scale)
 
   def draw(self):
     self.exp_graph_2sigma.Draw("A3")
@@ -131,6 +136,7 @@ class BrazilGraph:
     legend.AddEntry(self.exp_graph_2sigma, "Expected #pm 2 #sigma", "F")
     legend.DrawClone()
 
+
 def draw_brazil_plots():
 
   graph = BrazilGraph(config)
@@ -153,10 +159,10 @@ def draw_brazil_plots():
   graph.draw()
 
   legend_params = []
-  
+
   draw_cms_label()
   draw_lumi_label()
-  
+
   graph.draw_legend()
   draw_legend(legend_params)
 
@@ -166,10 +172,10 @@ def draw_brazil_plots():
   input_file_name = input_path.split("/")[-1]
   canvas.SaveAs(f"{config.results_output_path}/{input_file_name.replace('.txt', '')}.pdf")
 
+
 def main():
   ROOT.gROOT.SetBatch(True)
   draw_brazil_plots()
-  
 
 
 if __name__ == "__main__":
