@@ -26,9 +26,7 @@ NanoEventProcessor::NanoEventProcessor() {
   }
   try {
     config.GetCuts(eventCuts);
-  } catch (const Exception &e) {
-    warn() << "Couldn't read eventCuts from config file " << endl;
-  }
+  } catch (const Exception &e) { warn() << "Couldn't read eventCuts from config file " << endl; }
   try {
     config.GetValue("rhoBranchName", rhoBranchName);
   } catch (const Exception &e) {
@@ -50,7 +48,7 @@ NanoEventProcessor::NanoEventProcessor() {
 
 float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
   float weight = 1.0;
-  if (weightsBranchName.empty()) return weight;
+  if (weightsBranchName.empty()) { return weight; }
   try {
     weight = event->Get(weightsBranchName);
   } catch (const Exception &e) {
@@ -106,20 +104,18 @@ map<string, float> NanoEventProcessor::GetL1PreFiringWeight(const std::shared_pt
 
   weights["systematic"] = applyScaleFactors[name][0] ? event->Get(name + "_" + extraArgs["systematic"]) : 1.0;
 
-  if (!applyScaleFactors[name][1]) return weights;
+  if (!applyScaleFactors[name][1]) { return weights; }
 
   stringstream ss(extraArgs["variations"]);
   string variation;
-  while (getline(ss, variation, ',')) {
-    weights[name + "_" + variation] = event->Get(name + "_" + variation);
-  }
+  while (getline(ss, variation, ',')) { weights[name + "_" + variation] = event->Get(name + "_" + variation); }
 
   return weights;
 }
 
 map<string, float> NanoEventProcessor::GetMuonTriggerScaleFactors(const shared_ptr<NanoEvent> event, string name) {
   map<string, float> weights;
-  if (!event->GetMuonTriggerScaleFactors().empty()) return event->GetMuonTriggerScaleFactors();
+  if (!event->GetMuonTriggerScaleFactors().empty()) { return event->GetMuonTriggerScaleFactors(); }
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
@@ -138,7 +134,7 @@ map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const share
                                                                      const shared_ptr<NanoJets> jets) {
   map<string, float> weights;
   bool firstIteration = true;
-  if (datasetName.empty()) return weights;
+  if (datasetName.empty()) { return weights; }
 
   auto allBJets = event->GetCollection("GoodMediumBtaggedJets");
 
@@ -156,11 +152,9 @@ map<string, float> NanoEventProcessor::GetMediumBTaggingScaleFactors(const share
       firstIteration = false;
       continue;
     }
-    for (auto &[name, weight] : weights_) {
-      weights[name] *= weight;
-    }
+    for (auto &[name, weight] : weights_) { weights[name] *= weight; }
   }
-  if (firstIteration) return {{"systematic", 1.0}};
+  if (firstIteration) { return {{"systematic", 1.0}}; }
   return weights;
 }
 
@@ -174,9 +168,7 @@ map<string, float> NanoEventProcessor::GetPUJetIDScaleFactors(const shared_ptr<N
       firstIteration = false;
       continue;
     }
-    for (auto &[name, weight] : weights_) {
-      weights[name] *= weight;
-    }
+    for (auto &[name, weight] : weights_) { weights[name] *= weight; }
   }
   return weights;
 }
@@ -189,32 +181,26 @@ map<string, float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr
       auto weights_loose = muon->GetEmptyScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
       auto weights_tight = muon->GetEmptyScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
       auto weights_dsa = muon->GetEmptyDSAScaleFactors("dsamuonID", "dsamuonReco_cosmic");
-      for (auto &[name, weight] : weights_loose) {
-        weights[name] = 1.0;
-      }
-      for (auto &[name, weight] : weights_tight) {
-        weights[name] = 1.0;
-      }
-      for (auto &[name, weight] : weights_dsa) {
-        weights[name] = 1.0;
-      }
+      for (auto &[name, weight] : weights_loose) { weights[name] = 1.0; }
+      for (auto &[name, weight] : weights_tight) { weights[name] = 1.0; }
+      for (auto &[name, weight] : weights_dsa) { weights[name] = 1.0; }
       firstIteration = false;
     }
 
     if (muon->IsDSA()) {
       auto weights_dsa = muon->GetDSAScaleFactors("dsamuonID", "dsamuonReco_cosmic");
-      for (auto &[name, weight] : weights_dsa) weights[name] *= weight;
+      for (auto &[name, weight] : weights_dsa) { weights[name] *= weight; }
       // update all other variations with new systematic
       UpdateVariationWeights(weights, weights_dsa);
     } else {
       if (muon->IsTight()) {
         auto weights_tight = muon->GetScaleFactors("muonIDTight", "muonIsoTight", "muonReco", year);
-        for (auto &[name, weight] : weights_tight) weights[name] *= weight;
+        for (auto &[name, weight] : weights_tight) { weights[name] *= weight; }
         // update all other variations with new systematic
         UpdateVariationWeights(weights, weights_tight);
       } else {
         auto weights_loose = muon->GetScaleFactors("muonIDLoose", "muonIsoLoose", "muonReco", year);
-        for (auto &[name, weight] : weights_loose) weights[name] *= weight;
+        for (auto &[name, weight] : weights_loose) { weights[name] *= weight; }
         // update all other variations with new systematic
         UpdateVariationWeights(weights, weights_loose);
       }
@@ -226,10 +212,8 @@ map<string, float> NanoEventProcessor::GetMuonScaleFactors(const std::shared_ptr
 void NanoEventProcessor::UpdateVariationWeights(map<string, float> &weightsToUpdate,
                                                 map<string, float> &alreadyUpdatedWeights) {
   for (auto &[name, weight] : weightsToUpdate) {
-    if (name == "systematic") {
-      continue;
-    }
-    if (alreadyUpdatedWeights.find(name) != alreadyUpdatedWeights.end()) continue;
+    if (name == "systematic") { continue; }
+    if (alreadyUpdatedWeights.find(name) != alreadyUpdatedWeights.end()) { continue; }
     weightsToUpdate[name] *= alreadyUpdatedWeights["systematic"];
   }
 }
@@ -243,15 +227,13 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
     // vector<CorrectionArgType> args = {(double)muon->Get("pt"), (double)fabs(muon->GetAs<float>("dxyPVTraj"))};
     if (firstIteration) {
       auto weights_setup = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
-      for (auto &[name, weight] : weights_setup) weights[name] = 1.0;
+      for (auto &[name, weight] : weights_setup) { weights[name] = 1.0; }
       firstIteration = false;
     }
 
-    if (!muon->IsDSA()) {
-      continue;
-    }
+    if (!muon->IsDSA()) { continue; }
     auto weights_ = scaleFactorsManager.GetCustomScaleFactors("DSAEff", args);
-    for (auto &[name, weight] : weights_) weights[name] *= weight;
+    for (auto &[name, weight] : weights_) { weights[name] *= weight; }
   }
   return weights;
 }
@@ -259,7 +241,7 @@ map<string, float> NanoEventProcessor::GetDSAMuonEfficiencyScaleFactors(const sh
 pair<shared_ptr<NanoMuon>, shared_ptr<NanoMuon>> NanoEventProcessor::GetMuonPairClosestToZ(
     const std::shared_ptr<NanoEvent> event, string collection) {
   auto muons = event->GetCollection(collection);
-  if (muons->size() < 2) return {nullptr, nullptr};
+  if (muons->size() < 2) { return {nullptr, nullptr}; }
 
   shared_ptr<NanoMuon> muonA;
   shared_ptr<NanoMuon> muonB;
@@ -294,9 +276,7 @@ bool NanoEventProcessor::IsDataEvent(const std::shared_ptr<NanoEvent> event) {
   if (!weightsBranchName.empty()) {
     try {
       event->Get(weightsBranchName);
-    } catch (const Exception &e) {
-      isData = true;
-    }
+    } catch (const Exception &e) { isData = true; }
   }
   // Test 2: run run = 1 for MC
   unsigned run = event->Get("run");
@@ -325,23 +305,23 @@ float NanoEventProcessor::PropagateMET(const shared_ptr<NanoEvent> event, float 
 
 bool NanoEventProcessor::PassesEventCuts(const shared_ptr<NanoEvent> event, shared_ptr<CutFlowManager> cutFlowManager) {
   for (auto &[cutName, cutValues] : eventCuts) {
-    if (cutName.substr(0, 5) != "nano_") continue;
+    if (cutName.substr(0, 5) != "nano_") { continue; }
 
     if (cutName == "nano_applyHEMveto") {
-      if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) return false;
+      if (cutValues.first > 0.5 && !event->PassesHEMveto(cutValues.second)) { return false; }
     } else if (cutName == "nano_applyJetVetoMaps") {
-      if (cutValues.first > 0.5 && !event->PassesJetVetoMaps()) return false;
+      if (cutValues.first > 0.5 && !event->PassesJetVetoMaps()) { return false; }
     } else if (cutName == "nano_MET_pt") {
       float metPt = event->GetMetPt();
-      if (!inRange(metPt, cutValues)) return false;
+      if (!inRange(metPt, cutValues)) { return false; }
     } else {
       error() << "Unknown nano event cut: " << cutName << endl;
       continue;
     }
 
-    if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
+    if (cutFlowManager) { cutFlowManager->UpdateCutFlow(cutName); }
   }
-  if (!eventProcessor->PassesEventCuts(event->GetEvent(), cutFlowManager)) return false;
+  if (!eventProcessor->PassesEventCuts(event->GetEvent(), cutFlowManager)) { return false; }
 
   return true;
 }
@@ -377,11 +357,11 @@ void NanoEventProcessor::ApplyPuppiMETEnergyScaleCorrections(shared_ptr<NanoEven
     float pt_noMuL1 = pt_noMuRaw * corrections["jecL1" + dataStr];
     float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3" + dataStr];
 
-    if (pt_noMuL1L2L3 < 15) continue;
+    if (pt_noMuL1L2L3 < 15) { continue; }
 
     float chEmEF = nanoJet->Get("chEmEF");
     float neEmEF = nanoJet->Get("neEmEF");
-    if (chEmEF + neEmEF > 0.9) continue;
+    if (chEmEF + neEmEF > 0.9) { continue; }
 
     ROOT::Math::Polar2DVector Jet_p2D_noMuL1L2L3(pt_noMuL1L2L3, phi);
     ROOT::Math::Polar2DVector Jet_p2D_noMuL1(pt_noMuL1, phi);
@@ -400,9 +380,9 @@ void NanoEventProcessor::ApplyPuppiMETEnergyScaleCorrections(shared_ptr<NanoEven
     float pt_noMuL1 = pt_noMuRaw * corrections["jecL1" + dataStr];
     float pt_noMuL1L2L3 = pt_noMuRaw * corrections["jecL1L2L3" + dataStr];
 
-    if (pt_noMuL1L2L3 < 15) continue;
+    if (pt_noMuL1L2L3 < 15) { continue; }
     float EmEF = nanoJet->Get("EmEF");
-    if (EmEF > 0.9) continue;
+    if (EmEF > 0.9) { continue; }
 
     ROOT::Math::Polar2DVector CorrT1METJet_p2D_noMuL1L2L3(pt_noMuL1L2L3, phi);
     ROOT::Math::Polar2DVector CorrT1METJet_p2D_noMuL1(pt_noMuL1, phi);
@@ -419,7 +399,7 @@ map<string, float> NanoEventProcessor::GetMETEnergyScaleScaleFactors(shared_ptr<
                                                                      pair<float, float> metPtCuts) {
   float newMetPt = event->GetMetPt();
   map<string, float> met = {{"systematic", 1.0}};
-  if (newMetPt < metPtCuts.first || newMetPt > metPtCuts.second) met = {{"systematic", 0.0}};
+  if (newMetPt < metPtCuts.first || newMetPt > metPtCuts.second) { met = {{"systematic", 0.0}}; }
   return met;
 }
 
@@ -429,9 +409,7 @@ void NanoEventProcessor::ApplyJetEnergyScaleCorrections(const shared_ptr<NanoEve
   bool isData = IsDataEvent(event);
   uint run = event->Get("run");
 
-  for (auto jet : *jets) {
-    asNanoJet(jet)->UpdateJetEnergyScaleVariables(rho, isData, run);
-  }
+  for (auto jet : *jets) { asNanoJet(jet)->UpdateJetEnergyScaleVariables(rho, isData, run); }
 }
 
 tuple<map<string, float>, map<string, float>> NanoEventProcessor::GetJetMETEnergyScaleUncertainties(
@@ -464,7 +442,7 @@ tuple<map<string, float>, map<string, float>> NanoEventProcessor::GetJetMETEnerg
     const bool isGoodBJet = nanoJet->IsInCollection(goodBJetCollection);
 
     for (auto &[name, uncertainty] : uncertainties) {
-      if (name == "systematic") continue;
+      if (name == "systematic") { continue; }
       float newJetPt = pt * uncertainty;
 
       UpdateNPassingJetsForPt(newJetPt, name, nPassingGoodJets, nPassingGoodBJets, goodJetPtCuts, goodBJetPtCuts,
@@ -472,9 +450,7 @@ tuple<map<string, float>, map<string, float>> NanoEventProcessor::GetJetMETEnerg
 
       string met_name = name;
       size_t pos = met_name.find("jec");
-      if (pos != std::string::npos) {
-        met_name.replace(pos, 3, "met");
-      }
+      if (pos != std::string::npos) { met_name.replace(pos, 3, "met"); }
       UpdateMETDifferenceForPt(nanoJet, newJetPt, pt, met_name, totalPxDifference, totalPyDifference);
     }
   }
@@ -512,9 +488,7 @@ void NanoEventProcessor::UpdateNPassingJetsForPt(float newJetPt, string name, ma
     nPassingGoodJets[name] = 0;
     nPassingGoodBJets[name] = 0;
   }
-  if (isGoodJet && newJetPt >= goodJetPtCuts.first && newJetPt <= goodJetPtCuts.second) {
-    nPassingGoodJets[name]++;
-  }
+  if (isGoodJet && newJetPt >= goodJetPtCuts.first && newJetPt <= goodJetPtCuts.second) { nPassingGoodJets[name]++; }
   if (isGoodBJet && newJetPt >= goodBJetPtCuts.first && newJetPt <= goodBJetPtCuts.second) {
     nPassingGoodBJets[name]++;
   }
@@ -536,8 +510,8 @@ void NanoEventProcessor::UpdateSFsForJetJEC(map<string, float> &jecSFs, map<stri
                                             pair<float, float> goodBJetCuts) {
   for (auto &[name, nPassingJets] : nPassingGoodJets) {
     jecSFs[name] = 0.0;
-    if (nPassingGoodJets[name] < goodJetCuts.first || nPassingGoodJets[name] > goodJetCuts.second) continue;
-    if (nPassingGoodBJets[name] < goodBJetCuts.first || nPassingGoodBJets[name] > goodBJetCuts.second) continue;
+    if (nPassingGoodJets[name] < goodJetCuts.first || nPassingGoodJets[name] > goodJetCuts.second) { continue; }
+    if (nPassingGoodBJets[name] < goodBJetCuts.first || nPassingGoodBJets[name] > goodBJetCuts.second) { continue; }
     jecSFs[name] = 1.0;
   }
 }
@@ -548,7 +522,7 @@ void NanoEventProcessor::UpdateSFsForMETJEC(const shared_ptr<NanoEvent> event, m
   for (auto &[name, pxDifference] : totalPxDifference) {
     metSFs[name] = 0.0;
     float newMetPt = PropagateMET(event, totalPxDifference[name], totalPyDifference[name]);
-    if (newMetPt < metPtCuts.first || newMetPt > metPtCuts.second) continue;
+    if (newMetPt < metPtCuts.first || newMetPt > metPtCuts.second) { continue; }
     metSFs[name] = 1.0;
   }
 }
@@ -580,8 +554,9 @@ tuple<map<string, float>, map<string, float>> NanoEventProcessor::GetJetMETEnerg
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   map<string, float> jer = {{"systematic", 1.0}, {"jer_up", 1.0}, {"jer_down", 1.0}};
   map<string, float> met = {{"systematic", 1.0}, {"met_jer_up", 1.0}, {"met_jer_down", 1.0}};
-  if (!scaleFactorsManager.ShouldApplyScaleFactor("jer") && !scaleFactorsManager.ShouldApplyVariation("jer"))
+  if (!scaleFactorsManager.ShouldApplyScaleFactor("jer") && !scaleFactorsManager.ShouldApplyVariation("jer")) {
     return make_tuple(jer, met);
+  }
 
   auto goodJetCollection = event->GetCollection(goodJetsCollectionName);
   auto goodBJetCollection = event->GetCollection(goodBJetsCollectionName);
@@ -624,7 +599,7 @@ map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(cons
   map<string, float> scaleFactors = {{"systematic", 1.0}};
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  if (!scaleFactorsManager.ShouldApplyVariation("metUnclEnergy")) return scaleFactors;
+  if (!scaleFactorsManager.ShouldApplyVariation("metUnclEnergy")) { return scaleFactors; }
 
   float metPt = event->GetMetPt();
   float metPhi = event->GetMetPhi();
@@ -643,15 +618,15 @@ map<string, float> NanoEventProcessor::GetMETUnclusteredEnergyUncertainties(cons
 
   scaleFactors["MET_unclusteredEnergy_up"] = 1.0;
   scaleFactors["MET_unclusteredEnergy_down"] = 1.0;
-  if (met_up < metPtCuts.first || met_up > metPtCuts.second) scaleFactors["MET_unclusteredEnergy_up"] = 0.0;
-  if (met_down < metPtCuts.first || met_down > metPtCuts.second) scaleFactors["MET_unclusteredEnergy_down"] = 0.0;
+  if (met_up < metPtCuts.first || met_up > metPtCuts.second) { scaleFactors["MET_unclusteredEnergy_up"] = 0.0; }
+  if (met_down < metPtCuts.first || met_down > metPtCuts.second) { scaleFactors["MET_unclusteredEnergy_down"] = 0.0; }
 
   return scaleFactors;
 }
 
 void NanoEventProcessor::ApplyMETXYcorrections(const shared_ptr<NanoEvent> event) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  if (!scaleFactorsManager.ShouldApplyScaleFactor("metXYcorrection")) return;
+  if (!scaleFactorsManager.ShouldApplyScaleFactor("metXYcorrection")) { return; }
 
   float met_pt = event->GetMetPt();
   float met_phi = event->GetMetPhi();
@@ -673,6 +648,6 @@ map<string, float> NanoEventProcessor::GetMETXYScaleFactors(const shared_ptr<Nan
   float met_pt = event->GetMetPt();
 
   map<string, float> scaleFactors = {{"systematic", 1.0}};
-  if (met_pt < metPtCuts.first || met_pt > metPtCuts.second) scaleFactors["systematic"] = 0.0;
+  if (met_pt < metPtCuts.first || met_pt > metPtCuts.second) { scaleFactors["systematic"] = 0.0; }
   return scaleFactors;
 }

@@ -14,9 +14,7 @@ int main(int argc, char **argv) {
 
   // If input path was provided as an argument, set it in the config.
   // Otherwise, it will be set to the value from the config file.
-  if (args->GetString("input_path").has_value()) {
-    config.SetInputPath(args->GetString("input_path").value());
-  }
+  if (args->GetString("input_path").has_value()) { config.SetInputPath(args->GetString("input_path").value()); }
 
   // Create event reader and writer, which will handle input/output trees for you
   auto eventReader = make_shared<EventReader>();

@@ -34,10 +34,10 @@ int main(int argc, char **argv) {
     auto event = eventReader->GetEvent(iEvent);
 
     cutFlowManager->UpdateCutFlow("initial");
-    if (!eventProcessor->PassesTriggerCuts(event)) continue;
+    if (!eventProcessor->PassesTriggerCuts(event)) { continue; }
     cutFlowManager->UpdateCutFlow("trigger");
 
-    if (!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
+    if (!eventProcessor->PassesEventCuts(event, cutFlowManager)) { continue; }
 
     auto muons = event->GetCollection("Muon");
     if (muons->size() >= 2) {
@@ -47,14 +47,14 @@ int main(int argc, char **argv) {
     }
 
     vector<float> muonPts;
-    for (auto &muon : *muons) muonPts.push_back(muon->GetAs<float>("pt"));
+    for (auto &muon : *muons) { muonPts.push_back(muon->GetAs<float>("pt")); }
     event->SetVector<float>("muonPt", muonPts);
 
     // Branches declared without a varexp are only filled where the app sets them, and get a default
     // value (zero) everywhere else - both for objects skipped here and for entire events skipped below
     for (auto &muon : *muons) {
       float pt = muon->GetAs<float>("pt");
-      if (pt > 30) muon->Set<float>("ptIfGood", pt);
+      if (pt > 30) { muon->Set<float>("ptIfGood", pt); }
     }
 
     eventWriter->AddCurrentEvent("Events");

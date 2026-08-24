@@ -118,13 +118,13 @@ struct MuonID {
 
   std::string ToString() {
     std::string name = "";
-    if (soft) name += "soft ";
-    if (highPt) name += "highPt ";
-    if (trkHighPt) name += "trkHighPt ";
-    if (tight) name += "tight ";
-    if (mediumPrompt) name += "mediumPrompt ";
-    if (medium) name += "medium ";
-    if (loose) name += "loose ";
+    if (soft) { name += "soft "; }
+    if (highPt) { name += "highPt "; }
+    if (trkHighPt) { name += "trkHighPt "; }
+    if (tight) { name += "tight "; }
+    if (mediumPrompt) { name += "mediumPrompt "; }
+    if (medium) { name += "medium "; }
+    if (loose) { name += "loose "; }
     return name;
   }
 
@@ -159,14 +159,14 @@ struct MuonIso {
 
   std::string ToString() {
     std::string name = "";
-    if (tkIsoLoose) name += "tkIsoLoose ";
-    if (tkIsoTight) name += "tkIsoTight ";
-    if (pFIsoVeryLoose) name += "pFIsoVeryLoose ";
-    if (pFIsoLoose) name += "pFIsoLoose ";
-    if (pFIsoMedium) name += "pFIsoMedium ";
-    if (pFIsoTight) name += "pFIsoTight ";
-    if (pFIsoVeryTight) name += "pFIsoVeryTight ";
-    if (pFIsoVeryVeryTight) name += "pFIsoVeryVeryTight ";
+    if (tkIsoLoose) { name += "tkIsoLoose "; }
+    if (tkIsoTight) { name += "tkIsoTight "; }
+    if (pFIsoVeryLoose) { name += "pFIsoVeryLoose "; }
+    if (pFIsoLoose) { name += "pFIsoLoose "; }
+    if (pFIsoMedium) { name += "pFIsoMedium "; }
+    if (pFIsoTight) { name += "pFIsoTight "; }
+    if (pFIsoVeryTight) { name += "pFIsoVeryTight "; }
+    if (pFIsoVeryVeryTight) { name += "pFIsoVeryVeryTight "; }
     return name;
   }
 

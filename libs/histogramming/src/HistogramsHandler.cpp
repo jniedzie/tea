@@ -74,19 +74,17 @@ void HistogramsHandler::SetupHistograms() {
   }
 
   // copy names of all histograms to unfilledHistograms vector
-  for (auto &[names, hist] : histograms1D) {
-    unfilledHistograms.push_back(names.first);
-  }
-  for (auto &[names, hist] : histograms2D) {
-    unfilledHistograms.push_back(names.first);
-  }
+  for (auto &[names, hist] : histograms1D) { unfilledHistograms.push_back(names.first); }
+  for (auto &[names, hist] : histograms2D) { unfilledHistograms.push_back(names.first); }
 }
 
 void HistogramsHandler::SetupSFvariationHistograms() {
   for (auto &[title, params] : histParams) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+      continue;
+    }
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") continue;
+      if (sfName == "default") { continue; }
       string titlesf = title + "_" + sfName;
       histograms1D[make_pair(title, sfName)] =
           new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
@@ -94,9 +92,11 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   }
 
   for (auto &[title, params] : irregularHistParams) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+      continue;
+    }
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") continue;
+      if (sfName == "default") { continue; }
       string titlesf = title + "_" + sfName;
       histograms1D[make_pair(title, sfName)] =
           new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
@@ -104,9 +104,11 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   }
 
   for (auto &[title, params] : histParams2D) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+      continue;
+    }
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") continue;
+      if (sfName == "default") { continue; }
       string titlesf = title + "_" + sfName;
       histograms2D[make_pair(title, sfName)] = new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX,
                                                         params.maxX, params.nBinsY, params.minY, params.maxY);
@@ -114,9 +116,11 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   }
 
   for (auto &[title, params] : irregularHistParams2D) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) continue;
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+      continue;
+    }
     for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") continue;
+      if (sfName == "default") { continue; }
       string titlesf = title + "_" + sfName;
       histograms2D[make_pair(title, sfName)] =
           new TH2D(titlesf.c_str(), titlesf.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0],
@@ -141,9 +145,9 @@ void HistogramsHandler::Fill(string name, double value) {
   RemoveFromUnfilled(name);
 
   // handle SF variation histograms
-  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) { return; }
   for (auto &[sfName, weight] : eventWeights) {
-    if (sfName == "default") continue;
+    if (sfName == "default") { continue; }
     CheckHistogram(name, sfName);
     histograms1D[make_pair(name, sfName)]->Fill(value, weight);
   }
@@ -156,9 +160,9 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
 
   RemoveFromUnfilled(name);
 
-  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) return;
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) { return; }
   for (auto &[sfName, weight] : eventWeights) {
-    if (sfName == "default") continue;
+    if (sfName == "default") { continue; }
     CheckHistogram2D(name, sfName);
     histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
   }
@@ -166,9 +170,7 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
 
 void HistogramsHandler::RemoveFromUnfilled(string name) {
   auto it = find(unfilledHistograms.begin(), unfilledHistograms.end(), name);
-  if (it != unfilledHistograms.end()) {
-    unfilledHistograms.erase(it);
-  }
+  if (it != unfilledHistograms.end()) { unfilledHistograms.erase(it); }
 }
 
 void HistogramsHandler::CheckHistogram(string name, string directory) {
@@ -199,7 +201,7 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist *hist, TFile *outpu
     outputFile->cd();
   } else {
     TDirectory *directory = outputFile->GetDirectory(outputDir.c_str());
-    if (!directory) directory = outputFile->mkdir(outputDir.c_str());
+    if (!directory) { directory = outputFile->mkdir(outputDir.c_str()); }
     if (!directory) {
       error() << "Failed to create histogram output directory: " << outputDir << endl;
       return;
@@ -222,26 +224,20 @@ void HistogramsHandler::SaveHistograms() {
   const auto separator = outputPath.find_last_of("/");
   string path = separator == string::npos ? "./" : outputPath.substr(0, separator);
   string filename = separator == string::npos ? outputPath : outputPath.substr(separator + 1);
-  if (path.empty()) path = "./";
+  if (path.empty()) { path = "./"; }
   if (filename.empty()) {
     error() << "Cannot save histograms: output path has no filename: " << outputPath << endl;
     return;
   }
   std::error_code ec;
   std::filesystem::create_directories(path, ec);
-  if (ec) {
-    warn() << "Failed to create histogram output directory: " << path << " (" << ec.message() << ")" << endl;
-  }
+  if (ec) { warn() << "Failed to create histogram output directory: " << path << " (" << ec.message() << ")" << endl; }
 
   auto outputFile = new TFile((path + "/" + filename).c_str(), "recreate");
   outputFile->cd();
 
-  for (auto &[names, hist] : histograms1D) {
-    SaveHistogram(names, hist, outputFile);
-  }
-  for (auto &[names, hist] : histograms2D) {
-    SaveHistogram(names, hist, outputFile);
-  }
+  for (auto &[names, hist] : histograms1D) { SaveHistogram(names, hist, outputFile); }
+  for (auto &[names, hist] : histograms2D) { SaveHistogram(names, hist, outputFile); }
 
   outputFile->Close();
 
@@ -251,7 +247,5 @@ void HistogramsHandler::SaveHistograms() {
 }
 
 void HistogramsHandler::Print() {
-  for (auto &name : unfilledHistograms) {
-    warn() << "Histogram defined but not filled: " << name << endl;
-  }
+  for (auto &name : unfilledHistograms) { warn() << "Histogram defined but not filled: " << name << endl; }
 }

@@ -23,7 +23,7 @@ HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandl
 HistogramsFiller::~HistogramsFiller() {}
 
 void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) {
-  if (!event || !histogramsHandler) return;
+  if (!event || !histogramsHandler) { return; }
 
   for (auto &[title, params] : defaultHistVariables) {
     string collectionName = params.collection;
@@ -38,7 +38,7 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       float eventVariable;
       if (branchName[0] == 'n') {
         auto collection = event->GetCollection(branchName.substr(1));
-        if (!collection) continue;
+        if (!collection) { continue; }
         eventVariable = collection->size();
       } else {
         eventVariable = event->GetAs<float>(branchName);
@@ -46,9 +46,9 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       histogramsHandler->Fill(title, eventVariable);
     } else {
       auto collection = event->GetCollection(collectionName);
-      if (!collection) continue;
+      if (!collection) { continue; }
       for (auto object : *collection) {
-        if (!object) continue;
+        if (!object) { continue; }
         histogramsHandler->Fill(title, object->GetAs<float>(branchName));
       }
     }

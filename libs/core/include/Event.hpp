@@ -26,8 +26,9 @@ class Event {
           branchName.find("weight") != std::string::npos || branchName.find("wgt") != std::string::npos) {
         message += ", it's probably fine for data if this is a gen weight branch.";
         warn() << message << std::endl;
-      } else
+      } else {
         fatal(file, function, line) << message << std::endl;
+      }
       throw Exception(message.c_str());
     }
 
@@ -125,8 +126,8 @@ class Event {
   }
 
   inline std::shared_ptr<PhysicsObjects> GetCollection(std::string name) const {
-    if (collections.count(name)) return collections.at(name);
-    if (extraCollections.count(name)) return extraCollections.at(name);
+    if (collections.count(name)) { return collections.at(name); }
+    if (extraCollections.count(name)) { return extraCollections.at(name); }
     std::string message = "Tried to get a collection that doesn't exist: " + name;
     throw Exception(message.c_str());
   }
@@ -162,42 +163,44 @@ class Event {
 
   template <typename T>
   void Set(const std::string &branchName, T value) {
-    if constexpr (std::is_same_v<T, Float_t>)
+    if constexpr (std::is_same_v<T, Float_t>) {
       customValuesFloat[branchName] = value;
-    else if constexpr (std::is_same_v<T, Double_t>)
+    } else if constexpr (std::is_same_v<T, Double_t>) {
       customValuesDouble[branchName] = value;
-    else if constexpr (std::is_same_v<T, Int_t>)
+    } else if constexpr (std::is_same_v<T, Int_t>) {
       customValuesInt[branchName] = value;
-    else if constexpr (std::is_same_v<T, UInt_t>)
+    } else if constexpr (std::is_same_v<T, UInt_t>) {
       customValuesUint[branchName] = value;
-    else if constexpr (std::is_same_v<T, Bool_t>)
+    } else if constexpr (std::is_same_v<T, Bool_t>) {
       customValuesBool[branchName] = value;
-    else if constexpr (std::is_same_v<T, ULong64_t>)
+    } else if constexpr (std::is_same_v<T, ULong64_t>) {
       customValuesUlong[branchName] = value;
-    else if constexpr (std::is_same_v<T, UChar_t>)
+    } else if constexpr (std::is_same_v<T, UChar_t>) {
       customValuesUchar[branchName] = value;
-    else if constexpr (std::is_same_v<T, Short_t>)
+    } else if constexpr (std::is_same_v<T, Short_t>) {
       customValuesShort[branchName] = value;
-    else if constexpr (std::is_same_v<T, UShort_t>)
+    } else if constexpr (std::is_same_v<T, UShort_t>) {
       customValuesUshort[branchName] = value;
-    else
+    } else {
       static_assert(!sizeof(T), "Event::Set<T>: unsupported type");
+    }
 
     customValuesTypes[branchName] = RootTypeName<T>();
   }
 
   template <typename T>
   void SetVector(const std::string &branchName, std::vector<T> value) {
-    if constexpr (std::is_same_v<T, Float_t>)
+    if constexpr (std::is_same_v<T, Float_t>) {
       customValuesVectorFloat[branchName] = std::move(value);
-    else if constexpr (std::is_same_v<T, Double_t>)
+    } else if constexpr (std::is_same_v<T, Double_t>) {
       customValuesVectorDouble[branchName] = std::move(value);
-    else if constexpr (std::is_same_v<T, Int_t>)
+    } else if constexpr (std::is_same_v<T, Int_t>) {
       customValuesVectorInt[branchName] = std::move(value);
-    else if constexpr (std::is_same_v<T, UInt_t>)
+    } else if constexpr (std::is_same_v<T, UInt_t>) {
       customValuesVectorUInt[branchName] = std::move(value);
-    else
+    } else {
       static_assert(!sizeof(T), "Event::SetVector<T>: unsupported type (Float_t, Double_t, Int_t, UInt_t only)");
+    }
 
     customValuesTypes[branchName] = "vector<" + std::string(RootTypeName<T>()) + ">";
   }
@@ -212,16 +215,17 @@ class Event {
                             expectedType + "\n";
       throw BadTypeException(message.c_str());
     }
-    if constexpr (std::is_same_v<T, Float_t>)
+    if constexpr (std::is_same_v<T, Float_t>) {
       return customValuesVectorFloat.at(branchName);
-    else if constexpr (std::is_same_v<T, Double_t>)
+    } else if constexpr (std::is_same_v<T, Double_t>) {
       return customValuesVectorDouble.at(branchName);
-    else if constexpr (std::is_same_v<T, Int_t>)
+    } else if constexpr (std::is_same_v<T, Int_t>) {
       return customValuesVectorInt.at(branchName);
-    else if constexpr (std::is_same_v<T, UInt_t>)
+    } else if constexpr (std::is_same_v<T, UInt_t>) {
       return customValuesVectorUInt.at(branchName);
-    else
+    } else {
       static_assert(!sizeof(T), "Event::GetVector<T>: unsupported type (Float_t, Double_t, Int_t, UInt_t only)");
+    }
   }
 
   bool HasCustomValue(const std::string &branchName) const {
@@ -232,40 +236,40 @@ class Event {
   ConfigManager &config = ConfigManager::GetInstance();
 
   inline UInt_t GetUint(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUint[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesUint[branchName]; }
     return customValuesUint[branchName];
   }
   inline Int_t GetInt(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesInt[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesInt[branchName]; }
     return customValuesInt[branchName];
   }
   inline Bool_t GetBool(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesBool[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesBool[branchName]; }
     return customValuesBool[branchName];
   }
   inline Float_t GetFloat(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesFloat[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesFloat[branchName]; }
     return customValuesFloat[branchName];
   }
   inline Double_t GetDouble(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesDouble[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesDouble[branchName]; }
     return customValuesDouble[branchName];
   }
   inline ULong64_t GetULong(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUlong[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesUlong[branchName]; }
     return customValuesUlong[branchName];
   }
   inline UChar_t GetUChar(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUchar[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesUchar[branchName]; }
     return customValuesUchar[branchName];
   }
   inline Char_t GetChar(std::string branchName) { return valuesChar[branchName]; }
   inline UShort_t GetUShort(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesUshort[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesUshort[branchName]; }
     return customValuesUshort[branchName];
   }
   inline Short_t GetShort(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return valuesShort[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return valuesShort[branchName]; }
     return customValuesShort[branchName];
   }
 

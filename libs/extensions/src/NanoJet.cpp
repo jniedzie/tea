@@ -14,33 +14,25 @@ TLorentzVector NanoJet::GetFourVector() {
 }
 
 float NanoJet::GetPtSmeared() {
-  if (physicsObject->HasBranch("pt_smeared")) {
-    return physicsObject->GetAs<float>("pt_smeared");
-  }
+  if (physicsObject->HasBranch("pt_smeared")) { return physicsObject->GetAs<float>("pt_smeared"); }
   warn() << "Requested pt_smeared branch not found for jet. Returning standard pt." << endl;
   return physicsObject->GetAs<float>("pt");
 }
 
 float NanoJet::GetPtJES() {
-  if (physicsObject->HasBranch("pt_JES")) {
-    return physicsObject->GetAs<float>("pt_JES");
-  }
+  if (physicsObject->HasBranch("pt_JES")) { return physicsObject->GetAs<float>("pt_JES"); }
   warn() << "Requested pt_JES branch not found for jet. Returning standard pt." << endl;
   return physicsObject->GetAs<float>("pt");
 }
 
 float NanoJet::GetMassSmeared() {
-  if (physicsObject->HasBranch("mass_smeared")) {
-    return physicsObject->GetAs<float>("mass_smeared");
-  }
+  if (physicsObject->HasBranch("mass_smeared")) { return physicsObject->GetAs<float>("mass_smeared"); }
   warn() << "Requested mass_smeared branch not found for jet. Returning standard mass." << endl;
   return physicsObject->GetAs<float>("mass");
 }
 
 float NanoJet::GetMassJES() {
-  if (physicsObject->HasBranch("mass_JES")) {
-    return physicsObject->GetAs<float>("mass_JES");
-  }
+  if (physicsObject->HasBranch("mass_JES")) { return physicsObject->GetAs<float>("mass_JES"); }
   warn() << "Requested mass_JES branch not found for jet. Returning standard mass." << endl;
   return physicsObject->GetAs<float>("mass");
 }
@@ -48,8 +40,10 @@ float NanoJet::GetMassJES() {
 map<string, float> NanoJet::GetBtaggingScaleFactors(string workingPoint, bool isBJet, string datasetName) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
   map<string, float> scale_factors = {{"systematic", 1.0}};
-  if (!scaleFactorsManager.ShouldApplyScaleFactor("bTagging") && !scaleFactorsManager.ShouldApplyVariation("bTagging"))
+  if (!scaleFactorsManager.ShouldApplyScaleFactor("bTagging") &&
+      !scaleFactorsManager.ShouldApplyVariation("bTagging")) {
     return scale_factors;
+  }
 
   int hadronFlavour = abs(GetAs<int>("hadronFlavour"));
 
@@ -71,15 +65,16 @@ map<string, float> NanoJet::GetBtaggingScaleFactors(string workingPoint, bool is
     string name_ = name;
     if (wp_suffix != "") {
       size_t pos = name_.find(wp_suffix);
-      if (pos != string::npos) name_.erase(pos, wp_suffix.size());
+      if (pos != string::npos) { name_.erase(pos, wp_suffix.size()); }
     }
     if (isBJet) {
       scale_factors[name_] = sfs[name];
     } else {
-      if (taggingEfficiency == 1)  // Avoiding unstable efficiencies from low stat datasets.
+      if (taggingEfficiency == 1) {  // Avoiding unstable efficiencies from low stat datasets.
         scale_factors[name_] = 1.0;
-      else
+      } else {
         scale_factors[name_] = (1 - weight * taggingEfficiency) / (1 - taggingEfficiency);
+      }
     }
   }
 
@@ -91,9 +86,7 @@ map<string, float> NanoJet::GetPUJetIDScaleFactors(string name) {
   map<string, float> sfs = scaleFactorsManager.GetPUJetIDScaleFactors(name, GetEta(), GetPtSmeared());
   // PU jet ID only applied to low pT jets with pT < 50 GeV
   if (GetPtSmeared() > 50) {
-    for (auto &[name, weight] : sfs) {
-      sfs[name] = 1.0;
-    }
+    for (auto &[name, weight] : sfs) { sfs[name] = 1.0; }
   }
   return sfs;
 }
@@ -147,7 +140,7 @@ void NanoJet::UpdateJetEnergyScaleVariables(float rho, bool isData, uint run) {
 
   string dataStr = isData ? "Data" : "MC";
   vector<string> jecNames = {"jecL1" + dataStr, "jecL2" + dataStr};
-  if (isData) jecNames.push_back("jecL2L3" + dataStr);
+  if (isData) { jecNames.push_back("jecL2L3" + dataStr); }
   map<string, float> corrections = GetJetEnergyCorrections(jecNames, rho, run);
 
   float pt_raw = GetAs<float>("pt") * (1 - GetAs<float>("rawFactor"));
@@ -187,7 +180,7 @@ void NanoJet::AddSmearedPtByResolution(float rho, int eventID, shared_ptr<NanoEv
 
   float genPt = -1;
   auto genJet = GetGenJetAsRecommendedForJER(event, jerSF["PtResolution"]);
-  if (genJet) genPt = genJet->Get("pt");
+  if (genJet) { genPt = genJet->Get("pt"); }
 
   map<string, CorrectionArgType> inputs = {
       {"JetPt", GetPt()},
@@ -222,10 +215,10 @@ shared_ptr<PhysicsObject> NanoJet::GetGenJetAsRecommendedForJER(shared_ptr<NanoE
     float dEta = eta - float(genJet->Get("eta"));
     float dPhi = TVector2::Phi_mpi_pi(phi - float(genJet->Get("phi")));
     float dR = TMath::Sqrt(dEta * dEta + dPhi * dPhi);
-    if (dR >= R_cone / 2) continue;
+    if (dR >= R_cone / 2) { continue; }
 
     float absDPt = fabs(GetPtJES() - (float)genJet->Get("pt"));
-    if (absDPt >= 3 * sigma_JER * GetPtJES()) continue;
+    if (absDPt >= 3 * sigma_JER * GetPtJES()) { continue; }
 
     return genJet;
   }
@@ -246,9 +239,7 @@ float NanoJet::GetPyDifference(float newJetPt, float oldJetPt) {
 
 bool NanoJet::IsInCollection(const shared_ptr<PhysicsObjects> collection) {
   for (auto object : *collection) {
-    if (physicsObject == object) {
-      return true;
-    }
+    if (physicsObject == object) { return true; }
   }
   return false;
 }

@@ -13,6 +13,7 @@ DerivePointerAlignment: false
 
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: WithoutElse
-AllowShortBlocksOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Always
 AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: false
+InsertBraces: true

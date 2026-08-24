@@ -20,9 +20,7 @@ class ConfigManager {
 
     auto &config = GetInstance();
 
-    if (args->GetString("input_path").has_value()) {
-      config.SetInputPath(args->GetString("input_path").value());
-    }
+    if (args->GetString("input_path").has_value()) { config.SetInputPath(args->GetString("input_path").value()); }
 
     if (args->GetString("output_hists_path").has_value()) {
       config.SetHistogramsOutputPath(args->GetString("output_hists_path").value());

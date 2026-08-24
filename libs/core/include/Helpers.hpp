@@ -63,7 +63,7 @@ inline std::vector<std::string> getListOfTrees(TFile *file) {
 
   for (auto i : *keys) {
     auto key = (TKey *)i;
-    if (strcmp(key->GetClassName(), "TTree") == 0) trees.push_back(key->GetName());
+    if (strcmp(key->GetClassName(), "TTree") == 0) { trees.push_back(key->GetName()); }
   }
   return trees;
 }
@@ -74,7 +74,7 @@ inline std::vector<std::string> split(std::string input, char splitBy) {
   std::istringstream iss(input);
   std::string part;
 
-  while (std::getline(iss, part, splitBy)) parts.push_back(part);
+  while (std::getline(iss, part, splitBy)) { parts.push_back(part); }
   return parts;
 }
 
@@ -120,16 +120,14 @@ struct ExtraCollection {
 
   void Print() {
     info() << "Input collections: " << std::endl;
-    for (std::string name : inputCollections) info() << name << std::endl;
+    for (std::string name : inputCollections) { info() << name << std::endl; }
 
     info() << "All cuts: " << std::endl;
     for (auto &[name, cuts] : allCuts) {
       info() << "\t" << name << ": " << cuts.first << ", " << cuts.second << std::endl;
     }
     info() << "Flags: " << std::endl;
-    for (auto &[name, flag] : flags) {
-      info() << "\t" << name << ": " << flag << std::endl;
-    }
+    for (auto &[name, flag] : flags) { info() << "\t" << name << ": " << flag << std::endl; }
   }
 };
 
@@ -249,7 +247,9 @@ class insertion_ordered_map {
 
  public:
   bool insert(const K &k, const V &v) {
-    if (index_.count(k)) return false;  // no overwrite; adjust as needed
+    if (index_.count(k)) {
+      return false;  // no overwrite; adjust as needed
+    }
     order_.emplace_back(k, v);
     index_[k] = std::prev(order_.end());
     return true;
@@ -270,7 +270,7 @@ class insertion_ordered_map {
 
   bool erase(const K &k) {
     auto it = index_.find(k);
-    if (it == index_.end()) return false;
+    if (it == index_.end()) { return false; }
     order_.erase(it->second);
     index_.erase(it);
     return true;

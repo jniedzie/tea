@@ -15,9 +15,7 @@ EventProcessor::EventProcessor() {
 
   try {
     config.GetCuts(eventCuts);
-  } catch (const Exception &e) {
-    warn() << "Couldn't read eventCuts from config file " << endl;
-  }
+  } catch (const Exception &e) { warn() << "Couldn't read eventCuts from config file " << endl; }
 
   try {
     config.GetVector("requiredFlags", requiredFlags);
@@ -39,14 +37,14 @@ bool EventProcessor::PassesGoldenJson(const shared_ptr<Event> event) {
   uint run = event->Get("run");
   uint lumi = event->Get("luminosityBlock");
 
-  if (run == 1) return true;  // MC
+  if (run == 1) {
+    return true;  // MC
+  }
 
-  if (goldenJson.find(run) == goldenJson.end()) return false;
+  if (goldenJson.find(run) == goldenJson.end()) { return false; }
 
   for (auto &lumiRange : goldenJson[run]) {
-    if (lumi >= lumiRange[0] && lumi <= lumiRange[1]) {
-      return true;
-    }
+    if (lumi >= lumiRange[0] && lumi <= lumiRange[1]) { return true; }
   }
   return false;
 }
@@ -57,10 +55,8 @@ bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
     passes = false;
     try {
       passes = event->GetAs<bool>(triggerName);
-    } catch (Exception &) {
-      warn() << "Trigger not present: " << triggerName << endl;
-    }
-    if (passes) return true;
+    } catch (Exception &) { warn() << "Trigger not present: " << triggerName << endl; }
+    if (passes) { return true; }
   }
   return passes;
 }
@@ -68,29 +64,27 @@ bool EventProcessor::PassesTriggerCuts(const shared_ptr<Event> event) {
 bool EventProcessor::PassesMetFilters(const shared_ptr<Event> event) {
   for (string flag : requiredFlags) {
     bool flagValue = event->Get(flag);
-    if (!flagValue) return false;
+    if (!flagValue) { return false; }
   }
   return true;
 }
 
 void EventProcessor::RegisterCuts(shared_ptr<CutFlowManager> cutFlowManager) {
-  for (auto &[cutName, cutValues] : eventCuts) {
-    cutFlowManager->RegisterCut(cutName);
-  }
+  for (auto &[cutName, cutValues] : eventCuts) { cutFlowManager->RegisterCut(cutName); }
 }
 
 bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<CutFlowManager> cutFlowManager) {
   for (auto &[cutName, cutValues] : eventCuts) {
-    if (cutName.substr(0, 5) == "nano_") continue;
+    if (cutName.substr(0, 5) == "nano_") { continue; }
 
     try {
       auto collection = event->GetCollection(cutName.substr(1));
-      if (!inRange(collection->size(), cutValues)) return false;
+      if (!inRange(collection->size(), cutValues)) { return false; }
     } catch (Exception &) {
       float variable = event->Get(cutName);
-      if (!inRange(variable, cutValues)) return false;
+      if (!inRange(variable, cutValues)) { return false; }
     }
-    if (cutFlowManager) cutFlowManager->UpdateCutFlow(cutName);
+    if (cutFlowManager) { cutFlowManager->UpdateCutFlow(cutName); }
   }
 
   return true;
@@ -98,7 +92,7 @@ bool EventProcessor::PassesEventCuts(const shared_ptr<Event> event, shared_ptr<C
 
 float EventProcessor::GetMaxPt(shared_ptr<Event> event, string collectionName) {
   auto maxPtObject = GetMaxPtObject(event, collectionName);
-  if (!maxPtObject) return -1;
+  if (!maxPtObject) { return -1; }
   float maxPt = maxPtObject->Get("pt");
   return maxPt;
 }
@@ -129,7 +123,7 @@ shared_ptr<PhysicsObject> EventProcessor::GetSubleadingPtObject(shared_ptr<Event
   shared_ptr<PhysicsObject> subleadingPtObject = nullptr;
   for (auto element : *collection) {
     float pt = element->Get("pt");
-    if (pt == maxPt) continue;
+    if (pt == maxPt) { continue; }
     if (pt > subleadingPt) {
       subleadingPt = pt;
       subleadingPtObject = element;
@@ -149,7 +143,7 @@ shared_ptr<PhysicsObjects> EventProcessor::GetLeadingObjects(shared_ptr<Event> e
     leadingObjects->push_back(leadingObject);
     auto collection_tmp = make_shared<PhysicsObjects>();
     for (auto obj : *collection) {
-      if (obj == leadingObject) continue;
+      if (obj == leadingObject) { continue; }
       collection_tmp->push_back(obj);
     }
     collection = make_shared<PhysicsObjects>(*collection_tmp);

@@ -31,7 +31,7 @@ inline void PrintMessage(const std::string &message) {
 }
 
 inline void FinishProgress() {
-  if (progressLine.empty()) return;
+  if (progressLine.empty()) { return; }
   std::cerr << "\r\033[2K\n" << std::flush;
   progressLine.clear();
 }
@@ -82,7 +82,7 @@ class Logger {
 
   void Print() {
     Terminal::FinishProgress();
-    if (warnings.empty() && errors.empty() && fatals.empty()) return;
+    if (warnings.empty() && errors.empty() && fatals.empty()) { return; }
 
     Terminal::PrintMessage(
         "\033[0m\n========== Logs summary =========="

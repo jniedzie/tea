@@ -53,7 +53,7 @@ size_t FillArrayAddedBranch(T *buffer, const string &branchName, const string &v
     }
     buffer[writeIndex++] = value;
   }
-  for (size_t i = writeIndex; i < previousSize; i++) buffer[i] = T(0);
+  for (size_t i = writeIndex; i < previousSize; i++) { buffer[i] = T(0); }
   return writeIndex;
 }
 
@@ -79,19 +79,15 @@ template <typename T>
 int FilterBranch(T *vec, const std::vector<int> &keepIndices) {
   T tmp[maxCollectionElements];
   size_t writeIndex = 0;
-  for (int i : keepIndices) {
-    tmp[writeIndex++] = vec[i];
-  }
-  for (size_t i = 0; i < maxCollectionElements; ++i) {
-    vec[i] = (i < writeIndex) ? tmp[i] : 0;
-  }
+  for (int i : keepIndices) { tmp[writeIndex++] = vec[i]; }
+  for (size_t i = 0; i < maxCollectionElements; ++i) { vec[i] = (i < writeIndex) ? tmp[i] : 0; }
   return writeIndex;
 }
 
 template <typename T>
 size_t FilterAddedBranchIfPruned(T *buffer, size_t writeIndex, const string &collectionName,
                                  const vector<int> *keepIndices) {
-  if (keepIndices == nullptr || collectionName != prunedHepMCCollection) return writeIndex;
+  if (keepIndices == nullptr || collectionName != prunedHepMCCollection) { return writeIndex; }
   return FilterBranch(buffer, *keepIndices);
 }
 
@@ -134,13 +130,9 @@ void EventWriter::SetupOutputTree() {
   for (auto &[name, tree] : eventReader->inputTrees) {
     tree->SetBranchStatus("*", false);
 
-    for (auto &branchName : branchesToKeep) {
-      tree->SetBranchStatus(branchName.c_str(), true);
-    }
+    for (auto &branchName : branchesToKeep) { tree->SetBranchStatus(branchName.c_str(), true); }
 
-    for (auto &branchName : branchesToRemove) {
-      tree->SetBranchStatus(branchName.c_str(), false);
-    }
+    for (auto &branchName : branchesToRemove) { tree->SetBranchStatus(branchName.c_str(), false); }
 
     outputTrees[name] = tree->CloneTree(0);
     outputTrees[name]->Reset();
@@ -148,7 +140,7 @@ void EventWriter::SetupOutputTree() {
 
     bool isEventsTree = find(eventReader->eventsTreeNames.begin(), eventReader->eventsTreeNames.end(), name) !=
                         eventReader->eventsTreeNames.end();
-    if (isEventsTree) SetupAddedBranches(name);
+    if (isEventsTree) { SetupAddedBranches(name); }
 
     tree->SetBranchStatus("*", true);
   }
@@ -159,10 +151,10 @@ void EventWriter::SetupBoolVectorBranches(string treeName) {
 
   for (auto branchIter : *outputTree->GetListOfBranches()) {
     auto branch = (TBranch *)branchIter;
-    if (!eventReader->IsVectorBranch(branch)) continue;
+    if (!eventReader->IsVectorBranch(branch)) { continue; }
 
     auto leaf = eventReader->GetLeaf(branch);
-    if (string(leaf->GetTypeName()) != "vector<bool>") continue;
+    if (string(leaf->GetTypeName()) != "vector<bool>") { continue; }
 
     string branchName = branch->GetName();
     boolVectorBuffers[branchName] = vector<bool>();
@@ -173,7 +165,7 @@ void EventWriter::SetupBoolVectorBranches(string treeName) {
 
 void EventWriter::RepackBoolVectorBranches(string treeName) {
   auto it = boolVectorBranchesPerTree.find(treeName);
-  if (it == boolVectorBranchesPerTree.end()) return;
+  if (it == boolVectorBranchesPerTree.end()) { return; }
 
   auto &event = eventReader->currentEvent;
   for (auto &branchName : it->second) {
@@ -192,15 +184,15 @@ void EventWriter::SetupAddedBranches(string treeName) {
     }
 
     if (kAddedVectorBranchElementTypes.count(added.type) > 0) {
-      if (added.type == "vector<Float_t>")
+      if (added.type == "vector<Float_t>") {
         outputTree->Branch(name.c_str(), &addedStdVectorFloat[name]);
-      else if (added.type == "vector<Double_t>")
+      } else if (added.type == "vector<Double_t>") {
         outputTree->Branch(name.c_str(), &addedStdVectorDouble[name]);
-      else if (added.type == "vector<Int_t>")
+      } else if (added.type == "vector<Int_t>") {
         outputTree->Branch(name.c_str(), &addedStdVectorInt[name]);
-      else if (added.type == "vector<UInt_t>")
+      } else if (added.type == "vector<UInt_t>") {
         outputTree->Branch(name.c_str(), &addedStdVectorUInt[name]);
-      else {
+      } else {
         fatal() << "branchesToAdd: internal error - no vector branch handler for type \"" << added.type
                 << "\" (branch \"" << name
                 << "\"); kAddedVectorBranchElementTypes and the type-dispatch chain have drifted apart" << endl;
@@ -219,25 +211,25 @@ void EventWriter::SetupAddedBranches(string treeName) {
 
     if (added.IsEventLevel()) {
       string leaflist = name + "/" + typeCode;
-      if (added.type == "Float_t")
+      if (added.type == "Float_t") {
         outputTree->Branch(name.c_str(), &addedScalarFloat[name], leaflist.c_str());
-      else if (added.type == "Double_t")
+      } else if (added.type == "Double_t") {
         outputTree->Branch(name.c_str(), &addedScalarDouble[name], leaflist.c_str());
-      else if (added.type == "Int_t")
+      } else if (added.type == "Int_t") {
         outputTree->Branch(name.c_str(), &addedScalarInt[name], leaflist.c_str());
-      else if (added.type == "UInt_t")
+      } else if (added.type == "UInt_t") {
         outputTree->Branch(name.c_str(), &addedScalarUInt[name], leaflist.c_str());
-      else if (added.type == "Bool_t")
+      } else if (added.type == "Bool_t") {
         outputTree->Branch(name.c_str(), &addedScalarBool[name], leaflist.c_str());
-      else if (added.type == "ULong64_t")
+      } else if (added.type == "ULong64_t") {
         outputTree->Branch(name.c_str(), &addedScalarULong[name], leaflist.c_str());
-      else if (added.type == "UChar_t")
+      } else if (added.type == "UChar_t") {
         outputTree->Branch(name.c_str(), &addedScalarUChar[name], leaflist.c_str());
-      else if (added.type == "Short_t")
+      } else if (added.type == "Short_t") {
         outputTree->Branch(name.c_str(), &addedScalarShort[name], leaflist.c_str());
-      else if (added.type == "UShort_t")
+      } else if (added.type == "UShort_t") {
         outputTree->Branch(name.c_str(), &addedScalarUShort[name], leaflist.c_str());
-      else {
+      } else {
         fatal() << "branchesToAdd: internal error - no scalar branch handler "
                    "for type \""
                 << added.type << "\" (branch \"" << name
@@ -267,25 +259,25 @@ void EventWriter::SetupAddedBranches(string treeName) {
       added.sizeBranch = sizeBranch;
 
       string leaflist = name + "[" + sizeBranch + "]/" + typeCode;
-      if (added.type == "Float_t")
+      if (added.type == "Float_t") {
         outputTree->Branch(name.c_str(), addedVectorFloat[name], leaflist.c_str());
-      else if (added.type == "Double_t")
+      } else if (added.type == "Double_t") {
         outputTree->Branch(name.c_str(), addedVectorDouble[name], leaflist.c_str());
-      else if (added.type == "Int_t")
+      } else if (added.type == "Int_t") {
         outputTree->Branch(name.c_str(), addedVectorInt[name], leaflist.c_str());
-      else if (added.type == "UInt_t")
+      } else if (added.type == "UInt_t") {
         outputTree->Branch(name.c_str(), addedVectorUInt[name], leaflist.c_str());
-      else if (added.type == "Bool_t")
+      } else if (added.type == "Bool_t") {
         outputTree->Branch(name.c_str(), addedVectorBool[name], leaflist.c_str());
-      else if (added.type == "ULong64_t")
+      } else if (added.type == "ULong64_t") {
         outputTree->Branch(name.c_str(), addedVectorULong[name], leaflist.c_str());
-      else if (added.type == "UChar_t")
+      } else if (added.type == "UChar_t") {
         outputTree->Branch(name.c_str(), addedVectorUChar[name], leaflist.c_str());
-      else if (added.type == "Short_t")
+      } else if (added.type == "Short_t") {
         outputTree->Branch(name.c_str(), addedVectorShort[name], leaflist.c_str());
-      else if (added.type == "UShort_t")
+      } else if (added.type == "UShort_t") {
         outputTree->Branch(name.c_str(), addedVectorUShort[name], leaflist.c_str());
-      else {
+      } else {
         fatal() << "branchesToAdd: internal error - no array branch handler "
                    "for type \""
                 << added.type << "\" (branch \"" << name
@@ -302,7 +294,7 @@ void EventWriter::SetupAddedBranches(string treeName) {
 
 void EventWriter::FillAddedBranches(string treeName) {
   auto it = addedBranchesPerTree.find(treeName);
-  if (it == addedBranchesPerTree.end()) return;
+  if (it == addedBranchesPerTree.end()) { return; }
 
   auto &event = eventReader->currentEvent;
 
@@ -310,15 +302,15 @@ void EventWriter::FillAddedBranches(string treeName) {
     auto &added = addedBranches.at(name);
 
     if (kAddedVectorBranchElementTypes.count(added.type) > 0) {
-      if (added.type == "vector<Float_t>")
+      if (added.type == "vector<Float_t>") {
         FillStdVectorAddedBranch(addedStdVectorFloat, name, event, everSetByApp);
-      else if (added.type == "vector<Double_t>")
+      } else if (added.type == "vector<Double_t>") {
         FillStdVectorAddedBranch(addedStdVectorDouble, name, event, everSetByApp);
-      else if (added.type == "vector<Int_t>")
+      } else if (added.type == "vector<Int_t>") {
         FillStdVectorAddedBranch(addedStdVectorInt, name, event, everSetByApp);
-      else if (added.type == "vector<UInt_t>")
+      } else if (added.type == "vector<UInt_t>") {
         FillStdVectorAddedBranch(addedStdVectorUInt, name, event, everSetByApp);
-      else {
+      } else {
         fatal() << "branchesToAdd: internal error - no vector fill handler for type \"" << added.type << "\" (branch \""
                 << name << "\")" << endl;
         exit(1);
@@ -327,25 +319,25 @@ void EventWriter::FillAddedBranches(string treeName) {
     }
 
     if (added.IsEventLevel()) {
-      if (added.type == "Float_t")
+      if (added.type == "Float_t") {
         FillScalarAddedBranch(addedScalarFloat, name, event, everSetByApp);
-      else if (added.type == "Double_t")
+      } else if (added.type == "Double_t") {
         FillScalarAddedBranch(addedScalarDouble, name, event, everSetByApp);
-      else if (added.type == "Int_t")
+      } else if (added.type == "Int_t") {
         FillScalarAddedBranch(addedScalarInt, name, event, everSetByApp);
-      else if (added.type == "UInt_t")
+      } else if (added.type == "UInt_t") {
         FillScalarAddedBranch(addedScalarUInt, name, event, everSetByApp);
-      else if (added.type == "Bool_t")
+      } else if (added.type == "Bool_t") {
         FillScalarAddedBranch(addedScalarBool, name, event, everSetByApp);
-      else if (added.type == "ULong64_t")
+      } else if (added.type == "ULong64_t") {
         FillScalarAddedBranch(addedScalarULong, name, event, everSetByApp);
-      else if (added.type == "UChar_t")
+      } else if (added.type == "UChar_t") {
         FillScalarAddedBranch(addedScalarUChar, name, event, everSetByApp);
-      else if (added.type == "Short_t")
+      } else if (added.type == "Short_t") {
         FillScalarAddedBranch(addedScalarShort, name, event, everSetByApp);
-      else if (added.type == "UShort_t")
+      } else if (added.type == "UShort_t") {
         FillScalarAddedBranch(addedScalarUShort, name, event, everSetByApp);
-      else {
+      } else {
         fatal() << "branchesToAdd: internal error - no scalar fill handler for "
                    "type \""
                 << added.type << "\" (branch \"" << name << "\")" << endl;
@@ -443,10 +435,10 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
     auto branchPtr = (TBranch *)branchIter;
 
     bool isVectorBranch = eventReader->IsVectorBranch(branchPtr);
-    if (!isVectorBranch) continue;
+    if (!isVectorBranch) { continue; }
 
     string branchName = branchPtr->GetName();
-    if (branchName.rfind(prunedHepMCCollection + "_", 0) != 0) continue;
+    if (branchName.rfind(prunedHepMCCollection + "_", 0) != 0) { continue; }
 
     auto leaf = eventReader->GetLeaf(branchPtr);
     string branchType = leaf->GetTypeName();
@@ -475,16 +467,14 @@ void EventWriter::AddCurrentHepMCevent(string treeName, const vector<int> &keepI
 
 void EventWriter::Save() {
   for (auto &[name, added] : addedBranches) {
-    if (added.hasVarexp || everSetByApp[name]) continue;
+    if (added.hasVarexp || everSetByApp[name]) { continue; }
     warn() << "branchesToAdd: branch \"" << name
            << "\" has an empty varexp and was never set by the app for any event; every entry "
               "holds the default value 0"
            << endl;
   }
 
-  for (auto &[name, tree] : outputTrees) {
-    tree->Write();
-  }
+  for (auto &[name, tree] : outputTrees) { tree->Write(); }
   info() << "Saved output trees to " << outputFilePath << endl;
   outFile->Close();
 }

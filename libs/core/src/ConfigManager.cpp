@@ -13,9 +13,7 @@ using namespace std;
 static ConfigManager *instance = nullptr;
 
 ConfigManager &ConfigManager::getInstanceImpl(std::string *const _configPath) {
-  if (!instance) {
-    instance = new ConfigManager(_configPath);
-  }
+  if (!instance) { instance = new ConfigManager(_configPath); }
   return *instance;
 }
 
@@ -80,20 +78,22 @@ ConfigManager::~ConfigManager() {
 
 int ConfigManager::GetCollectionSize(PyObject *collection) {
   int size = -1;
-  if (PyList_Check(collection))
+  if (PyList_Check(collection)) {
     size = PyList_Size(collection);
-  else if (PyTuple_Check(collection))
+  } else if (PyTuple_Check(collection)) {
     size = PyTuple_Size(collection);
+  }
   return size;
 }
 
 PyObject *ConfigManager::GetItem(PyObject *collection, int index) {
   PyObject *item;
 
-  if (PyList_Check(collection))
+  if (PyList_Check(collection)) {
     item = PyList_GetItem(collection, index);
-  else if (PyTuple_Check(collection))
+  } else if (PyTuple_Check(collection)) {
     item = PyTuple_GetItem(collection, index);
+  }
 
   return item;
 }
@@ -104,9 +104,7 @@ PyObject *ConfigManager::GetItem(PyObject *collection, int index) {
 
 PyObject *ConfigManager::GetPythonValue(string name) {
   PyObject *pythonValue = PyDict_GetItemString(config, name.c_str());
-  if (!pythonValue) {
-    throw Exception(("Could not find a value in python config file: " + name).c_str());
-  }
+  if (!pythonValue) { throw Exception(("Could not find a value in python config file: " + name).c_str()); }
   return pythonValue;
 }
 
@@ -389,9 +387,7 @@ void ConfigManager::GetMap<string, map<string, string>>(string name, map<string,
     Py_ssize_t posInner = 0;
 
     while (PyDict_Next(pValue, &posInner, &pKeyInner, &pValueInner)) {
-      if (PyUnicode_Check(pValueInner)) {
-        tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner);
-      }
+      if (PyUnicode_Check(pValueInner)) { tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner); }
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = tmpMap;
   }
@@ -629,9 +625,7 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histograms
     histParams.max = PyFloat_AsDouble(GetItem(params, 4));
     histParams.directory = "";
     // we treat the directory as optional.
-    if (nParams == 6) {
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5));
-    }
+    if (nParams == 6) { histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5)); }
     title = histParams.collection + "_" + histParams.variable;
     histogramsParams[title] = histParams;
   }
@@ -668,9 +662,7 @@ void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams> &h
       histParams.binEdges.push_back(PyFloat_AsDouble(item));
     }
     histParams.directory = "";
-    if (nParams > 3) {
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3));
-    }
+    if (nParams > 3) { histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3)); }
     title = histParams.collection + "_" + histParams.variable;
 
     histogramsParams[title] = histParams;
@@ -698,9 +690,7 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogra
     histParams.minY = PyFloat_AsDouble(GetItem(params, 5));
     histParams.maxY = PyFloat_AsDouble(GetItem(params, 6));
     histParams.directory = "";
-    if (nParams == 8) {
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 7));
-    }
+    if (nParams == 8) { histParams.directory = PyUnicode_AsUTF8(GetItem(params, 7)); }
 
     histogramsParams[histParams.variable] = histParams;
   }

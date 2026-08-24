@@ -19,15 +19,15 @@ class PhysicsObject {
   // virtual ~PhysicsObject() = default;
   virtual ~PhysicsObject() {
     ForgetCustomValues();
-    for (auto &[name, ptr] : customValuesFloat) delete ptr;
-    for (auto &[name, ptr] : customValuesDouble) delete ptr;
-    for (auto &[name, ptr] : customValuesInt) delete ptr;
-    for (auto &[name, ptr] : customValuesUint) delete ptr;
-    for (auto &[name, ptr] : customValuesBool) delete ptr;
-    for (auto &[name, ptr] : customValuesUlong) delete ptr;
-    for (auto &[name, ptr] : customValuesUchar) delete ptr;
-    for (auto &[name, ptr] : customValuesShort) delete ptr;
-    for (auto &[name, ptr] : customValuesUshort) delete ptr;
+    for (auto &[name, ptr] : customValuesFloat) { delete ptr; }
+    for (auto &[name, ptr] : customValuesDouble) { delete ptr; }
+    for (auto &[name, ptr] : customValuesInt) { delete ptr; }
+    for (auto &[name, ptr] : customValuesUint) { delete ptr; }
+    for (auto &[name, ptr] : customValuesBool) { delete ptr; }
+    for (auto &[name, ptr] : customValuesUlong) { delete ptr; }
+    for (auto &[name, ptr] : customValuesUchar) { delete ptr; }
+    for (auto &[name, ptr] : customValuesShort) { delete ptr; }
+    for (auto &[name, ptr] : customValuesUshort) { delete ptr; }
   }
 
   void Reset();
@@ -43,7 +43,7 @@ class PhysicsObject {
       std::string message = "Trying to access incorrect physics object-level branch: ";
       message += branchName + " from " + originalCollection + " collection";
 
-      if (verbose) fatal(file, function, line) << message << std::endl;
+      if (verbose) { fatal(file, function, line) << message << std::endl; }
       throw Exception(message.c_str());
     }
     return Multitype(this, branchName);
@@ -153,39 +153,39 @@ class PhysicsObject {
   void Set(const std::string &branchName, T value) {
     if constexpr (std::is_same_v<T, Float_t>) {
       auto it = customValuesFloat.find(branchName);
-      if (it != customValuesFloat.end()) delete it->second;
+      if (it != customValuesFloat.end()) { delete it->second; }
       customValuesFloat[branchName] = new Float_t(value);
     } else if constexpr (std::is_same_v<T, Double_t>) {
       auto it = customValuesDouble.find(branchName);
-      if (it != customValuesDouble.end()) delete it->second;
+      if (it != customValuesDouble.end()) { delete it->second; }
       customValuesDouble[branchName] = new Double_t(value);
     } else if constexpr (std::is_same_v<T, Int_t>) {
       auto it = customValuesInt.find(branchName);
-      if (it != customValuesInt.end()) delete it->second;
+      if (it != customValuesInt.end()) { delete it->second; }
       customValuesInt[branchName] = new Int_t(value);
     } else if constexpr (std::is_same_v<T, UInt_t>) {
       auto it = customValuesUint.find(branchName);
-      if (it != customValuesUint.end()) delete it->second;
+      if (it != customValuesUint.end()) { delete it->second; }
       customValuesUint[branchName] = new UInt_t(value);
     } else if constexpr (std::is_same_v<T, Bool_t>) {
       auto it = customValuesBool.find(branchName);
-      if (it != customValuesBool.end()) delete it->second;
+      if (it != customValuesBool.end()) { delete it->second; }
       customValuesBool[branchName] = new Bool_t(value);
     } else if constexpr (std::is_same_v<T, ULong64_t>) {
       auto it = customValuesUlong.find(branchName);
-      if (it != customValuesUlong.end()) delete it->second;
+      if (it != customValuesUlong.end()) { delete it->second; }
       customValuesUlong[branchName] = new ULong64_t(value);
     } else if constexpr (std::is_same_v<T, UChar_t>) {
       auto it = customValuesUchar.find(branchName);
-      if (it != customValuesUchar.end()) delete it->second;
+      if (it != customValuesUchar.end()) { delete it->second; }
       customValuesUchar[branchName] = new UChar_t(value);
     } else if constexpr (std::is_same_v<T, Short_t>) {
       auto it = customValuesShort.find(branchName);
-      if (it != customValuesShort.end()) delete it->second;
+      if (it != customValuesShort.end()) { delete it->second; }
       customValuesShort[branchName] = new Short_t(value);
     } else if constexpr (std::is_same_v<T, UShort_t>) {
       auto it = customValuesUshort.find(branchName);
-      if (it != customValuesUshort.end()) delete it->second;
+      if (it != customValuesUshort.end()) { delete it->second; }
       customValuesUshort[branchName] = new UShort_t(value);
     } else {
       static_assert(!sizeof(T), "PhysicsObject::Set<T>: unsupported type");
@@ -222,40 +222,40 @@ class PhysicsObject {
   bool hasCustomValues = false;
 
   inline UInt_t GetUint(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesUint[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesUint[branchName]; }
     return *customValuesUint[branchName];
   }
   inline Int_t GetInt(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesInt[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesInt[branchName]; }
     return *customValuesInt[branchName];
   }
   inline Bool_t GetBool(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesBool[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesBool[branchName]; }
     return *customValuesBool[branchName];
   }
   inline Float_t GetFloat(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesFloat[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesFloat[branchName]; }
     return *customValuesFloat[branchName];
   }
   inline Double_t GetDouble(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesDouble[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesDouble[branchName]; }
     return *customValuesDouble[branchName];
   }
   inline ULong64_t GetULong(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesUlong[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesUlong[branchName]; }
     return *customValuesUlong[branchName];
   }
   inline UChar_t GetUChar(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesUchar[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesUchar[branchName]; }
     return *customValuesUchar[branchName];
   }
   inline UChar_t GetChar(std::string branchName) { return *valuesChar[branchName]; }
   inline UShort_t GetUShort(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesUshort[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesUshort[branchName]; }
     return *customValuesUshort[branchName];
   }
   inline Short_t GetShort(std::string branchName) {
-    if (valuesTypes.find(branchName) != valuesTypes.end()) return *valuesShort[branchName];
+    if (valuesTypes.find(branchName) != valuesTypes.end()) { return *valuesShort[branchName]; }
     return *customValuesShort[branchName];
   }
 

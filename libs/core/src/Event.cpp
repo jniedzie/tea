@@ -16,9 +16,7 @@ using namespace std;
 Event::Event() {
   try {
     config.GetExtraEventCollections(extraCollectionsDescriptions);
-  } catch (const Exception &e) {
-    hasExtraCollections = false;
-  }
+  } catch (const Exception &e) { hasExtraCollections = false; }
   try {
     config.GetValue("metBranchName", metBranchName);
   } catch (const Exception &e) {
@@ -47,23 +45,17 @@ void Event::UpdateMetVariables(string newBranchName, float pt, float phi) {
 }
 
 string Event::GetUpdatedMetBranchName() {
-  if (!metUpdatedBranchName.empty()) {
-    return metUpdatedBranchName;
-  }
+  if (!metUpdatedBranchName.empty()) { return metUpdatedBranchName; }
   return metBranchName;
 }
 
 float Event::GetMetPt() {
-  if (!metUpdatedBranchName.empty()) {
-    return GetFloat(metUpdatedBranchName + "_pt");
-  }
+  if (!metUpdatedBranchName.empty()) { return GetFloat(metUpdatedBranchName + "_pt"); }
   return GetFloat(metBranchName + "_pt");
 }
 
 float Event::GetMetPhi() {
-  if (!metUpdatedBranchName.empty()) {
-    return GetFloat(metUpdatedBranchName + "_phi");
-  }
+  if (!metUpdatedBranchName.empty()) { return GetFloat(metUpdatedBranchName + "_phi"); }
   return GetFloat(metBranchName + "_phi");
 }
 
@@ -94,7 +86,7 @@ bool Event::checkCuts(shared_ptr<PhysicsObject> physicsObject, string branchName
 }
 
 void Event::AddExtraCollections() {
-  if (!hasExtraCollections) return;
+  if (!hasExtraCollections) { return; }
 
   for (auto &[name, extraCollection] : extraCollectionsDescriptions) {
     auto newCollection = make_shared<PhysicsObjects>();
@@ -114,15 +106,15 @@ void Event::AddExtraCollections() {
 
         for (auto &[branchName, flag] : extraCollection.flags) {
           passes = checkCuts(physicsObject, branchName, {flag, flag});
-          if (!passes) break;
+          if (!passes) { break; }
         }
-        if (!passes) continue;
+        if (!passes) { continue; }
 
         for (auto &[branchName, cuts] : extraCollection.allCuts) {
           passes = checkCuts(physicsObject, branchName, cuts);
-          if (!passes) break;
+          if (!passes) { break; }
         }
-        if (!passes) continue;
+        if (!passes) { continue; }
 
         newCollection->push_back(physicsObject);
       }

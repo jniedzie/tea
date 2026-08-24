@@ -17,7 +17,7 @@ void FillHistograms(const shared_ptr<Event> &event, shared_ptr<HistogramsHandler
   auto bestDimuon = nanoEvent->GetBestDimuonVertex();
 
   // If there's no good dimuon in the event, we can't to fill the histograms.
-  if (!bestDimuon) return;
+  if (!bestDimuon) { return; }
 
   // Then, we can simply fill the histograms with the properties of the best dimuon.
   // The histogram name must match the name defined in the config.
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     auto event = eventReader->GetEvent(iEvent);
 
     // Check if the event passes the basic selection criteria defined in the config
-    if (!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
+    if (!eventProcessor->PassesEventCuts(event, cutFlowManager)) { continue; }
 
     // If the event passed, let's fill the histograms
     FillHistograms(event, histogramsHandler);

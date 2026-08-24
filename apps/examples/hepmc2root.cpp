@@ -75,12 +75,12 @@ class hepmc2root {
 
     while (getline(input_file, line)) {
       get_tokens(line);
-      if (tokens.size() == 0) continue;
-      if (tokens[0] != "E") continue;
+      if (tokens.size() == 0) { continue; }
+      if (tokens[0] != "E") { continue; }
       found_event = true;
       break;
     }
-    if (!found_event) return false;
+    if (!found_event) { return false; }
 
     set_event_variables();
     vertex.clear();
@@ -91,11 +91,11 @@ class hepmc2root {
       get_tokens(line);
       string key = tokens[0];
 
-      if (key == 'C')
+      if (key == 'C') {
         set_xsec_variables();
-      else if (key == 'F')
+      } else if (key == 'F') {
         set_pdf_variables();
-      else if (key == 'V') {
+      } else if (key == 'V') {
         int vbarcode = stoi(tokens[1]);
 
         vertex[vbarcode] = vector<int>(n_daughters, -1);
@@ -126,14 +126,12 @@ class hepmc2root {
               set_particle_variables(index);
               pvertex[index] = stoi(tokens[11]);
 
-              if (ii < vertex[vbarcode].size()) {
-                vertex[vbarcode][ii] = index;
-              }
+              if (ii < vertex[vbarcode].size()) { vertex[vbarcode][ii] = index; }
             }
             for_broken = true;
             break;
           }
-          if (!for_broken) return false;
+          if (!for_broken) { return false; }
         }
       }
 
@@ -142,13 +140,9 @@ class hepmc2root {
           int code = pvertex[index];
 
           if (vertex.find(code) != vertex.end()) {
-            for (int i = 0; i < n_daughters; i++) {
-              event.Particle_d[i][index] = vertex[code][i];
-            }
+            for (int i = 0; i < n_daughters; i++) { event.Particle_d[i][index] = vertex[code][i]; }
           } else {
-            for (int i = 0; i < n_daughters; i++) {
-              event.Particle_d[i][index] = -1;
-            }
+            for (int i = 0; i < n_daughters; i++) { event.Particle_d[i][index] = -1; }
           }
         }
         file->cd();
@@ -156,7 +150,7 @@ class hepmc2root {
         return true;
       }
     }
-    if (for_line_broken) return false;
+    if (for_line_broken) { return false; }
 
     return true;
   }
@@ -227,7 +221,7 @@ class hepmc2root {
     tokens.clear();
     istringstream iss(line);
     string tmp;
-    while (iss >> tmp) tokens.push_back(tmp);
+    while (iss >> tmp) { tokens.push_back(tmp); }
   }
 
   void set_event_variables() {
@@ -282,9 +276,9 @@ int main(int argc, char *argv[]) {
   string file_name = argv[1];
   string output_file_name = "";
 
-  if (argc == 3)
+  if (argc == 3) {
     output_file_name = argv[2];
-  else {
+  } else {
     output_file_name = file_name.substr(file_name.find_last_of("/\\") + 1);
     output_file_name = std::regex_replace(output_file_name, std::regex(".hepmc"), ".root");
   }
@@ -293,7 +287,7 @@ int main(int argc, char *argv[]) {
 
   int ii = 0;
   while (stream->process()) {
-    if (ii % 100 == 0) cout << ii << endl;
+    if (ii % 100 == 0) { cout << ii << endl; }
     ii++;
   }
 

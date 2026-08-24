@@ -92,11 +92,11 @@ int main(int argc, char **argv) {
     cutFlowManager->UpdateCutFlow("initial");
 
     bool passesTrigger = event->Get("HLT_IsoMu27");
-    if (!passesTrigger) continue;
+    if (!passesTrigger) { continue; }
     cutFlowManager->UpdateCutFlow("trigger");
 
     int nMuons = event->GetCollection("Muon")->size();
-    if (nMuons < 2) continue;
+    if (nMuons < 2) { continue; }
     cutFlowManager->UpdateCutFlow("nMuons");
 
     // If you want to store this event in the output tree, add it to the eventWriter

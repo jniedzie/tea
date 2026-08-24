@@ -26,36 +26,36 @@ float NanoGenParticle::GetDxy(float pv_x, float pv_y) {
 }
 
 bool NanoGenParticle::IsGoodBottomQuark(shared_ptr<NanoGenParticle> mother) {
-  if (!IsFirstCopy()) return false;
+  if (!IsFirstCopy()) { return false; }
   return abs(mother->GetPdgId()) == 6;  // mother must be a top
 }
 
 bool NanoGenParticle::IsGoodUdscQuark(shared_ptr<NanoGenParticle> mother) {
-  if (!IsFirstCopy()) return false;
+  if (!IsFirstCopy()) { return false; }
   return abs(mother->GetPdgId()) == 24;  // mother must be a W
 }
 
 bool NanoGenParticle::IsGoodLepton(shared_ptr<NanoGenParticle> mother) {
-  if (!IsFirstCopy()) return false;
+  if (!IsFirstCopy()) { return false; }
 
   // we don't want leptons from some intermediate W's
-  if (!mother->IsLastCopy()) return false;
+  if (!mother->IsLastCopy()) { return false; }
 
   // mother must be a W
-  if (abs(mother->GetPdgId()) != 24) return false;
+  if (abs(mother->GetPdgId()) != 24) { return false; }
 
   return true;
 }
 
 bool NanoGenParticle::IsGoodParticleWithID(int pdgId) {
-  if (!IsFirstCopy()) return false;
-  if (abs(GetPdgId()) != pdgId) return false;
+  if (!IsFirstCopy()) { return false; }
+  if (abs(GetPdgId()) != pdgId) { return false; }
 
   return true;
 }
 
 bool NanoGenParticle::IsJet() {
-  if (GetPdgId() == 21 || (abs(GetPdgId()) >= 1 && abs(GetPdgId()) <= 5)) return true;
+  if (GetPdgId() == 21 || (abs(GetPdgId()) >= 1 && abs(GetPdgId()) <= 5)) { return true; }
   return false;
 }
 
@@ -69,7 +69,7 @@ bool NanoGenParticle::IsMuon() {
 
 shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObjects> genParticles) {
   int motherIndex = GetMotherIndex();
-  if (motherIndex < 0) return nullptr;
+  if (motherIndex < 0) { return nullptr; }
   auto mother = make_shared<NanoGenParticle>(genParticles->at(motherIndex));
   int pdgId = abs(GetPdgId());
 
@@ -78,7 +78,7 @@ shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObje
   while (abs(mother->GetPdgId()) == pdgId) {
     firstCopy = mother;
     motherIndex = mother->GetMotherIndex();
-    if (motherIndex < 0) return nullptr;
+    if (motherIndex < 0) { return nullptr; }
     mother = make_shared<NanoGenParticle>(genParticles->at(motherIndex));
   }
   return firstCopy;
@@ -86,7 +86,7 @@ shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObje
 
 bool NanoGenParticle::IsMotherJPsi(const shared_ptr<PhysicsObjects> genParticles) {
   Short_t motherIndex = Get("genPartIdxMother");
-  if (motherIndex < 0) return false;
+  if (motherIndex < 0) { return false; }
   auto mother = genParticles->at(motherIndex);
   int motherPdgId = mother->Get("pdgId");
   return (motherPdgId == 443);
