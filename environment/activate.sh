@@ -108,8 +108,12 @@ tea_env_ensure_micromamba() (
   release_tag="2.8.1-0"
   platform="$1"
 
-  available_tool="$(type -P micromamba || true)"
-  if [[ -n "${available_tool}" ]] && "${available_tool}" --version >/dev/null 2>&1; then
+  available_tool="$(command -v micromamba 2>/dev/null || true)"
+  if [[ -n "${available_tool}" ]] && [[ -x "${available_tool}" ]] &&
+    "${available_tool}" --version >/dev/null 2>&1; then
+    if [[ "${available_tool}" != /* ]]; then
+      available_tool="$(cd -P "$(dirname "${available_tool}")" && pwd)/$(basename "${available_tool}")"
+    fi
     printf '%s\n' "${available_tool}"
     exit 0
   fi
