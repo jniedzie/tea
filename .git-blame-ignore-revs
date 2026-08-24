@@ -11,3 +11,6 @@
 
 # Re-apply repo-wide formatting after merging main (issue #118)
 86a9fc0e832c08c02b3a48570d39fe1e83388735
+
+# Re-apply repo-wide formatting after config tweaks (issue #118)
+e47fda3c56d991b506b25df357424981cbaffe13
