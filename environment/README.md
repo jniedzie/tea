@@ -1,7 +1,8 @@
 # Dependency lock maintenance
 
 Users do not need `conda-lock`; `build.sh` and `setup.sh` consume the committed
-explicit locks through a pinned micromamba executable.
+explicit locks with an existing `micromamba` from `PATH`, when available. If it
+is not installed, Tea downloads and verifies its pinned micromamba executable.
 
 To intentionally update the dependency set, install `conda-lock`, edit
 `environment.yml`, and regenerate every supported platform from this directory:

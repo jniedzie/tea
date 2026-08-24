@@ -102,11 +102,17 @@ tea_env_wait_for_lock() {
 tea_env_ensure_micromamba() (
   set -euo pipefail
 
-  local version release_tag platform checksum url tool_dir tool_path
+  local version release_tag platform checksum url tool_dir tool_path available_tool
   local lock_dir temporary actual_checksum lock_status
   version="2.8.1"
   release_tag="2.8.1-0"
   platform="$1"
+
+  available_tool="$(type -P micromamba || true)"
+  if [[ -n "${available_tool}" ]] && "${available_tool}" --version >/dev/null 2>&1; then
+    printf '%s\n' "${available_tool}"
+    exit 0
+  fi
 
   case "${platform}" in
     linux-64)
