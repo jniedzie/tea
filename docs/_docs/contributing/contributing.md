@@ -21,38 +21,61 @@ Run the relevant application on a small ROOT file. Plotting and documentation ch
 
 ## Formatting
 
-C++ (`clang-format`) and Python (`ruff format`) are enforced via [pre-commit](https://pre-commit.com/), both locally (once installed) and in CI — the `lint` job runs `pre-commit run --all-files` regardless of whether the local hook is enabled.
+C++ (`clang-format`) and Python (`ruff format`) are enforced through [pre-commit](https://pre-commit.com/), both locally once the hook is enabled and in CI, where the `lint` job runs `pre-commit run --all-files` regardless of the local setup.
 
-These tools are not provisioned by `install.sh`/`build.sh`, so install them yourself:
+`pre-commit` and `ruff` belong to the locked environment, so activating it is the whole installation step:
 
-- [ruff](https://docs.astral.sh/ruff/installation/)
-- [pre-commit](https://pre-commit.com/#install)
-- `clang-format`: ships with [LLVM](https://releases.llvm.org/download.html), or install via your package manager, e.g. `brew install clang-format`, `apt install clang-format`, `conda install -c conda-forge clang-format`.
+```bash
+source tea/setup.sh
+```
 
-Once installed, enable the hook once per checkout from the repo root:
+A checkout that predates their addition to the lock files picks them up on the next activation, because tea recreates an environment whenever the lock it derives from changes.
+
+`clang-format` is deliberately absent from that environment. The hook carries its own copy, pinned in `.pre-commit-config.yaml` and fetched into a per-user cache on first use. Do not add `clang-format` to the environment to satisfy the hook: keeping it out of the dependency solve is what allows the formatter to be updated without regard to the ROOT version.
+
+Enable the hook once per checkout, from the root of the `tea` repository:
 
 ```bash
 pre-commit install
 ```
 
-After that, every commit auto-formats staged files. Run it on demand (what CI does) with:
+Each commit then formats the staged files. The first run downloads the pinned hook tools; later runs reuse the cache and need no network access. Run the same checks on demand, as CI does, with:
 
 ```bash
 pre-commit run --all-files
 ```
 
-### VS Code
+The configuration lives in the `tea` repository, so these hooks apply to commits made inside `tea/`. An analysis repository that wants equivalent checks on its own `apps/` and `configs/` needs its own `.pre-commit-config.yaml`.
 
-No editor config ships with the repo, so set this up yourself:
+When updating a formatter, change the pinned `rev` in `.pre-commit-config.yaml`, and keep the `ruff` version in `environment/environment.yml` equal to the `ruff-pre-commit` `rev` so that the environment and the hook cannot disagree.
 
-- Python: install the `charliermarsh.ruff` extension — it auto-discovers `ruff.toml`.
-- C++: install `ms-vscode.cpptools` and set `"C_Cpp.formatting": "clangFormat"` and `"C_Cpp.clang_format_style": "file"`, or install `xaver.clang-format` instead — both pick up `.clang-format` from the repo root.
+### Editor integration
+
+No editor configuration ships with the repository.
+
+- Python: install the `charliermarsh.ruff` extension. It discovers `ruff.toml` from the repository root, and the environment provides a `ruff` of the pinned version, so the editor and the hook agree.
+- C++: install `ms-vscode.cpptools` and set `"C_Cpp.formatting": "clangFormat"` and `"C_Cpp.clang_format_style": "file"`, or install `xaver.clang-format` instead. Both read `.clang-format` from the repository root. Since `clang-format` is not on `PATH`, point the extension at the binary the hook installed:
+
+```bash
+ls -d ~/.cache/pre-commit/repo*/py_env-*/bin/clang-format
+```
+
+Using that path makes the editor and the hook the same executable.
+
 - Format-on-save, in your own `settings.json`:
 
 ```json
 {
   "editor.formatOnSave": true
 }
+```
+
+### A hook fails with a bad interpreter
+
+Hooks build a small virtual environment from whichever Python ran `pre-commit`. Inside the tea environment that interpreter lives under `TEA_HOME`, where environments are keyed by the contents of the lock files. Changing a lock retires the previous environment, which can leave a cached hook referring to an interpreter that no longer exists. Discard the cached hook environments and let the next run rebuild them:
+
+```bash
+pre-commit clean
 ```
 
 ## Documentation
