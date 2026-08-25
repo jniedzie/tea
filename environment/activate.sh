@@ -3,6 +3,31 @@
 # Internal environment bootstrap used by build.sh and setup.sh. This file is
 # sourced; it intentionally does not provide a separate user-facing command.
 
+if [ -n "${ZSH_VERSION:-}" ]; then
+  _tea_activate_self="${(%):-%x}"
+elif [ -n "${BASH_SOURCE+x}" ]; then
+  _tea_activate_self="${BASH_SOURCE[0]}"
+else
+  echo "tea: unsupported shell; source this from bash or zsh" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+TEA_ENV_FRAMEWORK_DIR="$(cd "$(dirname "${_tea_activate_self}")/.." && pwd)" || {
+  echo "tea: unable to locate the tea framework directory" >&2
+  return 1 2>/dev/null || exit 1
+}
+export TEA_ENV_FRAMEWORK_DIR
+unset _tea_activate_self
+
+# Name of the shell being used, in the spelling micromamba expects.
+tea_env_shell_name() {
+  if [ -n "${ZSH_VERSION:-}" ]; then
+    printf '%s\n' zsh
+  else
+    printf '%s\n' bash
+  fi
+}
+
 tea_env_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | awk '{print $1}'
@@ -33,7 +58,7 @@ tea_env_platform() {
 }
 
 tea_env_framework_dir() {
-  cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
+  printf '%s\n' "${TEA_ENV_FRAMEWORK_DIR}"
 }
 
 tea_env_config_file() {
@@ -262,7 +287,8 @@ tea_env_activate() {
   tea_env_prepare || return 1
   tea_env_ensure || return 1
   activation_code="$(MAMBA_CHANGEPS1=false MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
-    "${TEA_MICROMAMBA}" shell activate --shell bash --prefix "${TEA_ENV_PREFIX}")" || return 1
+    "${TEA_MICROMAMBA}" shell activate --shell "$(tea_env_shell_name)" \
+    --prefix "${TEA_ENV_PREFIX}")" || return 1
 
   # Conda-forge activation hooks are not consistently safe under `set -u`.
   # Restore the caller's nounset setting immediately after evaluating them.

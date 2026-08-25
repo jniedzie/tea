@@ -46,8 +46,8 @@ source tea/setup.sh
 
 The activated environment is shown as `(tea)`. Its packages still live in a
 versioned shared directory, but that internal path and lock hash are not used
-as the shell-facing name. Tea preserves the existing Bash prompt verbatim,
-including colours and multiline formatting, and only prepends `(tea) `.
+as the shell-facing name. Tea preserves the existing prompt verbatim, including
+colours and multiline formatting, and only prepends `(tea) `.
 
 Build after changing C++ or adding files:
 
@@ -55,9 +55,10 @@ Build after changing C++ or adding files:
 source tea/build.sh
 ```
 
-Both scripts recreate a missing shared environment. After either build script
-or setup script has been sourced, applications continue to run normally from
-`bin/`:
+Both scripts are sourced, and both support Bash and Zsh — which matters on
+macOS, where Zsh is the default login shell. They recreate a missing shared
+environment. After either build script or setup script has been sourced,
+applications continue to run normally from `bin/`:
 
 ```bash
 cd bin

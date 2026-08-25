@@ -1,17 +1,29 @@
 #!/bin/bash
 
 _build_sh_sourced=0
-[[ "${BASH_SOURCE[0]}" != "$0" ]] && _build_sh_sourced=1
+if [ -n "${ZSH_VERSION:-}" ]; then
+  case "${ZSH_EVAL_CONTEXT:-}" in
+    *:file*) _build_sh_sourced=1 ;;
+  esac
+  _build_sh_self="${(%):-%x}"
+elif [ -n "${BASH_SOURCE+x}" ]; then
+  [[ "${BASH_SOURCE[0]}" != "$0" ]] && _build_sh_sourced=1
+  _build_sh_self="${BASH_SOURCE[0]}"
+else
+  echo "tea: unsupported shell; use bash or zsh" >&2
+  # `return` when sourced, `exit` when executed: never kill the caller's shell.
+  return 1 2>/dev/null || exit 1
+fi
 
 _build_sh_restore_history=0
-if [[ "${_build_sh_sourced}" -eq 1 && $- == *i* ]]; then
+if [[ "${_build_sh_sourced}" -eq 1 && -n "${BASH_VERSION:-}" && $- == *i* ]]; then
   if set -o | grep -q '^history[[:space:]]*on$'; then
     _build_sh_restore_history=1
     set +o history
   fi
 fi
 
-_build_sh_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_build_sh_script_dir="$(cd "$(dirname "${_build_sh_self}")" && pwd)"
 # shellcheck source=environment/activate.sh
 source "${_build_sh_script_dir}/environment/activate.sh"
 if tea_env_activate; then
@@ -28,8 +40,7 @@ fi
 build_main() (
   set -euo pipefail
 
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  repo_root="$(cd "${script_dir}/.." && pwd)"
+  repo_root="$(cd "${_build_sh_script_dir}/.." && pwd)"
   build_dir="${repo_root}/build"
   bin_dir="${repo_root}/bin"
 
@@ -67,8 +78,13 @@ build_main() (
 
   cmake_args=("${repo_root}")
   if command -v correction >/dev/null 2>&1; then
-    read -r -a correction_cmake_args <<< "$(PYTHONNOUSERSITE=1 correction config --cmake)"
-    cmake_args=("${correction_cmake_args[@]}" "${cmake_args[@]}")
+    correction_cmake_args=()
+    while IFS= read -r correction_cmake_arg; do
+      [[ -n "${correction_cmake_arg}" ]] && correction_cmake_args+=("${correction_cmake_arg}")
+    done < <(PYTHONNOUSERSITE=1 correction config --cmake | tr '[:space:]' '\n')
+    if [[ "${#correction_cmake_args[@]}" -gt 0 ]]; then
+      cmake_args=("${correction_cmake_args[@]}" "${cmake_args[@]}")
+    fi
   fi
 
   if ! cmake "${cmake_args[@]}"; then
@@ -98,9 +114,9 @@ unset -f build_main
 
 if [[ "${_build_sh_sourced}" -eq 1 ]]; then
   [[ "${_build_sh_restore_history}" -eq 1 ]] && set -o history
-  unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir
+  unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir _build_sh_self
   return "${_build_sh_status}"
 fi
 
-unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir
+unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir _build_sh_self
 exit "${_build_sh_status}"
