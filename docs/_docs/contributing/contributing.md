@@ -29,23 +29,17 @@ C++ (`clang-format`) and Python (`ruff format`) are enforced through [pre-commit
 source tea/setup.sh
 ```
 
-A checkout that predates their addition to the lock files picks them up on the next activation, because tea recreates an environment whenever the lock it derives from changes.
-
-`clang-format` is deliberately absent from that environment. The hook carries its own copy, pinned in `.pre-commit-config.yaml` and fetched into a per-user cache on first use. Do not add `clang-format` to the environment to satisfy the hook: keeping it out of the dependency solve is what allows the formatter to be updated without regard to the ROOT version.
-
 Enable the hook once per checkout, from the root of the `tea` repository:
 
 ```bash
 pre-commit install
 ```
 
-Each commit then formats the staged files. The first run downloads the pinned hook tools; later runs reuse the cache and need no network access. Run the same checks on demand, as CI does, with:
+Each commit then formats the staged files. If desired, run the CI checks on demand with:
 
 ```bash
 pre-commit run --all-files
 ```
-
-The configuration lives in the `tea` repository, so these hooks apply to commits made inside `tea/`. An analysis repository that wants equivalent checks on its own `apps/` and `configs/` needs its own `.pre-commit-config.yaml`.
 
 When updating a formatter, change the pinned `rev` in `.pre-commit-config.yaml`, and keep the `ruff` version in `environment/environment.yml` equal to the `ruff-pre-commit` `rev` so that the environment and the hook cannot disagree.
 
