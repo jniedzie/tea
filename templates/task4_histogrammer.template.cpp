@@ -3,13 +3,12 @@
 #include "EventProcessor.hpp"
 #include "EventReader.hpp"
 #include "ExtensionsHelpers.hpp"
-#include "HistogramsHandler.hpp"
 #include "HistogramsFiller.hpp"
+#include "HistogramsHandler.hpp"
 
 using namespace std;
 
 void FillHistograms(const shared_ptr<Event> &event, shared_ptr<HistogramsHandler> &histogramsHandler) {
-  
   // A generic event can be converted to a NanoEvent, which represents an event in the nanoAOD format.
   // It will provide us with some additional functionality, making out life much easier.
   auto nanoEvent = asNanoEvent(event);
@@ -18,7 +17,7 @@ void FillHistograms(const shared_ptr<Event> &event, shared_ptr<HistogramsHandler
   auto bestDimuon = nanoEvent->GetBestDimuonVertex();
 
   // If there's no good dimuon in the event, we can't to fill the histograms.
-  if (!bestDimuon) return;
+  if (!bestDimuon) { return; }
 
   // Then, we can simply fill the histograms with the properties of the best dimuon.
   // The histogram name must match the name defined in the config.
@@ -44,13 +43,12 @@ int main(int argc, char **argv) {
 
   // Start the event loop (the number of events is defined in the config)
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
-    
     // Get current event
     auto event = eventReader->GetEvent(iEvent);
 
     // Check if the event passes the basic selection criteria defined in the config
-    if (!eventProcessor->PassesEventCuts(event, cutFlowManager)) continue;
-    
+    if (!eventProcessor->PassesEventCuts(event, cutFlowManager)) { continue; }
+
     // If the event passed, let's fill the histograms
     FillHistograms(event, histogramsHandler);
   }
@@ -58,7 +56,7 @@ int main(int argc, char **argv) {
   // After the event loop, let's fill the cut flow histograms and save the output
   histogramsFiller->FillCutFlow(cutFlowManager);
   histogramsHandler->SaveHistograms();
-  
+
   // Finally, let's print the cut flow and the summary of logs
   cutFlowManager->Print();
   Logger::GetInstance().Print();

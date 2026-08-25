@@ -5,24 +5,24 @@
 #ifndef EventWriter_hpp
 #define EventWriter_hpp
 
+#include "ConfigManager.hpp"
 #include "Event.hpp"
 #include "EventReader.hpp"
 #include "Helpers.hpp"
-#include "ConfigManager.hpp"
 
 class EventWriter {
-public:
+ public:
   EventWriter(const std::shared_ptr<EventReader> &eventReader_);
   ~EventWriter();
 
   void AddCurrentEvent(std::string treeName);
-  
+
   // With HepMC events, you can specify which particles to keep.
   void AddCurrentHepMCevent(std::string treeName, const std::vector<int> &keepIndices);
 
   void Save();
 
-private:
+ private:
   struct AddedBranch {
     std::string type;
     std::string collection;

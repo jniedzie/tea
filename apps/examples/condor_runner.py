@@ -32,7 +32,7 @@ def main():
   # hack the xauth issue
   os.system('echo "export DISPLAY=${DISPLAY}" > ${JOB_WORKING_DIR}/.display')
   os.system('echo "export TERM=${TERM}" >> ${JOB_WORKING_DIR}/.display')
-  os.system('export XAUTHORITY=${JOB_WORKING_DIR}/.Xauthority')
+  os.system("export XAUTHORITY=${JOB_WORKING_DIR}/.Xauthority")
   os.system('/usr/bin/xauth "$@" </dev/stdin')
 
   args, extra_args = get_args()
@@ -83,11 +83,13 @@ def main():
 
   args_dict = {}
   for i in range(0, len(extra_args), 2):
-    args_dict[extra_args[i]] = extra_args[i+1]
+    args_dict[extra_args[i]] = extra_args[i + 1]
 
   extra_args = " ".join([f"{key} {value}" for key, value in args_dict.items()])
 
-  command_for_file = f"{command} --input_path {input_file_path} {output_trees_file_path} {output_hists_file_path} {extra_args}"
+  command_for_file = (
+    f"{command} --input_path {input_file_path} {output_trees_file_path} {output_hists_file_path} {extra_args}"
+  )
 
   info(f"\n\nExecuting {command_for_file=}")
   os.system(command_for_file)

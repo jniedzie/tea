@@ -75,6 +75,18 @@ jobs:
           tea_env_activate
           ctest --test-dir build --output-on-failure
 
+  lint:
+    name: Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: pre-commit/action@v3.0.1
+
   macos:
     name: macOS (Apple Silicon)
     runs-on: macos-14

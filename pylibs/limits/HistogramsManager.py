@@ -76,8 +76,10 @@ class HistogramsManager:
         n_entries = hist.hist.GetEntries()
         if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
           warn(
-              (f"Histogram {sample.name} has less than "
-              f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded.")
+            (
+              f"Histogram {sample.name} has less than "
+              f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded."
+            )
           )
           continue
         background_histosamples[sample.name] = (hist, sample)
@@ -88,13 +90,13 @@ class HistogramsManager:
       obs_histosample = self.__get_backgrounds_sum_hist(background_histosamples)
 
     self.datacardsProcessor.create_new_datacard(
-        hist_name,
-        obs_histosample,
-        background_histosamples,
-        signal_histosample,
-        self.config.nuisances,
-        self.input_files,
-        self.config.add_uncertainties_on_zero
+      hist_name,
+      obs_histosample,
+      background_histosamples,
+      signal_histosample,
+      self.config.nuisances,
+      self.input_files,
+      self.config.add_uncertainties_on_zero,
     )
 
   def __get_backgrounds_sum_hist(self, hists):
@@ -116,16 +118,16 @@ class HistogramsManager:
 
     if hasattr(self.config, "do_abcd") and self.config.do_abcd:
       hist = Histogram2D(
-          name="data_obs",
-          norm_type=NormalizationType.to_lumi,
-          x_rebin=self.config.rebin_2D,
-          y_rebin=self.config.rebin_2D,
+        name="data_obs",
+        norm_type=NormalizationType.to_lumi,
+        x_rebin=self.config.rebin_2D,
+        y_rebin=self.config.rebin_2D,
       )
     else:
       hist = Histogram(
-          name="data_obs",
-          norm_type=NormalizationType.to_lumi,
-          rebin=self.config.rebin if hasattr(self.config, "rebin") else 1,
+        name="data_obs",
+        norm_type=NormalizationType.to_lumi,
+        rebin=self.config.rebin if hasattr(self.config, "rebin") else 1,
       )
 
     sample = Sample(name="bkg", type=SampleType.background)
@@ -142,11 +144,10 @@ class HistogramsManager:
 
     return hists_dict
 
-  def __get_file(self,sample):
+  def __get_file(self, sample):
     try:
-        file = ROOT.TFile.Open(sample.file_path, "READ")
+      file = ROOT.TFile.Open(sample.file_path, "READ")
     except OSError:
       fatal(f"Couldn't open file {sample.file_path}")
       exit(1)
     return file
-  

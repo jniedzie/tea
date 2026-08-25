@@ -1,15 +1,15 @@
-#include "ScaleFactorsManager.hpp"
 #include "NanoMuon.hpp"
 
 #include "ConfigManager.hpp"
 #include "ExtensionsHelpers.hpp"
+#include "ScaleFactorsManager.hpp"
 
 using namespace std;
 
 NanoMuon::NanoMuon(shared_ptr<PhysicsObject> physicsObject_) : physicsObject(physicsObject_) {}
 
 bool NanoMuon::IsTight() {
-  if (IsDSA()) return false;
+  if (IsDSA()) { return false; }
   return physicsObject->Get("tightId");
 }
 
@@ -19,120 +19,110 @@ TLorentzVector NanoMuon::GetFourVector() {
   return v;
 }
 
-map<string,float> NanoMuon::GetEmptyScaleFactors(string nameID, string nameIso, string nameReco, string year) {
+map<string, float> NanoMuon::GetEmptyScaleFactors(string nameID, string nameIso, string nameReco, string year) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  
-  map<string,float> emptySF;
-  map<string,float> idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
-  map<string,float> isoSF = scaleFactorsManager.GetMuonScaleFactors(nameIso, fabs(GetEta()), GetPt());
-  map<string,float> recoSF;
+
+  map<string, float> emptySF;
+  map<string, float> idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
+  map<string, float> isoSF = scaleFactorsManager.GetMuonScaleFactors(nameIso, fabs(GetEta()), GetPt());
+  map<string, float> recoSF;
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
     recoSF = scaleFactorsManager.GetMuonScaleFactors(nameReco, fabs(GetEta()), GetPt());
-    for (auto &[name, weight] : recoSF) {
-      emptySF[name] = 1.0;
-    }
+    for (auto &[name, weight] : recoSF) { emptySF[name] = 1.0; }
   }
-  for (auto &[name, weight] : idSF) {
-    emptySF[name] = 1.0;
-  }
-  for (auto &[name, weight] : isoSF) {
-    emptySF[name] = 1.0;
-  }
+  for (auto &[name, weight] : idSF) { emptySF[name] = 1.0; }
+  for (auto &[name, weight] : isoSF) { emptySF[name] = 1.0; }
   return emptySF;
 }
 
-
-map<string,float> NanoMuon::GetScaleFactors(string nameID, string nameIso, string nameReco, string year) {
-  if (!scaleFactor.empty()) return scaleFactor;
+map<string, float> NanoMuon::GetScaleFactors(string nameID, string nameIso, string nameReco, string year) {
+  if (!scaleFactor.empty()) { return scaleFactor; }
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
-  
-  map<string,float> idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
-  map<string,float> isoSF = scaleFactorsManager.GetMuonScaleFactors(nameIso, fabs(GetEta()), GetPt());
+
+  map<string, float> idSF = scaleFactorsManager.GetMuonScaleFactors(nameID, fabs(GetEta()), GetPt());
+  map<string, float> isoSF = scaleFactorsManager.GetMuonScaleFactors(nameIso, fabs(GetEta()), GetPt());
   // No Muon Reco SF for Run 3
-  map<string,float> recoSF;
+  map<string, float> recoSF;
   if (year == "2016preVFP" || year == "2016postVFP" || year == "2017" || year == "2018") {
     recoSF = scaleFactorsManager.GetMuonScaleFactors(nameReco, fabs(GetEta()), GetPt());
+  } else {
+    recoSF = {{"systematic", 1.0}};
   }
-  else recoSF = {{"systematic", 1.0}};
-  
+
   scaleFactor["systematic"] = recoSF["systematic"] * idSF["systematic"] * isoSF["systematic"];
   for (auto &[name, weight] : recoSF) {
-    if (name == "systematic") continue;
+    if (name == "systematic") { continue; }
     scaleFactor[name] = recoSF[name] * idSF["systematic"] * isoSF["systematic"];
   }
   for (auto &[name, weight] : idSF) {
-    if (name == "systematic") continue;
+    if (name == "systematic") { continue; }
     scaleFactor[name] = recoSF["systematic"] * idSF[name] * isoSF["systematic"];
   }
   for (auto &[name, weight] : isoSF) {
-    if (name == "systematic") continue;
+    if (name == "systematic") { continue; }
     scaleFactor[name] = recoSF["systematic"] * idSF["systematic"] * isoSF[name];
   }
 
   return scaleFactor;
 }
 
-map<string,float> NanoMuon::GetEmptyDSAScaleFactors(string nameID, string nameReco_cosmic) {
+map<string, float> NanoMuon::GetEmptyDSAScaleFactors(string nameID, string nameReco_cosmic) {
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   vector<CorrectionArgType> args_jpsi = {(double)fabs(GetEta()), (double)GetPt()};
   string nameID_jpsi = nameID;
-  map<string,float> idSF_jpsi = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_jpsi, args_jpsi);
+  map<string, float> idSF_jpsi = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_jpsi, args_jpsi);
 
   vector<CorrectionArgType> args_reco = {};
-  map<string,float> recoSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameReco_cosmic, args_reco);
+  map<string, float> recoSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameReco_cosmic, args_reco);
 
-  map<string,float> emptySF;
-  for (auto &[name, weight] : idSF_jpsi) {
-    emptySF[name] = 1.0;
-  }
-  for (auto &[name, weight] : recoSF) {
-    emptySF[name] = 1.0;  
-  }
+  map<string, float> emptySF;
+  for (auto &[name, weight] : idSF_jpsi) { emptySF[name] = 1.0; }
+  for (auto &[name, weight] : recoSF) { emptySF[name] = 1.0; }
   return emptySF;
 }
 
-map<string,float> NanoMuon::GetDSAScaleFactors(string nameID, string nameReco_cosmic) {
-  if (!scaleFactor.empty()) return scaleFactor;
+map<string, float> NanoMuon::GetDSAScaleFactors(string nameID, string nameReco_cosmic) {
+  if (!scaleFactor.empty()) { return scaleFactor; }
 
   auto &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   vector<CorrectionArgType> args_jpsi = {(double)fabs(GetEta()), (double)GetPt()};
   string nameID_jpsi = nameID;
-  map<string,float> idSF_jpsi = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_jpsi, args_jpsi);
+  map<string, float> idSF_jpsi = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_jpsi, args_jpsi);
 
   vector<CorrectionArgType> args_cosmic = {(double)fabs((float)Get("dxyPVTraj"))};
   string nameID_cosmic = nameID + "_cosmic";
-  map<string,float> idSF_cosmic = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_cosmic, args_cosmic);
+  map<string, float> idSF_cosmic = scaleFactorsManager.GetDSAMuonScaleFactors(nameID_cosmic, args_cosmic);
 
-  map<string,float> idSF;
+  map<string, float> idSF;
   idSF["systematic"] = idSF_jpsi["systematic"] * idSF_cosmic["systematic"];
   for (auto &[name_jpsi, weight] : idSF_jpsi) {
-    if (name_jpsi == "systematic") continue;
+    if (name_jpsi == "systematic") { continue; }
     string variation = name_jpsi.substr(nameID_jpsi.size() + 1);
     string name_cosmic = nameID_cosmic + "_" + variation;
     idSF[name_jpsi] = idSF_jpsi[name_jpsi] * idSF_cosmic[name_cosmic];
   }
   vector<CorrectionArgType> args_reco = {};
-  map<string,float> recoSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameReco_cosmic, args_reco);
+  map<string, float> recoSF = scaleFactorsManager.GetDSAMuonScaleFactors(nameReco_cosmic, args_reco);
 
   scaleFactor["systematic"] = idSF["systematic"] * recoSF["systematic"];
   for (auto &[name, weight] : idSF) {
-    if (name == "systematic") continue;
+    if (name == "systematic") { continue; }
     scaleFactor[name] = idSF[name] * recoSF["systematic"];
   }
   for (auto &[name, weight] : recoSF) {
-    if (name == "systematic") continue;
+    if (name == "systematic") { continue; }
     scaleFactor[name] = idSF["systematic"] * recoSF[name];
   }
   return scaleFactor;
 }
 
-
 MuonID NanoMuon::GetID() {
   UChar_t highPtID = Get("highPtId");
-  return MuonID(Get("softId"), highPtID == 2, highPtID == 1, Get("tightId"), Get("mediumPromptId"), Get("mediumId"), Get("looseId"));
+  return MuonID(Get("softId"), highPtID == 2, highPtID == 1, Get("tightId"), Get("mediumPromptId"), Get("mediumId"),
+                Get("looseId"));
 }
 
 MuonIso NanoMuon::GetIso() {
@@ -143,36 +133,35 @@ MuonIso NanoMuon::GetIso() {
 
 int NanoMuon::GetMatchIdxForNthBestMatch(int N) {
   string idxString;
-  if (IsDSA()) idxString = "muonMatch" + to_string(N) + "idx";
-  if (!IsDSA()) idxString = "dsaMatch" + to_string(N) + "idx";
+  if (IsDSA()) { idxString = "muonMatch" + to_string(N) + "idx"; }
+  if (!IsDSA()) { idxString = "dsaMatch" + to_string(N) + "idx"; }
   return GetAs<int>(idxString);
 }
 
 int NanoMuon::GetMatchesForNthBestMatch(int N) {
   string matchString;
-  if (IsDSA()) matchString = "muonMatch" + to_string(N);
-  if (!IsDSA()) matchString = "dsaMatch" + to_string(N);
+  if (IsDSA()) { matchString = "muonMatch" + to_string(N); }
+  if (!IsDSA()) { matchString = "dsaMatch" + to_string(N); }
   return GetAs<int>(matchString);
 }
 
 vector<int> NanoMuon::GetMatchedPATMuonIndices(float minMatchRatio) {
   vector<int> patIndices;
-  if (!IsDSA()) return patIndices;
+  if (!IsDSA()) { return patIndices; }
 
   float nSegments = Get("nSegments");
   for (int i = 1; i <= 5; i++) {
     float ratio_tmp = GetMatchesForNthBestMatch(i) / nSegments;
 
-    if(ratio_tmp >= minMatchRatio) {
-      patIndices.push_back(GetMatchIdxForNthBestMatch(i));
-    }
+    if (ratio_tmp >= minMatchRatio) { patIndices.push_back(GetMatchIdxForNthBestMatch(i)); }
   }
   return patIndices;
 }
 
-bool NanoMuon::HasPATSegmentMatch(shared_ptr<NanoMuons> patMuonCollection, shared_ptr<Event> event, float minMatchRatio) {
+bool NanoMuon::HasPATSegmentMatch(shared_ptr<NanoMuons> patMuonCollection, shared_ptr<Event> event,
+                                  float minMatchRatio) {
   // Implemented for DSA muons
-  if (!IsDSA()) return false;
+  if (!IsDSA()) { return false; }
 
   float nSegments = Get("nSegments");
   bool matchFound = false;
@@ -180,7 +169,7 @@ bool NanoMuon::HasPATSegmentMatch(shared_ptr<NanoMuons> patMuonCollection, share
     float ratio_tmp = GetMatchesForNthBestMatch(i) / nSegments;
     if (ratio_tmp >= minMatchRatio) {
       bool matchFound = asNanoEvent(event)->PATMuonIndexExist(patMuonCollection, GetMatchIdxForNthBestMatch(i));
-      if (matchFound) return true;
+      if (matchFound) { return true; }
     }
   }
   return false;
@@ -192,7 +181,8 @@ float NanoMuon::DeltaRtoParticle(shared_ptr<PhysicsObject> particle) {
   return TMath::Sqrt(dEta * dEta + dPhi * dPhi);
 }
 
-shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR, bool allowNonMuons, shared_ptr<PhysicsObject> excludeGenParticle) {
+shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR,
+                                                 bool allowNonMuons, shared_ptr<PhysicsObject> excludeGenParticle) {
   shared_ptr<NanoGenParticle> bestGenMuon = nullptr;
   float bestDeltaR = maxDeltaR;
 
@@ -201,9 +191,9 @@ shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genP
 
   for (auto physObj : *genParticles) {
     auto genParticle = asNanoGenParticle(physObj);
-    if (!genParticle->IsMuon() && !allowNonMuons) continue;
-    if (!genParticle->IsLastCopy()) continue;
-    if (excludeGenParticle && physObj == excludeGenParticle) continue;
+    if (!genParticle->IsMuon() && !allowNonMuons) { continue; }
+    if (!genParticle->IsLastCopy()) { continue; }
+    if (excludeGenParticle && physObj == excludeGenParticle) { continue; }
 
     float deltaR = DeltaRtoParticle(physObj);
     if (deltaR < bestDeltaR && deltaR < maxDeltaR) {
@@ -212,15 +202,16 @@ shared_ptr<NanoGenParticle> NanoMuon::GetGenMuon(shared_ptr<PhysicsObjects> genP
     }
   }
 
-  if (!bestGenMuon) return nullptr;
-  
+  if (!bestGenMuon) { return nullptr; }
+
   auto firstCopy = bestGenMuon->GetFirstCopy(genParticles);
-  if (firstCopy) bestGenMuon = firstCopy;
+  if (firstCopy) { bestGenMuon = firstCopy; }
 
   return bestGenMuon;
 }
 
-shared_ptr<NanoGenParticle> NanoMuon::GetLastCopyGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR, bool allowNonMuons) {
+shared_ptr<NanoGenParticle> NanoMuon::GetLastCopyGenMuon(shared_ptr<PhysicsObjects> genParticles, float maxDeltaR,
+                                                         bool allowNonMuons) {
   shared_ptr<NanoGenParticle> bestGenMuon = nullptr;
   float bestDeltaR = maxDeltaR;
 
@@ -229,8 +220,8 @@ shared_ptr<NanoGenParticle> NanoMuon::GetLastCopyGenMuon(shared_ptr<PhysicsObjec
 
   for (auto physObj : *genParticles) {
     auto genParticle = asNanoGenParticle(physObj);
-    if (!genParticle->IsMuon() && !allowNonMuons) continue;
-    if (!genParticle->IsLastCopy()) continue;
+    if (!genParticle->IsMuon() && !allowNonMuons) { continue; }
+    if (!genParticle->IsLastCopy()) { continue; }
 
     float genEta = genParticle->Get("eta");
     float genPhi = genParticle->Get("phi");
@@ -243,7 +234,7 @@ shared_ptr<NanoGenParticle> NanoMuon::GetLastCopyGenMuon(shared_ptr<PhysicsObjec
     }
   }
 
-  if (!bestGenMuon) return nullptr;
+  if (!bestGenMuon) { return nullptr; }
   return bestGenMuon;
 }
 

@@ -5,10 +5,10 @@
 #ifndef HistogramsFiller_hpp
 #define HistogramsFiller_hpp
 
+#include "CutFlowManager.hpp"
 #include "Event.hpp"
 #include "Helpers.hpp"
 #include "HistogramsHandler.hpp"
-#include "CutFlowManager.hpp"
 
 class HistogramsFiller {
  public:
@@ -17,7 +17,7 @@ class HistogramsFiller {
 
   void FillDefaultVariables(const std::shared_ptr<Event> event);
 
-  void FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlowManager);  
+  void FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlowManager);
 
  private:
   std::shared_ptr<HistogramsHandler> histogramsHandler;

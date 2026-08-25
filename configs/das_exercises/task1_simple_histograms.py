@@ -9,7 +9,7 @@ histogramsOutputFilePath = "../results/..."
 
 # You'll need to add some histogram parameters here.
 defaultHistParams = (
-  #  collection      variable          bins    xmin     xmax     dir
+  # (collection, variable, bins, xmin, xmax, dir)
   ("Event", "nMuon", 50, 0, 50, ""),
 )
 

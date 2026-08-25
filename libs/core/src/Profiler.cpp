@@ -1,6 +1,6 @@
 #include "Profiler.hpp"
 
-Profiler& Profiler::GetInstance() {
+Profiler &Profiler::GetInstance() {
   static Profiler instance;
   return instance;
 }

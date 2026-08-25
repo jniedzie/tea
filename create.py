@@ -5,23 +5,23 @@ import os
 args = argparse.ArgumentParser()
 args.add_argument("--name", help="Name of the class/app to add", required=True)
 args.add_argument(
-        "--type",
-        help=(
-            "Type of the extension to add: PhysicsObject, Event, HistogramsFiller, "
-            "app, printer, histogrammer, task4_histogrammer"
-        ),
-        required=True
-    )
+  "--type",
+  help=(
+    "Type of the extension to add: PhysicsObject, Event, HistogramsFiller, "
+    "app, printer, histogrammer, task4_histogrammer"
+  ),
+  required=True,
+)
 args = args.parse_args()
 
 
 def replace_string_in_file(file_path, old_string, new_string):
-  with open(file_path, 'r') as file:
+  with open(file_path, "r") as file:
     content = file.read()
 
   new_content = content.replace(old_string, new_string)
 
-  with open(file_path, 'w') as file:
+  with open(file_path, "w") as file:
     file.write(new_content)
 
 
@@ -29,9 +29,9 @@ def insert_cast(class_name, type):
 
   file_path = "libs/user_extensions/include/UserExtensionsHelpers.hpp"
 
-  old_string = "#include \"PhysicsObject.hpp\""
-  new_string = f"#include \"{class_name}.hpp\"\n"
-  new_string += "#include \"PhysicsObject.hpp\""
+  old_string = '#include "PhysicsObject.hpp"'
+  new_string = f'#include "{class_name}.hpp"\n'
+  new_string += '#include "PhysicsObject.hpp"'
   replace_string_in_file(file_path, old_string, new_string)
 
   old_string = "#endif /* UserExtensionsHelpers_hpp */"
@@ -74,34 +74,34 @@ def main():
   print(f"Adding {class_type}: {class_name}")
 
   files_to_copy = {
-      "PhysicsObject": (
-          ("tea/templates/PhysicsObject.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
-          ("tea/templates/PhysicsObject.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
-      ),
-      "HistogramsFiller": (
-          ("tea/templates/HistogramsFiller.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
-          ("tea/templates/HistogramsFiller.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
-      ),
-      "Event": (
-          ("tea/templates/Event.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
-          ("tea/templates/Event.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
-      ),
-      "app": (
-          ("tea/templates/app.template.cpp", f"apps/{class_name}.cpp"),
-          ("tea/templates/config.template.py", f"configs/{class_name}_config.py"),
-      ),
-      "printer": (
-          ("tea/templates/printer.template.cpp", f"apps/{class_name}.cpp"),
-          ("tea/templates/printer_config.template.py", f"configs/{class_name}_config.py"),
-      ),
-      "histogrammer": (
-          ("tea/templates/histogrammer.template.cpp", f"apps/{class_name}.cpp"),
-          ("tea/templates/histogrammer_config.template.py", f"configs/{class_name}_config.py"),
-      ),
-      "task4_histogrammer": (
-          ("tea/templates/task4_histogrammer.template.cpp", f"apps/{class_name}.cpp"),
-          ("tea/configs/das_exercises/task4_advanced_histograms.py", f"configs/{class_name}.py"),
-      ),
+    "PhysicsObject": (
+      ("tea/templates/PhysicsObject.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
+      ("tea/templates/PhysicsObject.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
+    ),
+    "HistogramsFiller": (
+      ("tea/templates/HistogramsFiller.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
+      ("tea/templates/HistogramsFiller.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
+    ),
+    "Event": (
+      ("tea/templates/Event.template.cpp", f"libs/user_extensions/src/{class_name}.cpp"),
+      ("tea/templates/Event.template.hpp", f"libs/user_extensions/include/{class_name}.hpp"),
+    ),
+    "app": (
+      ("tea/templates/app.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/templates/config.template.py", f"configs/{class_name}_config.py"),
+    ),
+    "printer": (
+      ("tea/templates/printer.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/templates/printer_config.template.py", f"configs/{class_name}_config.py"),
+    ),
+    "histogrammer": (
+      ("tea/templates/histogrammer.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/templates/histogrammer_config.template.py", f"configs/{class_name}_config.py"),
+    ),
+    "task4_histogrammer": (
+      ("tea/templates/task4_histogrammer.template.cpp", f"apps/{class_name}.cpp"),
+      ("tea/configs/das_exercises/task4_advanced_histograms.py", f"configs/{class_name}.py"),
+    ),
   }
 
   classes_with_cast = ("PhysicsObject", "Event")

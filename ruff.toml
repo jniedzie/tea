@@ -1,0 +1,13 @@
+line-length = 120
+indent-width = 2
+target-version = "py39"
+
+extend-exclude = ["bin", "build", "jsonPOG"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+
+# Linting is intentionally not enabled yet -- see issue #118 follow-up.
