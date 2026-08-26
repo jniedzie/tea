@@ -45,7 +45,9 @@ lines need no CMake edit.
 
 ## Select storage
 
-`tea` uses `~/.tea` by default, independently of the analysis repository's location. You can use a different location - this is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. Save it without editing a shell startup file:
+`tea` uses `~/.tea` by default, independently of the analysis repository's location. You can use a different location - this is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. Expect the environment to take up around 3 GB of space. On lxplus, if possible, use AFS - putting it on EOS is fine, but the environment building process will be much slower.
+
+Save it without editing a shell startup file:
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"

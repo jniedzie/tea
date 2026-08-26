@@ -60,7 +60,10 @@ installation, press Enter at the environment-location question to use
 Repository placement does not affect this choice. Any `tea` checkout configured with the same location can reuse a matching locked environment, 
 and `tea` recreates the environment automatically if it disappears.
 
-You can customize the location of the `tea` environment. This is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. Pass an absolute path (`~/...` is also accepted):
+You can customize the location of the `tea` environment. This is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. 
+Expect the environment to take up around 3 GB of space. On lxplus, if possible, use AFS - putting it on EOS is fine, but the environment building process will be much slower.
+
+Pass an absolute path (`~/...` is also accepted):
 
 ```bash
 ./install.sh --tea-home /shared/path/.tea \
