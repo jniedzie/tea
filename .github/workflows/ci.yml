@@ -46,6 +46,9 @@ jobs:
           python3 --version
           root-config --version
           correction config --version
+          clang-format --version
+          pre-commit --version
+          ruff --version
           ci/collect-environment.sh el9 ci/tea-environment-el9.txt
           cat ci/tea-environment-el9.txt
 
@@ -109,6 +112,9 @@ jobs:
           python3 --version
           root-config --version
           correction config --version
+          clang-format --version
+          pre-commit --version
+          ruff --version
           ci/collect-environment.sh macos-arm64 ci/tea-environment-macos-arm64.txt
           cat ci/tea-environment-macos-arm64.txt
 

@@ -21,3 +21,8 @@ conda-lock lock \
 Review all three lock diffs and let CI install them without an existing cache.
 Changing a lock changes the shared environment path automatically; never edit
 an explicit lock by hand.
+
+The formatting tools are pinned in `environment.yml` and must match
+`.pre-commit-config.yaml`. In particular, Tea uses clang-format 19.1.7 because
+clang-format 22 requires libxml2 2.14.6 or newer, while ROOT 6.34.10 requires
+libxml2 2.13.x.

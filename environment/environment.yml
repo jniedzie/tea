@@ -2,6 +2,7 @@ name: tea
 channels:
   - conda-forge
 dependencies:
+  - clang-format=19.1.7
   - cmake=3.31.8
   - correctionlib=2.8.0
   - cxx-compiler

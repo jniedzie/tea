@@ -22,7 +22,7 @@ output_stem="${output%.txt}"
   fi
 
   printf '\n[commands]\n'
-  for command_name in bash cmake c++ gcc g++ clang clang++ python3 root root-config correction conda mamba micromamba; do
+  for command_name in bash cmake c++ gcc g++ clang clang++ clang-format python3 root root-config correction pre-commit ruff conda mamba micromamba; do
     command_path="$(command -v "${command_name}" 2>/dev/null || true)"
     printf '%-12s %s\n' "${command_name}" "${command_path:-not found}"
   done
@@ -36,6 +36,9 @@ output_stem="${output%.txt}"
   root-config --features 2>/dev/null || true
   root-config --cxxstandard 2>/dev/null || true
   correction config --version 2>/dev/null || true
+  clang-format --version 2>/dev/null || true
+  pre-commit --version 2>/dev/null || true
+  ruff --version 2>/dev/null || true
 
   printf '\n[tea environment]\n'
   printf 'TEA_HOME=%s\n' "${TEA_HOME:-not set}"
