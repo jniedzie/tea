@@ -21,18 +21,12 @@ Run the relevant application on a small ROOT file. Plotting and documentation ch
 
 ## Formatting
 
-C++ (`clang-format`) and Python (`ruff format`) are enforced through [pre-commit](https://pre-commit.com/), both locally once the hook is enabled and in CI, where the `lint` job runs `pre-commit run --all-files` regardless of the local setup.
+C++ (`clang-format`) and Python (`ruff format`) are enforced through [pre-commit](https://pre-commit.com/), both locally once the hook is enabled and in CI, where the `lint` job runs `pre-commit run --all-files` regardless of the local setup. It is installed when `tea` is installed with `install.sh`.
 
 `pre-commit` and `ruff` belong to the locked environment, so activating it is the whole installation step:
 
 ```bash
 source tea/setup.sh
-```
-
-Enable the hook once per checkout, from the root of the `tea` repository:
-
-```bash
-pre-commit install
 ```
 
 Each commit then formats the staged files. If desired, run the CI checks on demand with:
