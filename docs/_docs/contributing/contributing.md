@@ -47,14 +47,9 @@ When updating a formatter, change the pinned `rev` in `.pre-commit-config.yaml`,
 
 No editor configuration ships with the repository.
 
+For VS Code Users:
 - Python: install the `charliermarsh.ruff` extension. It discovers `ruff.toml` from the repository root, and the environment provides a `ruff` of the pinned version, so the editor and the hook agree.
-- C++: install `ms-vscode.cpptools` and set `"C_Cpp.formatting": "clangFormat"` and `"C_Cpp.clang_format_style": "file"`, or install `xaver.clang-format` instead. Both read `.clang-format` from the repository root. Since `clang-format` is not on `PATH`, point the extension at the binary the hook installed:
-
-```bash
-ls -d ~/.cache/pre-commit/repo*/py_env-*/bin/clang-format
-```
-
-Using that path makes the editor and the hook the same executable.
+- C++: install `ms-vscode.cpptools` and set `"C_Cpp.formatting": "clangFormat"` and `"C_Cpp.clang_format_style": "file"`, or install `xaver.clang-format` instead. Both read `.clang-format` from the repository root. 
 
 - Format-on-save, in your own `settings.json`:
 
