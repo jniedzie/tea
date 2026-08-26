@@ -45,18 +45,14 @@ lines need no CMake edit.
 
 ## Select storage
 
-Tea uses `~/.tea` by default, independently of the analysis repository's
-location. To use a different absolute path for an existing installation, save
-it without editing a shell startup file:
+`tea` uses `~/.tea` by default, independently of the analysis repository's location. You can use a different location - this is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. Save it without editing a shell startup file:
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
 printf '%s\n' /shared/path/.tea > "${XDG_CONFIG_HOME:-$HOME/.config}/tea/home"
 ```
 
-Alternatively, export `TEA_HOME=/shared/path/.tea`; an exported value has
-precedence over the saved setting. On a batch system, select a path visible on
-both login and worker nodes.
+Alternatively, export `TEA_HOME=/shared/path/.tea`; an exported value has precedence over the saved setting. On a batch system, select a path visible on both login and worker nodes.
 
 ## Build and validate
 
