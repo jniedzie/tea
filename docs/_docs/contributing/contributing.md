@@ -39,19 +39,37 @@ When updating a formatter, change the pinned `rev` in `.pre-commit-config.yaml`,
 
 ### Editor integration
 
-No editor configuration ships with the repository.
+When VS Code is available, `source tea/build.sh` creates or updates the analysis
+project's top-level `.vscode/settings.json` and `.vscode/extensions.json`. The
+generated settings use the `tea` environment's Python, Ruff, and clang-format
+executables and the repository's `ruff.toml` and `.clang-format` files. Python
+files are formatted on save with Autopep8 using two-space indentation and a
+120-character line length; Ruff remains enabled for diagnostics. C++ formatting
+uses clang-format through the Microsoft C/C++ extension. Existing unrelated
+workspace settings and extension recommendations are preserved.
 
-For VS Code Users:
-- Python: install the `charliermarsh.ruff` extension. It discovers `ruff.toml` from the repository root, and the environment provides a `ruff` of the pinned version, so the editor and the hook agree.
-- C++: install `ms-vscode.cpptools` and set `"C_Cpp.formatting": "clangFormat"` and `"C_Cpp.clang_format_style": "file"`, or install `xaver.clang-format` instead. Both read `.clang-format` from the repository root. 
+VS Code recommends, but does not install automatically, these extensions:
 
-- Format-on-save, in your own `settings.json`:
+- `ms-python.python`
+- `ms-python.autopep8`
+- `charliermarsh.ruff`
+- `ms-vscode.cpptools`
 
-```json
-{
-  "editor.formatOnSave": true
-}
-```
+After opening or reloading the project, VS Code checks which recommendations are
+missing and can offer **Install**, **Show Recommendations**, or **Don't Show
+Again for this Repository**. The last choice is remembered for that repository
+on that machine, so declining does not cause a prompt on every reload. The
+recommendations remain available from **Extensions: Show Recommended
+Extensions** in the Command Palette.
+
+If missing recommendations are listed but no notification appears, open the VS
+Code user settings and remove `"extensions.ignoreRecommendations": true` or set
+it to `false`, then run **Developer: Reload Window**. This is a user preference;
+`tea` does not override it in the project settings.
+
+If an existing `.vscode/settings.json` or `.vscode/extensions.json` contains
+JSON comments or invalid JSON, `tea` leaves that file unchanged and prints a
+warning instead of risking the loss of user content.
 
 ### A hook fails with a bad interpreter
 
