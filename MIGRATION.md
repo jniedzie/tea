@@ -83,7 +83,7 @@ environment location changes; it rewrites the two files only when their content
 would differ. A `settings.json` containing JSON comments is left unchanged with
 a warning.
 
-## 7. Install `tea`'s pre-commit hooks (optional)
+## 7. Install `tea`'s pre-commit hooks
 
 This is the other step performed only by `install.sh`, so it too has to be run
 by hand in a migrated analysis. It installs the hook inside the `tea` submodule,
