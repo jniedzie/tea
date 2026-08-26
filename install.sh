@@ -131,6 +131,14 @@ if ! ./tea/build.sh; then
     exit 1
 fi
 
+echo "Installing pre-commit hooks for tea"
+if ! PRE_COMMIT_OUTPUT="$(source tea/environment/activate.sh && tea_env_activate && cd tea && pre-commit install 2>&1)"; then
+    echo "Warning: could not install tea's pre-commit hooks." >&2
+    printf '%s\n' "${PRE_COMMIT_OUTPUT}" >&2
+    echo "Formatting will not run automatically on commits in tea/. To retry, run:" >&2
+    echo "  (cd tea && pre-commit install)" >&2
+fi
+
 if [ "$SETUP_REMOTE" = true ]; then
     echo "Setting up remote"
     if ! REMOTE_ADD_OUTPUT="$(git remote add origin "${REMOTE_REPOSITORY}" 2>&1)"; then
