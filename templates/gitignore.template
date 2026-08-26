@@ -2,3 +2,4 @@ build/*
 bin/*
 
 .__afs*
+compile_commands.json

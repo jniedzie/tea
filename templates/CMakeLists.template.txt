@@ -6,6 +6,10 @@ if(NOT DEFINED CMAKE_CXX_STANDARD)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# export compile_commands.json (for clangd / IDE tooling); symlinked into the
+# source dir at the end of this file so tools find it without a build/ prefix
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wno-cpp)
 endif()
@@ -124,3 +128,11 @@ foreach(PYTHON_FILE ${PYTHON_CONFIGS})
     get_filename_component(PYTHON_FILENAME ${PYTHON_FILE} NAME)
     install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink \"${PYTHON_FILE}\" \"${PYTHON_INSTALL_DIR}/${PYTHON_FILENAME}\")")
 endforeach()
+
+# make compile_commands.json visible at the top level of the source tree
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    file(CREATE_LINK
+        "${CMAKE_BINARY_DIR}/compile_commands.json"
+        "${CMAKE_SOURCE_DIR}/compile_commands.json"
+        SYMBOLIC)
+endif()
