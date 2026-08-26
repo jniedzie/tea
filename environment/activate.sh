@@ -89,6 +89,51 @@ tea_env_resolve_home() {
   export TEA_HOME
 }
 
+tea_env_filesystem_type() {
+  # GNU and BSD stat spell filesystem-type queries differently.
+  stat -f -c '%T' "$1" 2>/dev/null || stat -f '%T' "$1" 2>/dev/null
+}
+
+tea_env_is_network_filesystem_type() {
+  case "$1" in
+    afs|fuse|fuse.*|fuseblk|nfs|nfs4|cifs|smbfs|lustre|gpfs)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+tea_env_should_stage_publish() {
+  local filesystem_type
+  filesystem_type="$(tea_env_filesystem_type "${TEA_ENV_PREFIX}" ||
+    tea_env_filesystem_type "$(dirname "${TEA_ENV_PREFIX}")" || true)"
+  tea_env_is_network_filesystem_type "${filesystem_type}"
+}
+
+tea_env_relocate() {
+  local source_prefix relocated_prefix
+  source_prefix="$1"
+  relocated_prefix="$2"
+  CONDA_PKGS_DIRS="$3" "${source_prefix}/bin/conda-pack" \
+    --quiet \
+    --prefix "${source_prefix}" \
+    --output "${relocated_prefix}" \
+    --format no-archive \
+    --dest-prefix "${TEA_ENV_PREFIX}"
+}
+
+tea_env_publish() {
+  local source_prefix destination_prefix python_executable
+  source_prefix="$1"
+  destination_prefix="$2"
+  python_executable="$3"
+  "${python_executable}" \
+    "${TEA_ENV_FRAMEWORK_DIR}/environment/publish_environment.py" \
+    --workers 32 "${source_prefix}" "${destination_prefix}"
+}
+
 tea_env_download() {
   local url destination
   url="$1"
@@ -247,7 +292,8 @@ tea_env_cleanup_legacy() {
 tea_env_ensure() (
   set -euo pipefail
 
-  local lock_dir lock_status marker_hash
+  local lock_dir lock_status marker_hash package_cache temp_root work_dir
+  local install_prefix relocated_prefix publish_prefix staged_publish
   tea_env_prepare
 
   if [[ -r "${TEA_ENV_MARKER}" ]]; then
@@ -269,7 +315,36 @@ tea_env_ensure() (
     exit "${lock_status}"
   fi
 
-  trap 'rmdir "${lock_dir}" 2>/dev/null || true' EXIT
+  work_dir=""
+  publish_prefix=""
+  tea_env_install_cleanup() {
+    if [[ -n "${work_dir}" ]]; then
+      rm -rf "${work_dir}"
+    fi
+    if [[ -n "${publish_prefix}" ]] && [[ -e "${publish_prefix}" ]]; then
+      rm -rf "${publish_prefix}"
+    fi
+    rmdir "${lock_dir}" 2>/dev/null || true
+  }
+  trap tea_env_install_cleanup EXIT
+
+  # Another process may have completed the environment between our final
+  # failed mkdir and the next successful lock attempt. Recheck after acquiring
+  # the lock so a waiter never removes and recreates that fresh environment.
+  if [[ -r "${TEA_ENV_MARKER}" ]]; then
+    IFS= read -r marker_hash < "${TEA_ENV_MARKER}"
+    if [[ "${marker_hash}" == "${TEA_ENV_LOCK_HASH}" ]]; then
+      exit 0
+    fi
+  fi
+
+  temp_root="${TMPDIR:-/tmp}"
+  work_dir="$(mktemp -d "${temp_root%/}/tea-environment-install.XXXXXX")" || {
+    echo "tea: unable to create temporary installation storage under ${temp_root}" >&2
+    exit 1
+  }
+  package_cache="${work_dir}/packages"
+  mkdir -p "${package_cache}"
 
   if [[ -e "${TEA_ENV_PREFIX}" ]]; then
     case "${TEA_ENV_PREFIX}" in
@@ -284,9 +359,35 @@ tea_env_ensure() (
   fi
 
   echo "tea: creating shared ${TEA_ENV_PLATFORM} environment at ${TEA_ENV_PREFIX}" >&2
-  MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
-    "${TEA_MICROMAMBA}" create --yes --prefix "${TEA_ENV_PREFIX}" --file "${TEA_ENV_LOCK_FILE}"
-  printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${TEA_ENV_MARKER}"
+  echo "tea: unpacking packages in temporary cache ${package_cache}" >&2
+  staged_publish=0
+  install_prefix="${TEA_ENV_PREFIX}"
+  if tea_env_should_stage_publish; then
+    staged_publish=1
+    install_prefix="${work_dir}/environment"
+    relocated_prefix="${work_dir}/relocated"
+    publish_prefix="${TEA_ENV_PREFIX}.publishing.$$"
+    [[ ! -e "${publish_prefix}" ]] || {
+      echo "tea: publication path already exists: ${publish_prefix}" >&2
+      exit 1
+    }
+    echo "tea: staging environment locally before parallel publication" >&2
+  fi
+
+  CONDA_PKGS_DIRS="${package_cache}" \
+    MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
+    "${TEA_MICROMAMBA}" --no-rc create --yes --prefix "${install_prefix}" --file "${TEA_ENV_LOCK_FILE}"
+
+  if [[ "${staged_publish}" -eq 1 ]]; then
+    echo "tea: relocating environment to final prefix ${TEA_ENV_PREFIX}" >&2
+    tea_env_relocate "${install_prefix}" "${relocated_prefix}" "${package_cache}"
+    tea_env_publish "${relocated_prefix}" "${publish_prefix}" "${install_prefix}/bin/python"
+    printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${publish_prefix}/.tea-environment"
+    mv "${publish_prefix}" "${TEA_ENV_PREFIX}"
+    publish_prefix=""
+  else
+    printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${TEA_ENV_MARKER}"
+  fi
 )
 
 tea_env_activate() {
@@ -334,6 +435,14 @@ tea_env_activate() {
   fi
   if [[ "${activation_status}" -ne 0 ]]; then
     return "${activation_status}"
+  fi
+
+  # Some system Conda installations report /usr as their active prefix.
+  # Micromamba removes that prefix's bin directory when switching environments,
+  # but the Tea environment still needs basic operating-system commands.
+  if [[ -d /usr/bin && ":${PATH}:" != *":/usr/bin:"* ]]; then
+    PATH="${PATH:+${PATH}:}/usr/bin"
+    export PATH
   fi
 
   # Old releases used one directory per lock hash. Remove only directories

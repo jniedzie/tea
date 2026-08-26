@@ -5,27 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
-
-
-def vscode_is_available() -> bool:
-  if os.environ.get("TERM_PROGRAM") == "vscode" or os.environ.get("VSCODE_IPC_HOOK_CLI"):
-    return True
-  if shutil.which("code") or shutil.which("code-insiders") or shutil.which("codium"):
-    return True
-
-  home = Path.home()
-  candidates = [
-    Path("/Applications/Visual Studio Code.app"),
-    home / "Applications/Visual Studio Code.app",
-    home / ".vscode-server",
-    home / ".vscode-server-insiders",
-  ]
-  return any(candidate.exists() for candidate in candidates)
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
@@ -142,12 +125,7 @@ def main() -> int:
   parser.add_argument("--workspace", required=True, type=Path)
   parser.add_argument("--framework", required=True, type=Path)
   parser.add_argument("--environment", required=True, type=Path)
-  parser.add_argument("--force", action="store_true", help=argparse.SUPPRESS)
   arguments = parser.parse_args()
-
-  if not arguments.force and not vscode_is_available():
-    print("tea: VS Code not detected; skipping workspace editor configuration")
-    return 0
 
   try:
     changed = configure_workspace(
