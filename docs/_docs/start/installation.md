@@ -49,8 +49,9 @@ chmod 700 install.sh
 
 The installer initializes the local analysis repository, adds `tea/` as a
 submodule, connects the GitHub repository, pushes the initial project, creates
-the locked dependency environment, and performs the first build. Installing
-without a linked GitHub repository is not part of the recommended setup. During
+the locked dependency environment, performs the first build, offers to
+configure VS Code, and installs Tea's pre-commit hooks. Installing without a
+linked GitHub repository is not part of the recommended setup. During
 installation, press Enter at the environment-location question to use
 `~/.tea`.
 
