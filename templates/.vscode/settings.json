@@ -18,6 +18,8 @@
   "autopep8.args": [
     "--indent-size",
     "2",
+    "--ignore",
+    "E12,E13,E226,E24,W50,W690",
     "--max-line-length",
     "120"
   ],
