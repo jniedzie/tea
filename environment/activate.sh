@@ -209,7 +209,9 @@ tea_env_prepare() {
   fi
 
   lock_hash="$(tea_env_sha256 "${lock_file}")" || return 1
-  env_prefix="${TEA_HOME}/environments/${platform}/${lock_hash}"
+  # Keep the prefix stable and human-readable. The lock hash belongs in the
+  # marker, where it can trigger replacement without leaking into editor paths.
+  env_prefix="${TEA_HOME}/environments/tea"
   marker="${env_prefix}/.tea-environment"
 
   TEA_ENV_PLATFORM="${platform}"
@@ -219,6 +221,27 @@ tea_env_prepare() {
   TEA_ENV_MARKER="${marker}"
   TEA_MICROMAMBA="$(tea_env_ensure_micromamba "${platform}")" || return 1
   export TEA_ENV_PLATFORM TEA_ENV_LOCK_FILE TEA_ENV_LOCK_HASH TEA_ENV_PREFIX TEA_MICROMAMBA
+}
+
+tea_env_cleanup_legacy() {
+  local legacy_root candidate candidate_name marker_hash
+
+  legacy_root="${TEA_HOME}/environments/${TEA_ENV_PLATFORM}"
+  [[ -d "${legacy_root}" ]] || return 0
+
+  for candidate in "${legacy_root}"/*; do
+    [[ -d "${candidate}" ]] || continue
+    candidate_name="${candidate##*/}"
+    [[ "${candidate_name}" =~ ^[0-9a-f]{64}$ ]] || continue
+    [[ -r "${candidate}/.tea-environment" ]] || continue
+    IFS= read -r marker_hash < "${candidate}/.tea-environment"
+    [[ "${marker_hash}" == "${candidate_name}" ]] || continue
+
+    echo "tea: removing superseded environment ${candidate}" >&2
+    rm -rf "${candidate}" || return 1
+  done
+
+  rmdir "${legacy_root}" 2>/dev/null || true
 }
 
 tea_env_ensure() (
@@ -250,7 +273,7 @@ tea_env_ensure() (
 
   if [[ -e "${TEA_ENV_PREFIX}" ]]; then
     case "${TEA_ENV_PREFIX}" in
-      "${TEA_HOME}"/environments/*)
+      "${TEA_HOME}"/environments/tea)
         rm -rf "${TEA_ENV_PREFIX}"
         ;;
       *)
@@ -270,9 +293,8 @@ tea_env_activate() {
   local activation_code activation_status nounset_was_enabled
   local prompt_base prompt_is_set prompt_modifier
 
-  # Prefix activation normally makes micromamba use the full environment path
-  # as its display name. Keep that content-addressed path internal and preserve
-  # the user's prompt (including colour escapes and embedded newlines).
+  # Preserve the user's prompt (including colour escapes and embedded newlines)
+  # while presenting the same short name used by the stable prefix.
   prompt_base=""
   prompt_is_set=0
   prompt_modifier="${CONDA_PROMPT_MODIFIER:-}"
@@ -305,6 +327,10 @@ tea_env_activate() {
   if [[ "${activation_status}" -ne 0 ]]; then
     return "${activation_status}"
   fi
+
+  # Old releases used one directory per lock hash. Remove only directories
+  # whose 64-character name agrees with Tea's marker file.
+  tea_env_cleanup_legacy || return 1
 
   TEA_ENV_NAME="tea"
   CONDA_DEFAULT_ENV="${TEA_ENV_NAME}"

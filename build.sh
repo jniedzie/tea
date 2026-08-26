@@ -44,6 +44,12 @@ build_main() (
   build_dir="${repo_root}/build"
   bin_dir="${repo_root}/bin"
 
+  "${TEA_ENV_PREFIX}/bin/python" \
+    "${_build_sh_script_dir}/environment/configure_vscode.py" \
+    --workspace "${repo_root}" \
+    --framework "${_build_sh_script_dir}" \
+    --environment "${TEA_ENV_PREFIX}"
+
   mkdir -p "${bin_dir}" "${build_dir}"
 
   if [[ "${1:-}" == "--clean" ]]; then
