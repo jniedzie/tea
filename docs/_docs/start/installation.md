@@ -56,28 +56,25 @@ installation, press Enter at the environment-location question to use
 
 ## Shared dependency location
 
-Tea stores dependencies outside the analysis repository and uses `~/.tea` by
-default. Repository placement does not affect this choice. Any tea checkout
-configured with the same location can reuse a matching locked environment, and
-tea recreates the environment automatically if it disappears.
+`tea` stores dependencies outside the analysis repository and uses `~/.tea` by default. 
+Repository placement does not affect this choice. Any `tea` checkout configured with the same location can reuse a matching locked environment, 
+and `tea` recreates the environment automatically if it disappears.
 
-For an unattended install, or when the default is unsuitable or not visible on
-batch worker nodes, pass an absolute path (`~/...` is also accepted):
+You can customize the location of the `tea` environment. This is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. 
+Expect the environment to take up around 3 GB of space. On lxplus, if possible, use AFS - putting it on EOS is fine, but the environment building process will be much slower.
+
+Pass an absolute path (`~/...` is also accepted):
 
 ```bash
 ./install.sh --tea-home /shared/path/.tea \
   git@github.com:YOUR_ACCOUNT/YOUR_ANALYSIS.git
 ```
 
-The installer records this choice in
-`${XDG_CONFIG_HOME:-$HOME/.config}/tea/home` and offers the saved choice as the
-default on later interactive installations. It does not modify shell startup
-files. Setting `TEA_HOME` in the shell overrides the recorded location.
+The installer records this choice in `${XDG_CONFIG_HOME:-$HOME/.config}/tea/home` and offers the saved choice as the default on later interactive installations. 
+It does not modify shell startup files. Setting `TEA_HOME` in the shell overrides the recorded location.
 
-The first checkout downloads the locked packages. Other checkouts using the
-same location reuse the completed environment. Prepare it on a login node
-before submitting batch jobs; `TEA_HOME` must be mounted at the same absolute
-path on workers.
+The first checkout downloads the locked packages. Other checkouts using the same location reuse the completed environment. Prepare it on a login node
+before submitting batch jobs; `TEA_HOME` must be mounted at the same absolute path on workers.
 
 ## Supported systems
 
