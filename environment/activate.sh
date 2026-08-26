@@ -291,7 +291,15 @@ tea_env_ensure() (
 
 tea_env_activate() {
   local activation_code activation_status nounset_was_enabled
+  local LC_COLLATE
   local prompt_base prompt_is_set prompt_modifier
+
+  # Some macOS conda-forge compiler hooks use locale-sensitive character
+  # ranges with `tr` to derive variable names (for example, GFORTRAN).
+  # Bytewise collation keeps those generated shell identifiers valid. Because
+  # LC_COLLATE is local to this function, the caller's locale is restored.
+  LC_COLLATE=C
+  export LC_COLLATE
 
   # Preserve the user's prompt (including colour escapes and embedded newlines)
   # while presenting the same short name used by the stable prefix.
