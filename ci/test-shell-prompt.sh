@@ -15,6 +15,7 @@ source "${framework_dir}/environment/activate.sh"
 tea_env_activate
 
 [[ "${TEA_ENV_NAME}" == "tea" ]]
+[[ "${TEA_ENV_PREFIX}" == "${TEA_HOME}/environments/tea" ]]
 [[ "${CONDA_DEFAULT_ENV}" == "tea" ]]
 [[ "${CONDA_PROMPT_MODIFIER}" == "(tea) " ]]
 [[ "${PS1}" == "(tea) ${original_prompt}" ]]
