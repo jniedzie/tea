@@ -33,6 +33,13 @@ On later installations it offers that saved location as the default. `tea` reads
 the file directly, so the installer does not edit `.bash_profile`, `.bashrc`,
 or `.zshrc`. An exported `TEA_HOME` overrides the saved location.
 
+The installer also asks once whether the analysis should be configured for VS
+Code, and `--vscode` or `--no-vscode` answers that question in advance. Without
+a terminal the answer defaults to `--no-vscode`. This configuration is a
+one-time setup that ordinary builds no longer repeat; `MIGRATION.md` documents
+how to create it later, which is also what an analysis installed before this
+question existed needs.
+
 The first installation downloads the locked packages and takes longer. Any
 later `tea` checkout configured with the same location reuses the environment.
 

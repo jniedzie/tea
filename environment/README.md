@@ -51,10 +51,13 @@ also installs notebook tooling, Numba, and Fortran compilers that `tea` does
 not use.
 
 The canonical VS Code configuration is stored in `templates/.vscode`.
-`build.sh` always copies and merges those templates into the analysis project's
-top-level `.vscode` directory, replacing `tea` placeholders with concrete paths
-to its Python, Ruff, configuration, and clang-format. This also happens during
-installation because `install.sh` runs `build.sh`. No VS Code installation is
+`environment/configure_vscode.py` copies and merges those templates into the
+analysis project's top-level `.vscode` directory, replacing `tea` placeholders
+with concrete paths to its Python, Ruff, configuration, and clang-format. It is
+a one-time setup, so `install.sh` offers it once as a question (`--vscode` and
+`--no-vscode` answer it non-interactively) and `build.sh` never runs it. An
+already installed analysis, and any analysis migrated from an older `tea`, runs
+it directly; `MIGRATION.md` gives the command. No VS Code installation is
 required at configuration time, and the files are ready if the project is later
 opened in VS Code. Existing unrelated settings and recommendations are
 preserved. Python formatting uses

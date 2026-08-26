@@ -63,7 +63,40 @@ builds and any other `tea` checkout using the same environment location reuse it
 The old external Conda environment is not deleted; remove it later only after
 the migrated analysis has been validated.
 
-## 6. Validate before submitting full jobs
+## 6. Configure VS Code (optional)
+
+`build.sh` does not touch the editor configuration. `install.sh` offers this
+step once, at installation time, so a migrated analysis has to run it by hand.
+It merges `tea`'s `templates/.vscode` into the analysis' top-level `.vscode`
+directory, replacing `tea` placeholders with concrete paths to its Python, Ruff,
+Ruff configuration, and clang-format. Existing unrelated settings and
+recommendations are preserved, and VS Code does not have to be installed:
+
+```bash
+source tea/setup.sh
+python tea/environment/configure_vscode.py \
+    --workspace "$(pwd)" --framework "$(pwd)/tea" --environment "${TEA_ENV_PREFIX}"
+```
+
+Run it again after a `tea` update that changes the templates or after the
+environment location changes; it rewrites the two files only when their content
+would differ. A `settings.json` containing JSON comments is left unchanged with
+a warning.
+
+## 7. Install `tea`'s pre-commit hooks (optional)
+
+This is the other step performed only by `install.sh`, so it too has to be run
+by hand in a migrated analysis. It installs the hook inside the `tea` submodule,
+which formats C++ and Python in `tea/` on commit:
+
+```bash
+source tea/setup.sh
+(cd tea && pre-commit install)
+```
+
+The hooks apply to commits made in `tea/` only, not to the analysis repository.
+
+## 8. Validate before submitting full jobs
 
 ```bash
 cd bin

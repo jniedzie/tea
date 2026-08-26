@@ -4,15 +4,20 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: ./install.sh [--tea-home ABSOLUTE_PATH] [GIT_REMOTE]
+Usage: ./install.sh [--tea-home ABSOLUTE_PATH] [--vscode|--no-vscode] [GIT_REMOTE]
 
 --tea-home selects a persistent shared location for tea dependencies. The
 installer otherwise asks for a location and offers ~/.tea as the default.
+
+--vscode / --no-vscode decides whether the analysis gets a VS Code workspace
+configuration. The installer otherwise asks. Without a terminal the answer
+defaults to --no-vscode; the configuration can be created at any later time.
 EOF
 }
 
 TEA_HOME_ARG=""
 TEA_HOME_EXPLICIT=false
+CONFIGURE_VSCODE=""
 REMOTE_REPOSITORY=""
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -25,6 +30,14 @@ while [[ "$#" -gt 0 ]]; do
             TEA_HOME_ARG="$2"
             TEA_HOME_EXPLICIT=true
             shift 2
+            ;;
+        --vscode)
+            CONFIGURE_VSCODE=true
+            shift
+            ;;
+        --no-vscode)
+            CONFIGURE_VSCODE=false
+            shift
             ;;
         -h|--help)
             usage
@@ -129,6 +142,45 @@ if ! ./tea/build.sh; then
     echo "Review the build error above, fix its cause, then rerun: ./tea/build.sh" >&2
     echo "The analysis repository and its initial commits were created successfully." >&2
     exit 1
+fi
+
+if [[ -z "${CONFIGURE_VSCODE}" ]]; then
+    if [[ -t 0 ]] && [[ -t 1 ]]; then
+        read -r -p "Configure this analysis for VS Code? [Y/n] " CONFIGURE_VSCODE_INPUT
+        case "${CONFIGURE_VSCODE_INPUT}" in
+            [Nn]*) CONFIGURE_VSCODE=false ;;
+            *) CONFIGURE_VSCODE=true ;;
+        esac
+    else
+        CONFIGURE_VSCODE=false
+    fi
+fi
+
+print_vscode_instructions() {
+    cat <<'EOF'
+  source tea/setup.sh
+  python tea/environment/configure_vscode.py \
+      --workspace "$(pwd)" --framework "$(pwd)/tea" --environment "${TEA_ENV_PREFIX}"
+EOF
+}
+
+if [ "${CONFIGURE_VSCODE}" = true ]; then
+    echo "Configuring the VS Code workspace"
+    if ! VSCODE_OUTPUT="$(source tea/environment/activate.sh && tea_env_activate &&
+            "${TEA_ENV_PREFIX}/bin/python" tea/environment/configure_vscode.py \
+                --workspace "$(pwd)" \
+                --framework "$(pwd)/tea" \
+                --environment "${TEA_ENV_PREFIX}" 2>&1)"; then
+        echo "Warning: could not configure the VS Code workspace." >&2
+        printf '%s\n' "${VSCODE_OUTPUT}" >&2
+        echo "The environment was built successfully; only .vscode is missing. To retry, run:" >&2
+        print_vscode_instructions >&2
+    elif [[ -n "${VSCODE_OUTPUT}" ]]; then
+        printf '%s\n' "${VSCODE_OUTPUT}"
+    fi
+else
+    echo "Skipping the VS Code configuration. To create it later, run:"
+    print_vscode_instructions
 fi
 
 echo "Installing pre-commit hooks for tea"
