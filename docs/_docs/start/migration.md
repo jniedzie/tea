@@ -30,43 +30,42 @@ git commit -m "Update tea build environment"
 When testing an unmerged tea feature, switch the submodule to that feature
 branch instead of `main`.
 
-## Update an older macOS CMake file
+## Run the migration
 
-If the analysis `CMakeLists.txt` contains these unconditional settings, remove
-them:
-
-```cmake
-set(CMAKE_OSX_ARCHITECTURES "arm64")
-SET(CMAKE_OSX_DEPLOYMENT_TARGET 13.2)
-```
-
-The managed toolchain now chooses the architecture. Analyses without these
-lines need no CMake edit.
-
-## Select storage
-
-`tea` uses `~/.tea` by default, independently of the analysis repository's location. You can use a different location - this is especially recommended on lxplus and other systems where `~/.tea` may not have enough quota to create the environment. Expect the environment to take up around 3 GB of space. On lxplus, if possible, use AFS - putting it on EOS is fine, but the environment building process will be much slower.
-
-Save it without editing a shell startup file:
+Choose a persistent location for the shared Tea environment, then run the
+migration script from the analysis root:
 
 ```bash
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
-printf '%s\n' /shared/path/.tea > "${XDG_CONFIG_HOME:-$HOME/.config}/tea/home"
+./tea/migrate.sh --tea-home /shared/path/.tea
 ```
 
-Alternatively, export `TEA_HOME=/shared/path/.tea`; an exported value has precedence over the saved setting. On a batch system, select a path visible on both login and worker nodes.
+The script performs all one-time setup that a new project receives from
+`install.sh`:
 
-## Build and validate
+- records the selected location in
+  `${XDG_CONFIG_HOME:-$HOME/.config}/tea/home`;
+- removes the obsolete `CMAKE_OSX_ARCHITECTURES` and
+  `CMAKE_OSX_DEPLOYMENT_TARGET` lines from an older `CMakeLists.txt`, if
+  present;
+- performs a clean build using the managed environment;
+- configures the analysis workspace for VS Code; and
+- runs `pre-commit install` in the `tea` submodule.
 
-Perform one clean build so no objects from the old compiler or ROOT remain:
+The command is safe to rerun if it is interrupted. It does not delete the old
+external Conda environment; remove that environment only after validating the
+migrated analysis.
 
-```bash
-source tea/build.sh --clean
-```
+`tea` uses `~/.tea` for new installations by default, independently of the
+analysis repository's location, but the migration command requires the choice
+to be explicit. A different location is especially recommended on lxplus and
+other systems where `~/.tea` may not have enough quota for the approximately
+3 GB environment. On lxplus, prefer AFS when possible. EOS also works, but
+creating the environment there is much slower. On a batch system, select a path
+visible at the same absolute location on login and worker nodes.
 
-The first invocation downloads the locked environment. Later builds and other
-tea checkouts using the same storage location and lock reuse it. Confirm the
-active versions:
+## Validate
+
+After the migration finishes, confirm the active versions:
 
 ```bash
 cd bin
@@ -74,5 +73,5 @@ python -c 'import ROOT, correctionlib; print(ROOT.gROOT.GetVersion(), correction
 ```
 
 Run a representative small input through a compiled application before a full
-batch submission. The old external Conda environment is not deleted; remove it
-only after the migrated analysis has been validated.
+batch submission. Later builds and other Tea checkouts using the same storage
+location and lock reuse the completed environment.
