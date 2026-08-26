@@ -1,10 +1,10 @@
 #ifndef NanoEvent_hpp
 #define NanoEvent_hpp
 
+#include "ConfigManager.hpp"
 #include "Event.hpp"
 #include "Helpers.hpp"
 #include "NanoDimuonVertex.hpp"
-#include "ConfigManager.hpp"
 #include "ScaleFactorsManager.hpp"
 
 typedef std::pair<std::shared_ptr<PhysicsObject>, std::shared_ptr<PhysicsObject>> MuonPair;
@@ -17,7 +17,7 @@ class NanoEvent {
   NanoEvent(std::shared_ptr<Event> event_);
   ~NanoEvent();
 
-  auto Get(std::string branchName, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
+  auto Get(std::string branchName, const char *file = __builtin_FILE(), const char *function = __builtin_FUNCTION(),
            int line = __builtin_LINE()) {
     return event->Get(branchName, file, function, line);
   }
@@ -30,25 +30,32 @@ class NanoEvent {
   void AddExtraCollections() { event->AddExtraCollections(); }
 
   TLorentzVector GetMetFourVector();
-  float GetMetPt();
+  std::string GetMetBranchName() { return event->GetMetBranchName(); }
+  std::string GetUpdatedMetBranchName() { return event->GetUpdatedMetBranchName(); }
+  float GetMetPt() { return event->GetMetPt(); }
+  float GetMetPhi() { return event->GetMetPhi(); }
 
   std::shared_ptr<Event> GetEvent() { return event; }
 
   std::shared_ptr<NanoMuons> GetDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float matchingDeltaR = 0.1);
-  NanoMuonMatches GetRevertedDRMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons, std::shared_ptr<NanoMuons> loosePATMuons,
-                                            float matchingDeltaR = 0.1);
-  std::shared_ptr<NanoMuons> GetOuterDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float matchingDeltaR = 0.1);
-  NanoMuonMatches GetRevertedOuterDRMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons, std::shared_ptr<NanoMuons> loosePATMuons,
-                                                 float matchingDeltaR = 0.1);
-  std::shared_ptr<NanoMuons> GetProximityDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float matchingDeltaR = 0.1);
-  NanoMuonMatches GetRevertedProximityDRMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons, std::shared_ptr<NanoMuons> loosePATMuons,
+  NanoMuonMatches GetRevertedDRMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons,
+                                            std::shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR = 0.1);
+  std::shared_ptr<NanoMuons> GetOuterDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection,
+                                                    float matchingDeltaR = 0.1);
+  NanoMuonMatches GetRevertedOuterDRMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons,
+                                                 std::shared_ptr<NanoMuons> loosePATMuons, float matchingDeltaR = 0.1);
+  std::shared_ptr<NanoMuons> GetProximityDRMatchedMuons(std::shared_ptr<NanoMuons> muonCollection,
+                                                        float matchingDeltaR = 0.1);
+  NanoMuonMatches GetRevertedProximityDRMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons,
+                                                     std::shared_ptr<NanoMuons> loosePATMuons,
                                                      float matchingDeltaR = 0.1);
-  std::shared_ptr<NanoMuons> GetSegmentMatchedMuons(std::shared_ptr<NanoMuons> muonCollection, float minMatchRatio = 2.0f / 3.0f);
-  NanoMuonMatches GetRevertedSegmentMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons, std::shared_ptr<NanoMuons> loosePATMuons,
-                                                 float minMatchRatio);
-  std::shared_ptr<NanoDimuonVertex> GetSegmentMatchedBestDimuonVertex(std::shared_ptr<NanoDimuonVertex> bestVertex,
-                                                                      std::shared_ptr<NanoDimuonVertices> goodVerticesCollection,
-                                                                      float minMatchRatio = 2.0f / 3.0f);
+  std::shared_ptr<NanoMuons> GetSegmentMatchedMuons(std::shared_ptr<NanoMuons> muonCollection,
+                                                    float minMatchRatio = 2.0f / 3.0f);
+  NanoMuonMatches GetRevertedSegmentMatchedMuons(std::shared_ptr<NanoMuons> looseDSAMuons,
+                                                 std::shared_ptr<NanoMuons> loosePATMuons, float minMatchRatio);
+  std::shared_ptr<NanoDimuonVertex> GetSegmentMatchedBestDimuonVertex(
+      std::shared_ptr<NanoDimuonVertex> bestVertex, std::shared_ptr<NanoDimuonVertices> goodVerticesCollection,
+      float minMatchRatio = 2.0f / 3.0f);
 
   std::shared_ptr<PhysicsObjects> GetAllMuonVerticesCollection();
   std::shared_ptr<PhysicsObjects> GetVerticesForMuons(std::shared_ptr<NanoMuons> muonCollection);
@@ -69,7 +76,8 @@ class NanoEvent {
   std::shared_ptr<NanoMuon> GetDSAMuonWithIndex(int muon_idx, std::string collectionName);
   std::shared_ptr<NanoMuon> GetPATMuonWithIndex(int muon_idx, std::string collectionName);
   std::shared_ptr<NanoMuon> GetPATMuonWithIndex(int muon_idx, std::shared_ptr<NanoMuons> collection);
-  std::shared_ptr<NanoMuon> GetPATorDSAMuonWithIndex(int muon_idx, std::shared_ptr<NanoMuons> collection, bool doDSAMuons = false);
+  std::shared_ptr<NanoMuon> GetPATorDSAMuonWithIndex(int muon_idx, std::shared_ptr<NanoMuons> collection,
+                                                     bool doDSAMuons = false);
   std::pair<float, int> GetDeltaRandIndexOfClosestGenMuon(std::shared_ptr<NanoMuon> recoMuon);
 
   std::shared_ptr<NanoMuons> GetDSAMuonsFromCollection(std::string muonCollectionName);
@@ -84,15 +92,16 @@ class NanoEvent {
 
   bool PassesHEMveto(float affectedFraction);
   bool PassesJetVetoMaps();
+  bool IsData();
 
  private:
-  ConfigManager& config = ConfigManager::GetInstance();
-  ScaleFactorsManager& scaleFactorsManager = ScaleFactorsManager::GetInstance();
+  ConfigManager &config = ConfigManager::GetInstance();
+  ScaleFactorsManager &scaleFactorsManager = ScaleFactorsManager::GetInstance();
 
   std::shared_ptr<Event> event;
   std::map<std::string, float> muonTriggerSF;
 
-  bool IsData();
+  // MET branch selection is owned by Event (see Event::GetMetBranchName()).
 };
 
 #endif /* NanoEvent_hpp */

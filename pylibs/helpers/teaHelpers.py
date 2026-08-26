@@ -36,7 +36,7 @@ def get_year_from_samples(samples):
     error("Could not find the year in the sample variable.")
     return None
 
-  m = re.search(r'(\d{4}[A-Za-z]*)', source_name)
+  m = re.search(r"(\d{4}[A-Za-z]*)", source_name)
   return m.group(1) if m else None
 
 
@@ -78,7 +78,7 @@ def _dcache_gfal_url(final_path):
   # prefix, neither of which the davs door accepts directly.
   real_path = os.path.normpath(os.path.realpath(final_path))
   if real_path.startswith(DCACHE_LOCAL_PREFIX + "/pnfs/"):
-    real_path = real_path[len(DCACHE_LOCAL_PREFIX):]
+    real_path = real_path[len(DCACHE_LOCAL_PREFIX) :]
   if not real_path.startswith("/pnfs/"):
     return None
   return GFAL_DOOR + real_path
@@ -89,9 +89,13 @@ def _run_gfal_copy(local_path, dest_url):
   # existing destination file rather than failing with "File exists".
   return subprocess.run(
     [
-      "gfal-copy", "-f", "-p",
-      "-t", str(GFAL_COPY_TIMEOUT_SECONDS),
-      "--checksum", "ADLER32",
+      "gfal-copy",
+      "-f",
+      "-p",
+      "-t",
+      str(GFAL_COPY_TIMEOUT_SECONDS),
+      "--checksum",
+      "ADLER32",
       f"file://{os.path.abspath(local_path)}",
       dest_url,
     ],

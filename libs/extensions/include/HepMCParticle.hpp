@@ -11,13 +11,15 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
  public:
   HepMCParticle(std::shared_ptr<PhysicsObject> physicsObject_, int index_);
 
-  auto Get(std::string branchName, bool verbose = true, const char* file = __builtin_FILE(), const char* function = __builtin_FUNCTION(),
-           int line = __builtin_LINE()) {
+  auto Get(std::string branchName, bool verbose = true, const char *file = __builtin_FILE(),
+           const char *function = __builtin_FUNCTION(), int line = __builtin_LINE()) {
     return physicsObject->Get(branchName, verbose, file, function, line);
   }
 
   template <typename T>
-  T GetAs(std::string branchName) { return physicsObject->GetAs<T>(branchName); }
+  T GetAs(std::string branchName) {
+    return physicsObject->GetAs<T>(branchName);
+  }
   std::string GetOriginalCollection() { return physicsObject->GetOriginalCollection(); }
   void Reset() { physicsObject->Reset(); }
 
@@ -48,9 +50,9 @@ class HepMCParticle : public std::enable_shared_from_this<HepMCParticle> {
   int GetIndex() { return index; }
   void SetIndex(int index_) { index = index_; }
 
-  std::shared_ptr<HepMCParticle> GetMother(const std::shared_ptr<PhysicsObjects>& allParticles);
+  std::shared_ptr<HepMCParticle> GetMother(const std::shared_ptr<PhysicsObjects> &allParticles);
 
-  std::vector<int>& GetDaughters() { return daughters; }
+  std::vector<int> &GetDaughters() { return daughters; }
 
   TVector3 GetOrigin() { return TVector3(GetZ() / 1e3, GetX() / 1e3, GetY() / 1e3); }
   TVector3 GetMomentum() {

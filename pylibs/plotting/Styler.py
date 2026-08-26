@@ -7,7 +7,6 @@ import ROOT
 
 
 class Styler:
-
   def __init__(self, config):
     self.config = config
 
@@ -16,10 +15,10 @@ class Styler:
     self.leftMargin = 0.13
     self.rightMargin = 0.04
     self.automaticMargins = {
-        "left": self.leftMargin,
-        "right": self.rightMargin,
-        "top": 0.06,
-        "bottom": self.bottomMargin,
+      "left": self.leftMargin,
+      "right": self.rightMargin,
+      "top": 0.06,
+      "bottom": self.bottomMargin,
     }
 
     self.plotMargins = getattr(self.config, "plot_margins", None)
@@ -39,7 +38,7 @@ class Styler:
     self.labelFontSize = 26
     self.pendingRatioYAxis = None
     self.pendingRatioTitleOffset = None
-    
+
     self.__setStyle()
 
   def setup_ratio_pad(self, pad):
@@ -170,7 +169,7 @@ class Styler:
     gStyle.SetOptLogy(0)
     gStyle.SetOptLogz(0)
 
-    gStyle.SetPaperSize(20., 20.)
+    gStyle.SetPaperSize(20.0, 20.0)
 
   def configureAutomaticMargins(self, y_ranges, canvas_size):
     """Choose one compact set of margins that fits every configured plot."""
@@ -178,24 +177,23 @@ class Styler:
       return
 
     canvas_width, canvas_height = canvas_size
-    measurement_canvas = ROOT.TCanvas(
-        "tea_layout_measurement", "", canvas_width, canvas_height)
+    measurement_canvas = ROOT.TCanvas("tea_layout_measurement", "", canvas_width, canvas_height)
     measurement_canvas.cd()
     try:
       widest_label = max(
-          (self.__widestYAxisLabel(*axis_range) for axis_range in y_ranges),
-          default=self.__textWidth("1.2", 43, self.labelFontSize))
+        (self.__widestYAxisLabel(*axis_range) for axis_range in y_ranges),
+        default=self.__textWidth("1.2", 43, self.labelFontSize),
+      )
       title_thickness = max(
-          self.__textHeight("Events", 43, self.labelFontSize),
-          self.__textHeight("Data/MC", 43, self.labelFontSize))
+        self.__textHeight("Events", 43, self.labelFontSize), self.__textHeight("Data/MC", 43, self.labelFontSize)
+      )
     finally:
       measurement_canvas.Close()
 
     label_gap = 6
     title_gap = 4
     outer_gap = 8
-    left_pixels = (widest_label + label_gap + title_gap
-                   + title_thickness + outer_gap)
+    left_pixels = widest_label + label_gap + title_gap + title_thickness + outer_gap
 
     show_labels = getattr(self.config, "show_cms_labels", False)
     labels_outside = getattr(self.config, "label_outside_axes", False)
@@ -210,12 +208,14 @@ class Styler:
     self.rightMargin = max(0.02, 12 / canvas_width)
     self.topMargin = max(0.04, top_pixels / canvas_height)
     self.bottomMargin = max(0.10, 84 / canvas_height)
-    self.automaticMargins.update({
+    self.automaticMargins.update(
+      {
         "left": self.leftMargin,
         "right": self.rightMargin,
         "top": self.topMargin,
         "bottom": self.bottomMargin,
-    })
+      }
+    )
     self.__setStyle()
 
   def getYAxisRangeForLayout(self, hist, source_histograms, is_ratio=False):
@@ -227,13 +227,11 @@ class Styler:
 
     values = []
     for source in source_histograms or []:
-      values.extend(source.GetBinContent(i)
-                    for i in range(1, source.GetNbinsX() + 1))
+      values.extend(source.GetBinContent(i) for i in range(1, source.GetNbinsX() + 1))
     positive_values = [value for value in values if value > 0]
     content_maximum = max(positive_values) if positive_values else 1.0
     if hist.log_y and not is_ratio:
-      content_minimum = (min(positive_values) if positive_values
-                         else content_maximum / 1000.0)
+      content_minimum = min(positive_values) if positive_values else content_maximum / 1000.0
       automatic_minimum = 0.7 * content_minimum
     else:
       automatic_minimum = min(0.0, min(values) if values else 0.0)
@@ -256,8 +254,7 @@ class Styler:
     if is_ratio:
       ratio_limits = getattr(self.config, "ratio_limits", None)
       if ratio_limits is None:
-        self.__setAutomaticLimits(
-            plot, hist, source_histograms, is_ratio=True)
+        self.__setAutomaticLimits(plot, hist, source_histograms, is_ratio=True)
       else:
         plot.SetMinimum(ratio_limits[0])
         plot.SetMaximum(ratio_limits[1])
@@ -270,8 +267,7 @@ class Styler:
       if not hist.log_y:
         frame = plot.GetHistogram()
         if frame is not None:
-          plot.SetMaximum(self.__addTopLabelClearance(
-              frame.GetMinimum(), frame.GetMaximum()))
+          plot.SetMaximum(self.__addTopLabelClearance(frame.GetMinimum(), frame.GetMaximum()))
 
     try:
       plot.SetTitle("" if is_ratio else hist.title)
@@ -298,8 +294,7 @@ class Styler:
       warn("Couldn't set axes limits")
       return
 
-  def __setAutomaticLimits(
-      self, plot, hist, source_histograms=None, is_ratio=False):
+  def __setAutomaticLimits(self, plot, hist, source_histograms=None, is_ratio=False):
     """Set missing bounds from all plotted contributions, with a small margin."""
     if not hasattr(plot, "GetHistogram"):
       return
@@ -320,12 +315,12 @@ class Styler:
         automatic_x_min = 0.7 * x_min
         automatic_x_max = 1.3 * x_max
       plot.GetXaxis().SetLimits(
-          hist.x_min if hist.x_min is not None else automatic_x_min,
-          hist.x_max if hist.x_max is not None else automatic_x_max)
+        hist.x_min if hist.x_min is not None else automatic_x_min,
+        hist.x_max if hist.x_max is not None else automatic_x_max,
+      )
 
     if hist.y_min is None or hist.y_max is None:
-      minimum, maximum = self.getYAxisRangeForLayout(
-          hist, source_histograms, is_ratio=is_ratio)
+      minimum, maximum = self.getYAxisRangeForLayout(hist, source_histograms, is_ratio=is_ratio)
       plot.SetMinimum(minimum)
       plot.SetMaximum(maximum)
 
@@ -346,11 +341,10 @@ class Styler:
       number_of_divisions = ctypes.c_int()
       division_width = ctypes.c_double()
       ROOT.THLimitsFinder.Optimize(
-          minimum, maximum, 5, label_minimum, label_maximum,
-          number_of_divisions, division_width)
+        minimum, maximum, 5, label_minimum, label_maximum, number_of_divisions, division_width
+      )
 
-      if attempt == 0 and not Styler.__usesAxisExponent(
-          label_minimum.value, label_maximum.value, 5):
+      if attempt == 0 and not Styler.__usesAxisExponent(label_minimum.value, label_maximum.value, 5):
         return maximum
 
       axis_range = maximum - minimum
@@ -358,8 +352,7 @@ class Styler:
       current_clearance = maximum - label_maximum.value
       if current_clearance >= minimum_clearance:
         break
-      maximum += ((minimum_clearance - current_clearance)
-                  / (1.0 - clearance_fraction))
+      maximum += (minimum_clearance - current_clearance) / (1.0 - clearance_fraction)
     return maximum
 
   @staticmethod
@@ -371,8 +364,7 @@ class Styler:
       return False
 
     division_width = abs(maximum - minimum) / number_of_divisions
-    if (division_width < 10 ** (-max_digits)
-        and math.log10(largest_magnitude) < 0):
+    if division_width < 10 ** (-max_digits) and math.log10(largest_magnitude) < 0:
       return True
 
     if largest_magnitude >= 1:
@@ -412,16 +404,12 @@ class Styler:
       return 1.5
 
     if ROOT.gPad is not None and ROOT.gPad.GetLogy():
-      central_label_width = self.__centralLogYAxisLabelWidth(
-          minimum, maximum)
+      central_label_width = self.__centralLogYAxisLabelWidth(minimum, maximum)
     else:
       central_label_width = self.__centralYAxisLabelWidth(minimum, maximum)
-    compact_capacity = self.__textWidth(
-        "600", 43, self.labelFontSize)
+    compact_capacity = self.__textWidth("600", 43, self.labelFontSize)
     offset_step = 1.5 * self.labelFontSize
-    return 1.35 + max(
-        0.0,
-        (central_label_width - compact_capacity) / offset_step)
+    return 1.35 + max(0.0, (central_label_width - compact_capacity) / offset_step)
 
   def __centralLogYAxisLabelWidth(self, minimum, maximum):
     if minimum <= 0 or maximum <= 0:
@@ -431,9 +419,10 @@ class Styler:
     maximum_exponent = math.ceil(math.log10(maximum))
     exponents = list(range(minimum_exponent, maximum_exponent + 1))
     central_exponents = [
-        exponent for index, exponent in enumerate(exponents)
-        if len(exponents) == 1
-        or 0.3 <= index / (len(exponents) - 1) <= 0.7]
+      exponent
+      for index, exponent in enumerate(exponents)
+      if len(exponents) == 1 or 0.3 <= index / (len(exponents) - 1) <= 0.7
+    ]
 
     def label(exponent):
       if exponent == 0:
@@ -442,14 +431,10 @@ class Styler:
         return "10"
       return f"10^{{{exponent}}}"
 
-    return max(
-        (self.__textWidth(label(exponent), 43, self.labelFontSize)
-         for exponent in central_exponents),
-        default=0)
+    return max((self.__textWidth(label(exponent), 43, self.labelFontSize) for exponent in central_exponents), default=0)
 
   def __centralYAxisLabelWidth(self, minimum, maximum):
-    label_minimum, _, number_of_labels, division_width = (
-        self.__optimizedYAxisLabels(minimum, maximum))
+    label_minimum, _, number_of_labels, division_width = self.__optimizedYAxisLabels(minimum, maximum)
     if number_of_labels <= 1:
       return self.__widestYAxisLabel(minimum, maximum)
 
@@ -458,19 +443,18 @@ class Styler:
       relative_position = index / (number_of_labels - 1)
       if 0.3 <= relative_position <= 0.7:
         value = label_minimum + index * division_width
-        central_widths.append(self.__textWidth(
-            f"{value:.6g}", 43, self.labelFontSize))
+        central_widths.append(self.__textWidth(f"{value:.6g}", 43, self.labelFontSize))
     return max(central_widths, default=0)
 
   def __widestYAxisLabel(self, minimum, maximum):
-    label_minimum, _, number_of_labels, division_width = (
-        self.__optimizedYAxisLabels(minimum, maximum))
+    label_minimum, _, number_of_labels, division_width = self.__optimizedYAxisLabels(minimum, maximum)
     return max(
-        (self.__textWidth(
-            f"{label_minimum + index * division_width:.6g}",
-            43, self.labelFontSize)
-         for index in range(number_of_labels)),
-        default=0)
+      (
+        self.__textWidth(f"{label_minimum + index * division_width:.6g}", 43, self.labelFontSize)
+        for index in range(number_of_labels)
+      ),
+      default=0,
+    )
 
   @staticmethod
   def __optimizedYAxisLabels(minimum, maximum):
@@ -478,11 +462,8 @@ class Styler:
     label_maximum = ctypes.c_double()
     optimized_divisions = ctypes.c_int()
     division_width = ctypes.c_double()
-    ROOT.THLimitsFinder.Optimize(
-        minimum, maximum, 5, label_minimum, label_maximum,
-        optimized_divisions, division_width)
-    return (label_minimum.value, label_maximum.value,
-            optimized_divisions.value + 1, division_width.value)
+    ROOT.THLimitsFinder.Optimize(minimum, maximum, 5, label_minimum, label_maximum, optimized_divisions, division_width)
+    return (label_minimum.value, label_maximum.value, optimized_divisions.value + 1, division_width.value)
 
   @staticmethod
   def __textWidth(text, font, size):

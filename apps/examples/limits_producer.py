@@ -84,7 +84,7 @@ def run_commands_with_condor(commands):
     f.write("RequestMemory = 1000MB\n")
     f.write("Initialdir = .\n")
     f.write("GetEnv = True\n")
-    f.write("+JobFlavour = \"espresso\"\n")
+    f.write('+JobFlavour = "espresso"\n')
     f.write(f"queue {len(commands)}\n")
 
   submit_output = subprocess.check_output(["condor_submit", submit_file], text=True)
@@ -119,15 +119,16 @@ def run_commands_with_condor(commands):
       print("\rJob finished.                                                        ")
       break
 
+
 def find_combine(config):
   combine_path = Path(config.combine_path)  # should be CMSSW_X_Y_Z/src
 
   # Candidate environment setups (order matters). We verify that `combine` is available.
   setup_cmds = [
-    f'cd {shlex.quote(str(combine_path))} && cmsenv',
-    f'cd {shlex.quote(str(combine_path))} && source env_lcg.sh',
-    f'cd {shlex.quote(str(combine_path))} && cmssw-el9 --no-home --command-to-run cmsenv',
-    f'cd {shlex.quote(str(combine_path))} && cmssw-el7 --no-home --command-to-run cmsenv',
+    f"cd {shlex.quote(str(combine_path))} && cmsenv",
+    f"cd {shlex.quote(str(combine_path))} && source env_lcg.sh",
+    f"cd {shlex.quote(str(combine_path))} && cmssw-el9 --no-home --command-to-run cmsenv",
+    f"cd {shlex.quote(str(combine_path))} && cmssw-el7 --no-home --command-to-run cmsenv",
   ]
 
   # Pick the first working environment
@@ -143,7 +144,7 @@ def find_combine(config):
   if not chosen_setup:
     fatal(f"Could not set up a working environment for Combine.\n")
     exit(1)
-    
+
   return chosen_setup
 
 
@@ -157,15 +158,12 @@ def run_combine(config, datacard_file_names):
     datacard_path = datacards_dir / f"{name}.txt"
     combine_log = datacard_path.with_suffix(".log")
 
-    cmd = (
-      "bash -lc "
-      + shlex.quote(
-        "set -e -o pipefail; "
-        f"{combine_setup}; "
-        f"cd {shlex.quote(str(datacards_dir))}; "
-        f"combine -M {args.method} {shlex.quote(str(datacard_path))} "
-        f"> {shlex.quote(str(combine_log))} 2>&1"
-      )
+    cmd = "bash -lc " + shlex.quote(
+      "set -e -o pipefail; "
+      f"{combine_setup}; "
+      f"cd {shlex.quote(str(datacards_dir))}; "
+      f"combine -M {args.method} {shlex.quote(str(datacard_path))} "
+      f"> {shlex.quote(str(combine_log))} 2>&1"
     )
     commands.append(cmd)
 
@@ -237,6 +235,7 @@ def print_significance(config):
       error(f"File {combine_output_path} not found.")
       continue
 
+
 def main():
   ROOT.gROOT.SetBatch(True)
 
@@ -264,7 +263,6 @@ def main():
   for main_sample in main_samples:
     datacard_file_name = get_datacard_file_name(config, main_sample)
 
-  
     info(f"Creating HistogramsManager for {datacard_file_name}")
 
     manager = HistogramsManager(config, input_files, datacard_file_name)

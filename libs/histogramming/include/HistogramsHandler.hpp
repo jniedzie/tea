@@ -8,28 +8,28 @@
 #include "Event.hpp"
 #include "Helpers.hpp"
 
-typedef std::pair<std::string,std::string> HistNames;
+typedef std::pair<std::string, std::string> HistNames;
 
 class HistogramsHandler {
  public:
   HistogramsHandler();
   ~HistogramsHandler();
 
-  void SetEventWeights(std::map<std::string,float> weights);
+  void SetEventWeights(std::map<std::string, float> weights);
 
   void Fill(std::string name, double value);
   void Fill(std::string name, double valueX, double valueY);
 
   void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
-  TH1D* GetHistogram1D(HistNames names) { return histograms1D[names]; }
-  std::map<HistNames, TH1D*> GetHistograms1D() { return histograms1D; }
-  std::map<HistNames, TH2D*> GetHistograms2D() { return histograms2D; }
+  TH1D *GetHistogram1D(HistNames names) { return histograms1D[names]; }
+  std::map<HistNames, TH1D *> GetHistograms1D() { return histograms1D; }
+  std::map<HistNames, TH2D *> GetHistograms2D() { return histograms2D; }
   void SaveHistograms();
   void Print();
-  
+
  private:
-  std::map<HistNames, TH1D*> histograms1D;
-  std::map<HistNames, TH2D*> histograms2D;
+  std::map<HistNames, TH1D *> histograms1D;
+  std::map<HistNames, TH2D *> histograms2D;
   std::map<std::string, std::string> histogramDirectories;
   std::vector<std::string> unfilledHistograms;
 
@@ -39,7 +39,7 @@ class HistogramsHandler {
   std::map<std::string, IrregularHistogramParams2D> irregularHistParams2D;
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
-  std::map<std::string,float> eventWeights;
+  std::map<std::string, float> eventWeights;
   bool sfSetup = false;
 
   void RemoveFromUnfilled(std::string name);
@@ -49,7 +49,7 @@ class HistogramsHandler {
   void SetupSFvariationHistograms();
 
   template <typename THist>
-  void SaveHistogram(HistNames name, THist* hist, TFile* outputFile);
+  void SaveHistogram(HistNames name, THist *hist, TFile *outputFile);
 };
 
 #endif /* HistogramsHandler_hpp */

@@ -27,7 +27,7 @@ class EventReader {
   int maxEvents;
 
   std::unordered_map<std::string, std::vector<std::string>> branchesPerCollection;
-  std::unordered_map<std::string, std::function<int(const std::shared_ptr<Event>&)>> collectionSizeGetters;
+  std::unordered_map<std::string, std::function<int(const std::shared_ptr<Event> &)>> collectionSizeGetters;
   std::unordered_map<std::string, std::string> defaultBranchSizeTypes;
 
   TFile *inputFile;

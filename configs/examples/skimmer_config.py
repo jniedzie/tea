@@ -3,22 +3,20 @@ nEvents = -1
 inputFilePath = "../tea/samples/background_dy.root"
 treeOutputFilePath = "../samples/skimmed/background_dy.root"
 
-triggerSelection = (
-    "HLT_IsoMu24",
-)
+triggerSelection = ("HLT_IsoMu24",)
 
 extraEventCollections = {
-    "GoodLeptons": {
-        "inputCollections": ("Muon", "Electron"),
-        "pt": (30., 9999999.),
-        "eta": (-2.4, 2.4),
-    },
+  "GoodLeptons": {
+    "inputCollections": ("Muon", "Electron"),
+    "pt": (30.0, 9999999.0),
+    "eta": (-2.4, 2.4),
+  },
 }
 
 eventCuts = {
-    "MET_pt": (30, 9999999),
-    "nMuon": (1, 9999999),
-    "nGoodLeptons": (1, 9999999),
+  "MET_pt": (30, 9999999),
+  "nMuon": (1, 9999999),
+  "nGoodLeptons": (1, 9999999),
 }
 
 
@@ -38,10 +36,10 @@ eventCuts = {
 
 # See templates/config.template.py for the (collection, name, type, varexp) format.
 branchesToAdd = (
-    ("Event", "dimuonMass", "Float_t", "-1.0"),
-    ("Muon", "ptSquared", "Float_t", "Muon_pt**2"),
-    ("Muon", "ptIfGood", "Float_t", ""),
-    ("Event", "muonPt", "vector<Float_t>", ""),
+  ("Event", "dimuonMass", "Float_t", "-1.0"),
+  ("Muon", "ptSquared", "Float_t", "Muon_pt**2"),
+  ("Muon", "ptIfGood", "Float_t", ""),
+  ("Event", "muonPt", "vector<Float_t>", ""),
 )
 
 # Uncomment if you want to specify event weights (e.g. from MC generator):

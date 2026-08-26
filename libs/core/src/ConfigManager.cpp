@@ -10,15 +10,14 @@
 
 using namespace std;
 
-static ConfigManager* instance = nullptr;
+static ConfigManager *instance = nullptr;
 
-ConfigManager& ConfigManager::getInstanceImpl(std::string* const _configPath) {
-  if (!instance) {
-    instance = new ConfigManager(_configPath);
-  }
+ConfigManager &ConfigManager::getInstanceImpl(std::string *const _configPath) {
+  if (!instance) { instance = new ConfigManager(_configPath); }
   return *instance;
 }
 
+// clang-format off
 void ConfigManager::PrintBanner() {
   cout << "\n"
        << "\033[1;31m"  // Bright red text
@@ -35,8 +34,9 @@ void ConfigManager::PrintBanner() {
        << "║\033[1;37m     toolkit for efficient analysis \033[0m\033[1;31m   ║\n"
        << "╚═══════════════════════════════════════╝\033[0m\n\n";
 }
+// clang-format on
 
-ConfigManager::ConfigManager(std::string* const _configPath) {
+ConfigManager::ConfigManager(std::string *const _configPath) {
   PrintBanner();
 
   if (nullptr == _configPath) {
@@ -72,24 +72,28 @@ ConfigManager::ConfigManager(std::string* const _configPath) {
   config = PyModule_GetDict(pythonModule);
 }
 
-ConfigManager::~ConfigManager() { Py_Finalize(); }
+ConfigManager::~ConfigManager() {
+  Py_Finalize();
+}
 
-int ConfigManager::GetCollectionSize(PyObject* collection) {
+int ConfigManager::GetCollectionSize(PyObject *collection) {
   int size = -1;
-  if (PyList_Check(collection))
+  if (PyList_Check(collection)) {
     size = PyList_Size(collection);
-  else if (PyTuple_Check(collection))
+  } else if (PyTuple_Check(collection)) {
     size = PyTuple_Size(collection);
+  }
   return size;
 }
 
-PyObject* ConfigManager::GetItem(PyObject* collection, int index) {
-  PyObject* item;
+PyObject *ConfigManager::GetItem(PyObject *collection, int index) {
+  PyObject *item;
 
-  if (PyList_Check(collection))
+  if (PyList_Check(collection)) {
     item = PyList_GetItem(collection, index);
-  else if (PyTuple_Check(collection))
+  } else if (PyTuple_Check(collection)) {
     item = PyTuple_GetItem(collection, index);
+  }
 
   return item;
 }
@@ -98,16 +102,14 @@ PyObject* ConfigManager::GetItem(PyObject* collection, int index) {
 // Methods to retrieve a value/list/dict from the python file
 //-------------------------------------------------------------------------------------------------
 
-PyObject* ConfigManager::GetPythonValue(string name) {
-  PyObject* pythonValue = PyDict_GetItemString(config, name.c_str());
-  if (!pythonValue) {
-    throw Exception(("Could not find a value in python config file: " + name).c_str());
-  }
+PyObject *ConfigManager::GetPythonValue(string name) {
+  PyObject *pythonValue = PyDict_GetItemString(config, name.c_str());
+  if (!pythonValue) { throw Exception(("Could not find a value in python config file: " + name).c_str()); }
   return pythonValue;
 }
 
-PyObject* ConfigManager::GetPythonList(string name) {
-  PyObject* pythonList = PyDict_GetItemString(config, name.c_str());
+PyObject *ConfigManager::GetPythonList(string name) {
+  PyObject *pythonList = PyDict_GetItemString(config, name.c_str());
 
   if (!pythonList || (!PyList_Check(pythonList) && !PyTuple_Check(pythonList))) {
     throw Exception(("Could not find a list/tuple in python config file: " + name).c_str());
@@ -115,8 +117,8 @@ PyObject* ConfigManager::GetPythonList(string name) {
   return pythonList;
 }
 
-PyObject* ConfigManager::GetPythonDict(string name) {
-  PyObject* pythonDict = PyDict_GetItemString(config, name.c_str());
+PyObject *ConfigManager::GetPythonDict(string name) {
+  PyObject *pythonDict = PyDict_GetItemString(config, name.c_str());
   if (!pythonDict || !PyDict_Check(pythonDict)) {
     throw Exception(("Could not find a dict in python config file: " + name).c_str());
   }
@@ -128,7 +130,7 @@ PyObject* ConfigManager::GetPythonDict(string name) {
 //-------------------------------------------------------------------------------------------------
 
 template <>
-void ConfigManager::GetValue<string>(std::string name, string& outputValue) {
+void ConfigManager::GetValue<string>(std::string name, string &outputValue) {
   if (name == "inputFilePath" && inputPath != "") {
     outputValue = inputPath;
     return;
@@ -142,7 +144,7 @@ void ConfigManager::GetValue<string>(std::string name, string& outputValue) {
     return;
   }
 
-  PyObject* pythonValue = GetPythonValue(name);
+  PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || !PyUnicode_Check(pythonValue)) {
     error() << "Failed retrieving python value (string)" << endl;
     return;
@@ -151,8 +153,8 @@ void ConfigManager::GetValue<string>(std::string name, string& outputValue) {
 }
 
 template <>
-void ConfigManager::GetValue<int>(std::string name, int& outputValue) {
-  PyObject* pythonValue = GetPythonValue(name);
+void ConfigManager::GetValue<int>(std::string name, int &outputValue) {
+  PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || (!PyUnicode_Check(pythonValue) && !PyLong_Check(pythonValue))) {
     error() << "Failed retrieving python value (int)" << endl;
     return;
@@ -161,8 +163,8 @@ void ConfigManager::GetValue<int>(std::string name, int& outputValue) {
 }
 
 template <>
-void ConfigManager::GetValue<bool>(std::string name, bool& outputValue) {
-  PyObject* pythonValue = GetPythonValue(name);
+void ConfigManager::GetValue<bool>(std::string name, bool &outputValue) {
+  PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || (!PyUnicode_Check(pythonValue) && !PyBool_Check(pythonValue))) {
     error() << "Failed retrieving python value (int)" << endl;
     return;
@@ -171,8 +173,8 @@ void ConfigManager::GetValue<bool>(std::string name, bool& outputValue) {
 }
 
 template <>
-void ConfigManager::GetValue<float>(std::string name, float& outputValue) {
-  PyObject* pythonValue = GetPythonValue(name);
+void ConfigManager::GetValue<float>(std::string name, float &outputValue) {
+  PyObject *pythonValue = GetPythonValue(name);
   if (!pythonValue || !PyFloat_Check(pythonValue)) {
     error() << "Failed retrieving python value (float)" << endl;
     return;
@@ -185,11 +187,11 @@ void ConfigManager::GetValue<float>(std::string name, float& outputValue) {
 //-------------------------------------------------------------------------------------------------
 
 template <>
-void ConfigManager::GetVector<std::string>(std::string name, std::vector<std::string>& outputVector) {
-  PyObject* pythonList = GetPythonList(name);
+void ConfigManager::GetVector<std::string>(std::string name, std::vector<std::string> &outputVector) {
+  PyObject *pythonList = GetPythonList(name);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* item = GetItem(pythonList, i);
+    PyObject *item = GetItem(pythonList, i);
 
     if (!item || !PyUnicode_Check(item)) {
       error() << "Failed retrieving python vector<string>" << endl;
@@ -201,11 +203,11 @@ void ConfigManager::GetVector<std::string>(std::string name, std::vector<std::st
 }
 
 template <>
-void ConfigManager::GetVector<int>(std::string name, std::vector<int>& outputVector) {
-  PyObject* pythonList = GetPythonList(name);
+void ConfigManager::GetVector<int>(std::string name, std::vector<int> &outputVector) {
+  PyObject *pythonList = GetPythonList(name);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* item = GetItem(pythonList, i);
+    PyObject *item = GetItem(pythonList, i);
 
     if (!item || !PyLong_Check(item)) {
       error() << "Failed retrieving python vector<int>" << endl;
@@ -221,8 +223,8 @@ void ConfigManager::GetVector<int>(std::string name, std::vector<int>& outputVec
 //-------------------------------------------------------------------------------------------------
 
 template <>
-void ConfigManager::GetMap<std::string, std::string>(std::string name, std::map<std::string, std::string>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<std::string, std::string>(std::string name, std::map<std::string, std::string> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -237,8 +239,8 @@ void ConfigManager::GetMap<std::string, std::string>(std::string name, std::map<
 }
 
 template <>
-void ConfigManager::GetMap<std::string, int>(std::string name, std::map<std::string, int>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<std::string, int>(std::string name, std::map<std::string, int> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -253,8 +255,8 @@ void ConfigManager::GetMap<std::string, int>(std::string name, std::map<std::str
 }
 
 template <>
-void ConfigManager::GetMap<std::string, float>(std::string name, std::map<std::string, float>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<std::string, float>(std::string name, std::map<std::string, float> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -269,8 +271,8 @@ void ConfigManager::GetMap<std::string, float>(std::string name, std::map<std::s
 }
 
 template <>
-void ConfigManager::GetMap<std::string, bool>(std::string name, std::map<std::string, bool>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<std::string, bool>(std::string name, std::map<std::string, bool> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -285,8 +287,8 @@ void ConfigManager::GetMap<std::string, bool>(std::string name, std::map<std::st
 }
 
 template <>
-void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vector<string>>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vector<string>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -298,7 +300,7 @@ void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vect
     }
     vector<string> outputVector;
     for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
-      PyObject* item = GetItem(pValue, i);
+      PyObject *item = GetItem(pValue, i);
       outputVector.push_back(PyUnicode_AsUTF8(item));
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
@@ -306,8 +308,8 @@ void ConfigManager::GetMap<string, vector<string>>(string name, map<string, vect
 }
 
 template <>
-void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<int>>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<int>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -319,7 +321,7 @@ void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<
     }
     vector<int> outputVector;
     for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
-      PyObject* item = GetItem(pValue, i);
+      PyObject *item = GetItem(pValue, i);
       outputVector.push_back(PyLong_AsLong(item));
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
@@ -327,8 +329,8 @@ void ConfigManager::GetMap<string, vector<int>>(string name, map<string, vector<
 }
 
 template <>
-void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vector<float>>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vector<float>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -340,7 +342,7 @@ void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vecto
     }
     vector<float> outputVector;
     for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
-      PyObject* item = GetItem(pValue, i);
+      PyObject *item = GetItem(pValue, i);
       outputVector.push_back(PyFloat_AsDouble(item));
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
@@ -348,8 +350,8 @@ void ConfigManager::GetMap<string, vector<float>>(string name, map<string, vecto
 }
 
 template <>
-void ConfigManager::GetMap<string, vector<bool>>(string name, map<string, vector<bool>>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<string, vector<bool>>(string name, map<string, vector<bool>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -361,7 +363,7 @@ void ConfigManager::GetMap<string, vector<bool>>(string name, map<string, vector
     }
     vector<bool> outputVector;
     for (Py_ssize_t i = 0; i < GetCollectionSize(pValue); ++i) {
-      PyObject* item = GetItem(pValue, i);
+      PyObject *item = GetItem(pValue, i);
       outputVector.push_back(PyLong_AsLong(item));
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = outputVector;
@@ -369,8 +371,8 @@ void ConfigManager::GetMap<string, vector<bool>>(string name, map<string, vector
 }
 
 template <>
-void ConfigManager::GetMap<string, map<string, string>>(string name, map<string, map<string, string>>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<string, map<string, string>>(string name, map<string, map<string, string>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pValue;
   Py_ssize_t pos = 0;
@@ -385,17 +387,15 @@ void ConfigManager::GetMap<string, map<string, string>>(string name, map<string,
     Py_ssize_t posInner = 0;
 
     while (PyDict_Next(pValue, &posInner, &pKeyInner, &pValueInner)) {
-      if (PyUnicode_Check(pValueInner)) {
-        tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner);
-      }
+      if (PyUnicode_Check(pValueInner)) { tmpMap[PyUnicode_AsUTF8(pKeyInner)] = PyUnicode_AsUTF8(pValueInner); }
     }
     outputMap[PyUnicode_AsUTF8(pKey)] = tmpMap;
   }
 }
 
 template <>
-void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vector<vector<int>>>& outputMap) {
-  PyObject* pythonDict = GetPythonDict(name);
+void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vector<vector<int>>> &outputMap) {
+  PyObject *pythonDict = GetPythonDict(name);
 
   PyObject *pKey, *pOuterList;
   Py_ssize_t pos = 0;
@@ -409,12 +409,12 @@ void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vecto
     vector<vector<int>> outerVector;
 
     for (Py_ssize_t i = 0; i < GetCollectionSize(pOuterList); ++i) {
-      PyObject* pInnerList = GetItem(pOuterList, i);
+      PyObject *pInnerList = GetItem(pOuterList, i);
 
       vector<int> innerVector;
 
       for (Py_ssize_t j = 0; j < GetCollectionSize(pInnerList); ++j) {
-        PyObject* pValue = GetItem(pInnerList, j);
+        PyObject *pValue = GetItem(pInnerList, j);
         innerVector.push_back(PyLong_AsLong(pValue));
       }
 
@@ -429,11 +429,11 @@ void ConfigManager::GetMap<int, vector<vector<int>>>(string name, map<int, vecto
 //-------------------------------------------------------------------------------------------------
 
 template <>
-void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, vector<string>>& outputPair) {
-  PyObject* pythonTuple = GetPythonList(name);
+void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, vector<string>> &outputPair) {
+  PyObject *pythonTuple = GetPythonList(name);
 
-  PyObject* first = GetItem(pythonTuple, 0);
-  PyObject* second = GetItem(pythonTuple, 1);
+  PyObject *first = GetItem(pythonTuple, 0);
+  PyObject *second = GetItem(pythonTuple, 1);
   if (!first || !PyUnicode_Check(first) || !second || !PyList_Check(second)) {
     error() << "Failed retrieving python pair (string, vector<string>)" << endl;
     return;
@@ -441,7 +441,7 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
   std::string value_first = PyUnicode_AsUTF8(first);
   vector<string> outputVector;
   for (Py_ssize_t i = 0; i < GetCollectionSize(second); ++i) {
-    PyObject* item = GetItem(second, i);
+    PyObject *item = GetItem(second, i);
     outputVector.push_back(PyUnicode_AsUTF8(item));
   }
   outputPair = {PyUnicode_AsUTF8(first), outputVector};
@@ -451,8 +451,9 @@ void ConfigManager::GetPair<string, vector<string>>(string name, pair<string, ve
 // Other methods
 //-------------------------------------------------------------------------------------------------
 
-void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, ExtraCollection>& extraEventCollections) {
-  PyObject* pythonDict = GetPythonDict("extraEventCollections");
+void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, ExtraCollection> &extraEventCollections,
+                                             string extraEventCollectionsName) {
+  PyObject *pythonDict = GetPythonDict(extraEventCollectionsName);
 
   PyObject *collectionName, *collectionSettings;
   Py_ssize_t pos = 0;
@@ -462,8 +463,8 @@ void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, Extra
       error() << "Failed retrieving python collection name (string)" << endl;
       continue;
     }
-    PyObject* pyKey = nullptr;
-    PyObject* pyValue = nullptr;
+    PyObject *pyKey = nullptr;
+    PyObject *pyValue = nullptr;
     Py_ssize_t pos2 = 0;
     ExtraCollection extraCollection;
 
@@ -471,12 +472,12 @@ void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, Extra
       string keyStr = PyUnicode_AsUTF8(pyKey);
       if (keyStr == "inputCollections") {
         for (Py_ssize_t i = 0; i < GetCollectionSize(pyValue); ++i) {
-          PyObject* item = GetItem(pyValue, i);
+          PyObject *item = GetItem(pyValue, i);
           extraCollection.inputCollections.push_back(PyUnicode_AsUTF8(item));
         }
       } else if (PyTuple_Check(pyValue)) {
-        PyObject* min = GetItem(pyValue, 0);
-        PyObject* max = GetItem(pyValue, 1);
+        PyObject *min = GetItem(pyValue, 0);
+        PyObject *max = GetItem(pyValue, 1);
         extraCollection.allCuts[keyStr] = {PyFloat_AsDouble(min), PyFloat_AsDouble(max)};
       } else {
         extraCollection.flags[keyStr] = PyLong_AsLong(pyValue);
@@ -487,8 +488,8 @@ void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, Extra
   }
 }
 
-void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsMap>& scaleFactors) {
-  PyObject* pythonDict = GetPythonDict(name.c_str());
+void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsMap> &scaleFactors) {
+  PyObject *pythonDict = GetPythonDict(name.c_str());
 
   PyObject *SFname, *SFvalues;
   Py_ssize_t pos0 = 0;
@@ -509,8 +510,8 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsMap>& s
         error() << "Failed retrieving python eta bin" << endl;
         continue;
       }
-      PyObject* ptBin = nullptr;
-      PyObject* values = nullptr;
+      PyObject *ptBin = nullptr;
+      PyObject *values = nullptr;
       Py_ssize_t pos2 = 0;
 
       tuple<float, float> etaBinValues = {PyFloat_AsDouble(GetItem(etaBin, 0)), PyFloat_AsDouble(GetItem(etaBin, 1))};
@@ -518,20 +519,21 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsMap>& s
       while (PyDict_Next(valuesForEta, &pos2, &ptBin, &values)) {
         tuple<float, float> ptBinValues = {PyFloat_AsDouble(GetItem(ptBin, 0)), PyFloat_AsDouble(GetItem(ptBin, 1))};
 
-        PyObject* fieldName = nullptr;
-        PyObject* fieldValue = nullptr;
+        PyObject *fieldName = nullptr;
+        PyObject *fieldValue = nullptr;
         Py_ssize_t pos3 = 0;
 
         while (PyDict_Next(values, &pos3, &fieldName, &fieldValue)) {
-          scaleFactors[SFnameStr][etaBinValues][ptBinValues][PyUnicode_AsUTF8(fieldName)] = PyFloat_AsDouble(fieldValue);
+          scaleFactors[SFnameStr][etaBinValues][ptBinValues][PyUnicode_AsUTF8(fieldName)] =
+              PyFloat_AsDouble(fieldValue);
         }
       }
     }
   }
 }
 
-void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple>& scaleFactors) {
-  PyObject* pythonDict = GetPythonDict(name.c_str());
+void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple> &scaleFactors) {
+  PyObject *pythonDict = GetPythonDict(name.c_str());
 
   PyObject *SFname, *SFvalues;
   Py_ssize_t pos0 = 0;
@@ -544,25 +546,25 @@ void ConfigManager::GetScaleFactors(string name, map<string, ScaleFactorsTuple>&
     string SFnameStr = PyUnicode_AsUTF8(SFname);
     scaleFactors[SFnameStr] = ScaleFactorsTuple();
 
-    PyObject* tupleFormula = GetItem(SFvalues, 0);
+    PyObject *tupleFormula = GetItem(SFvalues, 0);
     string formulaString = PyUnicode_AsUTF8(tupleFormula);
 
-    PyObject* tupleParams = GetItem(SFvalues, 1);
+    PyObject *tupleParams = GetItem(SFvalues, 1);
 
     vector<float> params;
     for (Py_ssize_t i = 0; i < GetCollectionSize(tupleParams); ++i) {
-      PyObject* item = GetItem(tupleParams, i);
+      PyObject *item = GetItem(tupleParams, i);
       params.push_back(PyFloat_AsDouble(item));
     }
     scaleFactors[SFnameStr] = {formulaString, params};
   }
 }
 
-void ConfigManager::GetAddedBranchesParams(vector<AddedBranchParams>& addedBranchesParams) {
-  PyObject* pythonList = GetPythonList("branchesToAdd");
+void ConfigManager::GetAddedBranchesParams(vector<AddedBranchParams> &addedBranchesParams) {
+  PyObject *pythonList = GetPythonList("branchesToAdd");
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* entry = GetItem(pythonList, i);
+    PyObject *entry = GetItem(pythonList, i);
     auto nParams = GetCollectionSize(entry);
 
     // Skipping a malformed entry would silently drop the branch from the output tree, so rather stop here
@@ -571,8 +573,8 @@ void ConfigManager::GetAddedBranchesParams(vector<AddedBranchParams>& addedBranc
               << " - expected (collection, name, type, varexp)" << endl;
       exit(1);
     }
-    if (!PyUnicode_Check(GetItem(entry, 0)) || !PyUnicode_Check(GetItem(entry, 1)) || !PyUnicode_Check(GetItem(entry, 2)) ||
-        !PyUnicode_Check(GetItem(entry, 3))) {
+    if (!PyUnicode_Check(GetItem(entry, 0)) || !PyUnicode_Check(GetItem(entry, 1)) ||
+        !PyUnicode_Check(GetItem(entry, 2)) || !PyUnicode_Check(GetItem(entry, 3))) {
       fatal() << "Invalid types in branchesToAdd definition at index " << i
               << " (expected four strings: collection, name, type, varexp)" << endl;
       exit(1);
@@ -587,11 +589,11 @@ void ConfigManager::GetAddedBranchesParams(vector<AddedBranchParams>& addedBranc
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<string, HistogramParams>& histogramsParams, string collectionName) {
-  PyObject* pythonList = GetPythonList(collectionName);
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams> &histogramsParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* params = GetItem(pythonList, i);
+    PyObject *params = GetItem(pythonList, i);
 
     HistogramParams histParams;
     string title;
@@ -606,8 +608,8 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams>& histograms
     // functions below.  In particular, an older one-name definition has the
     // same number of arguments as a valid definition, but its second item is
     // the number of bins rather than a variable name.
-    if (!PyUnicode_Check(GetItem(params, 0)) || !PyUnicode_Check(GetItem(params, 1)) || !PyLong_Check(GetItem(params, 2)) ||
-        !(PyFloat_Check(GetItem(params, 3)) || PyLong_Check(GetItem(params, 3))) ||
+    if (!PyUnicode_Check(GetItem(params, 0)) || !PyUnicode_Check(GetItem(params, 1)) ||
+        !PyLong_Check(GetItem(params, 2)) || !(PyFloat_Check(GetItem(params, 3)) || PyLong_Check(GetItem(params, 3))) ||
         !(PyFloat_Check(GetItem(params, 4)) || PyLong_Check(GetItem(params, 4))) ||
         (nParams == 6 && !PyUnicode_Check(GetItem(params, 5)))) {
       error() << "Invalid types in 1D histogram definition at index " << i << " in '" << collectionName
@@ -623,56 +625,55 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams>& histograms
     histParams.max = PyFloat_AsDouble(GetItem(params, 4));
     histParams.directory = "";
     // we treat the directory as optional.
-    if (nParams == 6) {
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5));
-    }
+    if (nParams == 6) { histParams.directory = PyUnicode_AsUTF8(GetItem(params, 5)); }
     title = histParams.collection + "_" + histParams.variable;
     histogramsParams[title] = histParams;
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams>& histogramsParams, string collectionName) {
-  PyObject* pythonList = GetPythonList(collectionName);
+void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams> &histogramsParams,
+                                        string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* params = GetItem(pythonList, i);
+    PyObject *params = GetItem(pythonList, i);
     auto nParams = GetCollectionSize(params);
 
     IrregularHistogramParams histParams;
     string title;
     if (nParams < 3 || nParams > 4) {
-      error() << "Invalid number of arguments in 1D variable bin histogram definition - expect either 3 or 4 " << std::endl;
+      error() << "Invalid number of arguments in 1D variable bin histogram definition - expect either 3 or 4 "
+              << std::endl;
       continue;
     }
     if (!PyUnicode_Check(GetItem(params, 0)) || !PyUnicode_Check(GetItem(params, 1)) ||
         (!PyList_Check(GetItem(params, 2)) && !PyTuple_Check(GetItem(params, 2))) ||
         (nParams == 4 && !PyUnicode_Check(GetItem(params, 3)))) {
-      error() << "Invalid types in 1D variable bin histogram definition at index " << i << " in '" << collectionName << "'" << endl;
+      error() << "Invalid types in 1D variable bin histogram definition at index " << i << " in '" << collectionName
+              << "'" << endl;
       continue;
     }
     histParams.collection = PyUnicode_AsUTF8(GetItem(params, 0));
     histParams.variable = PyUnicode_AsUTF8(GetItem(params, 1));
 
-    PyObject* binEdges = GetItem(params, 2);
+    PyObject *binEdges = GetItem(params, 2);
     for (Py_ssize_t i = 0; i < GetCollectionSize(binEdges); ++i) {
-      PyObject* item = GetItem(binEdges, i);
+      PyObject *item = GetItem(binEdges, i);
       histParams.binEdges.push_back(PyFloat_AsDouble(item));
     }
     histParams.directory = "";
-    if (nParams > 3) {
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3));
-    }
+    if (nParams > 3) { histParams.directory = PyUnicode_AsUTF8(GetItem(params, 3)); }
     title = histParams.collection + "_" + histParams.variable;
 
     histogramsParams[title] = histParams;
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D>& histogramsParams, string collectionName) {
-  PyObject* pythonList = GetPythonList(collectionName);
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D> &histogramsParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* params = GetItem(pythonList, i);
+    PyObject *params = GetItem(pythonList, i);
     auto nParams = GetCollectionSize(params);
     if (nParams < 7 || nParams > 8) {
       error() << "Invalid number of arguments in 2D histogram definition - expect either 7 or 8 " << std::endl;
@@ -689,34 +690,33 @@ void ConfigManager::GetHistogramsParams(map<string, HistogramParams2D>& histogra
     histParams.minY = PyFloat_AsDouble(GetItem(params, 5));
     histParams.maxY = PyFloat_AsDouble(GetItem(params, 6));
     histParams.directory = "";
-    if (nParams == 8) {
-      histParams.directory = PyUnicode_AsUTF8(GetItem(params, 7));
-    }
+    if (nParams == 8) { histParams.directory = PyUnicode_AsUTF8(GetItem(params, 7)); }
 
     histogramsParams[histParams.variable] = histParams;
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams2D>& histogramsParams, string collectionName) {
-  PyObject* pythonList = GetPythonList(collectionName);
+void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams2D> &histogramsParams,
+                                        string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
 
   for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject* params = GetItem(pythonList, i);
+    PyObject *params = GetItem(pythonList, i);
 
     IrregularHistogramParams2D histParams;
     string title;
 
     histParams.variable = PyUnicode_AsUTF8(GetItem(params, 0));
 
-    PyObject* binEdgesX = GetItem(params, 1);
-    PyObject* binEdgesY = GetItem(params, 2);
+    PyObject *binEdgesX = GetItem(params, 1);
+    PyObject *binEdgesY = GetItem(params, 2);
 
     for (Py_ssize_t i = 0; i < GetCollectionSize(binEdgesX); ++i) {
-      PyObject* item = GetItem(binEdgesX, i);
+      PyObject *item = GetItem(binEdgesX, i);
       histParams.binEdgesX.push_back(PyFloat_AsDouble(item));
     }
     for (Py_ssize_t i = 0; i < GetCollectionSize(binEdgesY); ++i) {
-      PyObject* item = GetItem(binEdgesY, i);
+      PyObject *item = GetItem(binEdgesY, i);
       histParams.binEdgesY.push_back(PyFloat_AsDouble(item));
     }
 
@@ -726,8 +726,8 @@ void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams2D>&
   }
 }
 
-void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>>& cuts) {
-  PyObject* pythonDict = GetPythonDict("eventCuts");
+void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
+  PyObject *pythonDict = GetPythonDict("eventCuts");
 
   PyObject *cutName, *cutValues;
   Py_ssize_t pos = 0;
@@ -737,8 +737,8 @@ void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>>& cuts) {
       error() << "Failed retrieving python cut name (string)" << endl;
       continue;
     }
-    PyObject* min = GetItem(cutValues, 0);
-    PyObject* max = GetItem(cutValues, 1);
+    PyObject *min = GetItem(cutValues, 0);
+    PyObject *max = GetItem(cutValues, 1);
     cuts.push_back({PyUnicode_AsUTF8(cutName), {PyFloat_AsDouble(min), PyFloat_AsDouble(max)}});
   }
 }

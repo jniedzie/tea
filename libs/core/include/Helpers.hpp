@@ -57,13 +57,13 @@ const int maxCollectionElements = 9999;
 const int maxNdaughters = 5;  // Number of daughters that will be considered for HEP MC particles.
                               // Heavily affects computing time. Max is 100.
 
-inline std::vector<std::string> getListOfTrees(TFile* file) {
+inline std::vector<std::string> getListOfTrees(TFile *file) {
   auto keys = file->GetListOfKeys();
   std::vector<std::string> trees;
 
   for (auto i : *keys) {
-    auto key = (TKey*)i;
-    if (strcmp(key->GetClassName(), "TTree") == 0) trees.push_back(key->GetName());
+    auto key = (TKey *)i;
+    if (strcmp(key->GetClassName(), "TTree") == 0) { trees.push_back(key->GetName()); }
   }
   return trees;
 }
@@ -74,7 +74,7 @@ inline std::vector<std::string> split(std::string input, char splitBy) {
   std::istringstream iss(input);
   std::string part;
 
-  while (std::getline(iss, part, splitBy)) parts.push_back(part);
+  while (std::getline(iss, part, splitBy)) { parts.push_back(part); }
   return parts;
 }
 
@@ -92,7 +92,9 @@ inline float randFloat(float min = 0.0, float max = 1.0) {
   return dist(gen);
 }
 
-inline bool inRange(float value, std::pair<float, float> range) { return value >= range.first && value <= range.second; }
+inline bool inRange(float value, std::pair<float, float> range) {
+  return value >= range.first && value <= range.second;
+}
 
 inline void makeParentDirectories(std::string filePath) {
   std::filesystem::path directoryPath = std::filesystem::path(filePath).parent_path();
@@ -106,7 +108,7 @@ inline void makeParentDirectories(std::string filePath) {
   }
 }
 
-inline bool FileExists(const std::string& name) {
+inline bool FileExists(const std::string &name) {
   std::ifstream f(name.c_str());
   return f.good();
 }
@@ -118,20 +120,19 @@ struct ExtraCollection {
 
   void Print() {
     info() << "Input collections: " << std::endl;
-    for (std::string name : inputCollections) info() << name << std::endl;
+    for (std::string name : inputCollections) { info() << name << std::endl; }
 
     info() << "All cuts: " << std::endl;
-    for (auto& [name, cuts] : allCuts) {
+    for (auto &[name, cuts] : allCuts) {
       info() << "\t" << name << ": " << cuts.first << ", " << cuts.second << std::endl;
     }
     info() << "Flags: " << std::endl;
-    for (auto& [name, flag] : flags) {
-      info() << "\t" << name << ": " << flag << std::endl;
-    }
+    for (auto &[name, flag] : flags) { info() << "\t" << name << ": " << flag << std::endl; }
   }
 };
 
-typedef std::map<std::tuple<float, float>, std::map<std::tuple<float, float>, std::map<std::string, float>>> ScaleFactorsMap;
+typedef std::map<std::tuple<float, float>, std::map<std::tuple<float, float>, std::map<std::string, float>>>
+    ScaleFactorsMap;
 typedef std::tuple<std::string, std::vector<float>> ScaleFactorsTuple;
 
 struct HistogramParams {
@@ -175,14 +176,15 @@ struct AddedBranchParams {
 };
 
 inline const std::map<std::string, std::string> kAddedBranchTypeCodes = {
-    {"Float_t", "F"}, {"Double_t", "D"}, {"Int_t", "I"},
-    {"UInt_t", "i"},  {"Bool_t", "O"},   {"ULong64_t", "l"},
-    {"UChar_t", "b"}, {"Short_t", "S"},  {"UShort_t", "s"},
+    {"Float_t", "F"},   {"Double_t", "D"}, {"Int_t", "I"},   {"UInt_t", "i"},   {"Bool_t", "O"},
+    {"ULong64_t", "l"}, {"UChar_t", "b"},  {"Short_t", "S"}, {"UShort_t", "s"},
 };
 
 inline const std::map<std::string, std::string> kAddedVectorBranchElementTypes = {
-    {"vector<Float_t>", "Float_t"}, {"vector<Double_t>", "Double_t"},
-    {"vector<Int_t>", "Int_t"},     {"vector<UInt_t>", "UInt_t"},
+    {"vector<Float_t>", "Float_t"},
+    {"vector<Double_t>", "Double_t"},
+    {"vector<Int_t>", "Int_t"},
+    {"vector<UInt_t>", "UInt_t"},
 };
 
 template <typename T>
@@ -233,7 +235,9 @@ double duration(T t0, T t1) {
 }
 
 /// Returns current time
-inline std::chrono::time_point<std::chrono::steady_clock> now() { return std::chrono::steady_clock::now(); }
+inline std::chrono::time_point<std::chrono::steady_clock> now() {
+  return std::chrono::steady_clock::now();
+}
 
 template <class K, class V>
 class insertion_ordered_map {
@@ -242,14 +246,16 @@ class insertion_ordered_map {
   std::unordered_map<K, typename std::list<Node>::iterator> index_;
 
  public:
-  bool insert(const K& k, const V& v) {
-    if (index_.count(k)) return false;  // no overwrite; adjust as needed
+  bool insert(const K &k, const V &v) {
+    if (index_.count(k)) {
+      return false;  // no overwrite; adjust as needed
+    }
     order_.emplace_back(k, v);
     index_[k] = std::prev(order_.end());
     return true;
   }
 
-  V& operator[](const K& k) {  // inserts default if missing
+  V &operator[](const K &k) {  // inserts default if missing
     if (!index_.count(k)) {
       order_.emplace_back(k, V{});
       index_[k] = std::prev(order_.end());
@@ -257,14 +263,14 @@ class insertion_ordered_map {
     return index_[k]->second;
   }
 
-  typename std::list<Node>::iterator find(const K& k) {
+  typename std::list<Node>::iterator find(const K &k) {
     auto it = index_.find(k);
     return it == index_.end() ? order_.end() : it->second;
   }
 
-  bool erase(const K& k) {
+  bool erase(const K &k) {
     auto it = index_.find(k);
-    if (it == index_.end()) return false;
+    if (it == index_.end()) { return false; }
     order_.erase(it->second);
     index_.erase(it);
     return true;

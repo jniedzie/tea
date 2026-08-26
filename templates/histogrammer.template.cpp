@@ -10,7 +10,7 @@
 
 using namespace std;
 
-int main(int argc, char **argv) {  
+int main(int argc, char **argv) {
   // Initialize ConfigManager with the path passed as an argument to the app
   vector<string> requiredArgs = {"config"};
   vector<string> optionalArgs = {"input_path", "output_hists_path"};

@@ -66,16 +66,17 @@ class Multitype {
 
   void checkType(std::string typeName) {
     std::string branchType;
-    if (object->valuesTypes.find(branchName) != object->valuesTypes.end())
+    if (object->valuesTypes.find(branchName) != object->valuesTypes.end()) {
       branchType = object->valuesTypes.at(branchName);
-    else if (object->customValuesTypes.find(branchName) != object->customValuesTypes.end()) {
+    } else if (object->customValuesTypes.find(branchName) != object->customValuesTypes.end()) {
       branchType = object->customValuesTypes.at(branchName);
     } else {
       std::string message = "Branch not found: " + branchName + "\n";
       throw BadTypeException(message.c_str());
     }
     if (branchType != typeName) {
-      std::string message = "Casting a physics object-level branch " + branchName + " (" + branchType + ") to " + typeName + "\n";
+      std::string message =
+          "Casting a physics object-level branch " + branchName + " (" + branchType + ") to " + typeName + "\n";
       throw BadTypeException(message.c_str());
     }
   }

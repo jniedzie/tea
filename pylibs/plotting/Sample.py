@@ -40,7 +40,6 @@ class Sample:
 
   def __post_init__(self):
     if self.cross_sections is not None and self.cross_section < 0:
-
       name = self.name.replace("signal_", "")
 
       for key, cross_section in self.cross_sections.items():

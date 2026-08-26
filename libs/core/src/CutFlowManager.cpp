@@ -15,12 +15,11 @@ CutFlowManager::CutFlowManager(shared_ptr<EventReader> eventReader_, shared_ptr<
 
   try {
     config.GetValue("weightsBranchName", weightsBranchName);
-  } catch (const Exception &e) {
-  }
+  } catch (const Exception &e) {}
 
   RegisterPreExistingCutFlows();
 
-  if (!eventWriter_) warn() << "No eventWriter given for CutFlowManager" << endl;
+  if (!eventWriter_) { warn() << "No eventWriter given for CutFlowManager" << endl; }
 }
 
 CutFlowManager::~CutFlowManager() {}
@@ -31,26 +30,28 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
   for (int i = 0; i < keys->GetSize(); i++) {
     TKey *key = (TKey *)keys->At(i);
     TString keyName = key->GetName();
-    if (keyName.Contains("CutFlow")) existingCutFlows.push_back(keyName.Data());
+    if (keyName.Contains("CutFlow")) { existingCutFlows.push_back(keyName.Data()); }
   }
 
   for (auto cutFlowName : existingCutFlows) {
-    if (!eventReader->inputFile->Get(cutFlowName.c_str())) continue;
+    if (!eventReader->inputFile->Get(cutFlowName.c_str())) { continue; }
 
     bool rawEvents = cutFlowName.find("RawEvents") != string::npos;
     string collectionName = "";
-    if (cutFlowName == "CutFlow" || cutFlowName == "RawEventsCutFlow")
+    if (cutFlowName == "CutFlow" || cutFlowName == "RawEventsCutFlow") {
       collectionName = "";
-    else if (cutFlowName.find("CollectionCutFlow_") != string::npos) {
+    } else if (cutFlowName.find("CollectionCutFlow_") != string::npos) {
       collectionName = cutFlowName.substr(cutFlowName.find("CollectionCutFlow_") + 17);
-      if (rawEvents) collectionName = collectionName.substr(collectionName.find("RawEventsCollectionCutFlow_") + 26);
+      if (rawEvents) {
+        collectionName = collectionName.substr(collectionName.find("RawEventsCollectionCutFlow_") + 26);
+      }
     } else {
       warn() << "Found cutflow in unknown format: " << cutFlowName
              << ". Expected cutflow name CutFlow or names starting with CollectionCutFlow_" << endl;
       collectionName = cutFlowName;
     }
 
-    if (!rawEvents && collectionName != "") RegisterCollection(collectionName);
+    if (!rawEvents && collectionName != "") { RegisterCollection(collectionName); }
     auto sourceDir = (TDirectory *)eventReader->inputFile->Get(cutFlowName.c_str());
 
     TIter nextKey(sourceDir->GetListOfKeys());
@@ -65,19 +66,20 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
       delete obj;
 
       if (rawEvents) {
-        if (collectionName == "")
+        if (collectionName == "") {
           rawEventsAfterCuts[cutName] = sumOfWeights;
-        else
+        } else {
           rawEventsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
+        }
       } else {
         if (collectionName == "") {
           weightsAfterCuts[cutName] = sumOfWeights;
-          if (containsInitial) inputContainsInitial = true;
+          if (containsInitial) { inputContainsInitial = true; }
           existingCuts.push_back(cutName);
           currentIndex++;
         } else {
           weightsAfterCollectionCuts[collectionName][cutName] = sumOfWeights;
-          if (containsInitial) inputCollectionContainsInitial[collectionName] = true;
+          if (containsInitial) { inputCollectionContainsInitial[collectionName] = true; }
           existingCollectionCuts[collectionName].push_back(cutName);
           currentCollectionIndex[collectionName]++;
         }
@@ -95,9 +97,9 @@ void CutFlowManager::RegisterCollection(string collectionName) {
 }
 
 void CutFlowManager::RegisterCut(string cutName, string collectionName) {
-  if (cutName == "initial" && HasCut("initial", collectionName)) return;
+  if (cutName == "initial" && HasCut("initial", collectionName)) { return; }
   bool containsInitial = collectionName == "" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
-  if (cutName == "initial" && containsInitial) return;
+  if (cutName == "initial" && containsInitial) { return; }
   int index = collectionName == "" ? currentIndex : currentCollectionIndex[collectionName];
   string fullCutName = (cutName == "initial") ? "0_initial" : (to_string(index) + "_" + cutName);
   if (collectionName == "") {
@@ -119,9 +121,7 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
     size_t underscorePos = existingCutName.find("_");
     if (underscorePos != string::npos) {
       string nameAfterUnderscore = existingCutName.substr(underscorePos + 1);
-      if (nameAfterUnderscore == cutName) {
-        matchingFullCutNames.push_back(existingCutName);
-      }
+      if (nameAfterUnderscore == cutName) { matchingFullCutNames.push_back(existingCutName); }
     }
   }
 
@@ -136,7 +136,7 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
       maxCutName = fullCutName;
     }
   }
-  if (maxCutName != "") return maxCutName;
+  if (maxCutName != "") { return maxCutName; }
 
   // If no matching full name was found, we cannot continue
   fatal() << "CutFlowManager does not contain cut " << cutName << endl;
@@ -145,11 +145,11 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
 }
 
 float CutFlowManager::GetCurrentEventWeight() {
-  if (eventWeight != 0) return eventWeight;
+  if (eventWeight != 0) { return eventWeight; }
 
   float weight = 1.0;
 
-  if (weightsBranchName == "") return weight;
+  if (weightsBranchName == "") { return weight; }
 
   try {
     weight = eventReader->currentEvent->Get(weightsBranchName);
@@ -161,7 +161,7 @@ float CutFlowManager::GetCurrentEventWeight() {
 
 void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
   bool containsInitial = collectionName == "" ? inputContainsInitial : inputCollectionContainsInitial[collectionName];
-  if (cutName == "initial" && containsInitial) return;
+  if (cutName == "initial" && containsInitial) { return; }
   string fullCutName = GetFullCutName(cutName, collectionName);
   if (collectionName == "") {
     weightsAfterCuts[fullCutName] += GetCurrentEventWeight();
@@ -173,9 +173,7 @@ void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
 }
 
 void CutFlowManager::SaveSingleCutFlow(string collectionName) {
-  if (!eventWriter) {
-    error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl;
-  }
+  if (!eventWriter) { error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl; }
   map<string, float> weights = weightsAfterCuts;
   map<string, float> rawEvents = rawEventsAfterCuts;
   string cutFlowName = "CutFlow";
@@ -190,9 +188,7 @@ void CutFlowManager::SaveSingleCutFlow(string collectionName) {
 
 void CutFlowManager::SaveCutFlow() {
   SaveSingleCutFlow();
-  for (auto &[collectionName, vertexCuts] : weightsAfterCollectionCuts) {
-    SaveSingleCutFlow(collectionName);
-  }
+  for (auto &[collectionName, vertexCuts] : weightsAfterCollectionCuts) { SaveSingleCutFlow(collectionName); }
 }
 
 bool CutFlowManager::HasCut(string cutName, string collectionName) {
@@ -201,18 +197,19 @@ bool CutFlowManager::HasCut(string cutName, string collectionName) {
 }
 
 map<string, float> CutFlowManager::GetCutFlow(string collectionName) {
-  if (collectionName != "") return weightsAfterCollectionCuts[collectionName];
+  if (collectionName != "") { return weightsAfterCollectionCuts[collectionName]; }
   return weightsAfterCuts;
 }
 
 map<string, float> CutFlowManager::GetRawEventsCutFlow(string collectionName) {
-  if (collectionName != "") return rawEventsAfterCollectionCuts[collectionName];
+  if (collectionName != "") { return rawEventsAfterCollectionCuts[collectionName]; }
   return rawEventsAfterCuts;
 }
 
 void CutFlowManager::Print(string collectionName) {
   map<string, float> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
-  map<string, float> rawEvents = collectionName == "" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
+  map<string, float> rawEvents =
+      collectionName == "" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
   map<int, pair<string, float>> sortedWeightsAfterCuts;
   map<int, pair<string, float>> sortedRawEventsAfterCuts;
   for (auto &[cutName, sumOfWeights] : weights) {
@@ -222,11 +219,12 @@ void CutFlowManager::Print(string collectionName) {
     sortedRawEventsAfterCuts[index] = {cutName, rawEvents[cutName]};
   }
 
+  // clang-format off
   cout << "\n\033[1;36m"  // Bright cyan
        << "╔═════════════════════════════════════════════════════════════════════════╗\n"
        << "║                               Cut Flow Table                            ║\n"
        << "╠═════════════════════════════╤═══════════════════════╤═══════════════════╣\n"
-       << "║ " << setw(27) << left << "Cut name"
+       << "║ " << setw(27) << left  << "Cut name"
        << " │ " << setw(21) << right << "Gen-weights sum"
        << " │ " << setw(17) << right << "Raw events" << " ║\n";
   cout << "╠═════════════════════════════╪═══════════════════════╪═══════════════════╣\n";
@@ -235,21 +233,22 @@ void CutFlowManager::Print(string collectionName) {
     string cutName = get<0>(values);
     float genWeight = get<1>(values);
     float rawEvents = get<1>(sortedRawEventsAfterCuts[index]);
-    cout << "║ " << setw(27) << left << cutName
+    cout << "║ " << setw(27) << left  << cutName
          << " │ " << setw(21) << right << genWeight
          << " │ " << setw(17) << right << rawEvents << " ║\n";
   }
 
   cout << "╚═════════════════════════════╧═══════════════════════╧═══════════════════╝\033[0m\n\n";
+  // clang-format on
 }
 
 bool CutFlowManager::isEmpty(string collectionName) {
-  if (collectionName != "") return weightsAfterCollectionCuts[collectionName].empty();
+  if (collectionName != "") { return weightsAfterCollectionCuts[collectionName].empty(); }
   return weightsAfterCuts.empty();
 }
 
 bool CutFlowManager::isRawEventsEmpty(string collectionName) {
-  if (collectionName != "") return rawEventsAfterCollectionCuts[collectionName].empty();
+  if (collectionName != "") { return rawEventsAfterCollectionCuts[collectionName].empty(); }
   return rawEventsAfterCuts.empty();
 }
 

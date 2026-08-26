@@ -4,7 +4,7 @@ from Legend import Legend
 from Histogram import Histogram
 from HistogramNormalizer import NormalizationType
 
-luminosity = 2300000.  # pb^-1 (2018)
+luminosity = 2300000.0  # pb^-1 (2018)
 
 samples = [
   Sample(
@@ -38,8 +38,34 @@ output_path = "../plots_large_stat/"
 
 histograms = (
   #            name      title     logx   logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
-  Histogram("Dimuon_minvAfterCut", "", False, True, NormalizationType.to_lumi, 5, 0, 100, 1e-1, 1e2, "m_{inv}^{#mu#mu} [GeV]", "# events"),
-  Histogram("Dimuon_logLxy", "", False, True, NormalizationType.to_lumi, 3, -4, 3, 1e-1, 1e4, "log(L_{xy}^{#mu#mu} [cm])", "# events"),
+  Histogram(
+    "Dimuon_minvAfterCut",
+    "",
+    False,
+    True,
+    NormalizationType.to_lumi,
+    5,
+    0,
+    100,
+    1e-1,
+    1e2,
+    "m_{inv}^{#mu#mu} [GeV]",
+    "# events",
+  ),
+  Histogram(
+    "Dimuon_logLxy",
+    "",
+    False,
+    True,
+    NormalizationType.to_lumi,
+    3,
+    -4,
+    3,
+    1e-1,
+    1e4,
+    "log(L_{xy}^{#mu#mu} [cm])",
+    "# events",
+  ),
 )
 
 legends = {
