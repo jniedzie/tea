@@ -13,9 +13,9 @@ git status
 git -C tea status
 ```
 
-## 2. Update tea
+## 2. Update `tea`
 
-Update the submodule to the tea revision containing the locked environment:
+Update the submodule to the `tea` revision containing the locked environment:
 
 ```bash
 git -C tea fetch origin
@@ -43,7 +43,7 @@ contain these lines.
 
 ## 4. Select the environment location
 
-Tea environment location defaults to `~/.tea`, independently of the analysis repository's location. To use the default, no configuration is needed. To select a different location, save it explicitly (replace `/shared/path/.tea` below):
+The `tea` environment location defaults to `~/.tea`, independently of the analysis repository's location. To use the default, no configuration is needed. To select a different location, save it explicitly (replace `/shared/path/.tea` below):
 
 ```bash
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tea"
@@ -59,7 +59,7 @@ source tea/build.sh --clean
 ```
 
 The first invocation downloads and creates the locked environment. Future
-builds and any other tea checkout using the same environment location reuse it.
+builds and any other `tea` checkout using the same environment location reuse it.
 The old external Conda environment is not deleted; remove it later only after
 the migrated analysis has been validated.
 

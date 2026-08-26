@@ -1,8 +1,8 @@
-# Installing tea
+# Installing `tea`
 
-Tea installs ROOT, correctionlib, Python, CMake, and the platform compiler from
+`tea` installs ROOT, correctionlib, Python, CMake, and the platform compiler from
 committed lock files. The environment is stored outside the analysis repository,
-can be reused by any tea checkout, and is recreated automatically if removed.
+can be reused by any `tea` checkout, and is recreated automatically if removed.
 
 ## New analysis
 
@@ -16,7 +16,7 @@ chmod 700 install.sh
 ./install.sh git@github.com:YOUR_ACCOUNT/my_analysis.git
 ```
 
-The installer asks where it should store the shared tea environment. Press
+The installer asks where it should store the shared `tea` environment. Press
 Enter to use the default, `~/.tea`. The choice has no relationship to the
 location of the analysis repository.
 
@@ -29,12 +29,12 @@ path (a path beginning with `~/` is also accepted):
 ```
 
 The installer stores the answer in `${XDG_CONFIG_HOME:-$HOME/.config}/tea/home`.
-On later installations it offers that saved location as the default. Tea reads
+On later installations it offers that saved location as the default. `tea` reads
 the file directly, so the installer does not edit `.bash_profile`, `.bashrc`,
 or `.zshrc`. An exported `TEA_HOME` overrides the saved location.
 
 The first installation downloads the locked packages and takes longer. Any
-later tea checkout configured with the same location reuses the environment.
+later `tea` checkout configured with the same location reuses the environment.
 
 ## Use the analysis
 
@@ -46,7 +46,7 @@ source tea/setup.sh
 
 The activated environment is shown as `(tea)`. Its packages still live in a
 versioned shared directory, but that internal path and lock hash are not used
-as the shell-facing name. Tea preserves the existing prompt verbatim, including
+as the shell-facing name. `tea` preserves the existing prompt verbatim, including
 colours and multiline formatting, and only prepends `(tea) `.
 
 Build after changing C++ or adding files:
@@ -86,8 +86,8 @@ node when qualifying a new site.
 
 ## Updating dependencies
 
-Ordinary tea builds never update dependencies. Maintainers change
+Ordinary `tea` builds never update dependencies. Maintainers change
 `environment/environment.yml`, regenerate all lock files with `conda-lock`,
 review the lock diff, and test it in CI. A changed lock creates a new shared
-environment while analyses using an older tea lock continue to use the old
+environment while analyses using an older `tea` lock continue to use the old
 one.
