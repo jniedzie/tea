@@ -105,7 +105,14 @@ build_main() (
 
 if build_main "$@"; then
   _build_sh_status=0
-  export PYTHONPATH="$(cd "${_build_sh_script_dir}/.." && pwd)/bin${PYTHONPATH:+:${PYTHONPATH}}"
+  if [[ "${_build_sh_sourced}" -eq 1 ]]; then
+    # A sourced build should leave the shell ready to run the analysis too.
+    # setup.sh supplies PYTHONPATH and the runtime library search path.
+    source "${_build_sh_script_dir}/setup.sh" || _build_sh_status=$?
+  else
+    echo "Build complete. Activate this analysis before running it with:"
+    echo "  source tea/setup.sh"
+  fi
 else
   _build_sh_status=$?
 fi
