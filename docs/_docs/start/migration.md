@@ -55,6 +55,13 @@ The command is safe to rerun if it is interrupted. It does not delete the old
 external Conda environment; remove that environment only after validating the
 migrated analysis.
 
+After migration finishes, activate Tea before validating or running the
+analysis:
+
+```bash
+source tea/setup.sh
+```
+
 `tea` uses `~/.tea` for new installations by default, independently of the
 analysis repository's location, but the migration command requires the choice
 to be explicit. A different location is especially recommended on lxplus and

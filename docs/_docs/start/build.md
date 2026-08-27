@@ -12,7 +12,9 @@ From the analysis root:
 source tea/build.sh
 ```
 
-The script configures CMake, builds and installs the project into `bin/`, links Python files there, and updates `PYTHONPATH` for the current shell. It preserves the existing build unless you request a clean build:
+The script configures CMake, builds and installs the project into `bin/`,
+links Python files there, and prepares the current terminal to run the
+analysis. It preserves the existing build unless you request a clean build:
 
 ```bash
 source tea/build.sh --clean
