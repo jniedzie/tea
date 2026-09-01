@@ -9,7 +9,7 @@ output_path = "../limits/"
 
 # If True, poisson error on empty bins (1.84) will be added to data histograms
 add_uncertainties_on_zero = False
-
+p
 signal_samples = (
   Sample(
     name="signal_ttZ",
@@ -19,25 +19,13 @@ signal_samples = (
   ),
 )
 
+# fmt: off
 background_samples = (
-  Sample(
-    name="DY",
-    file_path=f"{base_path}/histograms/background_dy.root",
-    type=SampleType.background,
-    cross_section=1976.0,
-  ),
-  Sample(
-    name="tt",
-    file_path=f"{base_path}/histograms/background_tt.root",
-    type=SampleType.background,
-    cross_section=687.1,
-  ),
-  Sample(
-    name="data_obs",
-    file_path=f"{base_path}/histograms/data.root",
-    type=SampleType.data,
-  ),
+  Sample(name="DY"      , file_path=f"{base_path}/histograms/background_dy.root", type=SampleType.background, cross_section=1976.0),
+  Sample(name="tt"      , file_path=f"{base_path}/histograms/background_tt.root", type=SampleType.background, cross_section=687.1 ),
+  Sample(name="data_obs", file_path=f"{base_path}/histograms/data.root"         , type=SampleType.data      ),
 )
+# fmt: on
 
 samples = signal_samples + background_samples
 

@@ -35,12 +35,14 @@ eventCuts = {
 # )
 
 # See templates/config.template.py for the (collection, name, type, varexp) format.
+# fmt: off
 branchesToAdd = (
-  ("Event", "dimuonMass", "Float_t", "-1.0"),
-  ("Muon", "ptSquared", "Float_t", "Muon_pt**2"),
-  ("Muon", "ptIfGood", "Float_t", ""),
-  ("Event", "muonPt", "vector<Float_t>", ""),
+  ("Event", "dimuonMass", "Float_t"        , "-1.0"      ),
+  ("Muon" , "ptSquared" , "Float_t"        , "Muon_pt**2"),
+  ("Muon" , "ptIfGood"  , "Float_t"        , ""          ),
+  ("Event", "muonPt"    , "vector<Float_t>", ""          ),
 )
+# fmt: on
 
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"

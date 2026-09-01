@@ -23,11 +23,13 @@
     "--max-line-length",
     "120"
   ],
+  "tupleTableFormatter.backend": "autopep8",
+  "tupleTableFormatter.executable": "",
   "C_Cpp.clang_format_path": "@TEA_ENV_PREFIX@/bin/clang-format",
   "C_Cpp.formatting": "clangFormat",
   "C_Cpp.clang_format_style": "file",
   "[python]": {
-    "editor.defaultFormatter": "ms-python.autopep8",
+    "editor.defaultFormatter": "local.tuple-table-formatter",
     "editor.tabSize": 2,
     "editor.insertSpaces": true,
     "editor.formatOnSave": true

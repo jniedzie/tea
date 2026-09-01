@@ -8,17 +8,17 @@ histogramsOutputFilePath = "../samples/histograms/custom_histograms.root"
 # define default histograms (can be filled automatically with HistogramsFiller, based on collection and variable names)
 # fmt: off
 defaultHistParams = (
-#  collection      variable          bins    xmin     xmax     dir
-  ("Event"       , "nMuon"         , 50,     0,       50,      ""  ),
-  ("Muon"        , "pt"            , 400,    0,       200,     ""  ),
-  ("Muon"        , "eta"           , 100,    -2.5,    2.5,     ""  ),
+# collection  variable  bins  xmin  xmax  dir
+  ("Event"   , "nMuon" ,   50,    0,   50, ""),
+  ("Muon"    , "pt"    ,  400,    0,  200, ""),
+  ("Muon"    , "eta"   ,  100, -2.5,  2.5, ""),
 )
 
 # define custom histograms (you will have to fill them in your HistogramsFiller)
 histParams = (
-#  collection variable    bins  xmin    xmax    dir
-  ("Dimuon", "mInv",      1000,  0,      10,     "kinematics"),
-  ("Dimuon", "deltaPhi",  1000, -3.5,    3.5,    "kinematics"),
+# collection  variable    bins  xmin  xmax  dir
+  ("Dimuon"  , "mInv"    , 1000,    0,   10, "kinematics"),
+  ("Dimuon"  , "deltaPhi", 1000, -3.5,  3.5, "kinematics"),
 )
 
 # define custom 2D histograms (you will have to fill them in your HistogramsFiller)

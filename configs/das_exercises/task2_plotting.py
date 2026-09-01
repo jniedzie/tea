@@ -35,11 +35,13 @@ samples = (
 )
 output_path = "../plots/"
 
+# fmt: off
 histograms = (
-  #         name      title logx   logy   norm_type                  rebin  xmin  xmax ymin   ymax xlabel         ylabel
-  Histogram("Muon_pt", "", False, True, NormalizationType.to_lumi, 1, 0, 200, 1, 1e3, "x axis", "y axis"),
-  Histogram("Muon_eta", "", False, False, NormalizationType.to_lumi, 1, -2.4, 2.4, 0, 250, "x axis", "y axis"),
+  # name        title  logx   logy   norm_type                  rebin  xmin  xmax  ymin  ymax  xlabel    ylabel
+  Histogram("Muon_pt" , ""   , False, True , NormalizationType.to_lumi,     1,    0,  200,    1,  1e3, "x axis", "y axis"),
+  Histogram("Muon_eta", ""   , False, False, NormalizationType.to_lumi,     1, -2.4,  2.4,    0,  250, "x axis", "y axis"),
 )
+# fmt: on
 
 legends = {
   SampleType.background: Legend(0.5, 0.8, 0.78, 0.85, "f"),
