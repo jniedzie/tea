@@ -39,7 +39,7 @@ When updating a formatter, change the pinned `rev` in `.pre-commit-config.yaml`,
 
 ### Editor integration
 
-When VS Code is available, `source tea/build.sh` creates or updates the analysis
+When VS Code is available, `tea/install.sh` creates or updates the analysis
 project's top-level `.vscode/settings.json` and `.vscode/extensions.json`. The
 generated settings use the `tea` environment's Python, Ruff, and clang-format
 executables and the repository's `ruff.toml` and `.clang-format` files. Python
