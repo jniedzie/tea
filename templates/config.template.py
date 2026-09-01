@@ -1,4 +1,4 @@
-## specify how many events to run on (and how often to print current event number)
+# specify how many events to run on (and how often to print current event number)
 nEvents = 100
 
 # specify input/output paths
@@ -10,17 +10,19 @@ histogramsOutputFilePath = "output_histograms.root"
 # fmt: off
 defaultHistParams = (
 #  collection      variable          bins    xmin     xmax     dir
-  ("Event"       , "nMuon"         , 50,     0,       50,      ""  ),
-  ("Muon"        , "pt"            , 400,    0,       200,     ""  ),
-  ("Muon"        , "eta"           , 100,    -2.5,    2.5,     ""  ),
+    ("Event"                , "nMuon"   , 50  , 0   , 50,  ""),
+    ("Muon"                 , "pt"      , 400 , 0   , 200, ""),
+    ("Muon"                 , "eta"     , 100 , -2.5, 2.5, ""),
+    ("NonGlobalMuons"       , "isGlobal", 2   , -0.5, 1.5, ""),
+    ("NonGlobalMuonsByRange", "isGlobal", 2   , -0.5, 1.5, ""),
 )
 
 # define custom histograms (you will have to fill them in your HistogramsFiller)
-# title: (n_bins, min, max, "output_directory")
 histParams = (
-  ("m_inv",      1000,  0,      10,     "kinematics"),
-  ("delta_phi",  1000, -3.5,    3.5,    "kinematics"),
-  ("n_muons",    20,    0,      20,     "counters"  ),
+#    collection variable       bins  xmin  xmax  dir
+    ("Dimuon"   , "mInv"      , 1000, 0   , 10  , "kinematics"),
+    ("Dimuon"   , "deltaPhi"  , 1000, -3.5, 3.5 , "kinematics"),
+    ("Counters" , "nMuons"    , 20  , 0   , 20  , "counters"  ),
 )
 
 # define custom 2D histograms (you will have to fill them in your HistogramsFiller)
@@ -37,8 +39,9 @@ eventsTreeName = "Events"
 # define extra collections:
 # - give it a name: e.g. GoodLeptons
 # - specify inputCollections: only those will be looped over to create your new collection
-# - add some requirements on values: e.g. if input collections have fields called pt, i.e. Muon_pt and Electron_pt,
-# you can specify a range for this parameter
+# - add requirements on values: a two-value tuple is an inclusive numeric range,
+#   while a single integer selects that exact value. In particular, (0, 0) and 0
+#   both select only objects whose field is zero.
 extraEventCollections = {
   "GoodLeptons": {
     "inputCollections": ("Muon", "Electron"),
@@ -50,6 +53,14 @@ extraEventCollections = {
     "pt": (30.0, 9999999.0),
     "eta": (-2.4, 2.4),
     "btagDeepB": (0.5, 9999999.0),
+  },
+  "NonGlobalMuons": {
+    "inputCollections": ("Muon",),
+    "isGlobal": 0,
+  },
+  "NonGlobalMuonsByRange": {
+    "inputCollections": ("Muon",),
+    "isGlobal": (0, 0),
   },
 }
 
@@ -86,9 +97,11 @@ branchesToRemove = (
 # Branches to create on the output tree that don't exist in the input: (collection, name, ROOT
 # type, varexp). Empty varexp means the branch is app-set only, via Event::Set<T>/PhysicsObject::Set<T>.
 # Custom values live for one event only, so anything the app doesn't set again is written as zero.
+# fmt: off
 branchesToAdd = (
-  ("Event", "dimuonMass", "Float_t", "-1.0"),
-  ("Muon", "dEdx", "Float_t", ""),
-  ("Event", "looseMuonPt", "vector<Float_t>", ""),
+  ("Event", "dimuonMass"  , "Float_t"         , "-1.0"),
+  ("Muon" , "dEdx"        , "Float_t"         , ""    ),
+  ("Event", "looseMuonPt" , "vector<Float_t>" , ""    ),
 )
+# fmt: on
 # branchesToAdd = ()

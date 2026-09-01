@@ -7,6 +7,10 @@ import ROOT
 
 
 class Styler:
+  mainXAxisTitleOffset = 1.15
+  legacyMainXAxisTitleOffset = 1.7
+  ratioXAxisTitleOffset = 1.0
+
   def __init__(self, config):
     self.config = config
 
@@ -171,7 +175,7 @@ class Styler:
 
     gStyle.SetPaperSize(20.0, 20.0)
 
-  def configureAutomaticMargins(self, y_ranges, canvas_size):
+  def configureAutomaticMargins(self, y_ranges, canvas_size, x_labels=(), has_ratio=False):
     """Choose one compact set of margins that fits every configured plot."""
     if self.plotMargins is not None:
       return
@@ -207,7 +211,18 @@ class Styler:
     self.leftMargin = max(0.09, left_pixels / canvas_width)
     self.rightMargin = max(0.02, 12 / canvas_width)
     self.topMargin = max(0.04, top_pixels / canvas_height)
-    self.bottomMargin = max(0.10, 84 / canvas_height)
+    # Reserve the actual vertical space used by the horizontal tick labels and
+    # title.  This must be kept in sync with setupFigure: a fixed pixel value
+    # is not sufficient when a title has superscripts/subscripts or when the
+    # configured font size changes.
+    x_label_height = self.__textHeight("012345", 43, self.labelFontSize)
+    x_title_height = max(
+      (self.__textHeight(label, 43, self.labelFontSize) for label in x_labels if label),
+      default=self.__textHeight("X", 43, self.labelFontSize),
+    )
+    x_title_offset = self.ratioXAxisTitleOffset if has_ratio else self.mainXAxisTitleOffset
+    bottom_pixels = max(84, x_label_height + x_title_offset * self.labelFontSize + x_title_height + 12)
+    self.bottomMargin = max(0.10, bottom_pixels / canvas_height)
     self.automaticMargins.update(
       {
         "left": self.leftMargin,
@@ -276,7 +291,13 @@ class Styler:
 
       plot.GetXaxis().SetTitle(hist.x_label)
 
-      plot.GetXaxis().SetTitleOffset(1.0 if is_ratio else 1.7)
+      if is_ratio:
+        x_title_offset = self.ratioXAxisTitleOffset
+      elif self.plotMargins is not None:
+        x_title_offset = self.legacyMainXAxisTitleOffset
+      else:
+        x_title_offset = self.mainXAxisTitleOffset
+      plot.GetXaxis().SetTitleOffset(x_title_offset)
 
       plot.GetXaxis().SetTitleSize(self.labelFontSize)
       plot.GetXaxis().SetLabelSize(self.labelFontSize)

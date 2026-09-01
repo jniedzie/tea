@@ -481,7 +481,8 @@ class HistogramPlotter:
       ratio_sources = [item for item in ratio_stack.GetHists()]
       y_ranges.append(self.styler.getYAxisRangeForLayout(hist, ratio_sources, is_ratio=True))
 
-    self.styler.configureAutomaticMargins(y_ranges, self.config.canvas_size)
+    x_labels = [hist.x_label for hist in self.config.histograms]
+    self.styler.configureAutomaticMargins(y_ranges, self.config.canvas_size, x_labels, has_ratio=self.show_ratios)
 
   def drawStacks(self):
     self.__configureAutomaticMargins()
