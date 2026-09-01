@@ -1,4 +1,4 @@
-## specify how many events to run on (and how often to print current event number)
+# specify how many events to run on (and how often to print current event number)
 nEvents = 100
 
 # specify input/output paths
@@ -10,19 +10,19 @@ histogramsOutputFilePath = "output_histograms.root"
 # fmt: off
 defaultHistParams = (
 #  collection      variable          bins    xmin     xmax     dir
-    ("Event"       , "nMuon"         , 50,     0,       50,      ""  ),
-    ("Muon"        , "pt"            , 400,    0,       200,     ""  ),
-    ("Muon"        , "eta"           , 100,    -2.5,    2.5,     ""  ),
-    ("NonGlobalMuons"       , "isGlobal", 2, -0.5, 1.5, ""),
-    ("NonGlobalMuonsByRange", "isGlobal", 2, -0.5, 1.5, ""),
+    ("Event"                , "nMuon"   , 50  , 0   , 50,  ""),
+    ("Muon"                 , "pt"      , 400 , 0   , 200, ""),
+    ("Muon"                 , "eta"     , 100 , -2.5, 2.5, ""),
+    ("NonGlobalMuons"       , "isGlobal", 2   , -0.5, 1.5, ""),
+    ("NonGlobalMuonsByRange", "isGlobal", 2   , -0.5, 1.5, ""),
 )
 
 # define custom histograms (you will have to fill them in your HistogramsFiller)
 histParams = (
 #    collection variable       bins  xmin  xmax  dir
-    ("Dimuon", "mInv",        1000,  0,    10,   "kinematics"),
-    ("Dimuon", "deltaPhi",    1000, -3.5,  3.5,  "kinematics"),
-    ("Counters", "nMuons",    20,    0,    20,   "counters"),
+    ("Dimuon"   , "mInv"      , 1000, 0   , 10  , "kinematics"),
+    ("Dimuon"   , "deltaPhi"  , 1000, -3.5, 3.5 , "kinematics"),
+    ("Counters" , "nMuons"    , 20  , 0   , 20  , "counters"  ),
 )
 
 # define custom 2D histograms (you will have to fill them in your HistogramsFiller)
@@ -97,9 +97,11 @@ branchesToRemove = (
 # Branches to create on the output tree that don't exist in the input: (collection, name, ROOT
 # type, varexp). Empty varexp means the branch is app-set only, via Event::Set<T>/PhysicsObject::Set<T>.
 # Custom values live for one event only, so anything the app doesn't set again is written as zero.
+# fmt: off
 branchesToAdd = (
-  ("Event", "dimuonMass", "Float_t", "-1.0"),
-  ("Muon", "dEdx", "Float_t", ""),
-  ("Event", "looseMuonPt", "vector<Float_t>", ""),
+  ("Event", "dimuonMass"  , "Float_t"         , "-1.0"),
+  ("Muon" , "dEdx"        , "Float_t"         , ""    ),
+  ("Event", "looseMuonPt" , "vector<Float_t>" , ""    ),
 )
+# fmt: on
 # branchesToAdd = ()
