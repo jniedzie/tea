@@ -1,7 +1,111 @@
-# !/bin/bash
+#!/bin/bash
+
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: ./install.sh [--tea-home ABSOLUTE_PATH] [--vscode|--no-vscode] [GIT_REMOTE]
+
+--tea-home selects a persistent shared location for tea dependencies. The
+installer otherwise asks for a location and offers ~/.tea as the default.
+
+--vscode / --no-vscode decides whether the analysis gets a VS Code workspace
+configuration. The installer otherwise asks. Without a terminal the answer
+defaults to --no-vscode; the configuration can be created at any later time.
+EOF
+}
+
+TEA_HOME_ARG=""
+TEA_HOME_EXPLICIT=false
+CONFIGURE_VSCODE=""
+REMOTE_REPOSITORY=""
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --tea-home)
+            if [[ "$#" -lt 2 ]]; then
+                echo "Missing path after --tea-home" >&2
+                usage >&2
+                exit 2
+            fi
+            TEA_HOME_ARG="$2"
+            TEA_HOME_EXPLICIT=true
+            shift 2
+            ;;
+        --vscode)
+            CONFIGURE_VSCODE=true
+            shift
+            ;;
+        --no-vscode)
+            CONFIGURE_VSCODE=false
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --*)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+        *)
+            if [[ -n "${REMOTE_REPOSITORY}" ]]; then
+                echo "Only one Git remote may be provided" >&2
+                usage >&2
+                exit 2
+            fi
+            REMOTE_REPOSITORY="$1"
+            shift
+            ;;
+    esac
+done
+
+TEA_CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/tea"
+TEA_CONFIG_FILE="${TEA_CONFIG_DIR}/home"
+TEA_HOME_DEFAULT="${HOME}/.tea"
+
+if [[ -z "${TEA_HOME_ARG}" ]] && [[ -n "${TEA_HOME:-}" ]]; then
+    TEA_HOME_ARG="${TEA_HOME}"
+    TEA_HOME_EXPLICIT=true
+elif [[ -z "${TEA_HOME_ARG}" ]] && [[ -r "${TEA_CONFIG_FILE}" ]]; then
+    IFS= read -r TEA_HOME_ARG < "${TEA_CONFIG_FILE}"
+fi
+
+if [[ -z "${TEA_HOME_ARG}" ]]; then
+    TEA_HOME_ARG="${TEA_HOME_DEFAULT}"
+fi
+
+if [[ -t 0 ]] && [[ -t 1 ]] && [[ "${TEA_HOME_EXPLICIT}" == false ]]; then
+    read -r -p "Where should tea store its shared environment? [${TEA_HOME_ARG}] " TEA_HOME_INPUT
+    if [[ -n "${TEA_HOME_INPUT}" ]]; then
+        TEA_HOME_ARG="${TEA_HOME_INPUT}"
+    fi
+fi
+
+case "${TEA_HOME_ARG}" in
+    "~")
+        TEA_HOME_ARG="${HOME}"
+        ;;
+    "~/"*)
+        TEA_HOME_ARG="${HOME}/${TEA_HOME_ARG:2}"
+        ;;
+esac
+
+if [[ "${TEA_HOME_ARG}" != /* ]]; then
+    echo "The tea environment location must be an absolute path (or start with ~/)." >&2
+    exit 2
+fi
+
+mkdir -p "${TEA_HOME_ARG}"
+TEA_HOME_ARG="$(cd "${TEA_HOME_ARG}" && pwd)"
+mkdir -p "${TEA_CONFIG_DIR}"
+printf '%s\n' "${TEA_HOME_ARG}" > "${TEA_CONFIG_FILE}"
+export TEA_HOME="${TEA_HOME_ARG}"
+echo "Using shared tea home: ${TEA_HOME_ARG}"
+echo "Saved this choice in ${TEA_CONFIG_FILE}"
 
 SETUP_REMOTE=true
-if [ $# -eq 0 ]; then
+if [[ -z "${REMOTE_REPOSITORY}" ]]; then
     echo "No remote repository provided. Git setup will be skipped."
     SETUP_REMOTE=false
 fi
@@ -13,6 +117,9 @@ mkdir -p apps bin build configs utils libs/user_extensions/include
 # initialize git repository
 echo "Initializing git repository"
 git init
+# Do not let the user's init.defaultBranch setting decide whether the initial
+# commits land on main or master.
+git symbolic-ref HEAD refs/heads/main
 
 echo "Adding tea as a submodule"
 git submodule add git@github.com:jniedzie/tea.git tea
@@ -26,13 +133,132 @@ cp tea/templates/gitignore.template .gitignore
 cp tea/templates/UserExtensionsHelpers.template.hpp libs/user_extensions/include/UserExtensionsHelpers.hpp
 rm install.sh
 
+git add .
+git commit -m "Initial commit"
+
+echo "Creating the locked tea environment and building the analysis"
+if ! ./tea/build.sh; then
+    echo "Error: the tea environment could not be built." >&2
+    echo "Review the build error above, fix its cause, then rerun: ./tea/build.sh" >&2
+    echo "The analysis repository and its initial commits were created successfully." >&2
+    exit 1
+fi
+
+if [[ -z "${CONFIGURE_VSCODE}" ]]; then
+    if [[ -t 0 ]] && [[ -t 1 ]]; then
+        read -r -p "Configure this analysis for VS Code? [Y/n] " CONFIGURE_VSCODE_INPUT
+        case "${CONFIGURE_VSCODE_INPUT}" in
+            [Nn]*) CONFIGURE_VSCODE=false ;;
+            *) CONFIGURE_VSCODE=true ;;
+        esac
+    else
+        CONFIGURE_VSCODE=false
+    fi
+fi
+
+print_vscode_instructions() {
+    cat <<'EOF'
+  source tea/setup.sh
+  python tea/environment/configure_vscode.py \
+      --workspace "$(pwd)" --framework "$(pwd)/tea" --environment "${TEA_ENV_PREFIX}"
+EOF
+}
+
+if [ "${CONFIGURE_VSCODE}" = true ]; then
+    echo "Configuring the VS Code workspace"
+    if ! VSCODE_OUTPUT="$(source tea/environment/activate.sh && tea_env_activate &&
+            "${TEA_ENV_PREFIX}/bin/python" tea/environment/configure_vscode.py \
+                --workspace "$(pwd)" \
+                --framework "$(pwd)/tea" \
+                --environment "${TEA_ENV_PREFIX}" 2>&1)"; then
+        echo "Warning: could not configure the VS Code workspace." >&2
+        printf '%s\n' "${VSCODE_OUTPUT}" >&2
+        echo "The environment was built successfully; only .vscode is missing. To retry, run:" >&2
+        print_vscode_instructions >&2
+    elif [[ -n "${VSCODE_OUTPUT}" ]]; then
+        printf '%s\n' "${VSCODE_OUTPUT}"
+    fi
+else
+    echo "Skipping the VS Code configuration. To create it later, run:"
+    print_vscode_instructions
+fi
+
+echo "Installing pre-commit hooks for tea"
+if ! PRE_COMMIT_OUTPUT="$(source tea/environment/activate.sh && tea_env_activate && cd tea && pre-commit install 2>&1)"; then
+    echo "Warning: could not install tea's pre-commit hooks." >&2
+    printf '%s\n' "${PRE_COMMIT_OUTPUT}" >&2
+    echo "Formatting will not run automatically on commits in tea/. To retry, run:" >&2
+    echo "  (cd tea && pre-commit install)" >&2
+fi
+
 if [ "$SETUP_REMOTE" = true ]; then
     echo "Setting up remote"
-    git remote add origin $1
-    git add .
-    git commit -m "Initial commit"
+    if ! REMOTE_ADD_OUTPUT="$(git remote add origin "${REMOTE_REPOSITORY}" 2>&1)"; then
+        echo "Error: could not add '${REMOTE_REPOSITORY}' as the origin remote." >&2
+        printf '%s\n' "${REMOTE_ADD_OUTPUT}" >&2
+        echo "Check that the URL is correct and that this directory does not already have an origin remote." >&2
+        echo "The tea environment was built successfully; only the Git remote setup is incomplete." >&2
+        exit 1
+    fi
 
-    # take what's in the repo already (like gitignore, README, etc.) and push all other files
-    git pull --rebase origin main
-    git push -u origin main
+    # An empty repository has no branch to pull. Distinguish that expected
+    # state from authentication, network, and invalid-URL failures.
+    REMOTE_HAS_BRANCHES=true
+    if REMOTE_HEADS="$(git ls-remote --exit-code --heads origin 2>&1)"; then
+        :
+    else
+        LS_REMOTE_STATUS=$?
+        if [[ "${LS_REMOTE_STATUS}" -eq 2 ]]; then
+            REMOTE_HAS_BRANCHES=false
+            REMOTE_HEADS=""
+        else
+            echo "Error: could not inspect the remote repository '${REMOTE_REPOSITORY}'." >&2
+            printf '%s\n' "${REMOTE_HEADS}" >&2
+            echo "Check the repository URL, your network connection, and your Git/SSH credentials." >&2
+            echo "The tea environment was built successfully; only the Git remote setup is incomplete." >&2
+            echo "After restoring access, run: git push -u origin main" >&2
+            exit 1
+        fi
+    fi
+
+    REMOTE_BRANCH="main"
+    if [[ "${REMOTE_HAS_BRANCHES}" == true ]]; then
+        if [[ "${REMOTE_HEADS}" != *$'\trefs/heads/main'* ]]; then
+            REMOTE_HEAD_INFO="$(git ls-remote --symref origin HEAD 2>/dev/null || true)"
+            REMOTE_BRANCH="$(awk '$1 == "ref:" && $2 ~ /^refs\/heads\// {sub(/^refs\/heads\//, "", $2); print $2; exit}' <<< "${REMOTE_HEAD_INFO}")"
+            if [[ -z "${REMOTE_BRANCH}" ]]; then
+                echo "Error: the remote has branches, but neither a 'main' branch nor a default branch could be determined." >&2
+                echo "Set the default branch on the Git hosting service, then integrate the remote manually." >&2
+                echo "The tea environment was built successfully and the local repository is ready on branch 'main'." >&2
+                exit 1
+            fi
+            git branch -M "${REMOTE_BRANCH}"
+        fi
+
+        echo "Integrating existing remote branch '${REMOTE_BRANCH}'"
+        if ! PULL_OUTPUT="$(git pull --rebase origin "${REMOTE_BRANCH}" 2>&1)"; then
+            echo "Error: could not integrate the existing remote branch '${REMOTE_BRANCH}'." >&2
+            printf '%s\n' "${PULL_OUTPUT}" >&2
+            echo "Resolve the reported Git problem in this directory, then run:" >&2
+            echo "  git pull --rebase origin ${REMOTE_BRANCH}" >&2
+            echo "  git push -u origin ${REMOTE_BRANCH}" >&2
+            echo "The tea environment was already built successfully; only the Git remote setup is incomplete." >&2
+            exit 1
+        fi
+    else
+        echo "Remote repository is empty; skipping the pull."
+    fi
+
+    if ! PUSH_OUTPUT="$(git push -u origin "${REMOTE_BRANCH}" 2>&1)"; then
+        echo "Error: could not push branch '${REMOTE_BRANCH}' to '${REMOTE_REPOSITORY}'." >&2
+        printf '%s\n' "${PUSH_OUTPUT}" >&2
+        echo "Check your write permission and any branch-protection rules, then run:" >&2
+        echo "  git push -u origin ${REMOTE_BRANCH}" >&2
+        echo "The tea environment was already built successfully; only the Git remote setup is incomplete." >&2
+        exit 1
+    fi
 fi
+
+echo
+echo "Installation complete. Activate this analysis in the current shell with:"
+echo "  source tea/setup.sh"

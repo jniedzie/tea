@@ -1,0 +1,35 @@
+{
+  "python.defaultInterpreterPath": "@TEA_ENV_PREFIX@/bin/python",
+  "python.analysis.extraPaths": [
+    "./bin"
+  ],
+  "python-envs.workspaceSearchPaths": [
+    ".venv",
+    "*/.venv",
+    "@TEA_ENV_PARENT@"
+  ],
+  "ruff.path": [
+    "@TEA_ENV_PREFIX@/bin/ruff"
+  ],
+  "ruff.interpreter": [
+    "@TEA_ENV_PREFIX@/bin/python"
+  ],
+  "ruff.configuration": "@TEA_FRAMEWORK_DIR@/ruff.toml",
+  "autopep8.args": [
+    "--indent-size",
+    "2",
+    "--ignore",
+    "E12,E13,E226,E24,W50,W690",
+    "--max-line-length",
+    "120"
+  ],
+  "C_Cpp.clang_format_path": "@TEA_ENV_PREFIX@/bin/clang-format",
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_style": "file",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8",
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": true
+  }
+}
