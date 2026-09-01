@@ -175,8 +175,7 @@ class Styler:
 
     gStyle.SetPaperSize(20.0, 20.0)
 
-  def configureAutomaticMargins(
-      self, y_ranges, canvas_size, x_labels=(), has_ratio=False):
+  def configureAutomaticMargins(self, y_ranges, canvas_size, x_labels=(), has_ratio=False):
     """Choose one compact set of margins that fits every configured plot."""
     if self.plotMargins is not None:
       return
@@ -218,15 +217,11 @@ class Styler:
     # configured font size changes.
     x_label_height = self.__textHeight("012345", 43, self.labelFontSize)
     x_title_height = max(
-        (self.__textHeight(label, 43, self.labelFontSize)
-         for label in x_labels if label),
-        default=self.__textHeight("X", 43, self.labelFontSize))
-    x_title_offset = (self.ratioXAxisTitleOffset if has_ratio
-                      else self.mainXAxisTitleOffset)
-    bottom_pixels = max(
-        84,
-        x_label_height + x_title_offset * self.labelFontSize
-        + x_title_height + 12)
+      (self.__textHeight(label, 43, self.labelFontSize) for label in x_labels if label),
+      default=self.__textHeight("X", 43, self.labelFontSize),
+    )
+    x_title_offset = self.ratioXAxisTitleOffset if has_ratio else self.mainXAxisTitleOffset
+    bottom_pixels = max(84, x_label_height + x_title_offset * self.labelFontSize + x_title_height + 12)
     self.bottomMargin = max(0.10, bottom_pixels / canvas_height)
     self.automaticMargins.update(
       {

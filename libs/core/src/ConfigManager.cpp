@@ -481,8 +481,8 @@ void ConfigManager::GetExtraEventCollections(insertion_ordered_map<string, Extra
                   << "': expected exactly two values" << endl;
           exit(1);
         }
-        PyObject* min = GetItem(pyValue, 0);
-        PyObject* max = GetItem(pyValue, 1);
+        PyObject *min = GetItem(pyValue, 0);
+        PyObject *max = GetItem(pyValue, 1);
         if (!(PyFloat_Check(min) || PyLong_Check(min)) || !(PyFloat_Check(max) || PyLong_Check(max))) {
           fatal() << "Invalid range for '" << keyStr << "' in extra collection '" << PyUnicode_AsUTF8(collectionName)
                   << "': both bounds must be numeric" << endl;

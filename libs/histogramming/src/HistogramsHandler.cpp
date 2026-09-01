@@ -262,7 +262,5 @@ void HistogramsHandler::SetHistogramLabels(string name, map<int, string> labels)
     error() << "Histogram " << name << " not found for SetHistogramLabels." << endl;
     return;
   }
-  for (auto& [bin, label] : labels) {
-    hist1DIt->second->GetXaxis()->SetBinLabel(bin + 1, label.c_str());
-  }
+  for (auto &[bin, label] : labels) { hist1DIt->second->GetXaxis()->SetBinLabel(bin + 1, label.c_str()); }
 }

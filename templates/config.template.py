@@ -54,14 +54,14 @@ extraEventCollections = {
     "eta": (-2.4, 2.4),
     "btagDeepB": (0.5, 9999999.0),
   },
-    "NonGlobalMuons": {
-        "inputCollections": ("Muon",),
-        "isGlobal": 0,
-    },
-    "NonGlobalMuonsByRange": {
-        "inputCollections": ("Muon",),
-        "isGlobal": (0, 0),
-    },
+  "NonGlobalMuons": {
+    "inputCollections": ("Muon",),
+    "isGlobal": 0,
+  },
+  "NonGlobalMuonsByRange": {
+    "inputCollections": ("Muon",),
+    "isGlobal": (0, 0),
+  },
 }
 
 # define simple event-level cuts

@@ -482,9 +482,7 @@ class HistogramPlotter:
       y_ranges.append(self.styler.getYAxisRangeForLayout(hist, ratio_sources, is_ratio=True))
 
     x_labels = [hist.x_label for hist in self.config.histograms]
-    self.styler.configureAutomaticMargins(
-        y_ranges, self.config.canvas_size, x_labels,
-        has_ratio=self.show_ratios)
+    self.styler.configureAutomaticMargins(y_ranges, self.config.canvas_size, x_labels, has_ratio=self.show_ratios)
 
   def drawStacks(self):
     self.__configureAutomaticMargins()
