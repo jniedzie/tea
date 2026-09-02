@@ -93,6 +93,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Test Python table formatter
+        run: python3 ci/test_format_python_tables.py
       - uses: pre-commit/action@v3.0.1
 
   macos:

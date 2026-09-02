@@ -9,12 +9,14 @@ process = "background_ttsemileptonic"
 inputFilePath = f"{base_path}/{process}/output_0.root"
 histogramsOutputFilePath = f"../histograms/{process}/after_selections.root"
 
+# fmt: off
 defaultHistParams = (
-  # (collection, variable, bins, xmin, xmax, dir)
-  ("Event", "nMuon", 50, 0, 50, ""),
-  ("Muon", "pt", 400, 0, 200, ""),
-  ("Muon", "eta", 100, -2.5, 2.5, ""),
+  # (collection  variable  bins  xmin  xmax  dir)
+  ("Event"    , "nMuon" ,   50,    0,   50, ""),
+  ("Muon"     , "pt"    ,  400,    0,  200, ""),
+  ("Muon"     , "eta"   ,  100, -2.5,  2.5, ""),
 )
+# fmt: on
 
 # Here, we define a custom histogram for the invariant mass of the best dimuon candidate.
 # Dimuon_minv is not a standard nanoAOD collection, so we will have to fill this one manually in a C++ program.

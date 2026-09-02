@@ -34,20 +34,24 @@ extraEventCollections = {
   },
 }
 
+# fmt: off
 defaultHistParams = (
-  # (collection, variable, bins, xmin, xmax, dir)
-  ("Event", "nMuon", 50, 0, 50, ""),
-  ("Muon", "pt", 400, 0, 200, ""),
-  ("Muon", "eta", 100, -2.5, 2.5, ""),
-  ("Event", "nGoodLeptons", 50, 0, 50, ""),
-  ("GoodLeptons", "pt", 400, 0, 200, ""),
-  ("GoodLeptons", "eta", 100, -2.5, 2.5, ""),
+  # (collection    variable        bins  xmin  xmax  dir)
+  ("Event"      , "nMuon"       ,   50,    0,   50, ""),
+  ("Muon"       , "pt"          ,  400,    0,  200, ""),
+  ("Muon"       , "eta"         ,  100, -2.5,  2.5, ""),
+  ("Event"      , "nGoodLeptons",   50,    0,   50, ""),
+  ("GoodLeptons", "pt"          ,  400,    0,  200, ""),
+  ("GoodLeptons", "eta"         ,  100, -2.5,  2.5, ""),
 )
+# fmt: on
 
+# fmt: off
 histParams = (
-  ("Muon", "scaledPt", 400, 0, 200, ""),
+  ("Muon", "scaledPt"             , 400, 0, 200, ""),
   ("Muon", "someUnfilledHistogram", 400, 0, 200, ""),
 )
+# fmt: on
 
 # Uncomment this if your events tree has a name other than "Events" (or if you have multiple trees):
 # eventsTreeNames = [
