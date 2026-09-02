@@ -15,9 +15,9 @@ import sys
 import tempfile
 import threading
 import time
-import uuid
 
 from Logger import info
+import teaHelpers
 from teaHelpers import get_facility, validate_root_file
 
 
@@ -511,40 +511,30 @@ class MergeProgress:
 
 
 def skip_files_without_keys(file_paths):
-  import ROOT
-
   files_with_keys = []
   skipped_files = []
   uninspected_files = []
   total_files = len(file_paths)
   start_time = time.monotonic()
-  previous_error_level = ROOT.gErrorIgnoreLevel
-  ROOT.gErrorIgnoreLevel = ROOT.kError
   info(f"Checking {total_files} input ROOT files for keys...")
   if total_files:
     print_file_progress(0, total_files)
 
   try:
     for file_index, file_path in enumerate(file_paths, start=1):
-      try:
-        input_file = ROOT.TFile.Open(file_path, "READ")
-      except OSError:
-        input_file = None
-      if not input_file or input_file.IsZombie():
-        if input_file:
-          input_file.Close()
-        files_with_keys.append(file_path)
-        uninspected_files.append(file_path)
+      # Same predicate as the stage-out gate and the resubmit check; only the disposition
+      # differs here -- a file we could not inspect is still handed to hadd, which has its
+      # own recovery, while a file that is readable but empty is genuinely useless.
+      status = teaHelpers.classify_root_file(file_path)
+      if status == teaHelpers.ROOT_FILE_NO_KEYS:
+        skipped_files.append(file_path)
       else:
-        if input_file.GetNkeys() == 0:
-          skipped_files.append(file_path)
-        else:
-          files_with_keys.append(file_path)
-        input_file.Close()
+        files_with_keys.append(file_path)
+        if status not in (teaHelpers.ROOT_FILE_HEALTHY, teaHelpers.ROOT_FILE_RECOVERED):
+          uninspected_files.append(file_path)
 
       print_file_progress(file_index, total_files)
   finally:
-    ROOT.gErrorIgnoreLevel = previous_error_level
     if total_files:
       info("\033[0m")
   for file_path in uninspected_files:
@@ -616,20 +606,6 @@ def choose_scratch_root(required_bytes):
   return None
 
 
-def eos_xrootd_url(file_path):
-  normalized_path = os.path.normpath(file_path)
-  home_match = re.fullmatch(r"/eos/home-([^/]+)/([^/]+)(/.*)?", normalized_path)
-  if home_match:
-    instance, username, suffix = home_match.groups()
-    return f"root://eoshome-{instance}.cern.ch//eos/user/{username[0]}/{username}{suffix or ''}"
-
-  user_match = re.fullmatch(r"/eos/user/([^/]+)/([^/]+)(/.*)?", normalized_path)
-  if user_match:
-    initial, username, suffix = user_match.groups()
-    return f"root://eoshome-{initial}.cern.ch//eos/user/{initial}/{username}{suffix or ''}"
-  return None
-
-
 def contains_top_level_tree(file_path):
   import ROOT
 
@@ -653,39 +629,10 @@ def contains_top_level_tree(file_path):
 
 
 def stage_output(local_output, output_file):
-  output_dir = os.path.dirname(output_file)
-  os.makedirs(output_dir, exist_ok=True)
-  stage_file = os.path.join(
-    output_dir,
-    f".{os.path.basename(output_file)}.stage-{uuid.uuid4().hex}",
-  )
-  stage_url = eos_xrootd_url(stage_file)
-  staged_with_xrootd = False
-
-  try:
-    if stage_url and shutil.which("xrdcp"):
-      result = subprocess.run(
-        ["xrdcp", "-f", "--cksum", "adler32", local_output, stage_url],
-        check=False,
-        capture_output=True,
-        text=True,
-      )
-      staged_with_xrootd = result.returncode == 0
-      if not staged_with_xrootd:
-        details = (result.stderr or result.stdout).strip()
-        info(
-          "xrdcp stage-out failed; falling back to a sequential filesystem copy" + (f": {details}" if details else "")
-        )
-
-    if not staged_with_xrootd:
-      shutil.copyfile(local_output, stage_file)
-    os.replace(stage_file, output_file)
-  except Exception:
-    try:
-      os.remove(stage_file)
-    except OSError:
-      pass
-    raise
+  # One stage-out implementation for the whole toolkit: temp name -> transport with retry
+  # -> atomic rename, with the transport chosen from the facility. Kept as a named
+  # function because the merge call site reads better with the local vocabulary.
+  teaHelpers.stage_output(local_output, output_file)
 
 
 def hadd_diagnostic_level(output_line):
@@ -735,12 +682,16 @@ def write_file(path, content):
 
 
 def get_merge_targets(files_config):
+  # An empty output_*_dir means "this stage produces no output of that kind" (the same
+  # convention SubmissionManager and condor_runner use). Taking it at face value here
+  # globs the CWD instead: base "" yields the pattern "./*.root" and the output directory
+  # "./_merged".
   targets = []
 
-  if hasattr(files_config, "output_hists_dir"):
+  if getattr(files_config, "output_hists_dir", ""):
     targets.append(("histograms", files_config.output_hists_dir))
 
-  if hasattr(files_config, "output_trees_dir"):
+  if getattr(files_config, "output_trees_dir", ""):
     targets.append(("trees", files_config.output_trees_dir))
 
   return targets
@@ -1003,12 +954,23 @@ def main():
   if explicit_input_files is not None:
     if hasattr(files_config, "samples") and list(files_config.samples) != [""]:
       raise ValueError("input_files cannot be combined with an explicit samples list")
-    explicit_input_files = list(explicit_input_files)
+    # Sorted, so an explicit list keeps the deterministic chunk -> ntuple_N.root mapping
+    # that the glob branch gets from sorted(glob.glob(...)).
+    explicit_input_files = sorted(explicit_input_files)
     if not explicit_input_files:
       raise ValueError("input_files must be a non-empty list of file paths")
     missing_files = [path for path in explicit_input_files if not os.path.isfile(path)]
     if missing_files:
       raise ValueError(f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}")
+    # realpath, because results-unmerged/ is itself a symlink: two textually distinct tag
+    # vintages can name one file, and hadd would then double-count its events and exit 0.
+    resolved_files = [os.path.realpath(path) for path in explicit_input_files]
+    duplicate_files = sorted({path for path in resolved_files if resolved_files.count(path) > 1})
+    if duplicate_files:
+      raise ValueError(
+        f"input_files lists {len(duplicate_files)} file(s) more than once (after resolving "
+        f"symlinks), which would double-count events: {duplicate_files[:5]}"
+      )
 
   merge_targets = get_merge_targets(files_config)
   if not merge_targets:

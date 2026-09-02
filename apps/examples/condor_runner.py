@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""Run one app instance on a worker node (or one slot of --local_parallel).
+
+On a real condor worker the app writes its outputs into _CONDOR_SCRATCH_DIR and this
+script publishes them to their final (often dCache/EOS) destination only after the app
+exits successfully: writing straight to a heavily-contended network mount intermittently
+corrupts ROOT files mid-write. Only --output_hists_path and --output_trees_path are
+redirected this way, so an app that writes a third output from a config key of its own
+still writes it straight to the mount.
+"""
+
 from Logger import error, info, warn
 
 import argparse
@@ -8,7 +18,7 @@ import shlex
 import subprocess
 import sys
 
-from teaHelpers import STAGE_BACKENDS, get_facility, gfal_stage_output, validate_root_file
+from teaHelpers import begin_stage_budget, stage_output, stage_preflight, validate_root_file
 
 
 def get_args():
@@ -21,6 +31,12 @@ def get_args():
   parser.add_argument("--output_trees_dir", type=str, default="", help="output trees path")
   parser.add_argument("--output_hists_dir", type=str, default="", help="output hists path")
   parser.add_argument("--file_name", type=str, default="", help="name of a file from the DAS dataset to run on")
+  parser.add_argument(
+    "--facility",
+    type=str,
+    default="default",
+    help="facility this job was submitted from, used to pick the stage-out transport",
+  )
 
   args, unknown = parser.parse_known_args()
   return args, unknown
@@ -62,11 +78,12 @@ def main():
   else:
     input_file_name = input_file_path.strip().split("/")[-1]
 
-  # create output dir if doesn't exist
-  if not os.path.exists(args.output_trees_dir) and args.output_trees_dir != "":
-    os.makedirs(args.output_trees_dir)
-  if not os.path.exists(args.output_hists_dir) and args.output_hists_dir != "":
-    os.makedirs(args.output_hists_dir)
+  # create output dir if doesn't exist -- exist_ok because ~1500 jobs racing to create the
+  # same directory otherwise lose the check-then-act.
+  if args.output_trees_dir != "":
+    os.makedirs(args.output_trees_dir, exist_ok=True)
+  if args.output_hists_dir != "":
+    os.makedirs(args.output_hists_dir, exist_ok=True)
 
   output_trees_file_path = ""
   output_hists_file_path = ""
@@ -85,11 +102,11 @@ def main():
   final_trees_path = output_trees_file_path
   final_hists_path = output_hists_file_path
 
-  # On a real condor worker node, write to local scratch first and stage the finished
-  # file out to its final (often pnfs/dCache) destination only after the app exits
-  # successfully -- writing straight to a heavily-contended dCache mount intermittently
-  # segfaults ROOT mid-write. --local_parallel runs this same script but never has
-  # _CONDOR_SCRATCH_DIR set, so it naturally falls through to the untouched behavior.
+  # Writing to local scratch and publishing afterwards is facility-independent; only the
+  # copy protocol is site-specific, and that comes from --facility (resolved on the submit
+  # node, where the hostname is actually recognizable). --local_parallel runs this same
+  # script but never has _CONDOR_SCRATCH_DIR set, so it naturally falls through to the
+  # untouched direct-write behavior.
   scratch_dir = os.environ.get("_CONDOR_SCRATCH_DIR", "")
   scratch_usable = bool(scratch_dir) and os.path.isdir(scratch_dir) and os.access(scratch_dir, os.W_OK)
   if scratch_dir and not scratch_usable:
@@ -97,7 +114,20 @@ def main():
       f"_CONDOR_SCRATCH_DIR={scratch_dir} is set but not usable (missing or not "
       f"writable); writing outputs directly to their final paths"
     )
-  use_scratch = scratch_usable and get_facility() in STAGE_BACKENDS
+  use_scratch = scratch_usable
+
+  if use_scratch:
+    # Ask now, not after hours of computation: a job that cannot stage out its result
+    # should write straight to the final paths instead of discarding the finished output.
+    preflight_ok, preflight_reason = stage_preflight([final_trees_path, final_hists_path], args.facility)
+    if preflight_ok:
+      info(f"Stage-out pre-flight passed for facility '{args.facility}': {preflight_reason}")
+    else:
+      warn(
+        f"Stage-out pre-flight failed for facility '{args.facility}': {preflight_reason}; "
+        f"writing outputs directly to their final paths"
+      )
+      use_scratch = False
 
   staged_outputs = []
 
@@ -130,19 +160,35 @@ def main():
   command_for_file = (
     f"{command} --input_path {input_file_path} {output_trees_file_path} {output_hists_file_path} {extra_args}"
   )
+  command_args = shlex.split(command_for_file)
 
-  info(f"\n\nExecuting {command_for_file=}")
-  result = subprocess.run(shlex.split(command_for_file), check=False)
+  # Log the argument vector that is actually executed: shlex.split drops the quoting the
+  # string form still carries, so the string is not what ran.
+  info(f"\n\nExecuting {command_args=}")
+  result = subprocess.run(command_args, check=False)
   returncode = result.returncode
 
-  if returncode == 0 and use_scratch:
+  if returncode == 0 and staged_outputs:
+    # One wall-clock budget for every output of this job, so trees + hists cannot compound
+    # their retries into a wall-time kill.
+    begin_stage_budget()
+    published = []
+    failed = []
     for scratch_path, final_path in staged_outputs:
       try:
         validate_root_file(scratch_path)
-        gfal_stage_output(scratch_path, final_path)
+        stage_output(scratch_path, final_path, args.facility)
+        published.append(final_path)
       except Exception as exception:
+        # No direct-write fallback: writing the file to the final path after a failed
+        # transport is exactly the partially-written-output bug staging exists to avoid.
+        failed.append(final_path)
         error(f"Failed to stage {scratch_path} -> {final_path}: {exception}")
         returncode = 1
+
+    if failed:
+      published_str = ", ".join(published) if published else "none"
+      error(f"Stage-out failed for: {', '.join(failed)} (outputs that did land: {published_str})")
 
   sys.exit(returncode)
 

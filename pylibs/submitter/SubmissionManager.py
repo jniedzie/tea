@@ -5,9 +5,8 @@ import ast
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
-import ROOT
 from Logger import info, warn, error, fatal
-from teaHelpers import get_facility
+from teaHelpers import get_facility, is_root_file_healthy
 
 
 class SubmissionSystem(Enum):
@@ -19,6 +18,7 @@ class SubmissionSystem(Enum):
 
 class SubmissionManager:
   def __init__(self, submission_system, app_name, config_path, files_config_path):
+    self.submission_system = submission_system
     self.app_name = app_name
     self.config_path = config_path
     self.files_config_path = files_config_path
@@ -231,7 +231,10 @@ class SubmissionManager:
     # Groups condor logs by submission (shares the hash already used for this
     # submission's tmp config/script/input-list) instead of dumping every job's
     # .out/.err/.log flat into output/, error/, log/ across all submissions.
-    for base in ("output", "error", "log"):
+    # log/ holds the condor event log only, so --local_parallel (which reuses this code
+    # path with --dry to build the script) must not create an empty one.
+    bases = ("output", "error", "log") if self.submission_system == SubmissionSystem.condor else ("output", "error")
+    for base in bases:
       self.__create_dir_if_not_exists(f"{base}/{self.submission_id}")
 
   def __setup_files_config(self):
@@ -471,17 +474,10 @@ class SubmissionManager:
       if hasattr(self.files_config, "output_dir") and self.files_config.output_dir != "":
         outputs.append(f"{self.files_config.output_dir}/{input_name}")
 
-      is_healthy = len(outputs) > 0
-      for path in outputs:
-        try:
-          root_file = ROOT.TFile.Open(path, "READ") if os.path.exists(path) else None
-        except OSError:
-          root_file = None
-        is_healthy = (
-          is_healthy and root_file and not root_file.IsZombie() and not root_file.TestBit(ROOT.TFile.kRecovered)
-        )
-        if root_file:
-          root_file.Close()
+      # One shared predicate (teaHelpers.classify_root_file): a destination file with zero
+      # keys used to read as healthy here and was never resubmitted, even though an app
+      # that exits successfully always writes at least one key.
+      is_healthy = len(outputs) > 0 and all(is_root_file_healthy(path) for path in outputs)
       if not is_healthy:
         failed_lines.append(line)
     if n_lines > 0:
@@ -530,6 +526,13 @@ class SubmissionManager:
     )
 
     self.__set_python_executable()
+
+    # set the facility, resolved here on the submit node: a worker node's hostname is
+    # often a short name that get_facility() cannot recognize, which used to make every
+    # facility-dependent behavior silently no-op there.
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<facility>{self.sed_char}{get_facility()}{self.sed_char}g' {self.condor_run_script_name}"
+    )
 
     # set the app and app config to execute
     os.system(
@@ -601,9 +604,14 @@ class SubmissionManager:
       os.system(
         f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/{self.submission_id}\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}"
       )
-      info(
-        f"Condor logs for this submission will be stored under output/{self.submission_id}, error/{self.submission_id}, log/{self.submission_id}"
-      )
+      if self.submission_system == SubmissionSystem.condor:
+        info(
+          f"Condor logs for this submission will be stored under output/{self.submission_id}, error/{self.submission_id}, log/{self.submission_id}"
+        )
+      else:
+        info(
+          f"Job logs for this submission will be stored under output/{self.submission_id} and error/{self.submission_id}"
+        )
     else:
       os.system(
         f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
