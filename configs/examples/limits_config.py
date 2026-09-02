@@ -9,7 +9,6 @@ output_path = "../limits/"
 
 # If True, poisson error on empty bins (1.84) will be added to data histograms
 add_uncertainties_on_zero = False
-p
 signal_samples = (
   Sample(
     name="signal_ttZ",
