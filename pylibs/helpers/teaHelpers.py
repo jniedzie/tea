@@ -105,12 +105,16 @@ def _run_gfal_copy(local_path, dest_url):
   )
 
 
+def _stage_local_copy(local_path, final_path):
+  os.makedirs(os.path.dirname(os.path.abspath(final_path)), exist_ok=True)
+  shutil.copyfile(local_path, final_path)
+
+
 def _stage_vub_gfal(local_path, final_path):
   dest_url = _dcache_gfal_url(final_path)
   if dest_url is None:
     info(f"{final_path} does not resolve to a pnfs path; copying directly instead of using gfal-copy")
-    os.makedirs(os.path.dirname(final_path), exist_ok=True)
-    shutil.copyfile(local_path, final_path)
+    _stage_local_copy(local_path, final_path)
     return
 
   last_exception = None
@@ -125,9 +129,10 @@ def _stage_vub_gfal(local_path, final_path):
     )
 
     if attempt < GFAL_COPY_MAX_ATTEMPTS:
-      # Constant 1-minute wait plus a random exponential jitter with a 1-minute
-      # half-life, so concurrent retries from ~1500 jobs don't all hammer the door
-      # at the same instant (a plain fixed backoff would).
+      # Constant GFAL_COPY_RETRY_BASE_WAIT_SECONDS (20 s) plus a random exponential
+      # jitter with a 1-minute half-life (median wait ~80 s, mean ~107 s), so concurrent
+      # retries from ~1500 jobs don't all hammer the door at the same instant (a plain
+      # fixed backoff would).
       wait_seconds = GFAL_COPY_RETRY_BASE_WAIT_SECONDS + random.expovariate(
         math.log(2) / GFAL_COPY_RETRY_EXPO_HALF_LIFE_SECONDS
       )
@@ -146,4 +151,14 @@ STAGE_BACKENDS = {
 
 
 def gfal_stage_output(local_path, final_path):
-  STAGE_BACKENDS[get_facility()](local_path, final_path)
+  # Only facilities in STAGE_BACKENDS have a remote stage-out protocol; everywhere else
+  # (lxplus, naf, unknown hosts) the final path is an ordinary filesystem path, so a plain
+  # copy is the correct stage-out rather than an error. Callers that want to skip staging
+  # altogether should test `get_facility() in STAGE_BACKENDS` first, as condor_runner does.
+  facility = get_facility()
+  backend = STAGE_BACKENDS.get(facility)
+  if backend is None:
+    info(f"No remote stage-out backend for facility '{facility}'; copying {local_path} -> {final_path}")
+    _stage_local_copy(local_path, final_path)
+    return
+  backend(local_path, final_path)

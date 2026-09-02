@@ -1,5 +1,6 @@
 # Project-specific rules -- hand-maintained, edit freely.
-# The generated block below comes from github/gitignore; see utils/update_gitignore.sh
+# The generated block below is vendored from github/gitignore -- see its header for how
+# to regenerate it. Keep hand-written overrides below the block: last match wins.
 
 build/*
 bin/*
@@ -9,7 +10,10 @@ compile_commands.json
 
 # ===== BEGIN github/gitignore =====
 # Generated -- do not edit by hand.
-# Regenerate with utils/update_gitignore.sh in the tea-ecp-rebuild superproject.
+# Regenerate by concatenating these upstream templates, in this order, between the
+# BEGIN/END markers (each under its own '### <name> ###' heading):
+#   C++.gitignore, Python.gitignore, Global/macOS.gitignore,
+#   Global/Linux.gitignore, Global/VisualStudioCode.gitignore
 # Source: https://github.com/github/gitignore @ main
 
 ### C++ ###
@@ -311,7 +315,8 @@ __marimo__/
 __MACOSX/
 .AppleDouble
 .LSOverride
-Icon[]
+Icon[
+]
 
 # Resource forks
 ._*
@@ -332,7 +337,8 @@ Icon[]
 .file
 .disk_label*
 lost+found
-.HFS+ Private Directory Data[]
+.HFS+ Private Directory Data[
+]
 
 # Directories potentially created on remote AFP share
 .AppleDB
