@@ -2,7 +2,7 @@
 """Align consecutive tuple/call rows that form tables in Python files.
 
 The formatter also wraps the containing assignment in ``# fmt: off/on`` so
-Ruff preserves the alignment.  Run without options to update files in place;
+Ruff preserves the alignment. Run on one or more file paths to update them in place;
 use ``--check`` in CI to report formatting drift without changing files.
 """
 
