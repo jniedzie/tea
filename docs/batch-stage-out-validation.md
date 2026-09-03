@@ -18,13 +18,7 @@ Everything else is already covered without a facility:
 What is left is everything that depends on a real worker node, a real proxy and real
 storage. Run the steps below on the facility named in each heading.
 
-Local prerequisites for the test suite itself (it needs neither ROOT nor the tea
-environment):
-
-```bash
-python3 -m pip install pytest    # not part of the locked environment
-python3 -m pytest tests -q
-```
+Pytest is part of the locked environment
 
 ---
 
