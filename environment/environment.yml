@@ -9,6 +9,7 @@ dependencies:
   - cxx-compiler
   - make
   - pre-commit=4.6.2
+  - pytest=8.4.1
   - python=3.12
   # root_base contains ROOT, PyROOT, root-config, and hadd. The root
   # metapackage also installs Jupyter, IPython, Numba, and Fortran compilers.

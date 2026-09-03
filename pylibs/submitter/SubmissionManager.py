@@ -5,9 +5,8 @@ import ast
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
-import ROOT
 from Logger import info, warn, error, fatal
-from teaHelpers import get_facility
+from teaHelpers import get_facility, is_lfn, is_root_file_healthy
 
 
 class SubmissionSystem(Enum):
@@ -19,6 +18,7 @@ class SubmissionSystem(Enum):
 
 class SubmissionManager:
   def __init__(self, submission_system, app_name, config_path, files_config_path):
+    self.submission_system = submission_system
     self.app_name = app_name
     self.config_path = config_path
     self.files_config_path = files_config_path
@@ -103,7 +103,7 @@ class SubmissionManager:
       if not args.dry:
         os.system(command)
 
-      return self.condor_run_script_name, effective_n_jobs
+      return self.condor_run_script_name, effective_n_jobs, self.submission_id
 
     if input_files is None and hasattr(self.files_config, "get_input_output_file_lists"):
       info("Getting input files from input_output_file_lists")
@@ -132,14 +132,20 @@ class SubmissionManager:
     finally:
       args.dry = dry
 
-    for script_name, n_jobs in submitted_jobs:
-      self.__run_condor_script_locally_parallel(script_name, n_jobs, args.local_parallel_jobs, args.save_logs)
+    for script_name, n_jobs, submission_id in submitted_jobs:
+      self.__run_condor_script_locally_parallel(
+        script_name, n_jobs, args.local_parallel_jobs, args.save_logs, submission_id
+      )
 
-  def __run_condor_script_locally_parallel(self, script_name, n_jobs, requested_max_workers, save_logs):
+  def __run_condor_script_locally_parallel(self, script_name, n_jobs, requested_max_workers, save_logs, submission_id):
     max_workers = self.__get_local_parallel_jobs(n_jobs, requested_max_workers)
     info(f"Executing {script_name} locally with {max_workers} parallel jobs")
+    output_dir = f"output/{submission_id}"
+    error_dir = f"error/{submission_id}"
     if save_logs:
-      info("Local job output will be stored in the output/ and error/ directories")
+      self.__create_dir_if_not_exists(output_dir)
+      self.__create_dir_if_not_exists(error_dir)
+      info(f"Local job output will be stored in {output_dir}/ and {error_dir}/")
 
     completed_jobs = 0
     failed_jobs = []
@@ -156,8 +162,8 @@ class SubmissionManager:
       error_file = None
       try:
         if save_logs:
-          output_file = open(f"output/{script_stem}.{job_number}.out", "w")
-          error_file = open(f"error/{script_stem}.{job_number}.err", "w")
+          output_file = open(f"{output_dir}/{script_stem}.{job_number}.out", "w")
+          error_file = open(f"{error_dir}/{script_stem}.{job_number}.err", "w")
           stdout = output_file
           stderr = error_file
         return subprocess.run(
@@ -220,6 +226,16 @@ class SubmissionManager:
   def __create_condor_directories(self):
     for path in ("error", "log", "output", "tmp"):
       self.__create_dir_if_not_exists(path)
+
+  def __create_submission_log_directories(self):
+    # Groups condor logs by submission (shares the hash already used for this
+    # submission's tmp config/script/input-list) instead of dumping every job's
+    # .out/.err/.log flat into output/, error/, log/ across all submissions.
+    # log/ holds the condor event log only, so --local_parallel (which reuses this code
+    # path with --dry to build the script) must not create an empty one.
+    bases = ("output", "error", "log") if self.submission_system == SubmissionSystem.condor else ("output", "error")
+    for base in bases:
+      self.__create_dir_if_not_exists(f"{base}/{self.submission_id}")
 
   def __setup_files_config(self):
     if self.files_config_path is None:
@@ -331,7 +347,10 @@ class SubmissionManager:
         return
 
       input_file_name = input_file_path.strip().split("/")[-1]
-      os.system(f"mkdir -p {self.files_config.output_dir}")
+      # An LFN output dir names no local directory; the stage-out (gfal-copy -p) creates
+      # the remote parent tree instead.
+      if not is_lfn(self.files_config.output_dir):
+        os.system(f"mkdir -p {self.files_config.output_dir}")
       output_file_path = f"{self.files_config.output_dir}/{input_file_name}"
       command_for_file = f"{self.command} --input_path {input_file_path} --output_path {output_file_path}"
 
@@ -365,9 +384,9 @@ class SubmissionManager:
         return
 
       input_file_name = input_file_path.strip().split("/")[-1]
-      if output_trees:
+      if output_trees and not is_lfn(self.files_config.output_trees_dir):
         os.system(f"mkdir -p {self.files_config.output_trees_dir}")
-      if output_hists:
+      if output_hists and not is_lfn(self.files_config.output_hists_dir):
         os.system(f"mkdir -p {self.files_config.output_hists_dir}")
 
       output_tree_file_path = f"{self.files_config.output_trees_dir}/{input_file_name}" if output_trees else ""
@@ -404,6 +423,7 @@ class SubmissionManager:
 
   def __setup_temp_file_paths(self):
     hash_string = str(uuid.uuid4().hex[:6])
+    self.submission_id = hash_string
     self.condor_config_name = f"tmp/condor_config_{hash_string}.sub"
     self.condor_run_script_name = f"tmp/condor_run_{hash_string}.sh"
     self.input_files_list_file_name = f"tmp/input_files_{hash_string}.txt"
@@ -428,6 +448,7 @@ class SubmissionManager:
 
   def __keep_only_failed_inputs(self):
     failed_lines = []
+    redirector = getattr(self.files_config, "redirector", None)
     lines = open(self.input_files_list_file_name).read().splitlines()
     n_lines = len(lines)
     for i, line in enumerate(lines, start=1):
@@ -457,17 +478,12 @@ class SubmissionManager:
       if hasattr(self.files_config, "output_dir") and self.files_config.output_dir != "":
         outputs.append(f"{self.files_config.output_dir}/{input_name}")
 
-      is_healthy = len(outputs) > 0
-      for path in outputs:
-        try:
-          root_file = ROOT.TFile.Open(path, "READ") if os.path.exists(path) else None
-        except OSError:
-          root_file = None
-        is_healthy = (
-          is_healthy and root_file and not root_file.IsZombie() and not root_file.TestBit(ROOT.TFile.kRecovered)
-        )
-        if root_file:
-          root_file.Close()
+      # One shared predicate (teaHelpers.classify_root_file): a destination file with zero
+      # keys used to read as healthy here and was never resubmitted, even though an app
+      # that exits successfully always writes at least one key. An LFN output is opened
+      # through the files config's redirector -- without it every output reads as missing
+      # and --resubmit_failed silently resubmits the entire submission.
+      is_healthy = len(outputs) > 0 and all(is_root_file_healthy(path, redirector) for path in outputs)
       if not is_healthy:
         failed_lines.append(line)
     if n_lines > 0:
@@ -517,6 +533,13 @@ class SubmissionManager:
 
     self.__set_python_executable()
 
+    # set the facility, resolved here on the submit node: a worker node's hostname is
+    # often a short name that get_facility() cannot recognize, which used to make every
+    # facility-dependent behavior silently no-op there.
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<facility>{self.sed_char}{get_facility()}{self.sed_char}g' {self.condor_run_script_name}"
+    )
+
     # set the app and app config to execute
     os.system(
       f"{self.sed_command} 's{self.sed_char}<app>{self.sed_char}{self.app_name}{self.sed_char}g' {self.condor_run_script_name}"
@@ -548,6 +571,16 @@ class SubmissionManager:
       f"{self.sed_command} 's{self.sed_char}<output_hists_dir>{self.sed_char}{output_hists_dir}{self.sed_char}g' {self.condor_run_script_name}"
     )
 
+    # set the storage door outputs are staged to. The env var (TEA_STAGE_URL_BASE) already
+    # reaches the worker through GetEnv = True; the files-config attribute is here so a
+    # submission is self-describing rather than depending on the submitter's shell.
+    stage_url_base = ""
+    if getattr(self.files_config, "stage_url_base", ""):
+      stage_url_base = "--stage_url_base " + self.files_config.stage_url_base.replace("/", "\\/")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<stage_url_base>{self.sed_char}{stage_url_base}{self.sed_char}g' {self.condor_run_script_name}"
+    )
+
     extra_args = ""
     if self.extra_args is not None:
       for key, value in self.extra_args.items():
@@ -577,15 +610,24 @@ class SubmissionManager:
     )
 
     if self.save_logs:
+      self.__create_submission_log_directories()
       os.system(
-        f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}"
+        f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/{self.submission_id}\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}"
       )
       os.system(
-        f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}"
+        f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/{self.submission_id}\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}"
       )
       os.system(
-        f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}"
+        f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/{self.submission_id}\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}"
       )
+      if self.submission_system == SubmissionSystem.condor:
+        info(
+          f"Condor logs for this submission will be stored under output/{self.submission_id}, error/{self.submission_id}, log/{self.submission_id}"
+        )
+      else:
+        info(
+          f"Job logs for this submission will be stored under output/{self.submission_id} and error/{self.submission_id}"
+        )
     else:
       os.system(
         f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
