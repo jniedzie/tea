@@ -88,7 +88,9 @@ cd <analysis>/bin
 python3 ecp_batch.py hist --group bkg --year 2024 --condor --devel
 ```
 
-When the job finishes, read its `.out` (under `output/<id>/`) and check, in order:
+When the job finishes, read its `.out` (under `output/<id>/`) and check the three things
+below. **"In order" means the order the job does them in, not the order they appear in the
+file** — see the note after the list.
 
 1. `Stage-out pre-flight passed for facility 'vub': gfal-copy stage-out ready for N output(s)`
    — if instead you see _pre-flight failed_, read the reason: it names the missing piece
@@ -101,6 +103,30 @@ When the job finishes, read its `.out` (under `output/<id>/`) and check, in orde
 3. Exit code 0 from `condor_history -l <ClusterId>.<ProcId> | grep ExitCode`, and the
    merged-in destination file present at its final path with a non-zero size.
 
+> ⚠️ **The `.out` is not in chronological order — grep it, don't read it top to bottom.**
+> Both lines above are printed by `condor_runner.py`, whose stdout is a file and therefore
+> block-buffered by Python, while the C++ app it launches inherits the same descriptor and
+> writes unbuffered. So the app's thousands of lines land first and `condor_runner.py`'s own
+> output is flushed at process exit, which puts the pre-flight line and the
+> `Executing command_args=[...]` line at the **end** of the file, after output from a step
+> that logically came later. This is cosmetic — the pre-flight really does run before the
+> app, and the `Executing` line really is printed before the app starts — but it makes
+> "check, in order" impossible to do by scrolling.
+>
+> This is deliberate and is **not** to be fixed with `python3 -u` or
+> `PYTHONUNBUFFERED=1`: unbuffering costs a write syscall per line on every job, and these
+> logs sit on shared storage. Read the log with `grep` instead, which is order-independent:
+>
+> ```bash
+> grep -nE "pre-flight|Executing command_args" output/<id>/*.out
+> ```
+>
+> The one thing you genuinely cannot conclude from the file is *timing* — the buffering
+> destroys it. If you need to prove the pre-flight ran in the job's first seconds rather
+> than at the end, take it from the wall-clock gap between the job's start in `log/<id>/`
+> and the destination file's mtime, or from a deliberately-failing job (step 3b), which
+> exits in seconds.
+
 To watch the atomic publish itself, poll the destination directory while the job is in its
 final seconds:
 
@@ -109,10 +135,19 @@ watch -n1 'ls -la /pnfs/.../results/<sample>/'
 ```
 
 Expected: a `.<basename>.stage-<32 hex>` file appears, then disappears as the final name
-appears. A `.stage-*` file that is still there after the job left the queue means the
-rename failed — capture it and the job's `.out` before deleting it; POSIX rename on dCache
-is the one assumption in this design that only VUB can confirm (the fallback would be
-`gfal-rename`).
+appears. **Not seeing it is the common case and proves nothing** — for a single `--devel`
+job the copy and the rename are typically well under a second apart, so a 1 s poll usually
+shows only the final name appearing. The check that actually matters is the *negative* one
+below; treat catching the intermediate name as a bonus.
+
+A `.stage-*` file that is still there after the job left the queue means the rename failed
+— capture it and the job's `.out` before deleting it; POSIX rename on dCache is the one
+assumption in this design that only VUB can confirm (the fallback would be `gfal-rename`).
+Sweep for leftovers across the whole tree rather than eyeballing one directory:
+
+```bash
+find <results> -name '.*stage-*'    # expected: no output
+```
 
 ### 3b. VUB — deliberately break the pre-flight
 
@@ -126,9 +161,19 @@ cd <analysis>/bin
 condor_submit tmp/condor_config_<id>.sub
 ```
 
+Note `GetEnv = True` in the submit file, so the job inherits the submitting shell's
+environment: editing the probe is not enough on its own if `X509_USER_PROXY` is exported
+where you submit from. Put a literal `unset X509_USER_PROXY` after the probe block.
+
 Expected in the `.out`: the `Stage-out pre-flight failed ... X509_USER_PROXY is not set`
-warning within seconds of the job starting, then normal direct-write execution and exit 0.
+warning, then normal direct-write execution and exit 0 — the `Executing command_args=[...]`
+line now carries the **final** paths rather than `$_CONDOR_SCRATCH_DIR` ones, which is the
+direct-write mode itself and the clearest single check that the degrade happened. The same
+buffering note applies, so grep for both lines rather than expecting them near the top.
 What must **not** happen: the job running to completion and then losing its output.
+
+This is also the cheapest way to confirm the pre-flight is early: with no credential the
+whole job is over in well under a minute, so it cannot have spent hours before noticing.
 
 
 ## 4. lxplus — regression, since scratch is newly enabled there
