@@ -156,3 +156,132 @@ def test_empty_output_dirs_alone_are_not_a_merge_target(monkeypatch, tmp_path):
   with pytest.raises(ValueError, match="output_hists_dir"):
     run_main_with_config(monkeypatch, tmp_path, files_config)
   assert not os.path.exists(os.path.join(os.getcwd(), "_merged"))
+
+
+# --- Remote (LFN) inputs and outputs ------------------------------------------------
+
+
+class FakeCompletedProcess:
+  def __init__(self, returncode=0, stdout="", stderr=""):
+    self.returncode = returncode
+    self.stdout = stdout
+    self.stderr = stderr
+
+
+XRDFS_LISTING = (
+  "-rw-r--r--        2026-08-27 14:03:03     13930949 /store/user/u/hists/ntuple_0.root\n"
+  "-rw-r--r--        2026-08-27 14:04:11      1048576 /store/user/u/hists/ntuple_1.root\n"
+  "drwxr-xr-x        2026-08-27 14:04:11            0 /store/user/u/hists/subdir\n"
+  "-rw-r--r--        2026-08-27 14:05:00          512 /store/user/u/hists/log.txt\n"
+)
+
+
+def test_list_input_files_reads_sizes_out_of_the_remote_listing(monkeypatch):
+  # One `ls -l` rather than a stat per file: the scratch estimate needs every size, and a
+  # sample directory can hold thousands of files.
+  commands = []
+
+  def fake_run(command, **kwargs):
+    commands.append(command)
+    return FakeCompletedProcess(stdout=XRDFS_LISTING)
+
+  monkeypatch.setattr(merge.subprocess, "run", fake_run)
+  paths, sizes = merge.list_input_files("/store/user/u/hists", "*.root", "maite.iihe.ac.be:1094")
+
+  assert commands == [["xrdfs", "root://maite.iihe.ac.be:1094", "ls", "-l", "/store/user/u/hists"]]
+  assert paths == ["/store/user/u/hists/ntuple_0.root", "/store/user/u/hists/ntuple_1.root"]
+  assert sizes["/store/user/u/hists/ntuple_0.root"] == 13930949
+
+
+def test_list_input_files_treats_an_absent_remote_directory_as_empty(monkeypatch):
+  # A sample with nothing merged yet must behave as it does on a POSIX path, where
+  # glob.glob simply finds nothing.
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(
+      returncode=54, stderr="[ERROR] Server responded with an error: [3011] No such file or directory\n"
+    ),
+  )
+  assert merge.list_input_files("/store/user/u/absent", "*.root", "door:1094") == ([], {})
+
+
+def test_list_input_files_raises_on_any_other_xrdfs_failure(monkeypatch):
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(returncode=51, stderr="[FATAL] Auth failed"),
+  )
+  with pytest.raises(RuntimeError, match="Auth failed"):
+    merge.list_input_files("/store/user/u/hists", "*.root", "door:1094")
+
+
+def test_list_input_files_stays_local_for_a_posix_directory(monkeypatch, tmp_path):
+  monkeypatch.setattr(
+    merge.subprocess, "run", lambda *a, **k: pytest.fail("a local directory must not touch the network")
+  )
+  (tmp_path / "a.root").write_text("aa")
+  paths, sizes = merge.list_input_files(str(tmp_path), "*.root", "door:1094")
+  assert paths == [str(tmp_path / "a.root")]
+  assert sizes == {str(tmp_path / "a.root"): 2}
+
+
+def test_hadd_reads_lfn_inputs_through_the_redirector():
+  # The job tuples keep bare LFNs so path arithmetic keeps working; only the command hadd
+  # actually runs carries URLs.
+  command = merge.build_hadd_command(
+    "/scratch/ntuple_0.root",
+    ["/store/user/u/hists/ntuple_0.root"],
+    preserve_input_compression=False,
+    redirector="maite.iihe.ac.be:1094",
+  )
+  assert command[-1] == "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root"
+  assert command[-2] == "/scratch/ntuple_0.root"
+
+
+def test_condor_merge_job_merges_into_scratch_and_stages(tmp_path):
+  script_path = merge.create_condor_job(
+    str(tmp_path),
+    "histograms",
+    "DYto2L/2024",
+    0,
+    "/store/user/u/hists_merged/ntuple_0.root",
+    ["/store/user/u/hists/ntuple_0.root"],
+    preserve_input_compression=False,
+    hadd_files_per_pass=None,
+    hadd_workers=1,
+    redirector="maite.iihe.ac.be:1094",
+  )
+  script = open(script_path).read()
+
+  # hadd writes into the job's own scratch, never onto the destination: an LFN is not a
+  # writable local path, and even a POSIX one would show a growing file to the next stage.
+  assert "_CONDOR_SCRATCH_DIR" in script
+  assert '"$work_dir/ntuple_0.root"' in script
+  assert "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root" in script
+  assert "teaHelpers.stage_output" in script
+  assert "mkdir -p /store" not in script
+
+
+def test_a_remote_output_without_scratch_is_a_hard_error(monkeypatch, tmp_path):
+  # Falling through to "merging in the output directory" would ask hadd to write a literal
+  # /store/... file on the worker and report success having published nothing.
+  files_config = make_files_config(
+    samples=[""],
+    output_hists_dir="/store/user/u/hists",
+    redirector="door:1094",
+  )
+  monkeypatch.setattr(
+    merge,
+    "list_input_files",
+    lambda input_dir, pattern, redirector: (["/store/user/u/in/ntuple_0.root"], {"/store/user/u/in/ntuple_0.root": 10}),
+  )
+  monkeypatch.setattr(merge, "contains_top_level_tree", lambda file_path, redirector=None: False)
+  monkeypatch.setattr(merge, "choose_scratch_root", lambda required_bytes: None)
+
+  config_path = tmp_path / "files_config.py"
+  config_path.write_text("")
+  monkeypatch.setattr(merge, "load_files_config", lambda path: files_config)
+  monkeypatch.setattr(sys, "argv", ["merge.py", "--files_config", str(config_path)])
+  with pytest.raises(RuntimeError, match="requires local scratch"):
+    merge.main()
