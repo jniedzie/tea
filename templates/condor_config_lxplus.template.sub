@@ -10,6 +10,9 @@ request_memory        = <memory_request> GB
 
 should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
+# The job's own credential: an lxplus worker cannot read the 0600 proxy left in the AFS
+# submit directory (that needs a token the job does not have), so it has to be shipped.
+transfer_input_files = voms_proxy
 transfer_output_files = condor_dummy.out
 
 queue <n_jobs>

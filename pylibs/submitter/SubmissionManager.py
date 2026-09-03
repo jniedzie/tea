@@ -6,7 +6,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from Logger import info, warn, error, fatal
-from teaHelpers import get_facility, is_root_file_healthy
+from teaHelpers import get_facility, is_lfn, is_root_file_healthy
 
 
 class SubmissionSystem(Enum):
@@ -347,7 +347,10 @@ class SubmissionManager:
         return
 
       input_file_name = input_file_path.strip().split("/")[-1]
-      os.system(f"mkdir -p {self.files_config.output_dir}")
+      # An LFN output dir names no local directory; the stage-out (gfal-copy -p) creates
+      # the remote parent tree instead.
+      if not is_lfn(self.files_config.output_dir):
+        os.system(f"mkdir -p {self.files_config.output_dir}")
       output_file_path = f"{self.files_config.output_dir}/{input_file_name}"
       command_for_file = f"{self.command} --input_path {input_file_path} --output_path {output_file_path}"
 
@@ -381,9 +384,9 @@ class SubmissionManager:
         return
 
       input_file_name = input_file_path.strip().split("/")[-1]
-      if output_trees:
+      if output_trees and not is_lfn(self.files_config.output_trees_dir):
         os.system(f"mkdir -p {self.files_config.output_trees_dir}")
-      if output_hists:
+      if output_hists and not is_lfn(self.files_config.output_hists_dir):
         os.system(f"mkdir -p {self.files_config.output_hists_dir}")
 
       output_tree_file_path = f"{self.files_config.output_trees_dir}/{input_file_name}" if output_trees else ""
@@ -445,6 +448,7 @@ class SubmissionManager:
 
   def __keep_only_failed_inputs(self):
     failed_lines = []
+    redirector = getattr(self.files_config, "redirector", None)
     lines = open(self.input_files_list_file_name).read().splitlines()
     n_lines = len(lines)
     for i, line in enumerate(lines, start=1):
@@ -476,8 +480,10 @@ class SubmissionManager:
 
       # One shared predicate (teaHelpers.classify_root_file): a destination file with zero
       # keys used to read as healthy here and was never resubmitted, even though an app
-      # that exits successfully always writes at least one key.
-      is_healthy = len(outputs) > 0 and all(is_root_file_healthy(path) for path in outputs)
+      # that exits successfully always writes at least one key. An LFN output is opened
+      # through the files config's redirector -- without it every output reads as missing
+      # and --resubmit_failed silently resubmits the entire submission.
+      is_healthy = len(outputs) > 0 and all(is_root_file_healthy(path, redirector) for path in outputs)
       if not is_healthy:
         failed_lines.append(line)
     if n_lines > 0:
@@ -563,6 +569,16 @@ class SubmissionManager:
     )
     os.system(
       f"{self.sed_command} 's{self.sed_char}<output_hists_dir>{self.sed_char}{output_hists_dir}{self.sed_char}g' {self.condor_run_script_name}"
+    )
+
+    # set the storage door outputs are staged to. The env var (TEA_STAGE_URL_BASE) already
+    # reaches the worker through GetEnv = True; the files-config attribute is here so a
+    # submission is self-describing rather than depending on the submitter's shell.
+    stage_url_base = ""
+    if getattr(self.files_config, "stage_url_base", ""):
+      stage_url_base = "--stage_url_base " + self.files_config.stage_url_base.replace("/", "\\/")
+    os.system(
+      f"{self.sed_command} 's{self.sed_char}<stage_url_base>{self.sed_char}{stage_url_base}{self.sed_char}g' {self.condor_run_script_name}"
     )
 
     extra_args = ""

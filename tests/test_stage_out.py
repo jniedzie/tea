@@ -1,5 +1,6 @@
 """Stage-out helpers: URL derivation, atomic publish and the retry backoff."""
 
+import os
 import statistics
 
 import pytest
@@ -202,3 +203,91 @@ def test_naf_and_lxplus_use_remote_transports():
   assert teaHelpers.get_transport("lxplus") is teaHelpers._transport_xrootd
   assert teaHelpers.get_transport("default") is teaHelpers._transport_filesystem
   assert teaHelpers.get_transport("something_new") is teaHelpers._transport_filesystem
+
+
+def test_lfn_destination_url_applies_the_site_prefix():
+  assert teaHelpers.stage_dest_url("/store/user/x/out.root") == (
+    teaHelpers.STAGE_URL_BASE + teaHelpers.STAGE_LFN_PREFIX + "/store/user/x/out.root"
+  )
+
+
+def test_lfn_is_checked_before_the_pnfs_case():
+  # realpath("/store/...") returns the string unchanged on a machine with no such path, so
+  # a pnfs-first ordering would fall through to None and the caller would write a literal
+  # "/store/..." file locally.
+  assert teaHelpers.stage_dest_url("/store/user/x/out.root") is not None
+
+
+def test_destination_url_honours_an_explicit_door():
+  assert teaHelpers.stage_dest_url("/store/user/x/out.root", "davs://other.example:2880") == (
+    "davs://other.example:2880" + teaHelpers.STAGE_LFN_PREFIX + "/store/user/x/out.root"
+  )
+
+
+def test_destination_url_is_none_for_an_ordinary_local_path(tmp_path):
+  assert teaHelpers.stage_dest_url(str(tmp_path / "out.root")) is None
+
+
+def test_transport_follows_the_destination_not_the_facility():
+  # An LFN output needs gfal wherever the job runs; the facility table only gets to choose
+  # when the destination resolves to no door URL.
+  assert teaHelpers.select_transport("/store/user/x/out.root", "lxplus") is teaHelpers._transport_gfal
+  assert teaHelpers.select_transport("/store/user/x/out.root", "default") is teaHelpers._transport_gfal
+  assert teaHelpers.select_transport("/eos/user/t/x/out.root", "lxplus") is teaHelpers._transport_xrootd
+
+
+def test_stage_output_to_an_lfn_copies_straight_to_the_destination(tmp_path, monkeypatch):
+  source = tmp_path / "out.root"
+  source.write_text("payload")
+  staged = []
+
+  def fake_gfal(local_path, stage_path, url_base=None):
+    staged.append((local_path, stage_path, url_base))
+
+  monkeypatch.setattr(teaHelpers, "_transport_gfal", fake_gfal)
+
+  teaHelpers.stage_output(str(source), "/store/user/x/out.root", "lxplus")
+
+  # No dot-file name and no os.makedirs of a local "/store" tree: the destination is
+  # written directly, and gfal-copy -p creates the remote parent.
+  assert staged == [(str(source), "/store/user/x/out.root", None)]
+  assert not os.path.exists("/store/user/x")
+
+
+def test_stage_output_passes_an_explicit_door_through(tmp_path, monkeypatch):
+  source = tmp_path / "out.root"
+  source.write_text("payload")
+  staged = []
+  monkeypatch.setattr(
+    teaHelpers, "_transport_gfal", lambda local, stage, url_base=None: staged.append(url_base)
+  )
+
+  teaHelpers.stage_output(str(source), "/store/user/x/out.root", "lxplus", "davs://other.example:2880")
+
+  assert staged == ["davs://other.example:2880"]
+
+
+def test_preflight_demands_gfal_for_an_lfn_output_on_lxplus(monkeypatch, tmp_path):
+  proxy = tmp_path / "voms_proxy"
+  proxy.write_text("proxy")
+  monkeypatch.setenv("X509_USER_PROXY", str(proxy))
+  monkeypatch.setattr(teaHelpers.shutil, "which", lambda binary: f"/usr/bin/{binary}")
+  ok, reason = teaHelpers.stage_preflight(["/store/user/x/out.root"], "lxplus")
+  assert ok
+  assert "gfal-copy" in reason
+
+  monkeypatch.delenv("X509_USER_PROXY")
+  ok, reason = teaHelpers.stage_preflight(["/store/user/x/out.root"], "lxplus")
+  assert not ok
+  assert "X509_USER_PROXY" in reason
+
+
+def test_read_url_spells_an_lfn_with_a_double_slash():
+  assert teaHelpers.read_url("/store/user/x/out.root", "maite.iihe.ac.be:1094") == (
+    "root://maite.iihe.ac.be:1094//store/user/x/out.root"
+  )
+  assert teaHelpers.read_url("/store/user/x/out.root", "root://door") == "root://door//store/user/x/out.root"
+
+
+def test_read_url_leaves_a_local_path_alone(tmp_path):
+  assert teaHelpers.read_url(str(tmp_path / "out.root")) == str(tmp_path / "out.root")
