@@ -83,6 +83,23 @@ jobs:
           tea_env_activate
           ctest --test-dir build --output-on-failure
 
+  tests:
+    name: Python unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The tests cover pure logic only (stage-out URLs and atomicity, merge planning and
+      # input validation), so they need neither ROOT nor the locked build environment.
+      - name: Install pytest
+        run: python -m pip install --upgrade pytest
+      - name: Run unit tests
+        run: python -m pytest tests -q
+
   lint:
     name: Formatting
     runs-on: ubuntu-24.04

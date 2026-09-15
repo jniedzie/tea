@@ -753,12 +753,14 @@ def write_file(path, content):
 
 
 def get_merge_targets(files_config):
+  # An empty output_*_dir means this stage produces no output of that kind.
+  # Treating it as a real target would create a phantom ./_merged plan.
   targets = []
 
-  if hasattr(files_config, "output_hists_dir"):
+  if getattr(files_config, "output_hists_dir", ""):
     targets.append(("histograms", files_config.output_hists_dir))
 
-  if hasattr(files_config, "output_trees_dir"):
+  if getattr(files_config, "output_trees_dir", ""):
     targets.append(("trees", files_config.output_trees_dir))
 
   return targets
@@ -1021,13 +1023,23 @@ def main():
   if explicit_input_files is not None:
     if hasattr(files_config, "samples") and list(files_config.samples) != [""]:
       raise ValueError("input_files cannot be combined with an explicit samples list")
-    explicit_input_files = list(explicit_input_files)
+    # Match the deterministic ordering already provided by the glob branch.
+    explicit_input_files = sorted(explicit_input_files)
     if not explicit_input_files:
       raise ValueError("input_files must be a non-empty list of file paths")
     missing_files = [path for path in explicit_input_files if not os.path.isfile(path)]
     if missing_files:
       raise ValueError(
         f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}"
+      )
+    # Distinct paths can name the same file through a symlink; hadd would
+    # otherwise double-count events while reporting success.
+    resolved_files = [os.path.realpath(path) for path in explicit_input_files]
+    duplicate_files = sorted({path for path in resolved_files if resolved_files.count(path) > 1})
+    if duplicate_files:
+      raise ValueError(
+        f"input_files lists {len(duplicate_files)} file(s) more than once (after resolving "
+        f"symlinks), which would double-count events: {duplicate_files[:5]}"
       )
 
   merge_targets = get_merge_targets(files_config)
