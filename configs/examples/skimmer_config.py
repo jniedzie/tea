@@ -46,3 +46,8 @@ branchesToAdd = (
 # weightsBranchName = "genWeight"
 
 # redirector = "xrootd-cms.infn.it"
+
+# Where output is staged to, when it does not land on a local filesystem. Defaults to
+# TEA_STAGE_URL_BASE (itself defaulting to the IIHE door); setting it here instead makes
+# a submission self-describing rather than dependent on the submitter's environment.
+# stage_url_base = "davs://maite.iihe.ac.be:2880"
