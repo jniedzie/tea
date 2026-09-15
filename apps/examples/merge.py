@@ -1029,9 +1029,7 @@ def main():
       raise ValueError("input_files must be a non-empty list of file paths")
     missing_files = [path for path in explicit_input_files if not os.path.isfile(path)]
     if missing_files:
-      raise ValueError(
-        f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}"
-      )
+      raise ValueError(f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}")
     # Distinct paths can name the same file through a symlink; hadd would
     # otherwise double-count events while reporting success.
     resolved_files = [os.path.realpath(path) for path in explicit_input_files]
@@ -1046,9 +1044,7 @@ def main():
   if not merge_targets:
     raise ValueError("files_config must define output_hists_dir and/or output_trees_dir")
   if explicit_input_files is not None and len(merge_targets) != 1:
-    raise ValueError(
-      "input_files can only be combined with exactly one of output_hists_dir/output_trees_dir"
-    )
+    raise ValueError("input_files can only be combined with exactly one of output_hists_dir/output_trees_dir")
 
   jobs_by_kind = []
   for merge_kind, base_dir in merge_targets:
