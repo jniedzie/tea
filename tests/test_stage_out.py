@@ -258,9 +258,7 @@ def test_stage_output_passes_an_explicit_door_through(tmp_path, monkeypatch):
   source = tmp_path / "out.root"
   source.write_text("payload")
   staged = []
-  monkeypatch.setattr(
-    teaHelpers, "_transport_gfal", lambda local, stage, url_base=None: staged.append(url_base)
-  )
+  monkeypatch.setattr(teaHelpers, "_transport_gfal", lambda local, stage, url_base=None: staged.append(url_base))
 
   teaHelpers.stage_output(str(source), "/store/user/x/out.root", "lxplus", "davs://other.example:2880")
 
