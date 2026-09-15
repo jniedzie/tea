@@ -156,7 +156,7 @@ def test_empty_output_dirs_alone_are_not_a_merge_target(monkeypatch, tmp_path):
   with pytest.raises(ValueError, match="output_hists_dir"):
     run_main_with_config(monkeypatch, tmp_path, files_config)
   assert not (tmp_path / "_merged").exists()
- 
+
 
 # --- Remote (LFN) inputs and outputs ------------------------------------------------
 

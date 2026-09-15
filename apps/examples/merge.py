@@ -936,7 +936,7 @@ def create_condor_job(
       "set -e",
       "touch condor_dummy.out",
       'work_dir=$(mktemp -d "${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/tea_merge_XXXXXX")',
-      'trap \'rm -rf "$work_dir"\' EXIT',
+      "trap 'rm -rf \"$work_dir\"' EXIT",
       shell_command(hadd_command, working_output),
       shell_command(stage_command(output_file, stage_url_base), working_output),
       "",
@@ -1191,9 +1191,7 @@ def main():
     contains_trees = contains_top_level_tree(merge_jobs[0][-1][0], redirector)
     for job in merge_jobs:
       output_expected_sizes[job[5]] = (
-        job_input_sizes[job[5]]
-        if contains_trees
-        else max(input_file_sizes[input_file] for input_file in job[-1])
+        job_input_sizes[job[5]] if contains_trees else max(input_file_sizes[input_file] for input_file in job[-1])
       )
   expected_output_size = sum(output_expected_sizes.values())
   peak_input_size = sum(max(job_input_sizes[job[5]] for job in merge_jobs) for _, _, merge_jobs in jobs_by_kind)
