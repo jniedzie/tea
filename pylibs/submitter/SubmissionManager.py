@@ -604,9 +604,13 @@ class SubmissionManager:
         f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/{self.submission_id}\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}"
       )
       if self.submission_system == SubmissionSystem.condor:
-        info(f"Condor logs for this submission will be stored under output/{self.submission_id}, error/{self.submission_id}, log/{self.submission_id}")
+        info(
+          f"Condor logs for this submission will be stored under output/{self.submission_id}, error/{self.submission_id}, log/{self.submission_id}"
+        )
       else:
-        info(f"Job logs for this submission will be stored under output/{self.submission_id} and error/{self.submission_id}")
+        info(
+          f"Job logs for this submission will be stored under output/{self.submission_id} and error/{self.submission_id}"
+        )
     else:
       os.system(
         f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
