@@ -83,6 +83,13 @@ jobs:
           tea_env_activate
           ctest --test-dir build --output-on-failure
 
+      - name: Run Python unit tests
+        if: matrix.correctionlib == 'with'
+        run: |
+          source environment/activate.sh
+          tea_env_activate
+          python3 -m pytest tests -q
+
   lint:
     name: Formatting
     runs-on: ubuntu-24.04
