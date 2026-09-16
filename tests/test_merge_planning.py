@@ -1,6 +1,5 @@
 """merge.py planning logic: merge targets, sample directories, chunking, input_files guards."""
 
-import os
 import sys
 import types
 
@@ -152,7 +151,8 @@ def test_merge_targets_are_required(monkeypatch, tmp_path):
 
 
 def test_empty_output_dirs_alone_are_not_a_merge_target(monkeypatch, tmp_path):
+  monkeypatch.chdir(tmp_path)
   files_config = make_files_config(output_hists_dir="", output_trees_dir="")
   with pytest.raises(ValueError, match="output_hists_dir"):
     run_main_with_config(monkeypatch, tmp_path, files_config)
-  assert not os.path.exists(os.path.join(os.getcwd(), "_merged"))
+  assert not (tmp_path / "_merged").exists()

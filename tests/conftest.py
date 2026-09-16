@@ -1,8 +1,7 @@
 """Make tea's Python libraries importable without an installed bin/ tree.
 
-The tests here cover pure logic only -- URL derivation, staging atomicity, merge planning
-and input validation -- so they deliberately import the modules directly from the source
-tree and never need ROOT, gfal, xrootd or condor.
+The tests here cover merge planning and input validation only, so they deliberately import
+the modules directly from the source tree and never need ROOT, gfal, xrootd or condor.
 """
 
 import os

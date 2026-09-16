@@ -1033,7 +1033,13 @@ def main():
     # Distinct paths can name the same file through a symlink; hadd would
     # otherwise double-count events while reporting success.
     resolved_files = [os.path.realpath(path) for path in explicit_input_files]
-    duplicate_files = sorted({path for path in resolved_files if resolved_files.count(path) > 1})
+    seen_files = set()
+    duplicate_files = set()
+    for path in resolved_files:
+      if path in seen_files:
+        duplicate_files.add(path)
+      seen_files.add(path)
+    duplicate_files = sorted(duplicate_files)
     if duplicate_files:
       raise ValueError(
         f"input_files lists {len(duplicate_files)} file(s) more than once (after resolving "
