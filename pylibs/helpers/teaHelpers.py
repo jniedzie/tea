@@ -38,20 +38,14 @@ GFAL_COPY_MAX_ATTEMPTS = 5
 GFAL_COPY_RETRY_BASE_WAIT_SECONDS = 20
 GFAL_COPY_RETRY_EXPO_HALF_LIFE_SECONDS = 60
 # The transport gets its own hard timeout on top of the protocol-level one, so a hung
-# client (rather than a slow transfer) cannot pin the job until MaxWallTime.
+# client (rather than a slow transfer) cannot block indefinitely.
 STAGE_SUBPROCESS_TIMEOUT_SECONDS = GFAL_COPY_TIMEOUT_SECONDS + 60
-# Wall-clock budget shared by every output of one job: 5 attempts x (600 s timeout +
-# ~107 s mean backoff) is ~1 h per output, so trees + hists could otherwise compound into
-# ~2 h of retries and push the job past its wall-time limit.
-STAGE_OUT_BUDGET_SECONDS = 1800
 
 ROOT_FILE_HEALTHY = "healthy"
 ROOT_FILE_MISSING = "missing"
 ROOT_FILE_UNREADABLE = "unreadable"
 ROOT_FILE_NO_KEYS = "no_keys"
 ROOT_FILE_RECOVERED = "recovered"
-
-_stage_deadline = None
 
 
 def get_year_from_samples(samples):
@@ -209,29 +203,6 @@ def eos_xrootd_url(file_path):
     initial, username, suffix = user_match.groups()
     return f"root://eoshome-{initial}.cern.ch//eos/user/{initial}/{username}{suffix or ''}"
   return None
-
-
-def begin_stage_budget(seconds=STAGE_OUT_BUDGET_SECONDS):
-  """Start (or reset) the wall-clock budget shared by every stage_output call of one job.
-
-  Without a budget each output retries independently; a job writing both trees and
-  histograms can then spend twice the per-output worst case. Long-lived processes that
-  stage many unrelated outputs (merge.py) simply never call this.
-  """
-  global _stage_deadline
-  _stage_deadline = None if seconds is None else time.monotonic() + seconds
-  return _stage_deadline
-
-
-def clear_stage_budget():
-  global _stage_deadline
-  _stage_deadline = None
-
-
-def _stage_budget_remaining():
-  if _stage_deadline is None:
-    return None
-  return _stage_deadline - time.monotonic()
 
 
 _gfal_interpreter = False  # False = not looked for yet; None = none found
@@ -395,9 +366,6 @@ def _transport_xrootd(local_path, stage_path, url_base=None):
       f"xrdcp {local_path} -> {dest_url}",
     )
   except (OSError, RuntimeError) as exception:
-    remaining_seconds = _stage_budget_remaining()
-    if remaining_seconds is not None and remaining_seconds <= 0:
-      raise
     info(f"xrdcp stage-out failed; falling back to a sequential filesystem copy: {exception}")
     _transport_filesystem(local_path, stage_path)
 
@@ -459,13 +427,6 @@ def _stage_with_retries(transport, local_path, stage_path):
     wait_seconds = GFAL_COPY_RETRY_BASE_WAIT_SECONDS + random.expovariate(
       math.log(2) / GFAL_COPY_RETRY_EXPO_HALF_LIFE_SECONDS
     )
-    remaining_seconds = _stage_budget_remaining()
-    if remaining_seconds is not None and remaining_seconds <= wait_seconds:
-      raise RuntimeError(
-        f"stage-out budget of {STAGE_OUT_BUDGET_SECONDS} s exhausted after attempt "
-        f"{attempt}/{GFAL_COPY_MAX_ATTEMPTS} staging {local_path}: {last_exception}"
-      ) from last_exception
-
     warn(
       f"stage-out attempt {attempt}/{GFAL_COPY_MAX_ATTEMPTS} failed staging "
       f"{local_path} -> {stage_path}; retrying in {wait_seconds:.1f}s ({last_exception})"

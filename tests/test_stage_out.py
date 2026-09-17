@@ -107,29 +107,6 @@ def test_stage_output_retries_until_the_transport_succeeds(tmp_path, monkeypatch
   assert destination.read_text() == "payload"
 
 
-def test_stage_budget_stops_the_retries(tmp_path, monkeypatch):
-  source = tmp_path / "out.root"
-  source.write_text("payload")
-  destination = tmp_path / "out_final.root"
-  attempts = []
-
-  def always_failing_transport(local_path, stage_path):
-    attempts.append(stage_path)
-    raise RuntimeError("transport is down")
-
-  monkeypatch.setattr(teaHelpers, "TRANSPORTS", {"default": always_failing_transport})
-  teaHelpers.begin_stage_budget(0.0)
-  try:
-    with pytest.raises(RuntimeError, match="budget"):
-      teaHelpers.stage_output(str(source), str(destination), "default")
-  finally:
-    teaHelpers.clear_stage_budget()
-
-  # The first attempt still runs; the budget only suppresses the waiting retries.
-  assert len(attempts) == 1
-  assert not destination.exists()
-
-
 def test_backoff_stays_within_the_bounds_the_retry_comment_claims():
   # The comment on the retry loop promises a 20 s floor, a ~80 s median and a ~107 s mean.
   # These are the numbers the distribution was chosen for, so they are worth pinning.
