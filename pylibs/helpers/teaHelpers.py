@@ -376,10 +376,17 @@ def _transport_xrootd(local_path, stage_path, url_base=None):
     _transport_filesystem(local_path, stage_path)
     return
 
-  _run_transport_command(
-    ["xrdcp", "-f", "--cksum", "adler32", os.path.abspath(local_path), dest_url],
-    f"xrdcp {local_path} -> {dest_url}",
-  )
+  try:
+    _run_transport_command(
+      ["xrdcp", "-f", "--cksum", "adler32", os.path.abspath(local_path), dest_url],
+      f"xrdcp {local_path} -> {dest_url}",
+    )
+  except (OSError, RuntimeError) as exception:
+    remaining_seconds = _stage_budget_remaining()
+    if remaining_seconds is not None and remaining_seconds <= 0:
+      raise
+    info(f"xrdcp stage-out failed; falling back to a sequential filesystem copy: {exception}")
+    _transport_filesystem(local_path, stage_path)
 
 
 # Scratch is facility-independent (see condor_runner); only the copy protocol is not.
