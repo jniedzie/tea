@@ -335,11 +335,24 @@ def _transport_gfal(local_path, stage_path, url_base=None):
     _transport_filesystem(local_path, stage_path)
     return
   if shutil.which("gfal-copy") is None:
-    # A filesystem copy into the staging name is still atomic on publish, so a host
-    # without the client degrades rather than failing. Jobs never reach this: their
-    # pre-flight has already turned staging off (see stage_preflight).
-    info("gfal-copy is not on PATH; copying directly instead")
-    _transport_filesystem(local_path, stage_path)
+    if is_lfn(stage_path):
+      raise RuntimeError(f"gfal-copy is required to stage the LFN destination {stage_path}")
+    info("gfal-copy is not on PATH; copying through the mounted filesystem instead")
+    output_dir = os.path.dirname(os.path.abspath(stage_path))
+    os.makedirs(output_dir, exist_ok=True)
+    fallback_stage_path = os.path.join(
+      output_dir,
+      f".{os.path.basename(stage_path)}.stage-{uuid.uuid4().hex}",
+    )
+    try:
+      _transport_filesystem(local_path, fallback_stage_path)
+      os.replace(fallback_stage_path, stage_path)
+    except Exception:
+      try:
+        os.remove(fallback_stage_path)
+      except OSError:
+        pass
+      raise
     return
 
   # -f: dCache is write-once, so a retry's overwrite of a partial stage file needs -f to
