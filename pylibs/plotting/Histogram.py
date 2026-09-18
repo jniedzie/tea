@@ -75,8 +75,12 @@ class Histogram:
         new_bin_edges.append(x_max)
 
       new_n_bins = len(new_bin_edges) - 1
-      new_histogram = ROOT.TH1F(f"{self.hist.GetName()}_{next(_cropped_histogram_ids)}",
-                                self.hist.GetTitle(), new_n_bins, array('d', new_bin_edges))
+      new_histogram = ROOT.TH1F(
+        f"{self.hist.GetName()}_{next(_cropped_histogram_ids)}",
+        self.hist.GetTitle(),
+        new_n_bins,
+        array("d", new_bin_edges),
+      )
 
       for i in range(1, new_n_bins + 1):
         original_bin = self.hist.FindBin(new_bin_edges[i - 1])
