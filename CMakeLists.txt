@@ -127,6 +127,17 @@ if(BUILD_TESTING)
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/profile2d_config.py"
                 "${CMAKE_CURRENT_BINARY_DIR}/profile2d_test.root"
     )
+    set_tests_properties(tea_profile2d PROPERTIES FIXTURES_SETUP profile2d_data)
+
+    add_test(
+        NAME tea_profile2d_plotting
+        COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_profile2d_plotting.py"
+                "${CMAKE_CURRENT_SOURCE_DIR}"
+                "${CMAKE_CURRENT_BINARY_DIR}/profile2d_test.root"
+                "${CMAKE_CURRENT_BINARY_DIR}/profile2d_plots"
+    )
+    set_tests_properties(tea_profile2d_plotting PROPERTIES FIXTURES_REQUIRED profile2d_data)
 
     add_test(
         NAME tea_smoke_examples
