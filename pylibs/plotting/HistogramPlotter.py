@@ -4,6 +4,7 @@ import os
 import os.path
 import copy
 from array import array
+from typing import Any
 
 from Sample import SampleType
 from Styler import Styler
@@ -33,7 +34,6 @@ class HistogramPlotter:
       self.ratiohists = None
 
     self.histsAndSamples = {}
-    self.hists2d = {sample_type: {} for sample_type in SampleType}
 
     self.data_included = any(sample.type == SampleType.data for sample in self.config.samples)
     self.backgrounds_included = any(sample.type == SampleType.background for sample in self.config.samples)
@@ -43,6 +43,7 @@ class HistogramPlotter:
     self.histosamples = []
     self.ratiosamples = []
     self.histosamples2D = []
+    self.profilesamples2D = []
     self.data_integral = {}
     self.total_backgrounds_integral = {}
 
@@ -89,6 +90,12 @@ class HistogramPlotter:
         return True
     return False
 
+  def __profilesample2DExists(self, profile: Any, sample: Any) -> bool:
+    for p, s in self.profilesamples2D:
+      if p.getName() == profile.getName() and s.name == sample.name:
+        return True
+    return False
+
   def addHistosample(self, hist, sample, input_file):
     if self.__histosampleExists(hist, sample):
       # warn(f"Skipping adding histogram {hist.getName()} for sample {sample.name} because it already exists")
@@ -115,6 +122,18 @@ class HistogramPlotter:
       return
 
     self.histosamples2D.append((copy.deepcopy(hist), sample))
+
+  def addProfilesample2D(self, profile: Any, sample: Any, input_file: Any) -> None:
+    if self.__profilesample2DExists(profile, sample):
+      warn(f"Skipping adding 2D profile {profile.getName()} for sample {sample.name} because it already exists")
+      return
+    profile.load(input_file)
+
+    if not profile.isGood():
+      warn("Some 2D profiles were missing for some of the samples.")
+      return
+
+    self.profilesamples2D.append((copy.deepcopy(profile), sample))
 
   def addHistosampleRatio(self, input_hist_pass, input_hist_tot, sample, input_file):
     if self.__histosampleRatioExists(input_hist_pass, input_hist_tot, sample):
@@ -260,20 +279,6 @@ class HistogramPlotter:
 
       if sample.legend_description != "" and self.legends[hist.getName()][key] is not None:
         self.legends[hist.getName()][key].AddEntry(hist.hist, sample.legend_description, options)
-
-  def addHists2D(self, input_file, sample):
-    if not hasattr(self.config, "histograms2D"):
-      return
-
-    for hist in self.config.histograms2D:
-      hist.load(input_file)
-
-      if not hist.isGood():
-        warn(f"Some histograms were missing for some of the samples.")
-        continue
-
-      hist.setup()
-      self.hists2d[sample.type][hist.getName()] = hist.hist
 
   def buildStacksRatio(self):
     if not hasattr(self.config, "histogramsRatio"):
@@ -514,30 +519,41 @@ class HistogramPlotter:
         path = self.config.output_path + "/" + hist.getName() + "." + output_format
         self.__save_canvas(canvas, path)
 
-  def drawHists2D(self):
-    if not hasattr(self.config, "histograms2D"):
-      return
+  def __drawObjects2D(self, objects: list[tuple[Any, Any]], object_label: str, normalize: bool) -> None:
+    canvas_size = getattr(self.config, "canvas_size_2Dhists", self.config.canvas_size)
 
-    for hist, sample in self.histosamples2D:
-      if hist.hist is None or type(hist.hist) == ROOT.TObject:
-        error(f"2D histogram {hist.getName()} for sample {sample.name} is not valid.")
+    for hist, sample in objects:
+      if hist.hist is None or type(hist.hist) is ROOT.TObject:
+        error(f"{object_label} {hist.getName()} for sample {sample.name} is not valid.")
         continue
 
-      self.normalizer.normalize(hist, sample)
+      if normalize:
+        self.normalizer.normalize(hist, sample)
 
       hist_rebinned = hist.hist.Rebin2D(hist.x_rebin, hist.y_rebin)
-
-      title = hist.getName() + "_" + sample.name
-      canvas = TCanvas(title, title, self.config.canvas_size_2Dhists[0], self.config.canvas_size_2Dhists[1])
+      title = hist.getOutputName() + "_" + sample.name
+      canvas = TCanvas(title, title, canvas_size[0], canvas_size[1])
       canvas.cd()
       if self.styler.plotMargins is None:
         canvas.SetRightMargin(0.14)
       hist_rebinned.Draw("colz")
       self.styler.setupFigure2D(hist_rebinned, hist)
 
+      canvas.SetLogx(hist.log_x)
+      canvas.SetLogy(hist.log_y)
       canvas.SetLogz(hist.log_z)
       canvas.Update()
-      self.__save_canvas(canvas, self.config.output_path + "/" + title + ".pdf")
+      for output_format in self.output_formats:
+        extension = output_format.lstrip(".")
+        self.__save_canvas(canvas, self.config.output_path + "/" + title + "." + extension)
+
+  def drawHists2D(self):
+    if hasattr(self.config, "histograms2D"):
+      self.__drawObjects2D(self.histosamples2D, "2D histogram", normalize=True)
+
+  def drawProfiles2D(self) -> None:
+    if hasattr(self.config, "profiles2D"):
+      self.__drawObjects2D(self.profilesamples2D, "2D profile", normalize=False)
 
   def drawRatioStacks(self):
     if not hasattr(self.config, "histogramsRatio"):

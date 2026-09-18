@@ -2,7 +2,7 @@ import ROOT
 from ROOT import TColor
 from Sample import Sample, SampleType
 from Legend import Legend
-from Histogram import Histogram, Histogram2D
+from Histogram import Histogram, Histogram2D, Profile2D
 from HistogramNormalizer import NormalizationType
 from CmsLabelsManager import CmsLabel
 
@@ -107,6 +107,13 @@ histograms2D = (
   #           name              title                rebin  xmin    xmax       ymin   ymax     zmin zmax xlabel               ylabel                        zlabel
   # Histogram2D("hit_xy",         "hit_xy"          , 1, 1, -15     , 15      , -15   , 15    , 0,  1e5, "x"             , "y"                         , "Counts"),
   # Histogram2D("time_vs_toa",    "time_vs_toa"     , 1, 1, -10     , 100     , -10   , 2000  , 0,  1e3, "Time (ns)"     , "Time of Arrival (ToA)"     , "Counts"),
+)
+
+profiles2D = (
+  # Profile2D(
+  #   "profiles/response", "Response", False, False, False, 1, 1,
+  #   None, None, None, None, None, None, "x", "y", "Mean response",
+  # ),
 )
 
 legend_width = 0.15

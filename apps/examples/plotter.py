@@ -33,6 +33,10 @@ def main():
       for hist in config.histograms2D:
         plotter.addHistosample2D(hist, sample, input_files[sample.name])
 
+    if hasattr(config, "profiles2D"):
+      for profile in config.profiles2D:
+        plotter.addProfilesample2D(profile, sample, input_files[sample.name])
+
     if hasattr(config, "histogramsRatio"):
       for histpair in config.histogramsRatio:
         plotter.addHistosampleRatio(histpair[0], histpair[1], sample, input_files[sample.name])
@@ -40,11 +44,10 @@ def main():
   plotter.setupLegends()
   plotter.buildStacks()
   plotter.buildStacksRatio()
-  if sample.name in input_files:
-    plotter.addHists2D(input_files[sample.name], sample)
   plotter.drawStacks()
   plotter.drawRatioStacks()
   plotter.drawHists2D()
+  plotter.drawProfiles2D()
 
   logger_print()
 
