@@ -532,6 +532,9 @@ class HistogramPlotter:
       canvas.cd()
       if self.styler.plotMargins is None:
         canvas.SetRightMargin(0.14)
+      if getattr(self.config, "show_grid_2D", False):
+        canvas.SetGridx(True)
+        canvas.SetGridy(True)
       hist_rebinned.Draw("colz")
       self.styler.setupFigure2D(hist_rebinned, hist)
 
