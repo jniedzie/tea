@@ -179,7 +179,6 @@ def load_files_config(config_path):
 
 
 def config_redirector(files_config):
-  """Redirector used to read LFN inputs, off the same attribute SubmissionManager reads."""
   return getattr(files_config, "redirector", None) or teaHelpers.XROOTD_REDIRECTOR
 
 
@@ -192,15 +191,6 @@ def _xrdfs_host(redirector):
 
 
 def _xrdfs_list_directory(directory, redirector):
-  """[(path, size)] for one remote directory. An absent directory lists as empty.
-
-  `ls -l` rather than `ls`, because the sizes come along for free: main() needs the size
-  of every input file to size the merge scratch, and statting them one at a time would be
-  thousands of round trips to the door for a single merge.
-
-  An absent directory returns [] rather than raising, so a sample with no output yet
-  behaves exactly as it does on a POSIX path, where glob.glob simply finds nothing.
-  """
   command = ["xrdfs", _xrdfs_host(redirector), "ls", "-l", directory]
   try:
     result = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -227,7 +217,6 @@ def _xrdfs_list_directory(directory, redirector):
 
 
 def _xrdfs_size(file_path, redirector):
-  """Size of one remote file, or None when it is not there."""
   command = ["xrdfs", _xrdfs_host(redirector), "stat", file_path]
   try:
     result = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -240,14 +229,12 @@ def _xrdfs_size(file_path, redirector):
 
 
 def file_size(file_path, redirector):
-  """Size of one input file, or None when it is not there. Local paths never hit the network."""
   if not is_lfn(file_path):
     return os.path.getsize(file_path) if os.path.isfile(file_path) else None
   return _xrdfs_size(file_path, redirector)
 
 
 def list_input_files(input_dir, input_file_pattern, redirector):
-  """(sorted input files, {path: size}) for one sample directory, local or LFN."""
   if not is_lfn(input_dir):
     file_paths = sorted(glob.glob(os.path.join(input_dir, input_file_pattern)))
     return file_paths, {file_path: os.path.getsize(file_path) for file_path in file_paths}
@@ -605,9 +592,6 @@ def skip_files_without_keys(file_paths, redirector=None):
 
   try:
     for file_index, file_path in enumerate(file_paths, start=1):
-      # Same predicate as the stage-out gate and the resubmit check; only the disposition
-      # differs here -- a file we could not inspect is still handed to hadd, which has its
-      # own recovery, while a file that is readable but empty is genuinely useless.
       status = teaHelpers.classify_root_file(file_path, redirector)
       if status == teaHelpers.ROOT_FILE_NO_KEYS:
         skipped_files.append(file_path)
@@ -650,8 +634,7 @@ def build_hadd_command(
   if hadd_files_per_pass is not None:
     # hadd's -n limit includes the target file itself.
     command.extend(["-n", str(hadd_files_per_pass + 1)])
-  # hadd reads xrootd URLs natively; the job tuples keep bare LFNs so every other
-  # consumer (sizes, progress, dedup) can keep doing ordinary path arithmetic.
+  # Keep bare LFNs internally; convert only for hadd.
   return [*command, output_file, *read_urls(input_files, redirector)]
 
 
@@ -715,9 +698,6 @@ def contains_top_level_tree(file_path, redirector=None):
 
 
 def stage_output(local_output, output_file, url_base=None):
-  # One stage-out implementation for the whole toolkit: temp name -> transport with retry
-  # -> atomic rename, with the transport chosen from the destination. Kept as a named
-  # function because the merge call site reads better with the local vocabulary.
   teaHelpers.stage_output(local_output, output_file, url_base=url_base)
 
 
@@ -768,10 +748,6 @@ def write_file(path, content):
 
 
 def get_merge_targets(files_config):
-  # An empty output_*_dir means "this stage produces no output of that kind" (the same
-  # convention SubmissionManager and condor_runner use). Taking it at face value here
-  # globs the CWD instead: base "" yields the pattern "./*.root" and the output directory
-  # "./_merged".
   targets = []
 
   if getattr(files_config, "output_hists_dir", ""):
@@ -805,12 +781,6 @@ def collect_jobs(
   explicit_input_files=None,
   redirector=None,
 ):
-  """(jobs, {input file: size}).
-
-  The sizes are carried out of the listing rather than re-derived later: main() needs one
-  per input file to size the merge scratch, and for an LFN input directory that would be
-  a stat round trip per file (thousands per merge) instead of a single ls.
-  """
   jobs = []
   file_sizes = {}
   info(f"[{merge_kind}] base dir: {base_dir}")
@@ -877,12 +847,6 @@ STAGE_SNIPPET = (
 
 
 def stage_command(output_file, url_base):
-  """The command a condor merge job runs to publish its scratch output.
-
-  sys.path is injected explicitly rather than relied upon: the job inherits the submit
-  node's environment (GetEnv = True), but the run script is generated here and does not
-  cd into the directory teaHelpers was imported from.
-  """
   helpers_dir = os.path.dirname(os.path.abspath(teaHelpers.__file__))
   return [
     sys.executable,
@@ -894,11 +858,6 @@ def stage_command(output_file, url_base):
 
 
 def shell_command(arguments, expanded):
-  """shlex.join, except that `expanded` is left unquoted so the shell still expands it.
-
-  The scratch path is the one argument here that has to survive as a shell expansion of
-  $work_dir; everything else (LFNs, URLs, sample names) must be quoted.
-  """
   return " ".join(f'"{argument}"' if argument == expanded else shlex.quote(argument) for argument in arguments)
 
 
@@ -917,9 +876,6 @@ def create_condor_job(
 ):
   safe_sample = sample.replace("/", "_")
   script_path = os.path.join(condor_dir, f"{merge_kind}_{safe_sample}_{batch_index}.sh")
-  # hadd into the worker's own scratch and stage the result, the same shape the app jobs
-  # use: merging straight onto the destination writes a growing file where the next stage
-  # expects a complete one, and for an LFN destination it is not a writable path at all.
   working_output = "$work_dir/" + os.path.basename(output_file)
   hadd_command = build_hadd_command(
     working_output,
@@ -1029,9 +985,6 @@ def run_jobs_locally(
   stage_url_base=None,
 ):
   for _, _, _, _, output_dir, output_file, input_files in merge_jobs:
-    # An LFN output dir names no local directory; the stage-out (gfal-copy -p) creates the
-    # remote parent tree instead. main() has already refused to get here without scratch
-    # for such a destination, so the merge itself always has a real directory to run in.
     if not is_lfn(output_dir):
       os.makedirs(output_dir, exist_ok=True)
     job_workers = min(hadd_workers, len(input_files))
@@ -1104,20 +1057,12 @@ def main():
   if explicit_input_files is not None:
     if hasattr(files_config, "samples") and list(files_config.samples) != [""]:
       raise ValueError("input_files cannot be combined with an explicit samples list")
-    # Sorted, so an explicit list keeps the deterministic chunk -> ntuple_N.root mapping
-    # that the glob branch gets from sorted(glob.glob(...)).
     explicit_input_files = sorted(explicit_input_files)
     if not explicit_input_files:
       raise ValueError("input_files must be a non-empty list of file paths")
-    # file_size, not os.path.isfile: an LFN exists in no local namespace, so isfile
-    # reports every one of them as missing.
     missing_files = [path for path in explicit_input_files if file_size(path, redirector) is None]
     if missing_files:
       raise ValueError(f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}")
-    # realpath, because results-unmerged/ is itself a symlink: two textually distinct tag
-    # vintages can name one file, and hadd would then double-count its events and exit 0.
-    # An LFN has no symlinks to resolve and realpath returns it unchanged, which is the
-    # right answer -- the textual comparison is all there is at the door.
     resolved_files = [path if is_lfn(path) else os.path.realpath(path) for path in explicit_input_files]
     seen_files = set()
     duplicate_files = set()
@@ -1183,8 +1128,6 @@ def main():
     return
 
   input_files = [input_file for job in jobs for input_file in job[-1]]
-  # Sizes come from the listing collect_jobs already did; statting each input again would
-  # be one round trip per file for an LFN input directory.
   job_input_sizes = {job[5]: sum(input_file_sizes[input_file] for input_file in job[-1]) for job in jobs}
   output_expected_sizes = {}
   for _, _, merge_jobs in jobs_by_kind:
@@ -1202,10 +1145,7 @@ def main():
       f"Using local merge scratch: {scratch_root} ({format_file_size(required_scratch_bytes)} estimated requirement)"
     )
   else:
-    # Merging in the output directory is only an option when that directory exists on this
-    # node. A remote destination has no such directory: hadd would be asked to write a
-    # literal "/store/..." file on the local root filesystem, and the merge would "succeed"
-    # having published nothing.
+    # Remote outputs require scratch; writing an LFN locally does not publish it.
     remote_outputs = [job[5] for job in jobs if stage_dest_url(job[5], stage_url_base) is not None]
     if remote_outputs:
       raise RuntimeError(

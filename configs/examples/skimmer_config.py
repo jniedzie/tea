@@ -45,10 +45,5 @@ branchesToAdd = (
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"
 
-# The xrootd door used whenever a path in this config is a bare LFN ("/store/...").
-# EventReader prepends "root://<redirector>/" before opening such a path, and the
-# submitter uses the same value to list an input directory with `xrdfs ls`. Prefer the
-# site-local door when there is one -- it avoids a redirect hop -- and fall back to a
-# federation redirector otherwise. Left unset, tea uses TEA_XROOTD_REDIRECTOR
-# (default "cms-xrd-global.cern.ch") and EventReader tries its own built-in list.
+# Used for bare LFN ("/store/...") inputs; defaults to TEA_XROOTD_REDIRECTOR.
 # redirector = "cms-xrd-global.cern.ch"    # or e.g. "maite.iihe.ac.be:1094"
