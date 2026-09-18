@@ -79,29 +79,20 @@ samples = (
 # custom_stacks_order = ("DY", "tt", "ttZ", "data")
 
 y_label = "# events (2018)"
-
+# fmt: off
 histograms = (
-  #           name                  title logx, logy    norm_type                       rebin xmin   xmax  ymin    ymax,    xlabel                ylabel            suffix
-  Histogram("Event_nMuon", "", False, False, NormalizationType.to_data, 1, 0, 20, 1e1, 5e4, "Number of muons", y_label),
-  Histogram(
-    "Event_nMuon", "", False, True, NormalizationType.to_data, 1, 0, 20, 1e1, 1e9, "Number of muons", y_label, "_log"
-  ),
-  Histogram("Muon_pt", "", False, True, NormalizationType.to_data, 5, 0, 500, 1e-2, 1e3, "p_{T}^{#mu} [GeV]", y_label),
-  Histogram(
-    "Muon_eta", "", False, False, NormalizationType.to_data, 10, -3.5, 3.5, 1e0, 1e3, "#eta^{#mu}", y_label, "_log"
-  ),
-  Histogram("Muon_eta", "", True, False, NormalizationType.to_data, 10, -3.5, 3.5, 1e0, 1e3, "#eta^{#mu}", y_label),
-  Histogram(
-    "Event_nGoodLeptons", "", True, False, NormalizationType.to_data, 1, 0, 30, 1e0, 1e9, "Number of jets", y_label
-  ),
-  Histogram(
-    "GoodLeptons_pt", "", True, False, NormalizationType.to_data, 5, 0, 500, 10, 1e8, "p_{T}^{j} [GeV]", y_label
-  ),
-  Histogram(
-    "GoodLeptons_eta", "", True, False, NormalizationType.to_data, 10, -3.5, 3.5, 1e0, 1e10, "#eta^{j}", y_label
-  ),
-  Histogram("cutFlow", "", True, False, NormalizationType.to_data, 1, 0, 8, 1e2, 1e6, "Selection", "#sum genWeight"),
+  # name                  title  logx   logy   norm_type                  rebin  xmin  xmax  ymin  ymax  xlabel               ylabel            suffix
+  Histogram("Event_nMuon"       , ""   , False, False, NormalizationType.to_data,     1,    0,   20,  1e1,  5e4, "Number of muons"  , y_label         ),
+  Histogram("Event_nMuon"       , ""   , False, True , NormalizationType.to_data,     1,    0,   20,  1e1,  1e9, "Number of muons"  , y_label         , "_log"),
+  Histogram("Muon_pt"           , ""   , False, True , NormalizationType.to_data,     5,    0,  500, 1e-2,  1e3, "p_{T}^{#mu} [GeV]", y_label         ),
+  Histogram("Muon_eta"          , ""   , False, False, NormalizationType.to_data,    10, -3.5,  3.5,  1e0,  1e3, "#eta^{#mu}"       , y_label         , "_log"),
+  Histogram("Muon_eta"          , ""   , True , False, NormalizationType.to_data,    10, -3.5,  3.5,  1e0,  1e3, "#eta^{#mu}"       , y_label         ),
+  Histogram("Event_nGoodLeptons", ""   , True , False, NormalizationType.to_data,     1,    0,   30,  1e0,  1e9, "Number of jets"   , y_label         ),
+  Histogram("GoodLeptons_pt"    , ""   , True , False, NormalizationType.to_data,     5,    0,  500,   10,  1e8, "p_{T}^{j} [GeV]"  , y_label         ),
+  Histogram("GoodLeptons_eta"   , ""   , True , False, NormalizationType.to_data,    10, -3.5,  3.5,  1e0, 1e10, "#eta^{j}"         , y_label         ),
+  Histogram("cutFlow"           , ""   , True , False, NormalizationType.to_data,     1,    0,    8,  1e2,  1e6, "Selection"        , "#sum genWeight"),
 )
+# fmt: on
 
 histograms2D = (
   #           name              title                rebin  xmin    xmax       ymin   ymax     zmin zmax xlabel               ylabel                        zlabel

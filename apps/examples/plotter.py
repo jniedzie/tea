@@ -6,25 +6,28 @@ import ROOT
 import importlib
 import argparse
 
+ROOT.gROOT.SetBatch(True)
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="", help="Path to the config file.")
 args = parser.parse_args()
 
 
 def main():
-  ROOT.gROOT.SetBatch(True)
-
   config = importlib.import_module(args.config.replace(".py", "").replace("/", "."))
   plotter = HistogramPlotter(config)
 
-  input_files = {}
+  # HistogramNormalizer has already opened these files to read cutFlow.  Reuse
+  # those handles instead of reopening every remote ROOT file.
+  input_files = dict(plotter.normalizer.input_files)
 
   for sample in config.samples:
-    try:
-      input_files[sample.name] = ROOT.TFile.Open(sample.file_path, "READ")
-    except OSError:
-      error(f"File {sample.file_path} not found!")
-      continue
+    if sample.name not in input_files:
+      try:
+        input_files[sample.name] = ROOT.TFile.Open(sample.file_path, "READ")
+      except OSError:
+        error(f"File {sample.file_path} not found!")
+        continue
 
     for hist in config.histograms:
       plotter.addHistosample(hist, sample, input_files[sample.name])

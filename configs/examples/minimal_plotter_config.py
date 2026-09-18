@@ -20,37 +20,13 @@ samples = (
 )
 output_path = "../plots"
 
+# fmt: off
 histograms = (
-  #            name            title     logx   logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
-  Histogram(
-    "Muon_pt",
-    "Muon p_{T}",
-    False,
-    True,
-    NormalizationType.to_lumi,
-    5,
-    None,
-    None,
-    None,
-    None,
-    "p_{T} [GeV]",
-    "# events (2018)",
-  ),
-  Histogram(
-    "Muon_eta",
-    "Muon #eta",
-    False,
-    False,
-    NormalizationType.to_lumi,
-    5,
-    None,
-    None,
-    None,
-    None,
-    "#eta",
-    "# events (2018)",
-  ),
+  # name        title         logx   logy   norm_type                  rebin  xmin  xmax  ymin  ymax  xlabel         ylabel
+  Histogram("Muon_pt" , "Muon p_{T}", False, True , NormalizationType.to_lumi,     5, None, None, None, None, "p_{T} [GeV]", "# events (2018)"),
+  Histogram("Muon_eta", "Muon #eta" , False, False, NormalizationType.to_lumi,     5, None, None, None, None, "#eta"       , "# events (2018)"),
 )
+# fmt: on
 luminosity = 63670.0  # pb^-1 (2018)
 
 legends = {
