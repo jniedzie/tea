@@ -45,4 +45,5 @@ branchesToAdd = (
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"
 
-# redirector = "xrootd-cms.infn.it"
+# Used for bare LFN ("/store/...") inputs; defaults to TEA_XROOTD_REDIRECTOR.
+# redirector = "cms-xrd-global.cern.ch"    # or e.g. "maite.iihe.ac.be:1094"
