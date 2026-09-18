@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
-from Logger import info
+"""Run one app instance on a worker node (or one slot of --local_parallel).
+
+On a real condor worker the app writes its outputs into _CONDOR_SCRATCH_DIR and this
+script publishes them to their final (often dCache/EOS) destination only after the app
+exits successfully: writing straight to a heavily-contended network mount intermittently
+corrupts ROOT files mid-write. Only --output_hists_path and --output_trees_path are
+redirected this way, so an app that writes a third output from a config key of its own
+still writes it straight to the mount.
+"""
+
+from Logger import error, info, warn
 
 import argparse
-import os
 import ast
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from teaHelpers import begin_stage_budget, is_lfn, stage_output, stage_preflight, validate_root_file
 
 
 def get_args():
@@ -16,6 +33,18 @@ def get_args():
   parser.add_argument("--output_trees_dir", type=str, default="", help="output trees path")
   parser.add_argument("--output_hists_dir", type=str, default="", help="output hists path")
   parser.add_argument("--file_name", type=str, default="", help="name of a file from the DAS dataset to run on")
+  parser.add_argument(
+    "--facility",
+    type=str,
+    default="default",
+    help="facility this job was submitted from, used to pick the stage-out transport",
+  )
+  parser.add_argument(
+    "--stage_url_base",
+    type=str,
+    default="",
+    help="base URL of the storage door outputs are staged to (overrides TEA_STAGE_URL_BASE)",
+  )
 
   args, unknown = parser.parse_known_args()
   return args, unknown
@@ -57,11 +86,13 @@ def main():
   else:
     input_file_name = input_file_path.strip().split("/")[-1]
 
-  # create output dir if doesn't exist
-  if not os.path.exists(args.output_trees_dir) and args.output_trees_dir != "":
-    os.makedirs(args.output_trees_dir)
-  if not os.path.exists(args.output_hists_dir) and args.output_hists_dir != "":
-    os.makedirs(args.output_hists_dir)
+  # create output dir if doesn't exist -- exist_ok because ~1500 jobs racing to create the
+  # same directory otherwise lose the check-then-act. An LFN names no local directory, so
+  # this would raise before the app is ever launched; gfal-copy -p creates the remote
+  # parent tree at stage-out time instead.
+  for output_dir in (args.output_trees_dir, args.output_hists_dir):
+    if output_dir != "" and not is_lfn(output_dir):
+      os.makedirs(output_dir, exist_ok=True)
 
   output_trees_file_path = ""
   output_hists_file_path = ""
@@ -76,23 +107,128 @@ def main():
   elif args.output_hists_dir != "":
     output_hists_file_path = f"{args.output_hists_dir}/{input_file_name}"
 
-  if output_trees_file_path != "":
-    output_trees_file_path = f"--output_trees_path {output_trees_file_path}"
-  if output_hists_file_path != "":
-    output_hists_file_path = f"--output_hists_path {output_hists_file_path}"
+  # Captured before the flag-wrapping below overwrites these with "--output_..._path <path>".
+  final_trees_path = output_trees_file_path
+  final_hists_path = output_hists_file_path
 
-  args_dict = {}
-  for i in range(0, len(extra_args), 2):
-    args_dict[extra_args[i]] = extra_args[i + 1]
+  # Writing to local scratch and publishing afterwards is facility-independent; only the
+  # copy protocol is site-specific, and that comes from --facility (resolved on the submit
+  # node, where the hostname is actually recognizable).
+  scratch_dir = os.environ.get("_CONDOR_SCRATCH_DIR", "")
+  scratch_usable = bool(scratch_dir) and os.path.isdir(scratch_dir) and os.access(scratch_dir, os.W_OK)
+  if scratch_dir and not scratch_usable:
+    warn(
+      f"_CONDOR_SCRATCH_DIR={scratch_dir} is set but not usable (missing or not "
+      f"writable); writing outputs directly to their final paths"
+    )
 
-  extra_args = " ".join([f"{key} {value}" for key, value in args_dict.items()])
+  # --local_parallel runs this same script with no _CONDOR_SCRATCH_DIR, and used to fall
+  # through to writing the app's output straight at the final path. That is still right
+  # for an ordinary filesystem destination, but an LFN names no writable local path at any
+  # site, so there the app needs somewhere real to write and a stage-out afterwards.
+  stage_url_base = args.stage_url_base or None
+  temporary_scratch_dir = None
+  final_paths = [path for path in (final_trees_path, final_hists_path) if path]
+  if not scratch_usable and any(is_lfn(path) for path in final_paths):
+    try:
+      temporary_scratch_dir = tempfile.mkdtemp(prefix="tea_stage_")
+    except OSError as exception:
+      error(f"Outputs go to an LFN but no scratch directory could be created: {exception}")
+      sys.exit(1)
+    info(f"No condor scratch directory; staging LFN outputs through {temporary_scratch_dir}")
+    scratch_dir = temporary_scratch_dir
+    scratch_usable = True
 
-  command_for_file = (
-    f"{command} --input_path {input_file_path} {output_trees_file_path} {output_hists_file_path} {extra_args}"
-  )
+  try:
+    use_scratch = scratch_usable
 
-  info(f"\n\nExecuting {command_for_file=}")
-  os.system(command_for_file)
+    if use_scratch:
+      # Ask now, not after hours of computation: a job that cannot stage out its result
+      # should write straight to the final paths instead of discarding the finished output.
+      preflight_ok, preflight_reason = stage_preflight(final_paths, args.facility, stage_url_base)
+      if preflight_ok:
+        info(f"Stage-out pre-flight passed for facility '{args.facility}': {preflight_reason}")
+      elif any(is_lfn(path) for path in final_paths):
+        # The usual fallback -- write straight to the final path -- is not available for
+        # an LFN: it would create a literal "/store/..." file on the worker's local disk
+        # and report success. Refuse now instead, before the app burns any wall time.
+        error(
+          f"Stage-out pre-flight failed for facility '{args.facility}': {preflight_reason}. "
+          f"Outputs go to an LFN, which cannot be written directly; refusing to run."
+        )
+        sys.exit(1)
+      else:
+        warn(
+          f"Stage-out pre-flight failed for facility '{args.facility}': {preflight_reason}; "
+          f"writing outputs directly to their final paths"
+        )
+        use_scratch = False
+
+    staged_outputs = []
+
+    if use_scratch:
+      # Separate subdirectories per output kind: in the output_trees_dir/output_hists_dir
+      # shape both paths share the same basename, which would collide in a flat scratch dir.
+      if output_trees_file_path != "":
+        trees_scratch_dir = os.path.join(scratch_dir, "trees")
+        os.makedirs(trees_scratch_dir, exist_ok=True)
+        output_trees_file_path = os.path.join(trees_scratch_dir, os.path.basename(final_trees_path))
+        staged_outputs.append((output_trees_file_path, final_trees_path))
+
+      if output_hists_file_path != "":
+        hists_scratch_dir = os.path.join(scratch_dir, "hists")
+        os.makedirs(hists_scratch_dir, exist_ok=True)
+        output_hists_file_path = os.path.join(hists_scratch_dir, os.path.basename(final_hists_path))
+        staged_outputs.append((output_hists_file_path, final_hists_path))
+
+    if output_trees_file_path != "":
+      output_trees_file_path = f"--output_trees_path {output_trees_file_path}"
+    if output_hists_file_path != "":
+      output_hists_file_path = f"--output_hists_path {output_hists_file_path}"
+
+    args_dict = {}
+    for i in range(0, len(extra_args), 2):
+      args_dict[extra_args[i]] = extra_args[i + 1]
+
+    extra_args = " ".join([f"{key} {value}" for key, value in args_dict.items()])
+
+    command_for_file = (
+      f"{command} --input_path {input_file_path} {output_trees_file_path} {output_hists_file_path} {extra_args}"
+    )
+    command_args = shlex.split(command_for_file)
+
+    # Log the argument vector that is actually executed: shlex.split drops the quoting the
+    # string form still carries, so the string is not what ran.
+    info(f"\n\nExecuting {command_args=}")
+    result = subprocess.run(command_args, check=False)
+    returncode = result.returncode
+
+    if returncode == 0 and staged_outputs:
+      # One wall-clock budget for every output of this job, so trees + hists cannot compound
+      # their retries into a wall-time kill.
+      begin_stage_budget()
+      published = []
+      failed = []
+      for scratch_path, final_path in staged_outputs:
+        try:
+          validate_root_file(scratch_path)
+          stage_output(scratch_path, final_path, args.facility, stage_url_base)
+          published.append(final_path)
+        except Exception as exception:
+          # No direct-write fallback: writing the file to the final path after a failed
+          # transport is exactly the partially-written-output bug staging exists to avoid.
+          failed.append(final_path)
+          error(f"Failed to stage {scratch_path} -> {final_path}: {exception}")
+          returncode = 1
+
+      if failed:
+        published_str = ", ".join(published) if published else "none"
+        error(f"Stage-out failed for: {', '.join(failed)} (outputs that did land: {published_str})")
+
+    sys.exit(returncode)
+  finally:
+    if temporary_scratch_dir is not None:
+      shutil.rmtree(temporary_scratch_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
