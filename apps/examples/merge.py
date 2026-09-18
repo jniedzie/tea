@@ -15,15 +15,14 @@ import sys
 import tempfile
 import threading
 import time
-import uuid
 
 from Logger import info
-from teaHelpers import get_facility
+import teaHelpers
+from teaHelpers import get_facility, validate_root_file
 
 
 DEFAULT_HADD_WORKERS = min(16, os.cpu_count() or 1)
 SCRATCH_SPACE_FACTOR = 2.5
-ROOT_VALIDATION_LOCK = threading.Lock()
 FINAL_REDUCTION_WORK_FACTOR = 3.0
 ETA_MIN_SAMPLE_SECONDS = 5.0
 ETA_MIN_SAMPLE_FRACTION = 0.02
@@ -512,40 +511,27 @@ class MergeProgress:
 
 
 def skip_files_without_keys(file_paths):
-  import ROOT
-
   files_with_keys = []
   skipped_files = []
   uninspected_files = []
   total_files = len(file_paths)
   start_time = time.monotonic()
-  previous_error_level = ROOT.gErrorIgnoreLevel
-  ROOT.gErrorIgnoreLevel = ROOT.kError
   info(f"Checking {total_files} input ROOT files for keys...")
   if total_files:
     print_file_progress(0, total_files)
 
   try:
     for file_index, file_path in enumerate(file_paths, start=1):
-      try:
-        input_file = ROOT.TFile.Open(file_path, "READ")
-      except OSError:
-        input_file = None
-      if not input_file or input_file.IsZombie():
-        if input_file:
-          input_file.Close()
-        files_with_keys.append(file_path)
-        uninspected_files.append(file_path)
+      status = teaHelpers.classify_root_file(file_path)
+      if status == teaHelpers.ROOT_FILE_NO_KEYS:
+        skipped_files.append(file_path)
       else:
-        if input_file.GetNkeys() == 0:
-          skipped_files.append(file_path)
-        else:
-          files_with_keys.append(file_path)
-        input_file.Close()
+        files_with_keys.append(file_path)
+        if status not in (teaHelpers.ROOT_FILE_HEALTHY, teaHelpers.ROOT_FILE_RECOVERED):
+          uninspected_files.append(file_path)
 
       print_file_progress(file_index, total_files)
   finally:
-    ROOT.gErrorIgnoreLevel = previous_error_level
     if total_files:
       info("\033[0m")
   for file_path in uninspected_files:
@@ -617,37 +603,6 @@ def choose_scratch_root(required_bytes):
   return None
 
 
-def eos_xrootd_url(file_path):
-  normalized_path = os.path.normpath(file_path)
-  home_match = re.fullmatch(r"/eos/home-([^/]+)/([^/]+)(/.*)?", normalized_path)
-  if home_match:
-    instance, username, suffix = home_match.groups()
-    return f"root://eoshome-{instance}.cern.ch//eos/user/{username[0]}/{username}{suffix or ''}"
-
-  user_match = re.fullmatch(r"/eos/user/([^/]+)/([^/]+)(/.*)?", normalized_path)
-  if user_match:
-    initial, username, suffix = user_match.groups()
-    return f"root://eoshome-{initial}.cern.ch//eos/user/{initial}/{username}{suffix or ''}"
-  return None
-
-
-def validate_root_file(file_path):
-  import ROOT
-
-  with ROOT_VALIDATION_LOCK:
-    previous_error_level = ROOT.gErrorIgnoreLevel
-    ROOT.gErrorIgnoreLevel = ROOT.kFatal
-    try:
-      root_file = ROOT.TFile.Open(file_path, "READ")
-      if not root_file or root_file.IsZombie() or root_file.GetNkeys() == 0:
-        if root_file:
-          root_file.Close()
-        raise RuntimeError(f"Merged ROOT file is invalid or contains no keys: {file_path}")
-      root_file.Close()
-    finally:
-      ROOT.gErrorIgnoreLevel = previous_error_level
-
-
 def contains_top_level_tree(file_path):
   import ROOT
 
@@ -671,39 +626,7 @@ def contains_top_level_tree(file_path):
 
 
 def stage_output(local_output, output_file):
-  output_dir = os.path.dirname(output_file)
-  os.makedirs(output_dir, exist_ok=True)
-  stage_file = os.path.join(
-    output_dir,
-    f".{os.path.basename(output_file)}.stage-{uuid.uuid4().hex}",
-  )
-  stage_url = eos_xrootd_url(stage_file)
-  staged_with_xrootd = False
-
-  try:
-    if stage_url and shutil.which("xrdcp"):
-      result = subprocess.run(
-        ["xrdcp", "-f", "--cksum", "adler32", local_output, stage_url],
-        check=False,
-        capture_output=True,
-        text=True,
-      )
-      staged_with_xrootd = result.returncode == 0
-      if not staged_with_xrootd:
-        details = (result.stderr or result.stdout).strip()
-        info(
-          "xrdcp stage-out failed; falling back to a sequential filesystem copy" + (f": {details}" if details else "")
-        )
-
-    if not staged_with_xrootd:
-      shutil.copyfile(local_output, stage_file)
-    os.replace(stage_file, output_file)
-  except Exception:
-    try:
-      os.remove(stage_file)
-    except OSError:
-      pass
-    raise
+  teaHelpers.stage_output(local_output, output_file)
 
 
 def hadd_diagnostic_level(output_line):
