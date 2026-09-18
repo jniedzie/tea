@@ -17,7 +17,7 @@ import tempfile
 import threading
 import time
 
-from Logger import info
+from Logger import info, warn
 import teaHelpers
 from teaHelpers import get_facility, is_lfn, read_url, stage_dest_url, validate_root_file
 
@@ -199,6 +199,9 @@ def _xrdfs_list_directory(directory: str, redirector: str) -> list[tuple[str, in
     result = subprocess.run(command, check=False, capture_output=True, text=True)
   except FileNotFoundError as error:
     raise RuntimeError(f"xrdfs is not on PATH; cannot list {directory}") from error
+
+  if "result may be incomplete" in result.stderr.lower():
+    warn(f"Incomplete xrdfs listing for {directory}: {result.stderr.strip()}")
 
   if result.returncode != 0:
     output = f"{result.stdout}{result.stderr}"
