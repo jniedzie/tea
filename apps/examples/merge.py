@@ -24,11 +24,14 @@ from teaHelpers import get_facility, is_lfn, read_url, stage_dest_url, validate_
 
 DEFAULT_HADD_WORKERS = min(16, os.cpu_count() or 1)
 SCRATCH_SPACE_FACTOR = 2.5
+MIN_CONDOR_DISK_KIB = 1024 * 1024
 FINAL_REDUCTION_WORK_FACTOR = 3.0
 ETA_MIN_SAMPLE_SECONDS = 5.0
 ETA_MIN_SAMPLE_FRACTION = 0.02
 ETA_ADJUSTMENT_FRACTION = 0.02
 MAX_PROGRESS_PER_SECOND = 4.0
+
+MergeJob = tuple[str, str, int, str, str, str, list[str]]
 
 
 def positive_int(value):
@@ -190,7 +193,7 @@ def _xrdfs_host(redirector):
   return redirector if redirector.startswith("root://") else f"root://{redirector}"
 
 
-def _xrdfs_list_directory(directory, redirector):
+def _xrdfs_list_directory(directory: str, redirector: str) -> list[tuple[str, int]]:
   command = ["xrdfs", _xrdfs_host(redirector), "ls", "-l", directory]
   try:
     result = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -205,14 +208,28 @@ def _xrdfs_list_directory(directory, redirector):
 
   entries = []
   for line in result.stdout.splitlines():
-    fields = line.split(None, 4)
-    if len(fields) < 5 or fields[0].startswith("d"):
+    prefix = line.split(None, 1)
+    if not prefix:
       continue
+
+    permissions = prefix[0]
+    if permissions.startswith("d"):
+      continue
+    if re.fullmatch(r"-[rwx-]{9}", permissions):
+      maxsplit = 6
+    elif re.fullmatch(r"-[rwx-]{3}", permissions):
+      maxsplit = 4
+    else:
+      raise RuntimeError(f"Could not parse xrdfs listing for {directory}: {line}")
+
+    fields = line.split(None, maxsplit)
+    if len(fields) != maxsplit + 1:
+      raise RuntimeError(f"Could not parse xrdfs listing for {directory}: {line}")
     try:
       size = int(fields[3])
-    except ValueError:
-      continue
-    entries.append((fields[4], size))
+    except ValueError as error:
+      raise RuntimeError(f"Could not read file size in xrdfs listing: {line}") from error
+    entries.append((fields[-1], size))
   return entries
 
 
@@ -904,16 +921,21 @@ def create_condor_job(
 
 
 def submit_condor_jobs(
-  condor_dir,
-  jobs,
-  preserve_input_compression,
-  hadd_files_per_pass,
-  hadd_workers,
-  redirector=None,
-  stage_url_base=None,
-):
+  condor_dir: str,
+  jobs: list[MergeJob],
+  input_file_sizes: dict[str, int],
+  preserve_input_compression: bool,
+  hadd_files_per_pass: int | None,
+  hadd_workers: int,
+  redirector: str | None = None,
+  stage_url_base: str | None = None,
+) -> None:
   os.makedirs(condor_dir, exist_ok=True)
   facility = get_facility()
+
+  peak_input_bytes = max(sum(input_file_sizes[path] for path in job[-1]) for job in jobs)
+  estimated_disk_kib = (int(SCRATCH_SPACE_FACTOR * peak_input_bytes) + 1023) // 1024
+  required_disk_kib = max(MIN_CONDOR_DISK_KIB, estimated_disk_kib)
 
   executable_paths = [
     create_condor_job(
@@ -940,6 +962,7 @@ def submit_condor_jobs(
     f"output = {condor_dir}/$(ClusterId).$(ProcId).out",
     f"error = {condor_dir}/$(ClusterId).$(ProcId).err",
     f"request_cpus = {hadd_workers}",
+    f"request_disk = {required_disk_kib}K",
   ]
 
   if facility == "lxplus":
@@ -1119,6 +1142,7 @@ def main():
       submit_condor_jobs(
         os.path.join(condor_base_dir, merge_kind),
         merge_jobs,
+        input_file_sizes,
         args.preserve_input_compression,
         args.hadd_files_per_pass,
         args.hadd_workers,

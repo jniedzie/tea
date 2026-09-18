@@ -166,10 +166,10 @@ class FakeCompletedProcess:
 
 
 XRDFS_LISTING = (
-  "-rw-r--r--        2026-08-27 14:03:03     13930949 /store/user/u/hists/ntuple_0.root\n"
-  "-rw-r--r--        2026-08-27 14:04:11      1048576 /store/user/u/hists/ntuple_1.root\n"
-  "drwxr-xr-x        2026-08-27 14:04:11            0 /store/user/u/hists/subdir\n"
-  "-rw-r--r--        2026-08-27 14:05:00          512 /store/user/u/hists/log.txt\n"
+  "-rw- 2026-08-27 14:03:03 13930949 /store/user/u/hists/ntuple_0.root\n"
+  "-rw-r--r-- user group 1048576 2026-08-27 14:04:11 /store/user/u/hists/ntuple_1.root\n"
+  "drwxr-xr-x user group 0 2026-08-27 14:04:11 /store/user/u/hists/subdir\n"
+  "-rw- 2026-08-27 14:05:00 512 /store/user/u/hists/log.txt\n"
 )
 
 
@@ -186,6 +186,18 @@ def test_list_input_files_reads_sizes_out_of_the_remote_listing(monkeypatch):
   assert commands == [["xrdfs", "root://maite.iihe.ac.be:1094", "ls", "-l", "/store/user/u/hists"]]
   assert paths == ["/store/user/u/hists/ntuple_0.root", "/store/user/u/hists/ntuple_1.root"]
   assert sizes["/store/user/u/hists/ntuple_0.root"] == 13930949
+
+
+def test_list_input_files_rejects_a_listing_without_a_file_size(monkeypatch):
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(
+      stdout="-rw-r--r-- user group unknown 2026-08-27 14:04:11 /store/user/u/hists/ntuple.root\n"
+    ),
+  )
+  with pytest.raises(RuntimeError, match="Could not read file size"):
+    merge.list_input_files("/store/user/u/hists", "*.root", "door:1094")
 
 
 def test_list_input_files_treats_an_absent_remote_directory_as_empty(monkeypatch):
@@ -250,6 +262,45 @@ def test_condor_merge_job_merges_into_scratch_and_stages(tmp_path):
   assert "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root" in script
   assert "teaHelpers.stage_output" in script
   assert "mkdir -p /store" not in script
+
+
+@pytest.mark.parametrize(
+  ("input_file_sizes", "expected_request"),
+  [
+    ({"a.root": 1000, "b.root": 1500, "c.root": 2000}, "request_disk = 1048576K"),
+    (
+      {"a.root": 1000, "b.root": 200_000_000, "c.root": 300_000_000},
+      "request_disk = 1220704K",
+    ),
+  ],
+)
+def test_condor_submit_requests_disk_for_the_largest_merge(monkeypatch, tmp_path, input_file_sizes, expected_request):
+  jobs = [
+    ("histograms", "A", 0, "/input/A", "/output/A", "/output/A/ntuple_0.root", ["a.root"]),
+    (
+      "histograms",
+      "B",
+      0,
+      "/input/B",
+      "/output/B",
+      "/output/B/ntuple_0.root",
+      ["b.root", "c.root"],
+    ),
+  ]
+  monkeypatch.setattr(merge, "get_facility", lambda: "other")
+  monkeypatch.setattr(merge, "run_command", lambda command: None)
+
+  merge.submit_condor_jobs(
+    str(tmp_path),
+    jobs,
+    input_file_sizes,
+    preserve_input_compression=False,
+    hadd_files_per_pass=None,
+    hadd_workers=1,
+  )
+
+  submit_file = (tmp_path / "merge.sub").read_text()
+  assert expected_request in submit_file
 
 
 def test_a_remote_output_without_scratch_is_a_hard_error(monkeypatch, tmp_path):
