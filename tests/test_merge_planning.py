@@ -205,8 +205,7 @@ def test_list_input_files_warns_and_uses_an_incomplete_remote_listing(monkeypatc
   assert paths == ["/store/user/u/hists/ntuple_0.root", "/store/user/u/hists/ntuple_1.root"]
   assert sizes["/store/user/u/hists/ntuple_0.root"] == 13930949
   assert warnings == [
-    "Incomplete xrdfs listing for /store/user/u/hists: "
-    "[WARN] Result may be incomplete: directory listing limit reached"
+    "Incomplete xrdfs listing for /store/user/u/hists: [WARN] Result may be incomplete: directory listing limit reached"
   ]
 
 
