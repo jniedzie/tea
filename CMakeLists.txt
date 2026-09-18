@@ -110,6 +110,24 @@ endforeach()
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(test_profile2d tests/test_profile2d.cpp)
+    target_link_libraries(test_profile2d PRIVATE core extensions histogramming ${ROOT_LIBRARIES} Python3::Python)
+    set_property(TARGET test_profile2d PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})
+    if(APPLE)
+        set_property(
+            TARGET test_profile2d APPEND PROPERTY INSTALL_RPATH
+            "@loader_path/libs/core"
+            "@loader_path/libs/extensions"
+            "@loader_path/libs/histogramming"
+        )
+    endif()
+    add_test(
+        NAME tea_profile2d
+        COMMAND test_profile2d
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/profile2d_config.py"
+                "${CMAKE_CURRENT_BINARY_DIR}/profile2d_test.root"
+    )
+
     add_test(
         NAME tea_smoke_examples
         COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/ci/smoke-test.sh"

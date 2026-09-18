@@ -35,6 +35,14 @@ HistogramsHandler::HistogramsHandler() {
   } catch (const Exception &e) {}
 
   try {
+    config.GetHistogramsParams(profile2DParams, "profile2DParams");
+  } catch (const Exception &e) {}
+
+  try {
+    config.GetHistogramsParams(irregularProfile2DParams, "irregularProfile2DParams");
+  } catch (const Exception &e) {}
+
+  try {
     config.GetValue("histogramsOutputFilePath", outputPath);
   } catch (const Exception &e) {}
   try {
@@ -73,9 +81,23 @@ void HistogramsHandler::SetupHistograms() {
                  params.binEdgesY.size() - 1, &params.binEdgesY[0]);
   }
 
+  for (auto &[title, params] : profile2DParams) {
+    histogramDirectories[title] = params.directory;
+    profiles2D[make_pair(title, "")] = new TProfile2D(title.c_str(), title.c_str(), params.nBinsX, params.minX,
+                                                      params.maxX, params.nBinsY, params.minY, params.maxY);
+  }
+
+  for (auto &[title, params] : irregularProfile2DParams) {
+    histogramDirectories[title] = params.directory;
+    profiles2D[make_pair(title, "")] =
+        new TProfile2D(title.c_str(), title.c_str(), params.binEdgesX.size() - 1, params.binEdgesX.data(),
+                       params.binEdgesY.size() - 1, params.binEdgesY.data());
+  }
+
   // copy names of all histograms to unfilledHistograms vector
   for (auto &[names, hist] : histograms1D) { unfilledHistograms.push_back(names.first); }
   for (auto &[names, hist] : histograms2D) { unfilledHistograms.push_back(names.first); }
+  for (auto &[names, profile] : profiles2D) { unfilledHistograms.push_back(names.first); }
 }
 
 void HistogramsHandler::SetupSFvariationHistograms() {
@@ -127,6 +149,36 @@ void HistogramsHandler::SetupSFvariationHistograms() {
                    params.binEdgesY.size() - 1, &params.binEdgesY[0]);
     }
   }
+
+  SetupProfile2DVariations();
+}
+
+void HistogramsHandler::SetupProfile2DVariations() {
+  for (auto &[title, params] : profile2DParams) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+      continue;
+    }
+    for (auto &[sfName, weight] : eventWeights) {
+      if (sfName == "default") { continue; }
+      string titlesf = title + "_" + sfName;
+      profiles2D[make_pair(title, sfName)] =
+          new TProfile2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY,
+                         params.minY, params.maxY);
+    }
+  }
+
+  for (auto &[title, params] : irregularProfile2DParams) {
+    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+      continue;
+    }
+    for (auto &[sfName, weight] : eventWeights) {
+      if (sfName == "default") { continue; }
+      string titlesf = title + "_" + sfName;
+      profiles2D[make_pair(title, sfName)] =
+          new TProfile2D(titlesf.c_str(), titlesf.c_str(), params.binEdgesX.size() - 1, params.binEdgesX.data(),
+                         params.binEdgesY.size() - 1, params.binEdgesY.data());
+    }
+  }
 }
 
 void HistogramsHandler::SetEventWeights(map<string, float> weights) {
@@ -168,6 +220,21 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   }
 }
 
+void HistogramsHandler::Fill(string name, double valueX, double valueY, double value) {
+  double weight = eventWeights["default"];
+  CheckProfile2D(name, "");
+  profiles2D[make_pair(name, "")]->Fill(valueX, valueY, value, weight);
+
+  RemoveFromUnfilled(name);
+
+  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) { return; }
+  for (auto &[sfName, variationWeight] : eventWeights) {
+    if (sfName == "default") { continue; }
+    CheckProfile2D(name, sfName);
+    profiles2D[make_pair(name, sfName)]->Fill(valueX, valueY, value, variationWeight);
+  }
+}
+
 void HistogramsHandler::FillUnweighted(string name, double value) {
   CheckHistogram(name, "");
   histograms1D[make_pair(name, "")]->Fill(value);
@@ -189,6 +256,13 @@ void HistogramsHandler::CheckHistogram(string name, string directory) {
 void HistogramsHandler::CheckHistogram2D(string name, string directory) {
   if (!histograms2D.count(make_pair(name, directory))) {
     fatal() << "Couldn't find key: " << name << ", " << directory << " in 2D histograms map" << endl;
+    exit(1);
+  }
+}
+
+void HistogramsHandler::CheckProfile2D(string name, string variation) {
+  if (!profiles2D.count(make_pair(name, variation))) {
+    fatal() << "Couldn't find key: " << name << ", " << variation << " in 2D profiles map" << endl;
     exit(1);
   }
 }
@@ -215,7 +289,7 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist *hist, TFile *outpu
     directory->cd();
   }
 
-  if constexpr (std::is_same<THist, TH2D>::value) {
+  if constexpr (std::is_same<THist, TH2D>::value || std::is_same<THist, TProfile2D>::value) {
     if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
       warn() << "You're creating a very large 2D histogram: " << name << " with ";
       warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
@@ -244,6 +318,7 @@ void HistogramsHandler::SaveHistograms() {
 
   for (auto &[names, hist] : histograms1D) { SaveHistogram(names, hist, outputFile); }
   for (auto &[names, hist] : histograms2D) { SaveHistogram(names, hist, outputFile); }
+  for (auto &[names, profile] : profiles2D) { SaveHistogram(names, profile, outputFile); }
 
   outputFile->Close();
 

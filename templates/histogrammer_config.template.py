@@ -26,6 +26,16 @@ histParams2D = (
 #  name     bins_x  xmin  xmax bins_y ymin ymax     dir
   ("hit_xy", 100  , -20 , 20  , 100 , -20 , 20  ,   ""),
 )
+
+# define regular and variable-bin 2D profiles (fill these manually with Fill(name, x, y, value))
+profile2DParams = (
+#  name        bins_x xmin xmax bins_y ymin ymax dir
+  ("response", 20,     0,   100, 10,    -2.5, 2.5, "profiles"),
+)
+irregularProfile2DParams = (
+#  name                 x_edges        y_edges          dir
+  ("response_variable", (0, 10, 100), (-2.5, 0, 2.5), "profiles"),
+)
 # fmt: on
 
 # specify name of the branch containing event weights

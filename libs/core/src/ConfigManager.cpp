@@ -740,6 +740,91 @@ void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams2D> 
   }
 }
 
+void ConfigManager::GetHistogramsParams(map<string, Profile2DParams> &profileParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject *params = GetItem(pythonList, i);
+    auto nParams = GetCollectionSize(params);
+    if (nParams < 7 || nParams > 8) {
+      error() << "Invalid number of arguments in 2D profile definition - expect either 7 or 8" << endl;
+      continue;
+    }
+    if (!PyUnicode_Check(GetItem(params, 0)) || !PyLong_Check(GetItem(params, 1)) ||
+        !(PyFloat_Check(GetItem(params, 2)) || PyLong_Check(GetItem(params, 2))) ||
+        !(PyFloat_Check(GetItem(params, 3)) || PyLong_Check(GetItem(params, 3))) || !PyLong_Check(GetItem(params, 4)) ||
+        !(PyFloat_Check(GetItem(params, 5)) || PyLong_Check(GetItem(params, 5))) ||
+        !(PyFloat_Check(GetItem(params, 6)) || PyLong_Check(GetItem(params, 6))) ||
+        (nParams == 8 && !PyUnicode_Check(GetItem(params, 7)))) {
+      error() << "Invalid types in 2D profile definition at index " << i << " in '" << collectionName << "'" << endl;
+      continue;
+    }
+
+    Profile2DParams params2D;
+    params2D.variable = PyUnicode_AsUTF8(GetItem(params, 0));
+    params2D.nBinsX = PyLong_AsLong(GetItem(params, 1));
+    params2D.minX = PyFloat_AsDouble(GetItem(params, 2));
+    params2D.maxX = PyFloat_AsDouble(GetItem(params, 3));
+    params2D.nBinsY = PyLong_AsLong(GetItem(params, 4));
+    params2D.minY = PyFloat_AsDouble(GetItem(params, 5));
+    params2D.maxY = PyFloat_AsDouble(GetItem(params, 6));
+    params2D.directory = nParams == 8 ? PyUnicode_AsUTF8(GetItem(params, 7)) : "";
+    profileParams[params2D.variable] = params2D;
+  }
+}
+
+void ConfigManager::GetHistogramsParams(map<string, IrregularProfile2DParams> &profileParams, string collectionName) {
+  PyObject *pythonList = GetPythonList(collectionName);
+
+  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
+    PyObject *params = GetItem(pythonList, i);
+    auto nParams = GetCollectionSize(params);
+    if (nParams < 3 || nParams > 4 || !PyUnicode_Check(GetItem(params, 0)) ||
+        (!PyList_Check(GetItem(params, 1)) && !PyTuple_Check(GetItem(params, 1))) ||
+        (!PyList_Check(GetItem(params, 2)) && !PyTuple_Check(GetItem(params, 2))) ||
+        (nParams == 4 && !PyUnicode_Check(GetItem(params, 3)))) {
+      error() << "Invalid 2D variable-bin profile definition at index " << i << " in '" << collectionName << "'"
+              << endl;
+      continue;
+    }
+
+    PyObject *binEdgesX = GetItem(params, 1);
+    PyObject *binEdgesY = GetItem(params, 2);
+    if (GetCollectionSize(binEdgesX) < 2 || GetCollectionSize(binEdgesY) < 2) {
+      error() << "A 2D variable-bin profile needs at least two edges per axis at index " << i << " in '"
+              << collectionName << "'" << endl;
+      continue;
+    }
+
+    IrregularProfile2DParams params2D;
+    params2D.variable = PyUnicode_AsUTF8(GetItem(params, 0));
+    bool validEdges = true;
+    for (Py_ssize_t edge = 0; edge < GetCollectionSize(binEdgesX); ++edge) {
+      PyObject *item = GetItem(binEdgesX, edge);
+      if (!PyFloat_Check(item) && !PyLong_Check(item)) {
+        validEdges = false;
+        break;
+      }
+      params2D.binEdgesX.push_back(PyFloat_AsDouble(item));
+    }
+    for (Py_ssize_t edge = 0; validEdges && edge < GetCollectionSize(binEdgesY); ++edge) {
+      PyObject *item = GetItem(binEdgesY, edge);
+      if (!PyFloat_Check(item) && !PyLong_Check(item)) {
+        validEdges = false;
+        break;
+      }
+      params2D.binEdgesY.push_back(PyFloat_AsDouble(item));
+    }
+    if (!validEdges) {
+      error() << "Non-numeric bin edge in 2D variable-bin profile definition at index " << i << " in '"
+              << collectionName << "'" << endl;
+      continue;
+    }
+    params2D.directory = nParams == 4 ? PyUnicode_AsUTF8(GetItem(params, 3)) : "";
+    profileParams[params2D.variable] = params2D;
+  }
+}
+
 void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
   PyObject *pythonDict = GetPythonDict("eventCuts");
 

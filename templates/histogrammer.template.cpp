@@ -38,6 +38,8 @@ int main(int argc, char **argv) {
     histogramsHandler->SetEventWeights(weight);
 
     histogramsFiller->FillDefaultVariables(event);
+    // 2D profiles are filled manually; the handler applies the current event weights.
+    // histogramsHandler->Fill("response", x, y, response);
     // If you have a custom histograms filler, use it to fill your custom histograms for this event
     // myHistogramsFiller->Fill(event);
   }
