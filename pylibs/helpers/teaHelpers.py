@@ -7,9 +7,11 @@ import random
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 import uuid
+from pathlib import Path
 from Logger import error, info, warn
 
 
@@ -46,6 +48,22 @@ ROOT_FILE_MISSING = "missing"
 ROOT_FILE_UNREADABLE = "unreadable"
 ROOT_FILE_NO_KEYS = "no_keys"
 ROOT_FILE_RECOVERED = "recovered"
+
+
+def ensure_root_compiler_environment():
+  """Restore the Conda compiler sysroot for partially activated Linux shells.
+
+  ROOT's interpreter needs system headers even when executing a compiled app.
+  Set this before importing ROOT, and inherit it in submitted local children.
+  Explicit compiler settings and non-Conda ROOT installations are untouched.
+  """
+  if sys.platform != "linux" or os.environ.get("CONDA_BUILD_SYSROOT"):
+    return
+  prefix = Path(os.environ.get("ROOTSYS") or os.environ.get("CONDA_PREFIX") or sys.prefix)
+  sysroot = prefix / "x86_64-conda-linux-gnu/sysroot"
+  if (prefix / "conda-meta").is_dir() and (sysroot / "usr/include/assert.h").is_file():
+    os.environ["CONDA_BUILD_SYSROOT"] = str(sysroot)
+    warn(f"Restored ROOT compiler sysroot: {sysroot}. Source tea/setup.sh for the full environment.")
 
 
 def get_year_from_samples(samples):

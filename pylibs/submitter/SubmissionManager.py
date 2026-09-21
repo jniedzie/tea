@@ -6,7 +6,9 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from Logger import info, warn, error, fatal
-from teaHelpers import get_facility, is_lfn, is_root_file_healthy
+from teaHelpers import get_facility, is_lfn, is_root_file_healthy, ensure_root_compiler_environment
+
+ensure_root_compiler_environment()
 
 
 class SubmissionSystem(Enum):
