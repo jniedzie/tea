@@ -60,6 +60,9 @@ class HistogramPlotter:
     info(f"Output directory: {os.path.abspath(self.config.output_path)}")
 
   def __save_canvas(self, canvas, path):
+    output_directory = os.path.dirname(path)
+    if output_directory:
+      os.makedirs(output_directory, exist_ok=True)
     original_error_level = ROOT.gErrorIgnoreLevel
     ROOT.gErrorIgnoreLevel = ROOT.kError
     try:
