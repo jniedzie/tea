@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,6 +118,28 @@ mixed = (
 """
 '''
     self.assertEqual(FORMATTER.format_python_tables(source)[0], source)
+
+  def test_preserves_form_feeds_in_multiline_strings(self):
+    source = 'text = """a\fb"""\nvalues = (\n  # left  right\n  ("a", 1),\n  ("long", 20),\n)\n'
+
+    formatted, count = FORMATTER.format_python_tables(source)
+
+    self.assertEqual(count, 1)
+    self.assertIn('"""a\fb"""', formatted)
+    self.assertEqual(
+      ast.dump(ast.parse(formatted), include_attributes=False),
+      ast.dump(ast.parse(source), include_attributes=False),
+    )
+
+  def test_does_not_write_a_semantic_change(self):
+    source = "answer = 1\n"
+    with tempfile.TemporaryDirectory() as directory:
+      path = Path(directory) / "config.py"
+      path.write_text(source)
+      with patch.object(FORMATTER, "format_python_tables", return_value=("answer = 2\n", 1)):
+        with self.assertRaisesRegex(ValueError, "syntax tree"):
+          FORMATTER.process_file(path, check=False, show_diff=False)
+      self.assertEqual(path.read_text(), source)
 
   def test_check_mode_reports_drift_without_writing(self):
     source = 'x = (\n  # left  right\n  ("a", 1),\n  ("long", 20),\n)\n'
