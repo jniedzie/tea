@@ -156,3 +156,191 @@ def test_empty_output_dirs_alone_are_not_a_merge_target(monkeypatch, tmp_path):
   with pytest.raises(ValueError, match="output_hists_dir"):
     run_main_with_config(monkeypatch, tmp_path, files_config)
   assert not (tmp_path / "_merged").exists()
+
+
+class FakeCompletedProcess:
+  def __init__(self, returncode=0, stdout="", stderr=""):
+    self.returncode = returncode
+    self.stdout = stdout
+    self.stderr = stderr
+
+
+XRDFS_LISTING = (
+  "-rw- 2026-08-27 14:03:03 13930949 /store/user/u/hists/ntuple_0.root\n"
+  "-rw-r--r-- user group 1048576 2026-08-27 14:04:11 /store/user/u/hists/ntuple_1.root\n"
+  "drwxr-xr-x user group 0 2026-08-27 14:04:11 /store/user/u/hists/subdir\n"
+  "-rw- 2026-08-27 14:05:00 512 /store/user/u/hists/log.txt\n"
+)
+
+
+def test_list_input_files_reads_sizes_out_of_the_remote_listing(monkeypatch):
+  commands = []
+
+  def fake_run(command, **kwargs):
+    commands.append(command)
+    return FakeCompletedProcess(stdout=XRDFS_LISTING)
+
+  monkeypatch.setattr(merge.subprocess, "run", fake_run)
+  paths, sizes = merge.list_input_files("/store/user/u/hists", "*.root", "maite.iihe.ac.be:1094")
+
+  assert commands == [["xrdfs", "root://maite.iihe.ac.be:1094", "ls", "-l", "/store/user/u/hists"]]
+  assert paths == ["/store/user/u/hists/ntuple_0.root", "/store/user/u/hists/ntuple_1.root"]
+  assert sizes["/store/user/u/hists/ntuple_0.root"] == 13930949
+
+
+def test_list_input_files_warns_and_uses_an_incomplete_remote_listing(monkeypatch):
+  warnings = []
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(
+      stdout=XRDFS_LISTING,
+      stderr="[WARN] Result may be incomplete: directory listing limit reached\n",
+    ),
+  )
+  monkeypatch.setattr(merge, "warn", warnings.append)
+
+  paths, sizes = merge.list_input_files("/store/user/u/hists", "*.root", "door:1094")
+
+  assert paths == ["/store/user/u/hists/ntuple_0.root", "/store/user/u/hists/ntuple_1.root"]
+  assert sizes["/store/user/u/hists/ntuple_0.root"] == 13930949
+  assert warnings == [
+    "Incomplete xrdfs listing for /store/user/u/hists: [WARN] Result may be incomplete: directory listing limit reached"
+  ]
+
+
+def test_list_input_files_rejects_a_listing_without_a_file_size(monkeypatch):
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(
+      stdout="-rw-r--r-- user group unknown 2026-08-27 14:04:11 /store/user/u/hists/ntuple.root\n"
+    ),
+  )
+  with pytest.raises(RuntimeError, match="Could not read file size"):
+    merge.list_input_files("/store/user/u/hists", "*.root", "door:1094")
+
+
+def test_list_input_files_treats_an_absent_remote_directory_as_empty(monkeypatch):
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(
+      returncode=54, stderr="[ERROR] Server responded with an error: [3011] No such file or directory\n"
+    ),
+  )
+  assert merge.list_input_files("/store/user/u/absent", "*.root", "door:1094") == ([], {})
+
+
+def test_list_input_files_raises_on_any_other_xrdfs_failure(monkeypatch):
+  monkeypatch.setattr(
+    merge.subprocess,
+    "run",
+    lambda command, **kwargs: FakeCompletedProcess(returncode=51, stderr="[FATAL] Auth failed"),
+  )
+  with pytest.raises(RuntimeError, match="Auth failed"):
+    merge.list_input_files("/store/user/u/hists", "*.root", "door:1094")
+
+
+def test_list_input_files_stays_local_for_a_posix_directory(monkeypatch, tmp_path):
+  monkeypatch.setattr(
+    merge.subprocess, "run", lambda *a, **k: pytest.fail("a local directory must not touch the network")
+  )
+  (tmp_path / "a.root").write_text("aa")
+  paths, sizes = merge.list_input_files(str(tmp_path), "*.root", "door:1094")
+  assert paths == [str(tmp_path / "a.root")]
+  assert sizes == {str(tmp_path / "a.root"): 2}
+
+
+def test_hadd_reads_lfn_inputs_through_the_redirector():
+  command = merge.build_hadd_command(
+    "/scratch/ntuple_0.root",
+    ["/store/user/u/hists/ntuple_0.root"],
+    preserve_input_compression=False,
+    redirector="maite.iihe.ac.be:1094",
+  )
+  assert command[-1] == "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root"
+  assert command[-2] == "/scratch/ntuple_0.root"
+
+
+def test_condor_merge_job_merges_into_scratch_and_stages(tmp_path):
+  script_path = merge.create_condor_job(
+    str(tmp_path),
+    "histograms",
+    "DYto2L/2024",
+    0,
+    "/store/user/u/hists_merged/ntuple_0.root",
+    ["/store/user/u/hists/ntuple_0.root"],
+    preserve_input_compression=False,
+    hadd_files_per_pass=None,
+    hadd_workers=1,
+    redirector="maite.iihe.ac.be:1094",
+  )
+  script = open(script_path).read()
+
+  assert "_CONDOR_SCRATCH_DIR" in script
+  assert '"$work_dir/ntuple_0.root"' in script
+  assert "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root" in script
+  assert "teaHelpers.stage_output" in script
+  assert "mkdir -p /store" not in script
+
+
+@pytest.mark.parametrize(
+  ("input_file_sizes", "expected_request"),
+  [
+    ({"a.root": 1000, "b.root": 1500, "c.root": 2000}, "request_disk = 1048576K"),
+    (
+      {"a.root": 1000, "b.root": 200_000_000, "c.root": 300_000_000},
+      "request_disk = 1220704K",
+    ),
+  ],
+)
+def test_condor_submit_requests_disk_for_the_largest_merge(monkeypatch, tmp_path, input_file_sizes, expected_request):
+  jobs = [
+    ("histograms", "A", 0, "/input/A", "/output/A", "/output/A/ntuple_0.root", ["a.root"]),
+    (
+      "histograms",
+      "B",
+      0,
+      "/input/B",
+      "/output/B",
+      "/output/B/ntuple_0.root",
+      ["b.root", "c.root"],
+    ),
+  ]
+  monkeypatch.setattr(merge, "get_facility", lambda: "other")
+  monkeypatch.setattr(merge, "run_command", lambda command: None)
+
+  merge.submit_condor_jobs(
+    str(tmp_path),
+    jobs,
+    input_file_sizes,
+    preserve_input_compression=False,
+    hadd_files_per_pass=None,
+    hadd_workers=1,
+  )
+
+  submit_file = (tmp_path / "merge.sub").read_text()
+  assert expected_request in submit_file
+
+
+def test_a_remote_output_without_scratch_is_a_hard_error(monkeypatch, tmp_path):
+  files_config = make_files_config(
+    samples=[""],
+    output_hists_dir="/store/user/u/hists",
+    redirector="door:1094",
+  )
+  monkeypatch.setattr(
+    merge,
+    "list_input_files",
+    lambda input_dir, pattern, redirector: (["/store/user/u/in/ntuple_0.root"], {"/store/user/u/in/ntuple_0.root": 10}),
+  )
+  monkeypatch.setattr(merge, "contains_top_level_tree", lambda file_path, redirector=None: False)
+  monkeypatch.setattr(merge, "choose_scratch_root", lambda required_bytes: None)
+
+  config_path = tmp_path / "files_config.py"
+  config_path.write_text("")
+  monkeypatch.setattr(merge, "load_files_config", lambda path: files_config)
+  monkeypatch.setattr(sys, "argv", ["merge.py", "--files_config", str(config_path)])
+  with pytest.raises(RuntimeError, match="requires local scratch"):
+    merge.main()
