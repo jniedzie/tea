@@ -40,6 +40,23 @@ fi
 build_main() (
   set -euo pipefail
 
+  # The conda-forge Darwin toolchain is useful for reproducible dependencies,
+  # but its linker can lag behind the SDK shipped by the locally selected Xcode.
+  # In that case it cannot parse newer target names in libSystem.tbd. Select
+  # the matching Apple compiler only for a compiler that resolves inside the
+  # Tea environment. This subshell keeps the caller's compiler settings intact.
+  if [[ "$(uname -s)" == "Darwin" && -n "${CONDA_PREFIX:-}" ]]; then
+    _tea_cc_path="$(command -v "${CC:-}" 2>/dev/null || true)"
+    if [[ "${_tea_cc_path}" == "${CONDA_PREFIX}"/* && -x /usr/bin/clang ]]; then
+      export CC=/usr/bin/clang
+    fi
+
+    _tea_cxx_path="$(command -v "${CXX:-}" 2>/dev/null || true)"
+    if [[ "${_tea_cxx_path}" == "${CONDA_PREFIX}"/* && -x /usr/bin/clang++ ]]; then
+      export CXX=/usr/bin/clang++
+    fi
+  fi
+
   repo_root="$(cd "${_build_sh_script_dir}/.." && pwd)"
   build_dir="${repo_root}/build"
   bin_dir="${repo_root}/bin"
@@ -54,6 +71,8 @@ build_main() (
   current_build_env="$(
     printf 'ROOTSYS=%s\n' "${ROOTSYS:-}"
     printf 'CONDA_PREFIX=%s\n' "${CONDA_PREFIX:-}"
+    printf 'CC=%s\n' "${CC:-}"
+    printf 'CXX=%s\n' "${CXX:-}"
     printf 'PYTHON3=%s\n' "$(command -v python3 || true)"
     printf 'CMAKE=%s\n' "$(command -v cmake || true)"
     printf 'CORRECTION=%s\n' "$(command -v correction || true)"

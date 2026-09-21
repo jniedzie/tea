@@ -45,7 +45,8 @@ branchesToAdd = (
 # Uncomment if you want to specify event weights (e.g. from MC generator):
 # weightsBranchName = "genWeight"
 
-# redirector = "xrootd-cms.infn.it"
+# Used for bare LFN ("/store/...") inputs; defaults to TEA_XROOTD_REDIRECTOR.
+# redirector = "cms-xrd-global.cern.ch"    # or e.g. "maite.iihe.ac.be:1094"
 
 # Where output is staged to, when it does not land on a local filesystem. Defaults to
 # TEA_STAGE_URL_BASE (itself defaulting to the IIHE door); setting it here instead makes
