@@ -84,10 +84,22 @@ class Styler:
     pad.SetTopMargin(top_margin)
 
   def setup_2d_pad(self, pad: Any, square_frame: bool = False) -> None:
+    margins = self.plotMargins or {}
+    left_margin = margins.get("left", self.leftMargin)
+    bottom_margin = margins.get("bottom", self.bottomMargin)
+    top_margin = margins.get("top", self.topMargin)
     minimum_margin = self.minimum2DRightMargin
     if pad.GetWw() > 0:
       minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / float(pad.GetWw()))
-    pad.SetRightMargin(max(self.rightMargin, minimum_margin))
+    right_margin = max(margins.get("right", self.rightMargin), minimum_margin)
+
+    if left_margin + right_margin >= 1 or top_margin + bottom_margin >= 1:
+      raise ValueError("2D plot margins leave no drawable frame")
+
+    pad.SetLeftMargin(left_margin)
+    pad.SetBottomMargin(bottom_margin)
+    pad.SetTopMargin(top_margin)
+    pad.SetRightMargin(right_margin)
 
     if not square_frame or pad.GetWw() <= 0 or pad.GetWh() <= 0:
       return
@@ -98,6 +110,9 @@ class Styler:
       pad.SetRightMargin(pad.GetRightMargin() + (frame_width - frame_height) / pad.GetWw())
     elif frame_height > frame_width:
       pad.SetTopMargin(pad.GetTopMargin() + (frame_height - frame_width) / pad.GetWh())
+
+    if pad.GetLeftMargin() + pad.GetRightMargin() >= 1 or pad.GetTopMargin() + pad.GetBottomMargin() >= 1:
+      raise ValueError("2D plot margins leave no drawable frame")
 
   def __setupPadDefaults(self, pad):
     pad.SetLeftMargin(self.leftMargin)
@@ -539,9 +554,9 @@ class Styler:
       label_size = self.labelFontSize / float(pad.GetWh())
     label_font = 42
 
-    if hist.z_min is not None and (hist.z_min > 0):
+    if hist.z_min is not None:
       plot.SetMinimum(hist.z_min)
-    if hist.z_max is not None and (hist.z_max > 0):
+    if hist.z_max is not None:
       plot.SetMaximum(hist.z_max)
 
     try:

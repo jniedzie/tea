@@ -112,15 +112,13 @@ include(CTest)
 if(BUILD_TESTING)
     add_executable(test_profile2d tests/test_profile2d.cpp)
     target_link_libraries(test_profile2d PRIVATE core extensions histogramming ${ROOT_LIBRARIES} Python3::Python)
-    set_property(TARGET test_profile2d PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})
-    if(APPLE)
-        set_property(
-            TARGET test_profile2d APPEND PROPERTY INSTALL_RPATH
-            "@loader_path/libs/core"
-            "@loader_path/libs/extensions"
-            "@loader_path/libs/histogramming"
-        )
-    endif()
+    set_target_properties(
+        test_profile2d
+        PROPERTIES
+            CXX_STANDARD ${CMAKE_CXX_STANDARD}
+            BUILD_WITH_INSTALL_RPATH FALSE
+            BUILD_RPATH "$<TARGET_FILE_DIR:core>;$<TARGET_FILE_DIR:extensions>;$<TARGET_FILE_DIR:histogramming>"
+    )
     add_test(
         NAME tea_profile2d
         COMMAND test_profile2d
@@ -133,7 +131,7 @@ if(BUILD_TESTING)
         NAME tea_profile2d_plotting
         COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_profile2d_plotting.py"
-                "${CMAKE_CURRENT_SOURCE_DIR}"
+                "${CMAKE_INSTALL_PREFIX}"
                 "${CMAKE_CURRENT_BINARY_DIR}/profile2d_test.root"
                 "${CMAKE_CURRENT_BINARY_DIR}/profile2d_plots"
     )

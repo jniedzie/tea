@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   ConfigManager::Initialize(argv[1]);
 
   auto handler = std::make_unique<HistogramsHandler>();
+  if (handler->GetProfiles2D().size() != 2) { return Fail("Invalid nominal profile definitions were not skipped"); }
   auto *regular = handler->GetProfile2D({"response", ""});
   auto *variable = handler->GetProfile2D({"response_variable", ""});
   if (!regular || !variable) { return Fail("Nominal profiles were not created"); }

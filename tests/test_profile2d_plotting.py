@@ -6,10 +6,10 @@ import ROOT
 
 
 def main() -> None:
-  source_dir = Path(sys.argv[1])
+  module_dir = Path(sys.argv[1])
   input_path = Path(sys.argv[2])
   output_dir = Path(sys.argv[3])
-  sys.path.insert(0, str(source_dir / "pylibs" / "plotting"))
+  sys.path.insert(0, str(module_dir))
 
   from Histogram import Histogram2D, Profile2D
   from HistogramNormalizer import NormalizationType
@@ -27,6 +27,8 @@ def main() -> None:
     x_label="x",
     y_label="y",
     z_label="Mean response",
+    z_min=-5.0,
+    z_max=0.0,
   )
   histogram = Histogram2D(
     name="counts",
@@ -34,6 +36,8 @@ def main() -> None:
     x_label="x",
     y_label="y",
     z_label="Events / bin",
+    z_min=-2.0,
+    z_max=0.0,
     comparable_axes=True,
   )
   root_histogram = ROOT.TH2D("counts", "", 2, 0.0, 2.0, 2, 0.0, 2.0)
@@ -57,7 +61,7 @@ def main() -> None:
     output_path=str(output_dir),
     output_formats=("png",),
     canvas_size=(400, 300),
-    plot_margins={"right": 0.05},
+    plot_margins={"left": 0.17, "right": 0.05, "top": 0.08, "bottom": 0.19},
     show_ratio_plots=False,
     show_grid_2D=True,
     show_y_equals_x_2D=True,
@@ -67,6 +71,16 @@ def main() -> None:
   margin_canvas = ROOT.TCanvas("margin_canvas", "", 400, 300)
   plotter.styler.setup_2d_pad(margin_canvas)
   expected_margin = max(Styler.minimum2DRightMargin, Styler.minimum2DRightMarginPixels / float(margin_canvas.GetWw()))
+  expected_margins = {"left": 0.17, "right": expected_margin, "top": 0.08, "bottom": 0.19}
+  actual_margins = {
+    "left": margin_canvas.GetLeftMargin(),
+    "right": margin_canvas.GetRightMargin(),
+    "top": margin_canvas.GetTopMargin(),
+    "bottom": margin_canvas.GetBottomMargin(),
+  }
+  for name, expected in expected_margins.items():
+    if abs(actual_margins[name] - expected) > 1e-6:
+      raise AssertionError(f"The configured 2D {name} margin was not applied")
   if abs(margin_canvas.GetRightMargin() - expected_margin) > 1e-6:
     raise AssertionError("The minimum 2D right margin was not applied")
 
@@ -75,6 +89,33 @@ def main() -> None:
   wider_styler.setup_2d_pad(wider_canvas)
   if abs(wider_canvas.GetRightMargin() - 0.45) > 1e-6:
     raise AssertionError("A larger configured 2D right margin was not preserved")
+
+  square_margins = {"left": 0.2, "right": 0.4, "top": 0.1, "bottom": 0.2}
+  square_styler = Styler(SimpleNamespace(plot_margins=square_margins))
+  square_canvas = ROOT.TCanvas("square_canvas", "", 400, 300)
+  square_styler.setup_2d_pad(square_canvas, square_frame=True)
+  for name, minimum in square_margins.items():
+    actual = getattr(square_canvas, f"Get{name.title()}Margin")()
+    if actual + 1e-6 < minimum:
+      raise AssertionError(f"Square-frame layout reduced the configured {name} margin")
+  if abs(square_canvas.GetLeftMargin() - square_margins["left"]) > 1e-6:
+    raise AssertionError("Square-frame layout changed the configured left margin")
+  if abs(square_canvas.GetBottomMargin() - square_margins["bottom"]) > 1e-6:
+    raise AssertionError("Square-frame layout changed the configured bottom margin")
+  square_width = square_canvas.GetWw() * (1.0 - square_canvas.GetLeftMargin() - square_canvas.GetRightMargin())
+  square_height = square_canvas.GetWh() * (1.0 - square_canvas.GetTopMargin() - square_canvas.GetBottomMargin())
+  if abs(square_width - square_height) > 1.0:
+    raise AssertionError("The configured square-frame margins did not produce a square frame")
+
+  invalid_margin_styler = Styler(SimpleNamespace(plot_margins={"top": 0.6, "bottom": 0.4}))
+  invalid_margin_canvas = ROOT.TCanvas("invalid_margin_canvas", "", 400, 300)
+  try:
+    invalid_margin_styler.setup_2d_pad(invalid_margin_canvas)
+  except ValueError as exception:
+    if "no drawable frame" not in str(exception):
+      raise
+  else:
+    raise AssertionError("Invalid effective 2D margins were accepted")
 
   input_file = ROOT.TFile.Open(str(input_path), "READ")
   if not input_file or input_file.IsZombie():
@@ -112,6 +153,16 @@ def main() -> None:
   plotter._HistogramPlotter__save_canvas = capture_canvas
   plotter.drawHists2D()
   plotter.drawProfiles2D()
+  if (
+    abs(histogram.hist.GetMinimum() - histogram.z_min) > 1e-12
+    or abs(histogram.hist.GetMaximum() - histogram.z_max) > 1e-12
+  ):
+    raise AssertionError("Negative or zero TH2D color limits were not applied")
+  if (
+    abs(loaded_profile.hist.GetMinimum() - profile.z_min) > 1e-12
+    or abs(loaded_profile.hist.GetMaximum() - profile.z_max) > 1e-12
+  ):
+    raise AssertionError("Negative or zero TProfile2D color limits were not applied")
   if histogram.hist.GetZaxis().GetTitle() != "Events / bin":
     raise AssertionError("The TH2D colorbar title was not set")
   if abs(histogram.hist.GetZaxis().GetTitleOffset() - Styler.colorbarTitleOffset) > 1e-6:
