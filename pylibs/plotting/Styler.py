@@ -4,7 +4,7 @@ from ROOT import TObject, gStyle
 import ctypes
 import math
 import ROOT
-from typing import Any
+from typing import Any, Optional
 
 
 class Styler:
@@ -83,11 +83,21 @@ class Styler:
     pad.SetBottomMargin(bottom_margin)
     pad.SetTopMargin(top_margin)
 
-  def setup_2d_pad(self, pad: Any) -> None:
+  def setup_2d_pad(self, pad: Any, square_frame: bool = False) -> None:
     minimum_margin = self.minimum2DRightMargin
     if pad.GetWw() > 0:
       minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / float(pad.GetWw()))
     pad.SetRightMargin(max(self.rightMargin, minimum_margin))
+
+    if not square_frame or pad.GetWw() <= 0 or pad.GetWh() <= 0:
+      return
+
+    frame_width = pad.GetWw() * (1.0 - pad.GetLeftMargin() - pad.GetRightMargin())
+    frame_height = pad.GetWh() * (1.0 - pad.GetTopMargin() - pad.GetBottomMargin())
+    if frame_width > frame_height:
+      pad.SetRightMargin(pad.GetRightMargin() + (frame_width - frame_height) / pad.GetWw())
+    elif frame_height > frame_width:
+      pad.SetTopMargin(pad.GetTopMargin() + (frame_height - frame_width) / pad.GetWh())
 
   def __setupPadDefaults(self, pad):
     pad.SetLeftMargin(self.leftMargin)
@@ -544,6 +554,8 @@ class Styler:
       plot.GetXaxis().SetTitleOffset(1.0)
       plot.GetXaxis().SetLabelFont(label_font)
       plot.GetXaxis().SetLabelSize(label_size)
+      if hist.comparable_axes:
+        plot.GetXaxis().SetNdivisions(505)
 
       if hist.y_min is not None and hist.y_max is not None:
         plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
@@ -568,6 +580,24 @@ class Styler:
     except Exception:
       warn("Couldn't set axes limits")
       return
+
+  def getComparable2DAxisRange(self, plot: Any, hist: Any) -> Optional[tuple[float, float]]:
+    if not hist.comparable_axes:
+      return None
+    if hist.log_x != hist.log_y:
+      raise ValueError(f"Comparable axes require matching x/y log settings for plot '{hist.getName()}'")
+
+    x_range = self.__displayed2DAxisRange(plot.GetXaxis())
+    y_range = self.__displayed2DAxisRange(plot.GetYaxis())
+    if not all(math.isclose(x, y, rel_tol=1e-9, abs_tol=1e-12) for x, y in zip(x_range, y_range)):
+      raise ValueError(
+        f"Comparable axes require equal x/y ranges for plot '{hist.getName()}': x={x_range}, y={y_range}"
+      )
+    return x_range
+
+  @staticmethod
+  def __displayed2DAxisRange(axis: Any) -> tuple[float, float]:
+    return float(axis.GetBinLowEdge(axis.GetFirst())), float(axis.GetBinUpEdge(axis.GetLast()))
 
   def setupUncertaintyHistogram(self, hist):
     if hasattr(self.config, "background_uncertainty"):

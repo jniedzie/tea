@@ -34,10 +34,21 @@ def main() -> None:
     x_label="x",
     y_label="y",
     z_label="Events / bin",
+    comparable_axes=True,
   )
-  root_histogram = ROOT.TH2D("counts", "", 2, 0.0, 2.0, 2, -1.0, 1.0)
+  root_histogram = ROOT.TH2D("counts", "", 2, 0.0, 2.0, 2, 0.0, 2.0)
   root_histogram.Fill(0.5, 0.5)
   histogram.set_hist(root_histogram)
+  comparable_profile = Profile2D(
+    name="comparable_profile",
+    x_label="x",
+    y_label="y",
+    z_label="Mean response",
+    comparable_axes=True,
+  )
+  root_comparable_profile = ROOT.TProfile2D("comparable_profile", "", 2, 0.0, 2.0, 2, 0.0, 2.0)
+  root_comparable_profile.Fill(0.5, 0.5, 4.0)
+  comparable_profile.set_hist(root_comparable_profile)
   config = SimpleNamespace(
     samples=(sample,),
     histograms=(),
@@ -48,6 +59,8 @@ def main() -> None:
     canvas_size=(400, 300),
     plot_margins={"right": 0.05},
     show_ratio_plots=False,
+    show_grid_2D=True,
+    show_y_equals_x_2D=True,
   )
 
   plotter = HistogramPlotter(config)
@@ -68,8 +81,9 @@ def main() -> None:
     raise RuntimeError(f"Could not open profile test file: {input_path}")
 
   plotter.addProfilesample2D(profile, sample, input_file)
+  plotter.profilesamples2D.append((comparable_profile, sample))
   plotter.histosamples2D.append((histogram, sample))
-  if len(plotter.profilesamples2D) != 1:
+  if len(plotter.profilesamples2D) != 2:
     raise AssertionError("The configured TProfile2D was not loaded")
 
   loaded_profile = plotter.profilesamples2D[0][0]
@@ -77,6 +91,25 @@ def main() -> None:
   if abs(loaded_profile.hist.GetBinContent(source_bin) - 8.0) > 1e-12:
     raise AssertionError("The profile mean changed while loading")
 
+  captured_canvases = {}
+  save_canvas = plotter._HistogramPlotter__save_canvas
+
+  def capture_canvas(canvas, path: str) -> None:
+    canvas.Update()
+    lines = [item for item in canvas.GetListOfPrimitives() if item.InheritsFrom("TLine")]
+    captured_canvases[Path(path).stem] = {
+      "frame_width": canvas.GetWw() * (1.0 - canvas.GetLeftMargin() - canvas.GetRightMargin()),
+      "frame_height": canvas.GetWh() * (1.0 - canvas.GetTopMargin() - canvas.GetBottomMargin()),
+      "grid_x": canvas.GetGridx(),
+      "grid_y": canvas.GetGridy(),
+      "lines": [
+        (line.GetX1(), line.GetY1(), line.GetX2(), line.GetY2(), line.GetLineColor(), line.GetLineStyle())
+        for line in lines
+      ],
+    }
+    save_canvas(canvas, path)
+
+  plotter._HistogramPlotter__save_canvas = capture_canvas
   plotter.drawHists2D()
   plotter.drawProfiles2D()
   if histogram.hist.GetZaxis().GetTitle() != "Events / bin":
@@ -95,7 +128,51 @@ def main() -> None:
   if abs(loaded_profile.hist.GetBinContent(rebinned_bin) - 8.0) > 1e-12:
     raise AssertionError("The profile mean changed while plotting")
 
-  output_paths = (output_dir / "counts_test.png", output_dir / "profiles_response_test.png")
+  for plot_name in ("counts_test", "comparable_profile_test"):
+    canvas_state = captured_canvases[plot_name]
+    if abs(canvas_state["frame_width"] - canvas_state["frame_height"]) > 1.0:
+      raise AssertionError(f"The comparable plot frame is not square: {plot_name}")
+    if not canvas_state["grid_x"] or not canvas_state["grid_y"]:
+      raise AssertionError(f"The configured 2D grid was not drawn: {plot_name}")
+    if canvas_state["lines"] != [(0.0, 0.0, 2.0, 2.0, ROOT.kBlack, ROOT.kSolid)]:
+      raise AssertionError(f"The y=x line is incorrect: {plot_name}")
+
+  if captured_canvases["profiles_response_test"]["lines"]:
+    raise AssertionError("The y=x line was drawn on a non-comparable plot")
+  if histogram.hist.GetXaxis().GetNdivisions() != histogram.hist.GetYaxis().GetNdivisions():
+    raise AssertionError("The comparable TH2D axes do not use the same tick divisions")
+  if comparable_profile.hist.GetXaxis().GetNdivisions() != comparable_profile.hist.GetYaxis().GetNdivisions():
+    raise AssertionError("The comparable TProfile2D axes do not use the same tick divisions")
+
+  no_grid_canvas = ROOT.TCanvas("no_grid_canvas", "", 400, 300)
+  plotter.styler.setup_2d_pad(no_grid_canvas, square_frame=True)
+  if no_grid_canvas.GetGridx() or no_grid_canvas.GetGridy():
+    raise AssertionError("Comparable axes forced the grid on")
+
+  unequal_axes = Histogram2D(name="unequal", comparable_axes=True)
+  unequal_root = ROOT.TH2D("unequal", "", 2, 0.0, 2.0, 2, -1.0, 1.0)
+  try:
+    plotter.styler.getComparable2DAxisRange(unequal_root, unequal_axes)
+  except ValueError as exception:
+    if "equal x/y ranges" not in str(exception):
+      raise
+  else:
+    raise AssertionError("Unequal comparable axes were accepted")
+
+  unequal_log_axes = Histogram2D(name="unequal_log", log_x=True, comparable_axes=True)
+  try:
+    plotter.styler.getComparable2DAxisRange(root_histogram, unequal_log_axes)
+  except ValueError as exception:
+    if "matching x/y log settings" not in str(exception):
+      raise
+  else:
+    raise AssertionError("Mismatched comparable log settings were accepted")
+
+  output_paths = (
+    output_dir / "counts_test.png",
+    output_dir / "profiles_response_test.png",
+    output_dir / "comparable_profile_test.png",
+  )
   for output_path in output_paths:
     if not output_path.is_file() or output_path.stat().st_size == 0:
       raise AssertionError(f"2D plot was not created: {output_path}")

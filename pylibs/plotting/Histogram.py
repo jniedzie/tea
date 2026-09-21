@@ -146,6 +146,7 @@ class Histogram2D:
   z_label: str = ""
   suffix: str = ""
   norm_scale: float = 1.0
+  comparable_axes: bool = False
 
   def __post_init__(self):
     self.hist = None

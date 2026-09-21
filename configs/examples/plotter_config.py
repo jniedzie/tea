@@ -104,6 +104,7 @@ histograms = (
 )
 
 histograms2D = (
+  # Set comparable_axes=True when x and y use equal ranges and should share a square scale.
   #           name              title                rebin  xmin    xmax       ymin   ymax     zmin zmax xlabel               ylabel                        zlabel
   # Histogram2D("hit_xy",         "hit_xy"          , 1, 1, -15     , 15      , -15   , 15    , 0,  1e5, "x"             , "y"                         , "Counts"),
   # Histogram2D("time_vs_toa",    "time_vs_toa"     , 1, 1, -10     , 100     , -10   , 2000  , 0,  1e3, "Time (ns)"     , "Time of Arrival (ToA)"     , "Counts"),
@@ -115,6 +116,9 @@ profiles2D = (
   #   None, None, None, None, None, None, "x", "y", "Mean response",
   # ),
 )
+
+# show_grid_2D = True
+# show_y_equals_x_2D = True  # Draw y=x on Histogram2D/Profile2D entries with comparable_axes=True.
 
 legend_width = 0.15
 legend_min_x = 0.40

@@ -534,16 +534,24 @@ class HistogramPlotter:
       title = hist.getOutputName() + "_" + sample.name
       canvas = TCanvas(title, title, canvas_size[0], canvas_size[1])
       canvas.cd()
-      self.styler.setup_2d_pad(canvas)
+      self.styler.setup_2d_pad(canvas, square_frame=hist.comparable_axes)
       if getattr(self.config, "show_grid_2D", False):
         canvas.SetGridx(True)
         canvas.SetGridy(True)
       hist_rebinned.Draw("colz")
       self.styler.setupFigure2D(hist_rebinned, hist)
+      comparable_axis_range = self.styler.getComparable2DAxisRange(hist_rebinned, hist)
 
       canvas.SetLogx(hist.log_x)
       canvas.SetLogy(hist.log_y)
       canvas.SetLogz(hist.log_z)
+      diagonal = None
+      if comparable_axis_range is not None and getattr(self.config, "show_y_equals_x_2D", False):
+        minimum, maximum = comparable_axis_range
+        diagonal = ROOT.TLine(minimum, minimum, maximum, maximum)
+        diagonal.SetLineColor(ROOT.kBlack)
+        diagonal.SetLineStyle(ROOT.kSolid)
+        diagonal.Draw("same")
       canvas.Update()
       for output_format in self.output_formats:
         extension = output_format.lstrip(".")
