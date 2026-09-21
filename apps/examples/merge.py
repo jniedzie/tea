@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import concurrent.futures
+from fnmatch import fnmatch
 import getpass
 import glob
 import hashlib
@@ -16,18 +17,21 @@ import tempfile
 import threading
 import time
 
-from Logger import info
+from Logger import info, warn
 import teaHelpers
-from teaHelpers import get_facility, validate_root_file
+from teaHelpers import get_facility, is_lfn, read_url, stage_dest_url, validate_root_file
 
 
 DEFAULT_HADD_WORKERS = min(16, os.cpu_count() or 1)
 SCRATCH_SPACE_FACTOR = 2.5
+MIN_CONDOR_DISK_KIB = 1024 * 1024
 FINAL_REDUCTION_WORK_FACTOR = 3.0
 ETA_MIN_SAMPLE_SECONDS = 5.0
 ETA_MIN_SAMPLE_FRACTION = 0.02
 ETA_ADJUSTMENT_FRACTION = 0.02
 MAX_PROGRESS_PER_SECOND = 4.0
+
+MergeJob = tuple[str, str, int, str, str, str, list[str]]
 
 
 def positive_int(value):
@@ -175,6 +179,92 @@ def load_files_config(config_path):
   sys.modules["files_config"] = files_config
   spec.loader.exec_module(files_config)
   return files_config
+
+
+def config_redirector(files_config):
+  return getattr(files_config, "redirector", None) or teaHelpers.XROOTD_REDIRECTOR
+
+
+def read_urls(file_paths, redirector):
+  return [read_url(file_path, redirector) for file_path in file_paths]
+
+
+def _xrdfs_host(redirector):
+  return redirector if redirector.startswith("root://") else f"root://{redirector}"
+
+
+def _xrdfs_list_directory(directory: str, redirector: str) -> list[tuple[str, int]]:
+  command = ["xrdfs", _xrdfs_host(redirector), "ls", "-l", directory]
+  try:
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+  except FileNotFoundError as error:
+    raise RuntimeError(f"xrdfs is not on PATH; cannot list {directory}") from error
+
+  if "result may be incomplete" in result.stderr.lower():
+    warn(f"Incomplete xrdfs listing for {directory}: {result.stderr.strip()}")
+
+  if result.returncode != 0:
+    output = f"{result.stdout}{result.stderr}"
+    if "3011" in output or "no such file" in output.lower():
+      return []
+    raise RuntimeError(f"Could not list {directory} with xrdfs: {output.strip()}")
+
+  entries = []
+  for line in result.stdout.splitlines():
+    prefix = line.split(None, 1)
+    if not prefix:
+      continue
+
+    permissions = prefix[0]
+    if permissions.startswith("d"):
+      continue
+    if re.fullmatch(r"-[rwx-]{9}", permissions):
+      maxsplit = 6
+    elif re.fullmatch(r"-[rwx-]{3}", permissions):
+      maxsplit = 4
+    else:
+      raise RuntimeError(f"Could not parse xrdfs listing for {directory}: {line}")
+
+    fields = line.split(None, maxsplit)
+    if len(fields) != maxsplit + 1:
+      raise RuntimeError(f"Could not parse xrdfs listing for {directory}: {line}")
+    try:
+      size = int(fields[3])
+    except ValueError as error:
+      raise RuntimeError(f"Could not read file size in xrdfs listing: {line}") from error
+    entries.append((fields[-1], size))
+  return entries
+
+
+def _xrdfs_size(file_path, redirector):
+  command = ["xrdfs", _xrdfs_host(redirector), "stat", file_path]
+  try:
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+  except FileNotFoundError as error:
+    raise RuntimeError(f"xrdfs is not on PATH; cannot stat {file_path}") from error
+  if result.returncode != 0:
+    return None
+  match = re.search(r"^Size:\s+(\d+)", result.stdout, re.MULTILINE)
+  return int(match.group(1)) if match else None
+
+
+def file_size(file_path, redirector):
+  if not is_lfn(file_path):
+    return os.path.getsize(file_path) if os.path.isfile(file_path) else None
+  return _xrdfs_size(file_path, redirector)
+
+
+def list_input_files(input_dir, input_file_pattern, redirector):
+  if not is_lfn(input_dir):
+    file_paths = sorted(glob.glob(os.path.join(input_dir, input_file_pattern)))
+    return file_paths, {file_path: os.path.getsize(file_path) for file_path in file_paths}
+
+  sizes = {
+    file_path: size
+    for file_path, size in _xrdfs_list_directory(input_dir, redirector)
+    if fnmatch(os.path.basename(file_path), input_file_pattern)
+  }
+  return sorted(sizes), sizes
 
 
 def chunk_files(file_paths, chunk_size):
@@ -510,7 +600,7 @@ class MergeProgress:
       info(f"Merge finished in {format_duration(elapsed)}")
 
 
-def skip_files_without_keys(file_paths):
+def skip_files_without_keys(file_paths, redirector=None):
   files_with_keys = []
   skipped_files = []
   uninspected_files = []
@@ -522,7 +612,7 @@ def skip_files_without_keys(file_paths):
 
   try:
     for file_index, file_path in enumerate(file_paths, start=1):
-      status = teaHelpers.classify_root_file(file_path)
+      status = teaHelpers.classify_root_file(file_path, redirector)
       if status == teaHelpers.ROOT_FILE_NO_KEYS:
         skipped_files.append(file_path)
       else:
@@ -552,6 +642,7 @@ def build_hadd_command(
   hadd_files_per_pass=None,
   hadd_workers=4,
   partial_dir=None,
+  redirector=None,
 ):
   force_option = "-fk" if preserve_input_compression else "-f"
   command = ["hadd", force_option]
@@ -563,7 +654,8 @@ def build_hadd_command(
   if hadd_files_per_pass is not None:
     # hadd's -n limit includes the target file itself.
     command.extend(["-n", str(hadd_files_per_pass + 1)])
-  return [*command, output_file, *input_files]
+  # Keep bare LFNs internally; convert only for hadd.
+  return [*command, output_file, *read_urls(input_files, redirector)]
 
 
 def run_command(command):
@@ -603,13 +695,13 @@ def choose_scratch_root(required_bytes):
   return None
 
 
-def contains_top_level_tree(file_path):
+def contains_top_level_tree(file_path, redirector=None):
   import ROOT
 
   previous_error_level = ROOT.gErrorIgnoreLevel
   ROOT.gErrorIgnoreLevel = ROOT.kFatal
   try:
-    root_file = ROOT.TFile.Open(file_path, "READ")
+    root_file = ROOT.TFile.Open(read_url(file_path, redirector), "READ")
     if not root_file or root_file.IsZombie():
       if root_file:
         root_file.Close()
@@ -625,8 +717,8 @@ def contains_top_level_tree(file_path):
     ROOT.gErrorIgnoreLevel = previous_error_level
 
 
-def stage_output(local_output, output_file):
-  teaHelpers.stage_output(local_output, output_file)
+def stage_output(local_output, output_file, url_base=None):
+  teaHelpers.stage_output(local_output, output_file, url_base=url_base)
 
 
 def hadd_diagnostic_level(output_line):
@@ -676,8 +768,6 @@ def write_file(path, content):
 
 
 def get_merge_targets(files_config):
-  # An empty output_*_dir means this stage produces no output of that kind.
-  # Treating it as a real target would create a phantom ./_merged plan.
   targets = []
 
   if getattr(files_config, "output_hists_dir", ""):
@@ -709,8 +799,10 @@ def collect_jobs(
   skip_no_keys,
   input_file_pattern="*.root",
   explicit_input_files=None,
+  redirector=None,
 ):
   jobs = []
+  file_sizes = {}
   info(f"[{merge_kind}] base dir: {base_dir}")
 
   for sample in samples:
@@ -723,21 +815,23 @@ def collect_jobs(
 
     if explicit_input_files is not None:
       input_files = list(explicit_input_files)
+      sample_sizes = {path: file_size(path, redirector) for path in input_files}
       info(f"[{merge_kind}] using {len(input_files)} explicitly listed input files")
     else:
-      input_pattern = os.path.join(input_dir, input_file_pattern)
-      info(f"[{merge_kind}] deduced input pattern: {input_pattern}")
-      input_files = sorted(glob.glob(input_pattern))
+      info(f"[{merge_kind}] deduced input pattern: {os.path.join(input_dir, input_file_pattern)}")
+      input_files, sample_sizes = list_input_files(input_dir, input_file_pattern, redirector)
       info(f"[{merge_kind}] found {len(input_files)} files for sample {sample}")
 
     if not input_files:
       continue
 
     if skip_no_keys:
-      input_files = skip_files_without_keys(input_files)
+      input_files = skip_files_without_keys(input_files, redirector)
       if not input_files:
         info(f"[{merge_kind}] no files with ROOT keys remain for sample {sample}")
         continue
+
+    file_sizes.update({path: sample_sizes[path] for path in input_files})
 
     provenance_suffix = f"_{provenance_tag}" if provenance_tag else ""
     if chunk_size == -1:
@@ -748,7 +842,7 @@ def collect_jobs(
         output_file = os.path.join(output_dir, f"ntuple_{batch_index}{provenance_suffix}.root")
         jobs.append((merge_kind, sample, batch_index, input_dir, output_dir, output_file, batch_files))
 
-  return jobs
+  return jobs, file_sizes
 
 
 def print_job_summary(jobs, use_condor):
@@ -766,6 +860,27 @@ def print_job_summary(jobs, use_condor):
       info(f"    input: {input_file}")
 
 
+STAGE_SNIPPET = (
+  "import sys; sys.path.insert(0, {helpers_dir!r}); import teaHelpers; "
+  "teaHelpers.stage_output(sys.argv[1], sys.argv[2], url_base={url_base!r})"
+)
+
+
+def stage_command(output_file, url_base):
+  helpers_dir = os.path.dirname(os.path.abspath(teaHelpers.__file__))
+  return [
+    sys.executable,
+    "-c",
+    STAGE_SNIPPET.format(helpers_dir=helpers_dir, url_base=url_base),
+    "$work_dir/" + os.path.basename(output_file),
+    output_file,
+  ]
+
+
+def shell_command(arguments, expanded):
+  return " ".join(f'"{argument}"' if argument == expanded else shlex.quote(argument) for argument in arguments)
+
+
 def create_condor_job(
   condor_dir,
   merge_kind,
@@ -776,15 +891,19 @@ def create_condor_job(
   preserve_input_compression,
   hadd_files_per_pass,
   hadd_workers,
+  redirector=None,
+  stage_url_base=None,
 ):
   safe_sample = sample.replace("/", "_")
   script_path = os.path.join(condor_dir, f"{merge_kind}_{safe_sample}_{batch_index}.sh")
+  working_output = "$work_dir/" + os.path.basename(output_file)
   hadd_command = build_hadd_command(
-    output_file,
+    working_output,
     input_files,
     preserve_input_compression,
     hadd_files_per_pass,
     hadd_workers,
+    redirector=redirector,
   )
 
   script_content = "\n".join(
@@ -792,8 +911,10 @@ def create_condor_job(
       "#!/bin/bash",
       "set -e",
       "touch condor_dummy.out",
-      f"mkdir -p {shlex.quote(os.path.dirname(output_file))}",
-      shlex.join(hadd_command),
+      'work_dir=$(mktemp -d "${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/tea_merge_XXXXXX")',
+      "trap 'rm -rf \"$work_dir\"' EXIT",
+      shell_command(hadd_command, working_output),
+      shell_command(stage_command(output_file, stage_url_base), working_output),
       "",
     ]
   )
@@ -803,14 +924,21 @@ def create_condor_job(
 
 
 def submit_condor_jobs(
-  condor_dir,
-  jobs,
-  preserve_input_compression,
-  hadd_files_per_pass,
-  hadd_workers,
-):
+  condor_dir: str,
+  jobs: list[MergeJob],
+  input_file_sizes: dict[str, int],
+  preserve_input_compression: bool,
+  hadd_files_per_pass: int | None,
+  hadd_workers: int,
+  redirector: str | None = None,
+  stage_url_base: str | None = None,
+) -> None:
   os.makedirs(condor_dir, exist_ok=True)
   facility = get_facility()
+
+  peak_input_bytes = max(sum(input_file_sizes[path] for path in job[-1]) for job in jobs)
+  estimated_disk_kib = (int(SCRATCH_SPACE_FACTOR * peak_input_bytes) + 1023) // 1024
+  required_disk_kib = max(MIN_CONDOR_DISK_KIB, estimated_disk_kib)
 
   executable_paths = [
     create_condor_job(
@@ -823,6 +951,8 @@ def submit_condor_jobs(
       preserve_input_compression,
       hadd_files_per_pass,
       hadd_workers,
+      redirector,
+      stage_url_base,
     )
     for merge_kind, sample, batch_index, _, _, output_file, input_files in jobs
   ]
@@ -835,6 +965,7 @@ def submit_condor_jobs(
     f"output = {condor_dir}/$(ClusterId).$(ProcId).out",
     f"error = {condor_dir}/$(ClusterId).$(ProcId).err",
     f"request_cpus = {hadd_workers}",
+    f"request_disk = {required_disk_kib}K",
   ]
 
   if facility == "lxplus":
@@ -876,9 +1007,12 @@ def run_jobs_locally(
   hadd_workers,
   show_hadd_output,
   scratch_root,
+  redirector=None,
+  stage_url_base=None,
 ):
   for _, _, _, _, output_dir, output_file, input_files in merge_jobs:
-    os.makedirs(output_dir, exist_ok=True)
+    if not is_lfn(output_dir):
+      os.makedirs(output_dir, exist_ok=True)
     job_workers = min(hadd_workers, len(input_files))
     work_dir = None
     partial_dir = None
@@ -902,6 +1036,7 @@ def run_jobs_locally(
         hadd_files_per_pass,
         job_workers,
         partial_dir,
+        redirector,
       )
       run_hadd(
         command,
@@ -914,7 +1049,7 @@ def run_jobs_locally(
       validate_root_file(working_output)
       if scratch_root:
         merge_progress.mark_staging(output_file)
-        stage_output(working_output, output_file)
+        stage_output(working_output, output_file, stage_url_base)
       merge_progress.complete_output(output_file, len(input_files))
       job_succeeded = True
     finally:
@@ -937,6 +1072,8 @@ def main():
     info(f"CMSSW provenance tag: {provenance_tag}")
 
   files_config = load_files_config(args.files_config)
+  redirector = config_redirector(files_config)
+  stage_url_base = getattr(files_config, "stage_url_base", "") or None
   samples = files_config.samples if hasattr(files_config, "samples") else [""]
   input_file_pattern = getattr(files_config, "input_file_pattern", "*.root")
   if os.path.basename(input_file_pattern) != input_file_pattern:
@@ -946,16 +1083,13 @@ def main():
   if explicit_input_files is not None:
     if hasattr(files_config, "samples") and list(files_config.samples) != [""]:
       raise ValueError("input_files cannot be combined with an explicit samples list")
-    # Match the deterministic ordering already provided by the glob branch.
     explicit_input_files = sorted(explicit_input_files)
     if not explicit_input_files:
       raise ValueError("input_files must be a non-empty list of file paths")
-    missing_files = [path for path in explicit_input_files if not os.path.isfile(path)]
+    missing_files = [path for path in explicit_input_files if file_size(path, redirector) is None]
     if missing_files:
       raise ValueError(f"input_files lists {len(missing_files)} file(s) that do not exist: {missing_files[:5]}")
-    # Distinct paths can name the same file through a symlink; hadd would
-    # otherwise double-count events while reporting success.
-    resolved_files = [os.path.realpath(path) for path in explicit_input_files]
+    resolved_files = [path if is_lfn(path) else os.path.realpath(path) for path in explicit_input_files]
     seen_files = set()
     duplicate_files = set()
     for path in resolved_files:
@@ -976,8 +1110,9 @@ def main():
     raise ValueError("input_files can only be combined with exactly one of output_hists_dir/output_trees_dir")
 
   jobs_by_kind = []
+  input_file_sizes = {}
   for merge_kind, base_dir in merge_targets:
-    jobs = collect_jobs(
+    jobs, file_sizes = collect_jobs(
       samples,
       base_dir,
       merge_kind,
@@ -986,7 +1121,9 @@ def main():
       args.skip_no_keys,
       input_file_pattern,
       explicit_input_files,
+      redirector,
     )
+    input_file_sizes.update(file_sizes)
     if jobs:
       jobs_by_kind.append((merge_kind, base_dir, jobs))
 
@@ -1008,20 +1145,23 @@ def main():
       submit_condor_jobs(
         os.path.join(condor_base_dir, merge_kind),
         merge_jobs,
+        input_file_sizes,
         args.preserve_input_compression,
         args.hadd_files_per_pass,
         args.hadd_workers,
+        redirector,
+        stage_url_base,
       )
     return
 
   input_files = [input_file for job in jobs for input_file in job[-1]]
-  job_input_sizes = {job[5]: sum(os.path.getsize(input_file) for input_file in job[-1]) for job in jobs}
+  job_input_sizes = {job[5]: sum(input_file_sizes[input_file] for input_file in job[-1]) for job in jobs}
   output_expected_sizes = {}
   for _, _, merge_jobs in jobs_by_kind:
-    contains_trees = contains_top_level_tree(merge_jobs[0][-1][0])
+    contains_trees = contains_top_level_tree(merge_jobs[0][-1][0], redirector)
     for job in merge_jobs:
       output_expected_sizes[job[5]] = (
-        job_input_sizes[job[5]] if contains_trees else max(os.path.getsize(input_file) for input_file in job[-1])
+        job_input_sizes[job[5]] if contains_trees else max(input_file_sizes[input_file] for input_file in job[-1])
       )
   expected_output_size = sum(output_expected_sizes.values())
   peak_input_size = sum(max(job_input_sizes[job[5]] for job in merge_jobs) for _, _, merge_jobs in jobs_by_kind)
@@ -1032,6 +1172,16 @@ def main():
       f"Using local merge scratch: {scratch_root} ({format_file_size(required_scratch_bytes)} estimated requirement)"
     )
   else:
+    # Remote outputs require scratch; writing an LFN locally does not publish it.
+    remote_outputs = [job[5] for job in jobs if stage_dest_url(job[5], stage_url_base) is not None]
+    if remote_outputs:
+      raise RuntimeError(
+        f"{len(remote_outputs)} merge output(s) publish to remote storage (e.g. {remote_outputs[0]}), "
+        f"which requires local scratch to merge into first, but no scratch location has "
+        f"{format_file_size(required_scratch_bytes)} free "
+        f"(SCRATCH_SPACE_FACTOR={SCRATCH_SPACE_FACTOR} x {format_file_size(peak_input_size)} peak input). "
+        f"Set TMPDIR to a larger filesystem, or merge fewer files per output with -n."
+      )
     info("Local scratch is unavailable or too small; merging in the output directory")
   info(f"Using up to {args.hadd_workers} hadd worker processes per merge")
 
@@ -1056,6 +1206,8 @@ def main():
           args.hadd_workers,
           args.show_hadd_output,
           scratch_root,
+          redirector,
+          stage_url_base,
         )
         for _, _, merge_jobs in jobs_by_kind
       ]
