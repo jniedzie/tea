@@ -367,8 +367,10 @@ def format_python_tables(
   insert_fmt_guards: bool = True,
 ) -> tuple[str, int]:
   newline = "\r\n" if "\r\n" in source else "\n"
-  had_final_newline = source.endswith("\n")
-  lines = source.splitlines()
+  had_final_newline = source.endswith(newline)
+  lines = source.split(newline)
+  if had_final_newline:
+    lines.pop()
   groups = find_groups(lines, minimum_rows, multiline_string_lines(source))
   statements: list[dict[str, object]] = []
 
@@ -418,7 +420,11 @@ def process_file(path: Path, *, check: bool, show_diff: bool) -> bool:
   if formatted == source:
     return False
 
-  ast.parse(formatted, filename=str(path))
+  original_tree = ast.parse(source, filename=str(path))
+  formatted_tree = ast.parse(formatted, filename=str(path))
+  if ast.dump(original_tree, include_attributes=False) != ast.dump(formatted_tree, include_attributes=False):
+    raise ValueError("Formatting would change the Python syntax tree")
+
   if show_diff:
     sys.stdout.writelines(
       difflib.unified_diff(
@@ -450,7 +456,7 @@ def main(argv: list[str] | None = None) -> int:
       continue
     try:
       changed |= process_file(path, check=args.check, show_diff=args.diff)
-    except (OSError, SyntaxError, UnicodeError, tokenize.TokenError) as error:
+    except (OSError, SyntaxError, UnicodeError, ValueError, tokenize.TokenError) as error:
       failed = True
       print(f"Could not format {path}: {error}", file=sys.stderr)
   return 1 if failed or (args.check and changed) else 0
