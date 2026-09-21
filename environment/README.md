@@ -66,3 +66,40 @@ indentation that Ruff cannot parse; Ruff remains enabled for diagnostics. A
 settings file that uses JSON comments is left unchanged with a warning because
 rewriting JSON-with-comments safely would risk losing user formatting or
 comments.
+
+### Python table formatting
+
+From the `tea` repository root, align a configuration table with:
+
+```sh
+python scripts/format_python_tables.py path/to/config.py
+python scripts/format_python_tables.py --check --diff path/to/config.py
+```
+
+The script requires Python 3.9 or newer. Pass explicit Python file paths; it
+does not search directories. It only aligns recognized tuple/call tables and
+adds `# fmt: off/on` guards so subsequent formatting preserves the columns.
+It does not run Autopep8 or Ruff itself. The pre-commit configuration runs
+table alignment first, followed by Ruff for the rest of the file.
+
+The table hook uses a pre-commit-managed Python 3.12 environment, matching
+the formatting CI job. Activate the Tea environment before running
+`pre-commit run --all-files` so its Python 3.12 interpreter is available.
+Pre-commit creates the hook environment but does not install Python itself.
+Install the commit hook once per checkout with `pre-commit install`.
+
+VS Code uses the recommended Microsoft Autopep8 extension by default. For
+table alignment on save as well, install the optional
+[Tuple Table Formatter VSIX](https://github.com/jniedzie/tuple-table-formatter/releases/tag/v0.4.0)
+and then set `editor.defaultFormatter` inside `[python]` to
+`jniedzie.tuple-table-formatter` in the workspace settings. The extension is
+distributed as a VSIX, so adding its ID to Marketplace recommendations would
+not install it. On Remote SSH, install it in the remote extension host.
+The old `local.tuple-table-formatter` ID belongs to the private prototype.
+
+The generated settings configure this optional extension to align tables
+with Tea's Python, then run Autopep8 with the existing `autopep8.args`.
+It can also use Ruff by setting `tupleTableFormatter.backend` to `ruff`;
+with an empty `tupleTableFormatter.executable`, it uses Tea's `ruff.path`.
+The extension's `none` backend only aligns tables. If you rerun Tea's VS Code
+configuration helper, reapply your optional default formatter selection.

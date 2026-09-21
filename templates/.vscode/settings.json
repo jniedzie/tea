@@ -23,6 +23,9 @@
     "--max-line-length",
     "120"
   ],
+  "tupleTableFormatter.backend": "autopep8",
+  "tupleTableFormatter.executable": "",
+  "tupleTableFormatter.pythonExecutable": "@TEA_ENV_PREFIX@/bin/python",
   "C_Cpp.clang_format_path": "@TEA_ENV_PREFIX@/bin/clang-format",
   "C_Cpp.formatting": "clangFormat",
   "C_Cpp.clang_format_style": "file",

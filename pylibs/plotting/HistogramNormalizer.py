@@ -15,6 +15,11 @@ class NormalizationType(Enum):
 class HistogramNormalizer:
   def __init__(self, config):
     self.config = config
+    # Keep the files opened while collecting normalization metadata.  Plotting
+    # configurations commonly live on network filesystems, where opening the
+    # same ROOT file a second time is expensive (and was previously done by
+    # the plotter immediately after this constructor returns).
+    self.input_files = {}
 
     # Check if any of histograms in the config has NormalizationType different than none or to_one:
     normalize_hists = False
@@ -138,7 +143,10 @@ class HistogramNormalizer:
 
     for sample in self.config.samples:
       try:
-        file = TFile.Open(sample.file_path, "READ")
+        file = self.input_files.get(sample.name)
+        if file is None:
+          file = TFile.Open(sample.file_path, "READ")
+          self.input_files[sample.name] = file
       except OSError:
         error(f"Couldn't open file {sample.file_path}")
         continue
