@@ -4,12 +4,16 @@ from ROOT import TObject, gStyle
 import ctypes
 import math
 import ROOT
+from typing import Any
 
 
 class Styler:
   mainXAxisTitleOffset = 1.15
   legacyMainXAxisTitleOffset = 1.7
   ratioXAxisTitleOffset = 1.0
+  colorbarTitleOffset = 1.5
+  minimum2DRightMargin = 0.18
+  minimum2DRightMarginPixels = 140
 
   def __init__(self, config):
     self.config = config
@@ -78,6 +82,12 @@ class Styler:
       raise ValueError("top and bottom plot margins must sum to less than 1")
     pad.SetBottomMargin(bottom_margin)
     pad.SetTopMargin(top_margin)
+
+  def setup_2d_pad(self, pad: Any) -> None:
+    minimum_margin = self.minimum2DRightMargin
+    if pad.GetWw() > 0:
+      minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / float(pad.GetWw()))
+    pad.SetRightMargin(max(self.rightMargin, minimum_margin))
 
   def __setupPadDefaults(self, pad):
     pad.SetLeftMargin(self.leftMargin)
@@ -549,7 +559,7 @@ class Styler:
       plot.GetZaxis().SetTitle(hist.z_label)
       plot.GetZaxis().SetTitleFont(label_font)
       plot.GetZaxis().SetTitleSize(label_size)
-      plot.GetZaxis().SetTitleOffset(1.3)
+      plot.GetZaxis().SetTitleOffset(self.colorbarTitleOffset)
       plot.GetZaxis().CenterTitle()
       plot.GetZaxis().SetLabelFont(label_font)
       plot.GetZaxis().SetLabelSize(label_size)

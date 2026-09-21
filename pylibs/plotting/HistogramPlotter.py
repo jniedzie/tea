@@ -534,8 +534,7 @@ class HistogramPlotter:
       title = hist.getOutputName() + "_" + sample.name
       canvas = TCanvas(title, title, canvas_size[0], canvas_size[1])
       canvas.cd()
-      if self.styler.plotMargins is None:
-        canvas.SetRightMargin(0.14)
+      self.styler.setup_2d_pad(canvas)
       if getattr(self.config, "show_grid_2D", False):
         canvas.SetGridx(True)
         canvas.SetGridy(True)
