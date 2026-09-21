@@ -36,37 +36,13 @@ samples = [
 
 output_path = "../plots_large_stat/"
 
+# fmt: off
 histograms = (
-  #            name      title     logx   logy    norm_type                  rebin xmin xmax ymin ymax  xlabel         ylabel
-  Histogram(
-    "Dimuon_minvAfterCut",
-    "",
-    False,
-    True,
-    NormalizationType.to_lumi,
-    5,
-    0,
-    100,
-    1e-1,
-    1e2,
-    "m_{inv}^{#mu#mu} [GeV]",
-    "# events",
-  ),
-  Histogram(
-    "Dimuon_logLxy",
-    "",
-    False,
-    True,
-    NormalizationType.to_lumi,
-    3,
-    -4,
-    3,
-    1e-1,
-    1e4,
-    "log(L_{xy}^{#mu#mu} [cm])",
-    "# events",
-  ),
+  # name                   title  logx   logy  norm_type                  rebin  xmin  xmax  ymin  ymax  xlabel                       ylabel
+  Histogram("Dimuon_minvAfterCut", ""   , False, True, NormalizationType.to_lumi,     5,    0,  100, 1e-1,  1e2, "m_{inv}^{#mu#mu} [GeV]"   , "# events"),
+  Histogram("Dimuon_logLxy"      , ""   , False, True, NormalizationType.to_lumi,     3,   -4,    3, 1e-1,  1e4, "log(L_{xy}^{#mu#mu} [cm])", "# events"),
 )
+# fmt: on
 
 legends = {
   SampleType.background: Legend(0.5, 0.85, 0.78, 0.90, "f"),
