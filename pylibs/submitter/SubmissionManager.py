@@ -5,9 +5,11 @@ import ast
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
-import ROOT
 from Logger import info, warn, error, fatal
-from teaHelpers import get_facility
+from teaHelpers import get_facility, ensure_root_compiler_environment
+
+ensure_root_compiler_environment()
+import ROOT
 
 
 class SubmissionSystem(Enum):

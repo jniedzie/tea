@@ -1,7 +1,26 @@
 import re
 import inspect
 import socket
+import os
+from pathlib import Path
+import sys
 from Logger import error, warn
+
+
+def ensure_root_compiler_environment():
+  """Restore the Conda compiler sysroot for partially activated Linux shells.
+
+  ROOT's interpreter needs system headers even when executing a compiled app.
+  Set this before importing ROOT, and inherit it in submitted local children.
+  Explicit compiler settings and non-Conda ROOT installations are untouched.
+  """
+  if sys.platform != "linux" or os.environ.get("CONDA_BUILD_SYSROOT"):
+    return
+  prefix = Path(os.environ.get("ROOTSYS") or os.environ.get("CONDA_PREFIX") or sys.prefix)
+  sysroot = prefix / "x86_64-conda-linux-gnu/sysroot"
+  if (prefix / "conda-meta").is_dir() and (sysroot / "usr/include/assert.h").is_file():
+    os.environ["CONDA_BUILD_SYSROOT"] = str(sysroot)
+    warn(f"Restored ROOT compiler sysroot: {sysroot}. Source tea/setup.sh for the full environment.")
 
 
 def get_year_from_samples(samples):

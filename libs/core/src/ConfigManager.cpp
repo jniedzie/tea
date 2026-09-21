@@ -59,8 +59,13 @@ ConfigManager::ConfigManager(std::string *const _configPath) {
     exit(1);
   }
 
-  PyRun_SimpleFile(pythonFile, configPath.c_str());
+  const int configStatus = PyRun_SimpleFile(pythonFile, configPath.c_str());
   fclose(pythonFile);
+  if (configStatus != 0) {
+    fatal() << "Python config failed: " << configPath << "; refusing a partial configuration" << endl;
+    Py_Finalize();
+    exit(1);
+  }
 
   pythonModule = PyImport_ImportModule("__main__");
   if (!pythonModule) {
