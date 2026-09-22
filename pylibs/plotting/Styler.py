@@ -325,8 +325,27 @@ class Styler:
 
     source_histograms = source_histograms or [source_histogram]
 
-    x_min = min(h.GetXaxis().GetXmin() for h in source_histograms)
-    x_max = max(h.GetXaxis().GetXmax() for h in source_histograms)
+    occupied_x_ranges = []
+    for source in source_histograms:
+      occupied_bins = [
+        bin_index
+        for bin_index in range(1, source.GetNbinsX() + 1)
+        if source.GetBinContent(bin_index) != 0
+      ]
+      if occupied_bins:
+        axis = source.GetXaxis()
+        occupied_x_ranges.append(
+          (axis.GetBinLowEdge(occupied_bins[0]), axis.GetBinUpEdge(occupied_bins[-1]))
+        )
+
+    # Histogram booking often reserves a broad diagnostic domain.  Frame the
+    # populated bins instead; an empty histogram still falls back to booking.
+    if occupied_x_ranges:
+      x_min = min(x_range[0] for x_range in occupied_x_ranges)
+      x_max = max(x_range[1] for x_range in occupied_x_ranges)
+    else:
+      x_min = min(h.GetXaxis().GetXmin() for h in source_histograms)
+      x_max = max(h.GetXaxis().GetXmax() for h in source_histograms)
     if hist.x_min is None or hist.x_max is None:
       if x_min <= 0 or x_max <= 0:
         padding = 0.05 * (x_max - x_min)

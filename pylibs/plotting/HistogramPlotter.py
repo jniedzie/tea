@@ -461,6 +461,11 @@ class HistogramPlotter:
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() == 0:
         continue
+
+      # A stacked total is required for the upper bound, but its lowest
+      # nonzero bin can be much larger than a visible component.  Include the
+      # components as well so logarithmic lower bounds do not hide them.
+      plotted_histograms.extend(item for item in stack.GetHists())
       stack_histograms = stack.GetStack()
       if stack_histograms and stack_histograms.GetSize() > 0:
         plotted_histograms.append(stack_histograms.Last())
