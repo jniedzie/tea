@@ -34,6 +34,7 @@ def install_root_warning_collector():
     namespace TeaRootWarnings {
       unsigned long empty_histogram_count = 0;
       unsigned long non_exact_rebin_count = 0;
+      unsigned long negative_stack_minimum_count = 0;
       ErrorHandlerFunc_t previous_handler = nullptr;
       bool installed = false;
 
@@ -48,6 +49,14 @@ def install_root_warning_collector():
         if (location && message && std::strstr(location, "::Rebin") &&
             std::strstr(message, "is not an exact divider of nbins=")) {
           ++non_exact_rebin_count;
+          return;
+        }
+
+        if (location && message &&
+            std::strcmp(location, "THStack::BuildStack") == 0 &&
+            std::strcmp(message,
+                        "Histograms with a negative minimum may produce wrong plots") == 0) {
+          ++negative_stack_minimum_count;
           return;
         }
 
@@ -75,6 +84,12 @@ def install_root_warning_collector():
         non_exact_rebin_count = 0;
         return count;
       }
+
+      unsigned long TakeNegativeStackMinimumCount() {
+        const auto count = negative_stack_minimum_count;
+        negative_stack_minimum_count = 0;
+        return count;
+      }
     }
     #endif
   """)
@@ -90,16 +105,21 @@ def collect_root_warnings():
 
   empty_count = int(ROOT.TeaRootWarnings.TakeEmptyHistogramCount())
   rebin_count = int(ROOT.TeaRootWarnings.TakeNonExactRebinCount())
+  negative_stack_count = int(ROOT.TeaRootWarnings.TakeNegativeStackMinimumCount())
 
   empty_message = "ROOT encountered an empty histogram (nbins <= 0; using one bin)."
   rebin_message = "ROOT rebinning group is not an exact divider of the histogram bins."
+  negative_stack_message = "ROOT THStack histograms had a negative minimum and may produce incorrect plots."
   warn_messages[empty_message] = warn_messages.get(empty_message, 0) + empty_count
   warn_messages[rebin_message] = warn_messages.get(rebin_message, 0) + rebin_count
+  warn_messages[negative_stack_message] = warn_messages.get(negative_stack_message, 0) + negative_stack_count
 
   if warn_messages[empty_message] == 0:
     del warn_messages[empty_message]
   if warn_messages[rebin_message] == 0:
     del warn_messages[rebin_message]
+  if warn_messages[negative_stack_message] == 0:
+    del warn_messages[negative_stack_message]
 
 
 def error(message):
