@@ -1,11 +1,92 @@
 """Stage-out helpers: URL derivation, atomic publish and the retry backoff."""
 
+from __future__ import annotations
+
 import os
 import statistics
+import subprocess
+from argparse import Namespace
+from pathlib import Path
 
+import condor_runner
 import pytest
-
 import teaHelpers
+
+
+def test_condor_runner_main_is_callable() -> None:
+  assert callable(condor_runner.main)
+
+
+def _condor_runner_args(tmp_path: Path, **overrides: object) -> Namespace:
+  input_files = tmp_path / "input_files.txt"
+  input_files.write_text("input.root\n")
+  args = Namespace(
+    app="analysis_app",
+    config="config",
+    file_index=0,
+    input_files_file_name=str(input_files),
+    output_trees_dir="",
+    output_hists_dir=str(tmp_path / "final"),
+    file_name="",
+    facility="default",
+    stage_url_base="",
+  )
+  for name, value in overrides.items():
+    setattr(args, name, value)
+  return args
+
+
+def _prepare_condor_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, args: Namespace) -> Path:
+  scratch_dir = tmp_path / "scratch"
+  scratch_dir.mkdir()
+  monkeypatch.setenv("_CONDOR_SCRATCH_DIR", str(scratch_dir))
+  monkeypatch.setattr(condor_runner, "get_args", lambda: (args, []))
+  monkeypatch.setattr(condor_runner.os, "system", lambda command: 0)
+  monkeypatch.setattr(condor_runner, "validate_root_file", lambda path: None)
+  return scratch_dir
+
+
+def test_condor_runner_stage_out_failure_returns_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+  args = _condor_runner_args(tmp_path)
+  _prepare_condor_runner(monkeypatch, tmp_path, args)
+  monkeypatch.setattr(condor_runner, "stage_preflight", lambda paths, facility, url_base: (True, "ready"))
+  monkeypatch.setattr(
+    condor_runner.subprocess,
+    "run",
+    lambda command_args, check: subprocess.CompletedProcess(command_args, returncode=0),
+  )
+
+  def failing_stage_output(local_path: str, final_path: str, facility: str, url_base: str | None) -> None:
+    raise RuntimeError("stage-out failed")
+
+  monkeypatch.setattr(condor_runner, "stage_output", failing_stage_output)
+
+  with pytest.raises(SystemExit) as exit_info:
+    condor_runner.main()
+
+  assert exit_info.value.code == 1
+
+
+def test_condor_runner_lfn_preflight_failure_stops_before_application(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  args = _condor_runner_args(tmp_path, output_hists_dir="/store/user/x/results")
+  _prepare_condor_runner(monkeypatch, tmp_path, args)
+  monkeypatch.setattr(
+    condor_runner,
+    "stage_preflight",
+    lambda paths, facility, url_base: (False, "X509_USER_PROXY is not set"),
+  )
+
+  def unexpected_run(command_args: list[str], check: bool) -> None:
+    pytest.fail("the application ran after a fatal LFN preflight failure")
+
+  monkeypatch.setattr(condor_runner.subprocess, "run", unexpected_run)
+
+  with pytest.raises(SystemExit) as exit_info:
+    condor_runner.main()
+
+  assert exit_info.value.code == 1
 
 
 def test_dcache_url_from_bare_pnfs_path():
@@ -105,6 +186,30 @@ def test_stage_output_retries_until_the_transport_succeeds(tmp_path, monkeypatch
 
   assert len(attempts) == 3
   assert destination.read_text() == "payload"
+
+
+def test_each_output_has_an_independent_retry_sequence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+  sources = [tmp_path / "one.root", tmp_path / "two.root"]
+  destinations = [tmp_path / "final" / source.name for source in sources]
+  attempts = {str(source): 0 for source in sources}
+  for source in sources:
+    source.write_text(source.name)
+
+  def flaky_transport(local_path: str, stage_path: str) -> None:
+    attempts[local_path] += 1
+    if attempts[local_path] < 5:
+      raise RuntimeError("transient failure")
+    teaHelpers._transport_filesystem(local_path, stage_path)
+
+  monkeypatch.setattr(teaHelpers, "TRANSPORTS", {"default": flaky_transport})
+  monkeypatch.setattr(teaHelpers, "GFAL_COPY_RETRY_BASE_WAIT_SECONDS", 0)
+  monkeypatch.setattr(teaHelpers, "GFAL_COPY_RETRY_EXPO_HALF_LIFE_SECONDS", 1e-6)
+
+  for source, destination in zip(sources, destinations):
+    teaHelpers.stage_output(str(source), str(destination), "default")
+
+  assert attempts == {str(source): 5 for source in sources}
+  assert [destination.read_text() for destination in destinations] == ["one.root", "two.root"]
 
 
 def test_backoff_stays_within_the_bounds_the_retry_comment_claims():
