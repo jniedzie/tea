@@ -32,7 +32,7 @@ histParams2D = (
   ("hit_xy", 100, -20, 20, 100, -20, 20, ""),
 )
 
-# define 2D profiles. Fill these manually with Fill(name, x, y, value).
+# define 2D profiles. Fill these manually with Fill(name, x, y, profileValue).
 profile2DParams = (
   ("response", 20, 0, 100, 10, -2.5, 2.5, "profiles"),
 )

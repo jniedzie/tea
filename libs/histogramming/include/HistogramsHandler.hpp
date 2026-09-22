@@ -18,8 +18,8 @@ class HistogramsHandler {
   void SetEventWeights(std::map<std::string, float> weights);
 
   void Fill(std::string name, double value);
-  void Fill(std::string name, double valueX, double valueY);
-  void Fill(std::string name, double valueX, double valueY, double value);
+  void Fill(std::string name, double x, double y);
+  void Fill(std::string name, double x, double y, double profileValue);
   void FillUnweighted(std::string name, double value);
 
   void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }

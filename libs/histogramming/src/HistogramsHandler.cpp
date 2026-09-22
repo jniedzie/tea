@@ -205,10 +205,10 @@ void HistogramsHandler::Fill(string name, double value) {
   }
 }
 
-void HistogramsHandler::Fill(string name, double valueX, double valueY) {
+void HistogramsHandler::Fill(string name, double x, double y) {
   double weight = eventWeights["default"];
   CheckHistogram2D(name, "");
-  histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
+  histograms2D[make_pair(name, "")]->Fill(x, y, weight);
 
   RemoveFromUnfilled(name);
 
@@ -216,14 +216,14 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY) {
   for (auto &[sfName, weight] : eventWeights) {
     if (sfName == "default") { continue; }
     CheckHistogram2D(name, sfName);
-    histograms2D[make_pair(name, sfName)]->Fill(valueX, valueY, weight);
+    histograms2D[make_pair(name, sfName)]->Fill(x, y, weight);
   }
 }
 
-void HistogramsHandler::Fill(string name, double valueX, double valueY, double value) {
+void HistogramsHandler::Fill(string name, double x, double y, double profileValue) {
   double weight = eventWeights["default"];
   CheckProfile2D(name, "");
-  profiles2D[make_pair(name, "")]->Fill(valueX, valueY, value, weight);
+  profiles2D[make_pair(name, "")]->Fill(x, y, profileValue, weight);
 
   RemoveFromUnfilled(name);
 
@@ -231,7 +231,7 @@ void HistogramsHandler::Fill(string name, double valueX, double valueY, double v
   for (auto &[sfName, variationWeight] : eventWeights) {
     if (sfName == "default") { continue; }
     CheckProfile2D(name, sfName);
-    profiles2D[make_pair(name, sfName)]->Fill(valueX, valueY, value, variationWeight);
+    profiles2D[make_pair(name, sfName)]->Fill(x, y, profileValue, variationWeight);
   }
 }
 

@@ -27,7 +27,7 @@ histParams2D = (
   ("hit_xy", 100  , -20 , 20  , 100 , -20 , 20  ,   ""),
 )
 
-# define regular and variable-bin 2D profiles (fill these manually with Fill(name, x, y, value))
+# define regular and variable-bin 2D profiles (fill these manually with Fill(name, x, y, profileValue))
 profile2DParams = (
 #  name        bins_x xmin xmax bins_y ymin ymax dir
   ("response", 20,     0,   100, 10,    -2.5, 2.5, "profiles"),

@@ -554,6 +554,11 @@ class Styler:
       label_size = self.labelFontSize / float(pad.GetWh())
     label_font = 42
 
+    if hist.log_z and any(limit is not None and limit <= 0 for limit in (hist.z_min, hist.z_max)):
+      raise ValueError(f"Logarithmic z-axis limits must be positive for plot '{hist.getName()}'")
+    if hist.z_min is not None and hist.z_max is not None and hist.z_min >= hist.z_max:
+      raise ValueError(f"z-axis minimum must be smaller than maximum for plot '{hist.getName()}'")
+
     if hist.z_min is not None:
       plot.SetMinimum(hist.z_min)
     if hist.z_max is not None:
@@ -604,6 +609,8 @@ class Styler:
 
     x_range = self.__displayed2DAxisRange(plot.GetXaxis())
     y_range = self.__displayed2DAxisRange(plot.GetYaxis())
+    if hist.log_x and (x_range[0] <= 0 or y_range[0] <= 0):
+      raise ValueError(f"Comparable log axes require positive x/y ranges for plot '{hist.getName()}'")
     if not all(math.isclose(x, y, rel_tol=1e-9, abs_tol=1e-12) for x, y in zip(x_range, y_range)):
       raise ValueError(
         f"Comparable axes require equal x/y ranges for plot '{hist.getName()}': x={x_range}, y={y_range}"

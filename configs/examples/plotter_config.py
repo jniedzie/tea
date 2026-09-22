@@ -96,15 +96,22 @@ histograms = (
 
 histograms2D = (
   # Set comparable_axes=True when x and y use equal ranges and should share a square scale.
-  #           name              title                rebin  xmin    xmax       ymin   ymax     zmin zmax xlabel               ylabel                        zlabel
-  # Histogram2D("hit_xy",         "hit_xy"          , 1, 1, -15     , 15      , -15   , 15    , 0,  1e5, "x"             , "y"                         , "Counts"),
-  # Histogram2D("time_vs_toa",    "time_vs_toa"     , 1, 1, -10     , 100     , -10   , 2000  , 0,  1e3, "Time (ns)"     , "Time of Arrival (ToA)"     , "Counts"),
+  # Histogram2D(
+  #   name="hit_xy", title="hit_xy", x_rebin=1, y_rebin=1,
+  #   x_min=-15, x_max=15, y_min=-15, y_max=15, z_min=0, z_max=1e5,
+  #   x_label="x", y_label="y", z_label="Counts", comparable_axes=True,
+  # ),
+  # Histogram2D(
+  #   name="time_vs_toa", title="time_vs_toa", x_rebin=1, y_rebin=1,
+  #   x_min=-10, x_max=100, y_min=-10, y_max=2000, z_min=0, z_max=1e3,
+  #   x_label="Time (ns)", y_label="Time of Arrival (ToA)", z_label="Counts",
+  # ),
 )
 
 profiles2D = (
   # Profile2D(
-  #   "profiles/response", "Response", False, False, False, 1, 1,
-  #   None, None, None, None, None, None, "x", "y", "Mean response",
+  #   name="profiles/response", title="Response", x_rebin=1, y_rebin=1,
+  #   x_label="x", y_label="y", z_label="Mean response",
   # ),
 )
 

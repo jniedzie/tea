@@ -219,6 +219,21 @@ def main() -> None:
   else:
     raise AssertionError("Mismatched comparable log settings were accepted")
 
+  zero_origin_log_axes = Histogram2D(name="zero_origin_log", log_x=True, log_y=True, comparable_axes=True)
+  zero_origin_log_root = ROOT.TH2D("zero_origin_log", "", 2, 0.0, 2.0, 4, 0.0, 2.0)
+  try:
+    plotter.styler.getComparable2DAxisRange(zero_origin_log_root, zero_origin_log_axes)
+  except ValueError as exception:
+    if "positive x/y ranges" not in str(exception):
+      raise
+  else:
+    raise AssertionError("Comparable log axes starting at zero were accepted")
+
+  positive_log_axes = Histogram2D(name="positive_log", log_x=True, log_y=True, comparable_axes=True)
+  positive_log_root = ROOT.TH2D("positive_log", "", 2, 1.0, 100.0, 4, 1.0, 100.0)
+  if plotter.styler.getComparable2DAxisRange(positive_log_root, positive_log_axes) != (1.0, 100.0):
+    raise AssertionError("Valid positive comparable log axes were rejected")
+
   output_paths = (
     output_dir / "counts_test.png",
     output_dir / "profiles_response_test.png",
