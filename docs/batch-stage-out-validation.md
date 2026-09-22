@@ -26,7 +26,7 @@ Pytest is part of the locked environment
 
 ```bash
 cd <analysis>/bin
-python3 ecp_batch.py hist --group bkg --year 2024 --condor --dry
+python3 ecp_batch.py hist --group bkg --year 2024 --condor --dry --save_logs
 ```
 
 Then inspect the two generated files that the submission would have used:
@@ -79,7 +79,7 @@ difference in the planned batches is a regression.
 source ~/cern.sh
 voms
 cd <analysis>/bin
-python3 ecp_batch.py hist --group bkg --year 2024 --condor --devel
+python3 ecp_batch.py hist --group bkg --year 2024 --condor --devel --save_logs
 ```
 
 When the job finishes, read its `.out` (under `output/<id>/`) and check the three things
@@ -88,9 +88,9 @@ file** — see the note after the list.
 
 1. `Stage-out pre-flight passed for facility 'vub': gfal-copy stage-out ready for N output(s)`
    — if instead you see _pre-flight failed_, read the reason: it names the missing piece
-   (`gfal-copy` not on PATH, `X509_USER_PROXY` unset, proxy file unreadable). The job then
-   ran in direct-write mode, which is the pre-PR behaviour, so the output is still valid —
-   but staging did not happen and steps 2-3 below will show nothing.
+   (`gfal-copy` not on PATH, `X509_USER_PROXY` unset, proxy file unreadable). For an LFN
+   destination this failure is fatal: the application does not run, because writing an
+   LFN as a local `/store/...` path cannot produce a valid remote output.
 2. `Executing command_args=[...]` with `--output_hists_path $_CONDOR_SCRATCH_DIR/hists/...`
    (and `--output_trees_path .../trees/...` for a skim). The app must be writing into
    scratch, not into `/pnfs`.
@@ -121,23 +121,18 @@ file** — see the note after the list.
 > and the destination file's mtime, or from a deliberately-failing job (step 3b), which
 > exits in seconds.
 
-To watch the atomic publish itself, poll the destination directory while the job is in its
-final seconds:
+GFAL writes an LFN or dCache destination directly to its remote URL. It does not create a
+local sibling `.stage-*` path and then call `os.replace`, so no `.stage-*` file is expected
+for the VUB GFAL path. Confirm the final file instead:
 
 ```bash
-watch -n1 'ls -la /pnfs/.../results/<sample>/'
+gfal-stat davs://<door>:2880/<destination>
 ```
 
-Expected: a `.<basename>.stage-<32 hex>` file appears, then disappears as the final name
-appears. **Not seeing it is the common case and proves nothing** — for a single `--devel`
-job the copy and the rename are typically well under a second apart, so a 1 s poll usually
-shows only the final name appearing. The check that actually matters is the *negative* one
-below; treat catching the intermediate name as a bonus.
-
-A `.stage-*` file that is still there after the job left the queue means the rename failed
-— capture it and the job's `.out` before deleting it; POSIX rename on dCache is the one
-assumption in this design that only VUB can confirm (the fallback would be `gfal-rename`).
-Sweep for leftovers across the whole tree rather than eyeballing one directory:
+The `.<basename>.stage-<32 hex>` temporary name and atomic `os.replace` apply only when
+publishing through a filesystem path. For such destinations, a leftover temporary file
+after the job exits means the filesystem publication was interrupted or its rename
+failed. Sweep for unexpected leftovers when validating that path:
 
 ```bash
 find <results> -name '.*stage-*'    # expected: no output
@@ -159,12 +154,9 @@ Note `GetEnv = True` in the submit file, so the job inherits the submitting shel
 environment: editing the probe is not enough on its own if `X509_USER_PROXY` is exported
 where you submit from. Put a literal `unset X509_USER_PROXY` after the probe block.
 
-Expected in the `.out`: the `Stage-out pre-flight failed ... X509_USER_PROXY is not set`
-warning, then normal direct-write execution and exit 0 — the `Executing command_args=[...]`
-line now carries the **final** paths rather than `$_CONDOR_SCRATCH_DIR` ones, which is the
-direct-write mode itself and the clearest single check that the degrade happened. The same
-buffering note applies, so grep for both lines rather than expecting them near the top.
-What must **not** happen: the job running to completion and then losing its output.
+Expected in the `.out`: `Stage-out pre-flight failed ... X509_USER_PROXY is not set`, with
+text saying that the runner refuses to run. The job exits nonzero before the application
+starts, so there must be no `Executing command_args=[...]` line and no output file.
 
 This is also the cheapest way to confirm the pre-flight is early: with no credential the
 whole job is over in well under a minute, so it cannot have spent hours before noticing.
@@ -178,7 +170,7 @@ is needed to confirm nothing regressed:
 
 ```bash
 cd <analysis>/bin
-python3 ecp_batch.py hist --group bkg --year 2024 --condor --devel
+python3 ecp_batch.py hist --group bkg --year 2024 --condor --devel --save_logs
 ```
 
 Checks:
@@ -212,8 +204,7 @@ the prefix override is wrong, not that staging is broken.
 
 | Symptom                                                                                    | Meaning                                                                                                                                                                                  |
 | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-flight failed ...` at job start                                                       | Staging is off for that job; it wrote directly to the final path, exactly as before this work. Fix the reason named in the message.                                                      |
-| `stage-out attempt N/5 failed ...; retrying in Xs`                                         | Transient storage error. The wait is 20 s plus an exponential jitter (median ~80 s), so ~1500 concurrent jobs do not retry in lockstep.                                                  |
-| `stage-out budget of 1800 s exhausted`                                                     | The job spent its whole staging budget on retries; it exits 1 and publishes nothing rather than being killed for wall time mid-write.                                                    |
+| `pre-flight failed ...` at job start                                                       | For an LFN destination this is fatal and the application does not run. A non-LFN destination can fall back to direct filesystem writing. Fix the reason named in the message.            |
+| `stage-out attempt N/5 failed ...; retrying in Xs`                                         | Transient storage error. Each output independently receives five attempts. The wait is 20 s plus an exponential jitter (median ~80 s), so ~1500 concurrent jobs do not retry in lockstep. |
 | `Failed to stage ... -> ...` then `Stage-out failed for: ... (outputs that did land: ...)` | Final failure after retries. Deliberately no direct-write fallback: writing to the final path after a failed transport is the corrupt-file bug this exists to prevent. Resubmit the job. |
-| A `.stage-*` file left at the destination                                                  | The transport succeeded and `os.replace` failed, or the job was killed between the two. Safe to delete; report it, because it questions the POSIX-rename assumption.                     |
+| A `.stage-*` file left at a filesystem destination                                         | Filesystem publication was interrupted or `os.replace` failed. GFAL writes directly to the remote destination and does not use these temporary names.                                  |

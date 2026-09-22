@@ -20,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 
-from teaHelpers import begin_stage_budget, is_lfn, stage_output, stage_preflight, validate_root_file
+from teaHelpers import is_lfn, stage_output, stage_preflight, validate_root_file
 
 
 def get_args():
@@ -204,9 +204,6 @@ def main():
     returncode = result.returncode
 
     if returncode == 0 and staged_outputs:
-      # One wall-clock budget for every output of this job, so trees + hists cannot compound
-      # their retries into a wall-time kill.
-      begin_stage_budget()
       published = []
       failed = []
       for scratch_path, final_path in staged_outputs:
