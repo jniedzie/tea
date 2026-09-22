@@ -24,6 +24,7 @@
 #include "TMath.h"
 #include "TMatrixD.h"
 #include "TPolyLine.h"
+#include "TProfile2D.h"
 #include "TROOT.h"
 #include "TRandom.h"
 #include "TRotation.h"
@@ -165,6 +166,18 @@ struct IrregularHistogramParams2D {
   std::string collection, variable, directory;
   std::vector<float> binEdgesX;
   std::vector<float> binEdgesY;
+};
+
+struct Profile2DParams {
+  std::string variable, directory;
+  int nBinsX, nBinsY;
+  double minX, maxX, minY, maxY;
+};
+
+struct IrregularProfile2DParams {
+  std::string variable, directory;
+  std::vector<double> binEdgesX;
+  std::vector<double> binEdgesY;
 };
 
 inline const std::string kEventLevelBranchCollection = "Event";

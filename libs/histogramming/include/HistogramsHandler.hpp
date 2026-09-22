@@ -18,13 +18,16 @@ class HistogramsHandler {
   void SetEventWeights(std::map<std::string, float> weights);
 
   void Fill(std::string name, double value);
-  void Fill(std::string name, double valueX, double valueY);
+  void Fill(std::string name, double x, double y);
+  void Fill(std::string name, double x, double y, double profileValue);
   void FillUnweighted(std::string name, double value);
 
   void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
   TH1D *GetHistogram1D(HistNames names) { return histograms1D[names]; }
   std::map<HistNames, TH1D *> GetHistograms1D() { return histograms1D; }
   std::map<HistNames, TH2D *> GetHistograms2D() { return histograms2D; }
+  TProfile2D *GetProfile2D(HistNames names) { return profiles2D[names]; }
+  std::map<HistNames, TProfile2D *> GetProfiles2D() { return profiles2D; }
   void SetHistogramLabels(std::string name, std::map<int, std::string> labels);
   void SaveHistograms();
   void Print();
@@ -32,6 +35,7 @@ class HistogramsHandler {
  private:
   std::map<HistNames, TH1D *> histograms1D;
   std::map<HistNames, TH2D *> histograms2D;
+  std::map<HistNames, TProfile2D *> profiles2D;
   std::map<std::string, std::string> histogramDirectories;
   std::vector<std::string> unfilledHistograms;
 
@@ -39,6 +43,8 @@ class HistogramsHandler {
   std::map<std::string, IrregularHistogramParams> irregularHistParams;
   std::map<std::string, HistogramParams2D> histParams2D;
   std::map<std::string, IrregularHistogramParams2D> irregularHistParams2D;
+  std::map<std::string, Profile2DParams> profile2DParams;
+  std::map<std::string, IrregularProfile2DParams> irregularProfile2DParams;
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
   std::map<std::string, float> eventWeights;
@@ -47,8 +53,10 @@ class HistogramsHandler {
   void RemoveFromUnfilled(std::string name);
   void CheckHistogram(std::string name, std::string directory);
   void CheckHistogram2D(std::string name, std::string directory);
+  void CheckProfile2D(std::string name, std::string variation);
   void SetupHistograms();
   void SetupSFvariationHistograms();
+  void SetupProfile2DVariations();
 
   template <typename THist>
   void SaveHistogram(HistNames name, THist *hist, TFile *outputFile);

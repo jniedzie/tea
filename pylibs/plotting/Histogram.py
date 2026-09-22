@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from copy import deepcopy
 from array import array
 from itertools import count
-from typing import Optional
+from typing import Any, Optional
 import ROOT
 
 from Sample import SampleType
@@ -148,6 +148,7 @@ class Histogram2D:
   z_label: str = ""
   suffix: str = ""
   norm_scale: float = 1.0
+  comparable_axes: bool = False
 
   def __post_init__(self):
     self.hist = None
@@ -187,3 +188,21 @@ class Histogram2D:
 
   def getName(self):
     return self.name + self.suffix
+
+  def getOutputName(self) -> str:
+    return self.getName().replace("/", "_")
+
+
+@dataclass
+class Profile2D(Histogram2D):
+  norm_type: NormalizationType = field(default=NormalizationType.none, init=False)
+  norm_scale: float = field(default=1.0, init=False)
+
+  def load(self, input_file: Any) -> None:
+    super().load(input_file)
+
+    if self.hist is None or type(self.hist) is ROOT.TObject:
+      return
+    if not self.hist.InheritsFrom("TProfile2D"):
+      error(f"Object is not a TProfile2D: {self.name} in file {input_file.GetName()}")
+      self.hist = None

@@ -4,12 +4,16 @@ from ROOT import TObject, gStyle
 import ctypes
 import math
 import ROOT
+from typing import Any, Optional
 
 
 class Styler:
   mainXAxisTitleOffset = 1.15
   legacyMainXAxisTitleOffset = 1.7
   ratioXAxisTitleOffset = 1.0
+  colorbarTitleOffset = 1.5
+  minimum2DRightMargin = 0.18
+  minimum2DRightMarginPixels = 140
 
   def __init__(self, config):
     self.config = config
@@ -78,6 +82,37 @@ class Styler:
       raise ValueError("top and bottom plot margins must sum to less than 1")
     pad.SetBottomMargin(bottom_margin)
     pad.SetTopMargin(top_margin)
+
+  def setup_2d_pad(self, pad: Any, square_frame: bool = False) -> None:
+    margins = self.plotMargins or {}
+    left_margin = margins.get("left", self.leftMargin)
+    bottom_margin = margins.get("bottom", self.bottomMargin)
+    top_margin = margins.get("top", self.topMargin)
+    minimum_margin = self.minimum2DRightMargin
+    if pad.GetWw() > 0:
+      minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / float(pad.GetWw()))
+    right_margin = max(margins.get("right", self.rightMargin), minimum_margin)
+
+    if left_margin + right_margin >= 1 or top_margin + bottom_margin >= 1:
+      raise ValueError("2D plot margins leave no drawable frame")
+
+    pad.SetLeftMargin(left_margin)
+    pad.SetBottomMargin(bottom_margin)
+    pad.SetTopMargin(top_margin)
+    pad.SetRightMargin(right_margin)
+
+    if not square_frame or pad.GetWw() <= 0 or pad.GetWh() <= 0:
+      return
+
+    frame_width = pad.GetWw() * (1.0 - pad.GetLeftMargin() - pad.GetRightMargin())
+    frame_height = pad.GetWh() * (1.0 - pad.GetTopMargin() - pad.GetBottomMargin())
+    if frame_width > frame_height:
+      pad.SetRightMargin(pad.GetRightMargin() + (frame_width - frame_height) / pad.GetWw())
+    elif frame_height > frame_width:
+      pad.SetTopMargin(pad.GetTopMargin() + (frame_height - frame_width) / pad.GetWh())
+
+    if pad.GetLeftMargin() + pad.GetRightMargin() >= 1 or pad.GetTopMargin() + pad.GetBottomMargin() >= 1:
+      raise ValueError("2D plot margins leave no drawable frame")
 
   def __setupPadDefaults(self, pad):
     pad.SetLeftMargin(self.leftMargin)
@@ -519,9 +554,14 @@ class Styler:
       label_size = self.labelFontSize / float(pad.GetWh())
     label_font = 42
 
-    if hist.z_min is not None and (hist.z_min > 0):
+    if hist.log_z and any(limit is not None and limit <= 0 for limit in (hist.z_min, hist.z_max)):
+      raise ValueError(f"Logarithmic z-axis limits must be positive for plot '{hist.getName()}'")
+    if hist.z_min is not None and hist.z_max is not None and hist.z_min >= hist.z_max:
+      raise ValueError(f"z-axis minimum must be smaller than maximum for plot '{hist.getName()}'")
+
+    if hist.z_min is not None:
       plot.SetMinimum(hist.z_min)
-    if hist.z_max is not None and (hist.z_max > 0):
+    if hist.z_max is not None:
       plot.SetMaximum(hist.z_max)
 
     try:
@@ -534,6 +574,8 @@ class Styler:
       plot.GetXaxis().SetTitleOffset(1.0)
       plot.GetXaxis().SetLabelFont(label_font)
       plot.GetXaxis().SetLabelSize(label_size)
+      if hist.comparable_axes:
+        plot.GetXaxis().SetNdivisions(505)
 
       if hist.y_min is not None and hist.y_max is not None:
         plot.GetYaxis().SetRangeUser(hist.y_min, hist.y_max)
@@ -549,7 +591,7 @@ class Styler:
       plot.GetZaxis().SetTitle(hist.z_label)
       plot.GetZaxis().SetTitleFont(label_font)
       plot.GetZaxis().SetTitleSize(label_size)
-      plot.GetZaxis().SetTitleOffset(1.3)
+      plot.GetZaxis().SetTitleOffset(self.colorbarTitleOffset)
       plot.GetZaxis().CenterTitle()
       plot.GetZaxis().SetLabelFont(label_font)
       plot.GetZaxis().SetLabelSize(label_size)
@@ -558,6 +600,26 @@ class Styler:
     except Exception:
       warn("Couldn't set axes limits")
       return
+
+  def getComparable2DAxisRange(self, plot: Any, hist: Any) -> Optional[tuple[float, float]]:
+    if not hist.comparable_axes:
+      return None
+    if hist.log_x != hist.log_y:
+      raise ValueError(f"Comparable axes require matching x/y log settings for plot '{hist.getName()}'")
+
+    x_range = self.__displayed2DAxisRange(plot.GetXaxis())
+    y_range = self.__displayed2DAxisRange(plot.GetYaxis())
+    if hist.log_x and (x_range[0] <= 0 or y_range[0] <= 0):
+      raise ValueError(f"Comparable log axes require positive x/y ranges for plot '{hist.getName()}'")
+    if not all(math.isclose(x, y, rel_tol=1e-9, abs_tol=1e-12) for x, y in zip(x_range, y_range)):
+      raise ValueError(
+        f"Comparable axes require equal x/y ranges for plot '{hist.getName()}': x={x_range}, y={y_range}"
+      )
+    return x_range
+
+  @staticmethod
+  def __displayed2DAxisRange(axis: Any) -> tuple[float, float]:
+    return float(axis.GetBinLowEdge(axis.GetFirst())), float(axis.GetBinUpEdge(axis.GetLast()))
 
   def setupUncertaintyHistogram(self, hist):
     if hasattr(self.config, "background_uncertainty"):

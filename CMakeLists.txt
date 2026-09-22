@@ -110,6 +110,33 @@ endforeach()
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(test_profile2d tests/test_profile2d.cpp)
+    target_link_libraries(test_profile2d PRIVATE core extensions histogramming ${ROOT_LIBRARIES} Python3::Python)
+    set_target_properties(
+        test_profile2d
+        PROPERTIES
+            CXX_STANDARD ${CMAKE_CXX_STANDARD}
+            BUILD_WITH_INSTALL_RPATH FALSE
+            BUILD_RPATH "$<TARGET_FILE_DIR:core>;$<TARGET_FILE_DIR:extensions>;$<TARGET_FILE_DIR:histogramming>"
+    )
+    add_test(
+        NAME tea_profile2d
+        COMMAND test_profile2d
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/profile2d_config.py"
+                "${CMAKE_CURRENT_BINARY_DIR}/profile2d_test.root"
+    )
+    set_tests_properties(tea_profile2d PROPERTIES FIXTURES_SETUP profile2d_data)
+
+    add_test(
+        NAME tea_profile2d_plotting
+        COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_profile2d_plotting.py"
+                "${CMAKE_INSTALL_PREFIX}"
+                "${CMAKE_CURRENT_BINARY_DIR}/profile2d_test.root"
+                "${CMAKE_CURRENT_BINARY_DIR}/profile2d_plots"
+    )
+    set_tests_properties(tea_profile2d_plotting PROPERTIES FIXTURES_REQUIRED profile2d_data)
+
     add_test(
         NAME tea_smoke_examples
         COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/ci/smoke-test.sh"
