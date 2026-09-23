@@ -22,6 +22,7 @@ class HistogramsFiller {
  private:
   std::shared_ptr<HistogramsHandler> histogramsHandler;
   std::map<std::string, HistogramParams> defaultHistVariables;
+  std::map<std::string, IrregularHistogramParams> irregularDefaultHistVariables;
   std::string weightsBranchName;
 
   std::map<std::string, std::string> defaultCollectionsTypes;

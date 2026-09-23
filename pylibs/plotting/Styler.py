@@ -42,39 +42,49 @@ class Styler:
         raise ValueError("left and right plot margins must sum to less than 1")
 
     self.labelFontSize = 26
+    # Updated from rendered category labels by configureAutomaticMargins.
+    self.categoricalMainXAxisTitleOffsetForLayout = self.categoricalMainXAxisTitleOffset
+    self.categoricalRatioXAxisTitleOffsetForLayout = self.categoricalRatioXAxisTitleOffset
+    self.regularBottomMargin = self.bottomMargin
+    self.categoricalBottomMargin = self.bottomMargin
     self.pendingRatioYAxis = None
     self.pendingRatioTitleOffset = None
 
     self.__setStyle()
 
   def setup_ratio_pad(self, pad):
-    pad.SetPad(0, 0, 1, 0.3)
+    fraction = getattr(self, "ratioPadFraction", 0.3)
+    pad.SetPad(0, 0, 1, fraction)
     self.__setupPadDefaults(pad)
     pad.SetTopMargin(0)
     margins = self.plotMargins or self.automaticMargins
     canvas_bottom_margin = margins.get("bottom", 0.18)
-    if canvas_bottom_margin >= 0.3:
-      raise ValueError("bottom plot margin must be less than 0.3 for ratio plots")
-    bottom_margin = canvas_bottom_margin / 0.3
+    if canvas_bottom_margin >= fraction:
+      raise ValueError("bottom plot margin must be smaller than the ratio pad")
+    bottom_margin = canvas_bottom_margin / fraction
     pad.SetBottomMargin(bottom_margin)
     pad.SetLogy(False)
 
   def setup_main_pad_with_ratio(self, pad):
-    pad.SetPad(0, 0.3, 1, 1)
+    fraction = getattr(self, "ratioPadFraction", 0.3)
+    pad.SetPad(0, fraction, 1, 1)
     self.__setupPadDefaults(pad)
     pad.SetBottomMargin(0.0)
     margins = self.plotMargins or self.automaticMargins
     canvas_top_margin = margins.get("top", 0.063)
-    if canvas_top_margin >= 0.7:
-      raise ValueError("top plot margin must be less than 0.7 for ratio plots")
-    top_margin = canvas_top_margin / 0.7
+    if canvas_top_margin >= 1 - fraction:
+      raise ValueError("top plot margin must be smaller than the main pad")
+    top_margin = canvas_top_margin / (1 - fraction)
     pad.SetTopMargin(top_margin)
 
-  def setup_main_pad_without_ratio(self, pad):
+  def setup_main_pad_without_ratio(self, pad, has_categorical_labels=False):
     # pad.SetPad(0, 0.0, 1, 1)
     self.__setupPadDefaults(pad)
     margins = self.plotMargins or self.automaticMargins
-    bottom_margin = margins.get("bottom", 0.2)
+    if self.plotMargins is None:
+      bottom_margin = self.categoricalBottomMargin if has_categorical_labels else self.regularBottomMargin
+    else:
+      bottom_margin = margins.get("bottom", 0.2)
     top_margin = margins.get("top", 0.09)
     if top_margin + bottom_margin >= 1:
       raise ValueError("top and bottom plot margins must sum to less than 1")
@@ -178,7 +188,7 @@ class Styler:
     gStyle.SetPaperSize(20.0, 20.0)
 
   def configureAutomaticMargins(self, y_ranges, canvas_size, x_labels=(), x_tick_labels=(), has_ratio=False):
-    """Choose one compact set of margins that fits every configured plot."""
+    """Choose common left/top/right margins; bottom is measured per plot."""
     if self.plotMargins is not None:
       return
 
@@ -211,39 +221,19 @@ class Styler:
       top_pixels = self.labelFontSize + 6
 
     self.leftMargin = max(0.09, left_pixels / canvas_width)
-    tick_label_width = max(
-      (self.__textWidth(label, 43, self.labelFontSize) for label in x_tick_labels if label),
-      default=0,
-    )
+    # ROOT needs an active canvas to return meaningful TLatex bounding boxes.
+    # The y-axis measurement canvas above is already closed at this point.
+    tick_measurement_canvas = ROOT.TCanvas("tea_tick_layout_measurement", "", canvas_width, canvas_height)
+    tick_measurement_canvas.cd()
     tick_label_height = max(
       (self.__textHeight(label, 43, self.labelFontSize) for label in x_tick_labels if label),
       default=0,
     )
-    has_categorical_labels = tick_label_width > 0
     # Categorical labels are drawn vertically below their ticks. Their horizontal
     # extent needs real right-side canvas space, not just the standard tick gap.
-    tick_side_pixels = 0.5 * tick_label_height if has_categorical_labels else 0
+    tick_side_pixels = 0.5 * tick_label_height
     self.rightMargin = max(0.02, (12 + tick_side_pixels) / canvas_width)
     self.topMargin = max(0.04, top_pixels / canvas_height)
-    # Reserve the actual vertical space used by the horizontal tick labels and
-    # title.  This must be kept in sync with setupFigure: a fixed pixel value
-    # is not sufficient when a title has superscripts/subscripts or when the
-    # configured font size changes.
-    x_label_height = self.__textHeight("012345", 43, self.labelFontSize)
-    if has_categorical_labels:
-      # A vertical label uses its rendered width as vertical space. Include a
-      # small diagonal allowance for ROOT versions that draw at an angle.
-      x_label_height = max(x_label_height, math.hypot(tick_label_width, tick_label_height))
-    x_title_height = max(
-      (self.__textHeight(label, 43, self.labelFontSize) for label in x_labels if label),
-      default=self.__textHeight("X", 43, self.labelFontSize),
-    )
-    if has_categorical_labels:
-      x_title_offset = self.categoricalRatioXAxisTitleOffset if has_ratio else self.categoricalMainXAxisTitleOffset
-    else:
-      x_title_offset = self.ratioXAxisTitleOffset if has_ratio else self.mainXAxisTitleOffset
-    bottom_pixels = max(84, x_label_height + x_title_offset * self.labelFontSize + x_title_height + 12)
-    self.bottomMargin = max(0.10, bottom_pixels / canvas_height)
     self.automaticMargins.update(
       {
         "left": self.leftMargin,
@@ -252,7 +242,94 @@ class Styler:
         "bottom": self.bottomMargin,
       }
     )
+    tick_measurement_canvas.Close()
     self.__setStyle()
+
+  @staticmethod
+  def categoricalLabels(sources):
+    """Read category positions from data bins, never from the display frame."""
+    labels = {}
+    for source in sources:
+      axis = source.GetXaxis()
+      for index in range(1, source.GetNbinsX() + 1):
+        label = axis.GetBinLabel(index)
+        if label:
+          labels[axis.GetBinCenter(index)] = str(label)
+    return sorted(labels.items())
+
+  def preparePlotLayout(self, hist, sources, canvas, has_ratio=False):
+    """Only the bottom margin depends on this plot's tick labels and title."""
+    canvas.cd()
+    labels = [(x, label) for x, label in self.categoricalLabels(sources)
+              if (hist.x_min is None or x >= hist.x_min) and (hist.x_max is None or x <= hist.x_max)]
+    height = max(1, canvas.GetWh())
+    title_height = self.__textHeight(hist.x_label, 43, self.labelFontSize) if hist.x_label else 0
+    if labels:
+      label_extent = max(self.__textWidth(label, 43, self.labelFontSize) for _, label in labels)
+      bottom_pixels = label_extent + title_height + 32
+    else:
+      label_extent = self.__textHeight("012345", 43, self.labelFontSize)
+      bottom_pixels = max(76, label_extent + title_height + 32)
+    bottom = bottom_pixels / height
+    if self.plotMargins is None:
+      self.regularBottomMargin = self.categoricalBottomMargin = bottom
+      self.automaticMargins["bottom"] = bottom
+    # Enlarge the ratio pad for long labels while retaining a visible ratio
+    # frame. Numeric plots keep the established 30 percent ratio pad.
+    self.ratioPadFraction = max(0.3, bottom + 0.16) if has_ratio else 0.3
+
+  @staticmethod
+  def prepareDisplayFrame(stack):
+    """Separate the plotting coordinates from the data's bin edges/labels.
+
+    SetLimits alone leaves a variable-bin TAxis's edge array unchanged, which
+    ROOT uses when painting. A uniform empty frame supports arbitrary display
+    limits without modifying the histograms or stretching categorical bins.
+    """
+    sources = list(stack.GetHists())
+    frame = ROOT.TH1D(stack.GetName() + "_display", "", 100,
+                      min(h.GetXaxis().GetXmin() for h in sources),
+                      max(h.GetXaxis().GetXmax() for h in sources))
+    frame.SetDirectory(0)
+    stack.SetHistogram(frame)
+    ROOT.SetOwnership(frame, False)  # THStack owns its display histogram.
+
+  def drawCategoricalAxis(self, plot, hist, sources, pad):
+    labels = self.categoricalLabels(sources)
+    if not labels:
+      return
+    pad.cd()
+    axis = plot.GetXaxis()
+    xmin, xmax = axis.GetXmin(), axis.GetXmax()
+    left, right = pad.GetLeftMargin(), 1 - pad.GetRightMargin()
+    bottom, top = pad.GetBottomMargin(), 1 - pad.GetTopMargin()
+    height = max(1, pad.GetWh() * pad.GetAbsHNDC())
+    label_y = bottom - 10 / height
+    longest = 0
+    primitives = []
+    for center, label in labels:
+      if not xmin <= center <= xmax:
+        continue
+      x = self.__projectToNdc(center, xmin, xmax, hist.log_x, left, right)
+      text = ROOT.TLatex()
+      text.SetTextFont(43)
+      text.SetTextSize(self.labelFontSize)
+      text.SetTextAngle(90)
+      text.SetTextAlign(32)  # right end at the axis, centered on the bin
+      text.SetNDC(True)
+      primitives.append(text.DrawLatex(x, label_y, label))
+      longest = max(longest, self.__textWidth(label, 43, self.labelFontSize))
+      for y, direction in ((bottom, 1), (top, -1)):
+        tick = ROOT.TLine()
+        primitives.append(tick.DrawLineNDC(x, y, x, y + direction * 7 / height))
+    if hist.x_label:
+      text = ROOT.TLatex()
+      text.SetTextFont(43)
+      text.SetTextSize(self.labelFontSize)
+      text.SetTextAlign(33)
+      text.SetNDC(True)
+      primitives.append(text.DrawLatex(right, label_y - (longest + 8) / height, hist.x_label))
+    pad._tea_category_primitives = primitives
 
   def getYAxisRangeForLayout(self, hist, source_histograms, is_ratio=False):
     """Return the final Y range used to size labels before canvases are made."""
@@ -317,10 +394,6 @@ class Styler:
         source and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
         for source in source_histograms
       )
-      if has_categorical_labels:
-        x_axis.LabelsOption("v")
-        x_axis.SetLabelOffset(0.014)
-
       if is_ratio:
         x_title_offset = self.ratioXAxisTitleOffset
       elif self.plotMargins is not None:
@@ -328,11 +401,19 @@ class Styler:
       else:
         x_title_offset = self.mainXAxisTitleOffset
       if has_categorical_labels:
-        x_title_offset = self.categoricalRatioXAxisTitleOffset if is_ratio else self.categoricalMainXAxisTitleOffset
+        x_title_offset = (
+          self.categoricalRatioXAxisTitleOffsetForLayout if is_ratio
+          else self.categoricalMainXAxisTitleOffsetForLayout
+        )
       x_axis.SetTitleOffset(x_title_offset)
 
       x_axis.SetTitleSize(self.labelFontSize)
       x_axis.SetLabelSize(self.labelFontSize)
+      if has_categorical_labels:
+        # Draw these at their original data coordinates after range selection.
+        x_axis.SetLabelSize(0)
+        x_axis.SetTitle("")
+        x_axis.SetTickLength(0)
 
       plot.GetYaxis().SetTitle("Data/MC" if is_ratio else hist.y_label)
       plot.GetYaxis().SetTitleSize(self.labelFontSize)
@@ -346,6 +427,213 @@ class Styler:
     except Exception:
       warn("Couldn't set axes limits")
       return
+
+  def adjustAxesForLegend(self, plot, hist, source_histograms, legends, pad):
+    """Expand automatic axes just enough to keep drawn distributions out of legends.
+
+    The solver evaluates x-only, y-only, and combined extensions.  It never
+    shrinks a range and leaves plots without configured legends unchanged.
+    """
+    if not getattr(self.config, "auto_adjust_axes_for_legend", False):
+      return
+    if plot is None or pad is None or not source_histograms:
+      return
+
+    visible_legends = [legend for legend in legends if legend is not None]
+    if not visible_legends:
+      return
+
+    x_axis = plot.GetXaxis()
+    x_min, x_max = x_axis.GetXmin(), x_axis.GetXmax()
+    # THStack.GetMinimum/GetMaximum describe its stacked contents, rather than
+    # the visible frame range. The frame is what the legend can overlap.
+    frame = plot.GetHistogram() if hasattr(plot, "GetHistogram") else None
+    y_min = frame.GetMinimum() if frame is not None else plot.GetMinimum()
+    y_max = frame.GetMaximum() if frame is not None else plot.GetMaximum()
+    if x_max <= x_min or y_max <= y_min:
+      return
+    if (hist.log_x and x_min <= 0) or (hist.log_y and y_min <= 0):
+      return
+
+    left, right = pad.GetLeftMargin(), 1.0 - pad.GetRightMargin()
+    bottom, top = pad.GetBottomMargin(), 1.0 - pad.GetTopMargin()
+    if right <= left or top <= bottom:
+      return
+
+    legend_boxes = []
+    for legend in visible_legends:
+      # Before Draw(), ROOT leaves Get*NDC() at zero even though the TLegend
+      # constructor has stored valid NDC coordinates in GetX*()/GetY*().
+      x1, x2 = legend.GetX1NDC(), legend.GetX2NDC()
+      y1, y2 = legend.GetY1NDC(), legend.GetY2NDC()
+      if x1 == x2 or y1 == y2:
+        x1, x2 = legend.GetX1(), legend.GetX2()
+        y1, y2 = legend.GetY1(), legend.GetY2()
+      x1, x2 = sorted((x1, x2))
+      y1, y2 = sorted((y1, y2))
+      # ROOT does not enlarge TLegend's NDC box when a label is wider than
+      # the configured rectangle: it paints the text outside the box. Reserve
+      # that rendered footprint too, otherwise a narrow upper-right legend
+      # still overlaps the high-x distribution.
+      x2 = max(x2, x1 + self.__legendTextWidthNdc(legend, pad))
+      x1, x2 = max(left, x1), min(right, x2)
+      y1, y2 = max(bottom, y1), min(top, y2)
+      if x2 > x1 and y2 > y1:
+        legend_boxes.append((x1, y1, x2, y2))
+    if not legend_boxes:
+      return
+
+    # Expand toward the legend horizontally, or leave room above the filled
+    # distributions vertically. Fixed endpoints remain authoritative.
+    legend_x_center = sum((box[0] + box[2]) / 2 for box in legend_boxes) / len(legend_boxes)
+    grow_x_upper = legend_x_center >= (left + right) / 2
+
+    extensions = [index / 100.0 for index in range(101)] + [1.5, 2.0, 3.0]
+    # A vertical expansion changes the apparent peak height, especially on a
+    # logarithmic axis. Prefer equally small horizontal whitespace and use y
+    # only when it is materially cheaper or needed with x.
+    y_extension_penalty = 1.75 if hist.log_y else 1.25
+    x_range_is_fixed = hist.x_max is not None if grow_x_upper else hist.x_min is not None
+    x_extensions = (0.0,) if x_range_is_fixed else extensions
+    transform_y = math.log10 if hist.log_y else lambda value: value
+    low, high = transform_y(y_min), transform_y(y_max)
+    # Cache the actual drawn envelope, including stacked totals and errors.
+    bins = []
+    for source in source_histograms:
+      axis = source.GetXaxis()
+      for index in range(1, source.GetNbinsX() + 1):
+        value = source.GetBinContent(index) + source.GetBinError(index)
+        if value > y_min:
+          bins.append((axis.GetBinLowEdge(index), axis.GetBinUpEdge(index), transform_y(value)))
+    best = None
+    # For each horizontal extension solve the required y maximum directly in
+    # screen coordinates. This avoids both grid-sized overshoots and silent
+    # failures when the required y extension exceeds the candidate grid.
+    for x_extension in x_extensions:
+      candidate_x_min, candidate_x_max = self.__extendAxisRange(
+        x_min, x_max, x_extension, grow_x_upper, hist.log_x
+      )
+      required_high = high
+      for bin_low, bin_high, value in bins:
+        if bin_high <= candidate_x_min or bin_low >= candidate_x_max:
+          continue
+        x1 = self.__projectToNdc(max(bin_low, candidate_x_min), candidate_x_min, candidate_x_max,
+                                hist.log_x, left, right)
+        x2 = self.__projectToNdc(min(bin_high, candidate_x_max), candidate_x_min, candidate_x_max,
+                                hist.log_x, left, right)
+        for lx1, ly1, lx2, _ in legend_boxes:
+          if x2 < lx1 - 0.012 or x1 > lx2 + 0.012:
+            continue
+          fraction = (ly1 - 0.012 - bottom) / (top - bottom)
+          required_high = max(required_high, low + (value - low) / fraction) if fraction > 0 else math.inf
+      if not math.isfinite(required_high) or (hist.log_y and required_high > 300):
+        continue
+      if hist.y_max is not None and required_high > high:
+        continue
+      y_extension = (required_high - high) / (high - low)
+      score = x_extension ** 2 + (y_extension_penalty * y_extension) ** 2
+      if best is None or score < best[0]:
+        best = (score, candidate_x_min, candidate_x_max,
+                10 ** required_high if hist.log_y else required_high)
+    if best is not None:
+      _, candidate_x_min, candidate_x_max, candidate_y_max = best
+      if self.__legendOverlapsDistributions(
+        source_histograms, legend_boxes, candidate_x_min, candidate_x_max,
+        y_min, candidate_y_max, hist.log_x, hist.log_y, left, right, bottom, top,
+      ):
+        warn("Legend clearance could not be satisfied for " + hist.name)
+        return
+      x_axis.SetLimits(candidate_x_min, candidate_x_max)
+      plot.SetMinimum(y_min)
+      plot.SetMaximum(candidate_y_max)
+      if frame is not None:
+        frame.GetXaxis().SetLimits(candidate_x_min, candidate_x_max)
+        frame.SetMinimum(y_min)
+        frame.SetMaximum(candidate_y_max)
+      pad.Modified()
+      return
+    warn("Configured axis limits leave no room for the legend in " + hist.name)
+
+  def __legendTextWidthNdc(self, legend, pad):
+    """Return the NDC width required by the widest visible legend label."""
+    labels = []
+    primitives = legend.GetListOfPrimitives()
+    if primitives:
+      for primitive in primitives:
+        if hasattr(primitive, "GetLabel"):
+          label = primitive.GetLabel()
+          if label:
+            labels.append(str(label))
+    if not labels:
+      return legend.GetX2NDC() - legend.GetX1NDC()
+
+    text_size = legend.GetTextSize()
+    canvas_width = pad.GetWw() * pad.GetAbsWNDC()
+    if canvas_width <= 0 and pad.GetCanvas():
+      canvas_width = pad.GetCanvas().GetWw()
+    canvas_width = max(canvas_width, 1)
+    # Font 43 uses pixels; other ROOT fonts use the pad-height fraction.
+    if text_size <= 1.0:
+      canvas_height = pad.GetWh()
+      if canvas_height <= 0 and pad.GetCanvas():
+        canvas_height = pad.GetCanvas().GetWh()
+      text_size *= max(canvas_height, 1)
+    pad.cd()
+    font = legend.GetTextFont() // 10 * 10 + 3  # measure using pixel precision
+    text_pixels = max(self.__textWidth(label, font, text_size) for label in labels)
+    box_width = abs(legend.GetX2() - legend.GetX1())
+    return box_width * legend.GetMargin() + (text_pixels + 8) / canvas_width
+
+  @staticmethod
+  def __extendAxisRange(minimum, maximum, extension, grow_upper, logarithmic):
+    if extension == 0:
+      return minimum, maximum
+    if logarithmic:
+      log_minimum, log_maximum = math.log10(minimum), math.log10(maximum)
+      span = log_maximum - log_minimum
+      if grow_upper:
+        log_maximum += extension * span
+      else:
+        log_minimum -= extension * span
+      return 10 ** log_minimum, 10 ** log_maximum
+    span = maximum - minimum
+    if grow_upper:
+      maximum += extension * span
+    else:
+      minimum -= extension * span
+    return minimum, maximum
+
+  @staticmethod
+  def __projectToNdc(value, minimum, maximum, logarithmic, ndc_minimum, ndc_maximum):
+    if logarithmic:
+      if value <= 0:
+        return ndc_minimum
+      value, minimum, maximum = math.log10(value), math.log10(minimum), math.log10(maximum)
+    return ndc_minimum + (value - minimum) / (maximum - minimum) * (ndc_maximum - ndc_minimum)
+
+  def __legendOverlapsDistributions(
+      self, source_histograms, legend_boxes, x_min, x_max, y_min, y_max,
+      log_x, log_y, left, right, bottom, top,
+  ):
+    # Leave one percent of the drawable pad as a visual buffer around legends.
+    clearance = 0.01
+    for source in source_histograms:
+      axis = source.GetXaxis()
+      for bin_index in range(1, source.GetNbinsX() + 1):
+        if axis.GetBinUpEdge(bin_index) <= x_min or axis.GetBinLowEdge(bin_index) >= x_max:
+          continue
+        value = source.GetBinContent(bin_index) + source.GetBinError(bin_index)
+        if value <= y_min:
+          continue
+        x1 = self.__projectToNdc(axis.GetBinLowEdge(bin_index), x_min, x_max, log_x, left, right)
+        x2 = self.__projectToNdc(axis.GetBinUpEdge(bin_index), x_min, x_max, log_x, left, right)
+        y2 = self.__projectToNdc(value, y_min, y_max, log_y, bottom, top)
+        for legend_x1, legend_y1, legend_x2, legend_y2 in legend_boxes:
+          if x2 < legend_x1 - clearance or x1 > legend_x2 + clearance:
+            continue
+          if y2 >= legend_y1 - clearance and bottom <= legend_y2 + clearance:
+            return True
+    return False
 
   def __setAutomaticLimits(self, plot, hist, source_histograms=None, is_ratio=False):
     """Set missing bounds from all plotted contributions, with a small margin."""
@@ -370,6 +658,14 @@ class Styler:
           (axis.GetBinLowEdge(occupied_bins[0]), axis.GetBinUpEdge(occupied_bins[-1]))
         )
 
+    # A categorical axis has one immutable physical bin per label. Changing
+    # its numeric limits shifts ROOT's labels relative to those bins, so only
+    # continuous histograms receive occupied-bin automatic x ranges.
+    has_categorical_labels = any(
+      any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
+      for source in source_histograms
+    )
+
     # Histogram booking often reserves a broad diagnostic domain.  Frame the
     # populated bins instead; an empty histogram still falls back to booking.
     if occupied_x_ranges:
@@ -378,7 +674,7 @@ class Styler:
     else:
       x_min = min(h.GetXaxis().GetXmin() for h in source_histograms)
       x_max = max(h.GetXaxis().GetXmax() for h in source_histograms)
-    if hist.x_min is None or hist.x_max is None:
+    if not has_categorical_labels and (hist.x_min is None or hist.x_max is None):
       if x_min <= 0 or x_max <= 0:
         padding = 0.05 * (x_max - x_min)
         automatic_x_min = x_min - padding

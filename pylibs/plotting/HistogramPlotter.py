@@ -343,6 +343,7 @@ class HistogramPlotter:
     ratio_hist = self.__getRatioStack(hist)
     if ratio_hist:
       canvas.cd(2)
+      self.styler.prepareDisplayFrame(ratio_hist)
       ratio_hist.Draw("p e0")
       ratio_histograms = ratio_hist.GetStack()
       source_histograms = [ratio_histograms.Last()] if ratio_histograms and ratio_histograms.GetSize() > 0 else None
@@ -410,6 +411,8 @@ class HistogramPlotter:
       options = f"{options} same" if firstPlotted else options
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() > 0:
+        if not firstPlotted:
+          self.styler.prepareDisplayFrame(stack)
         stack.Draw(options)
         firstPlotted = True
 
@@ -444,13 +447,19 @@ class HistogramPlotter:
       firstPlotted = True
 
   def __setup_canvas(self, canvas, hist):
+    sources = self.__getPlottedHistograms(hist)
+    self.styler.preparePlotLayout(hist, sources, canvas, self.show_ratios)
+    has_categorical_labels = any(
+      any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
+      for source in sources
+    )
     if self.show_ratios:
       canvas.Divide(1, 2)
       self.styler.setup_ratio_pad(canvas.GetPad(2))
       self.styler.setup_main_pad_with_ratio(canvas.GetPad(1))
     else:
       canvas.Divide(1, 1)
-      self.styler.setup_main_pad_without_ratio(canvas.GetPad(1))
+      self.styler.setup_main_pad_without_ratio(canvas.GetPad(1), has_categorical_labels)
 
     canvas.GetPad(1).SetLogx(hist.log_x)
     canvas.GetPad(1).SetLogy(hist.log_y)
@@ -513,6 +522,35 @@ class HistogramPlotter:
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawLegends(canvas, hist)
+
+      # The uncertainty band is drawn after the first stack range pass and can
+      # itself enter the legend area. Re-evaluate against the drawn legend and
+      # include that band, so the final rendered frame—not just the stack—is
+      # legend-safe.
+      first_stack = next(
+        (
+          self.stacks[sample_type][hist.getName()]
+          for sample_type in SampleType
+          if self.stacks[sample_type][hist.getName()].GetNhists() > 0
+        ),
+        None,
+      )
+      if first_stack is not None:
+        final_sources = self.__getPlottedHistograms(hist)
+        if background_uncertainty_hist is not None:
+          final_sources.append(background_uncertainty_hist)
+        self.styler.adjustAxesForLegend(
+          first_stack, hist, final_sources,
+          self.legends.get(hist.getName(), {}).values(), canvas.GetPad(1),
+        )
+        pad = canvas.GetPad(1)
+        pad.Modified()
+        pad.Update()
+        if self.show_ratios and ratio_stack is not None:
+          self.styler.drawCategoricalAxis(ratio_stack, hist, final_sources, canvas.GetPad(2))
+        else:
+          self.styler.drawCategoricalAxis(first_stack, hist, final_sources, pad)
+
       self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       # Keep every frame border identical and on top of plotted objects.

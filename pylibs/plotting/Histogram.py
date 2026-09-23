@@ -31,6 +31,7 @@ class Histogram:
   error: float = -1.0
   entries: int = 0
   scale_bin: bool = False
+  scale_by_bin_width: bool = False
 
   def __post_init__(self):
     self.hist = None
@@ -117,6 +118,8 @@ class Histogram:
     self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
     if self.scale_bin:
       self.hist.Scale(1.0 / self.rebin)
+    if self.scale_by_bin_width:
+      self.hist.Scale(1.0, "width")
 
   def setupRatio(self, sample):
     if sample.type == SampleType.background:
