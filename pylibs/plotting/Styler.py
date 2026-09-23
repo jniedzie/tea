@@ -10,6 +10,8 @@ class Styler:
   mainXAxisTitleOffset = 1.15
   legacyMainXAxisTitleOffset = 1.7
   ratioXAxisTitleOffset = 1.0
+  categoricalMainXAxisTitleOffset = 2.4
+  categoricalRatioXAxisTitleOffset = 2.0
 
   def __init__(self, config):
     self.config = config
@@ -175,7 +177,7 @@ class Styler:
 
     gStyle.SetPaperSize(20.0, 20.0)
 
-  def configureAutomaticMargins(self, y_ranges, canvas_size, x_labels=(), has_ratio=False):
+  def configureAutomaticMargins(self, y_ranges, canvas_size, x_labels=(), x_tick_labels=(), has_ratio=False):
     """Choose one compact set of margins that fits every configured plot."""
     if self.plotMargins is not None:
       return
@@ -209,18 +211,37 @@ class Styler:
       top_pixels = self.labelFontSize + 6
 
     self.leftMargin = max(0.09, left_pixels / canvas_width)
-    self.rightMargin = max(0.02, 12 / canvas_width)
+    tick_label_width = max(
+      (self.__textWidth(label, 43, self.labelFontSize) for label in x_tick_labels if label),
+      default=0,
+    )
+    tick_label_height = max(
+      (self.__textHeight(label, 43, self.labelFontSize) for label in x_tick_labels if label),
+      default=0,
+    )
+    has_categorical_labels = tick_label_width > 0
+    # Categorical labels are drawn vertically below their ticks. Their horizontal
+    # extent needs real right-side canvas space, not just the standard tick gap.
+    tick_side_pixels = 0.5 * tick_label_height if has_categorical_labels else 0
+    self.rightMargin = max(0.02, (12 + tick_side_pixels) / canvas_width)
     self.topMargin = max(0.04, top_pixels / canvas_height)
     # Reserve the actual vertical space used by the horizontal tick labels and
     # title.  This must be kept in sync with setupFigure: a fixed pixel value
     # is not sufficient when a title has superscripts/subscripts or when the
     # configured font size changes.
     x_label_height = self.__textHeight("012345", 43, self.labelFontSize)
+    if has_categorical_labels:
+      # A vertical label uses its rendered width as vertical space. Include a
+      # small diagonal allowance for ROOT versions that draw at an angle.
+      x_label_height = max(x_label_height, math.hypot(tick_label_width, tick_label_height))
     x_title_height = max(
       (self.__textHeight(label, 43, self.labelFontSize) for label in x_labels if label),
       default=self.__textHeight("X", 43, self.labelFontSize),
     )
-    x_title_offset = self.ratioXAxisTitleOffset if has_ratio else self.mainXAxisTitleOffset
+    if has_categorical_labels:
+      x_title_offset = self.categoricalRatioXAxisTitleOffset if has_ratio else self.categoricalMainXAxisTitleOffset
+    else:
+      x_title_offset = self.ratioXAxisTitleOffset if has_ratio else self.mainXAxisTitleOffset
     bottom_pixels = max(84, x_label_height + x_title_offset * self.labelFontSize + x_title_height + 12)
     self.bottomMargin = max(0.10, bottom_pixels / canvas_height)
     self.automaticMargins.update(
@@ -289,7 +310,16 @@ class Styler:
       if hist.x_min is not None and hist.x_max is not None:
         plot.GetXaxis().SetLimits(hist.x_min, hist.x_max)
 
-      plot.GetXaxis().SetTitle(hist.x_label)
+      x_axis = plot.GetXaxis()
+      x_axis.SetTitle(hist.x_label)
+      source_histograms = source_histograms or [plot.GetHistogram()]
+      has_categorical_labels = any(
+        source and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
+        for source in source_histograms
+      )
+      if has_categorical_labels:
+        x_axis.LabelsOption("v")
+        x_axis.SetLabelOffset(0.014)
 
       if is_ratio:
         x_title_offset = self.ratioXAxisTitleOffset
@@ -297,10 +327,12 @@ class Styler:
         x_title_offset = self.legacyMainXAxisTitleOffset
       else:
         x_title_offset = self.mainXAxisTitleOffset
-      plot.GetXaxis().SetTitleOffset(x_title_offset)
+      if has_categorical_labels:
+        x_title_offset = self.categoricalRatioXAxisTitleOffset if is_ratio else self.categoricalMainXAxisTitleOffset
+      x_axis.SetTitleOffset(x_title_offset)
 
-      plot.GetXaxis().SetTitleSize(self.labelFontSize)
-      plot.GetXaxis().SetLabelSize(self.labelFontSize)
+      x_axis.SetTitleSize(self.labelFontSize)
+      x_axis.SetLabelSize(self.labelFontSize)
 
       plot.GetYaxis().SetTitle("Data/MC" if is_ratio else hist.y_label)
       plot.GetYaxis().SetTitleSize(self.labelFontSize)
