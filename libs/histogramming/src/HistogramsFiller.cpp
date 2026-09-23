@@ -18,6 +18,9 @@ HistogramsFiller::HistogramsFiller(shared_ptr<HistogramsHandler> histogramsHandl
   } catch (const Exception &e) {
     warn() << "Couldn't read defaultHistParams from config file - no default histograms will be included" << endl;
   }
+  try {
+    config.GetHistogramsParams(irregularDefaultHistVariables, "irregularDefaultHistParams");
+  } catch (const Exception &e) {}
 }
 
 HistogramsFiller::~HistogramsFiller() {}
@@ -50,6 +53,30 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
       for (auto object : *collection) {
         if (!object) { continue; }
         histogramsHandler->Fill(title, object->GetAs<float>(branchName));
+      }
+    }
+  }
+
+  for (auto &[title, params] : irregularDefaultHistVariables) {
+    string collectionName = params.collection;
+    string branchName = params.variable;
+    static string const suffix = "_variable";
+    if (branchName.size() <= suffix.size() ||
+        branchName.compare(branchName.size() - suffix.size(), suffix.size(), suffix) != 0) {
+      warn() << "Skipping irregular default histogram '" << title
+             << "': variable name must end in '_variable'" << endl;
+      continue;
+    }
+    string const sourceBranchName = branchName.substr(0, branchName.size() - suffix.size());
+    auto collection = event->GetCollection(collectionName);
+    if (!collection) continue;
+    for (auto object : *collection) {
+      if (!object) continue;
+      if (sourceBranchName == "p") {
+        if (!object->HasBranch("pt") || !object->HasBranch("pz")) continue;
+        histogramsHandler->Fill(title, std::hypot(object->GetAs<float>("pt"), object->GetAs<float>("pz")));
+      } else if (object->HasBranch(sourceBranchName)) {
+        histogramsHandler->Fill(title, object->GetAs<float>(sourceBranchName));
       }
     }
   }

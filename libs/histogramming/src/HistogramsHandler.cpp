@@ -27,6 +27,10 @@ HistogramsHandler::HistogramsHandler() {
   } catch (const Exception &e) {}
 
   try {
+    config.GetHistogramsParams(irregularHistParams, "irregularDefaultHistParams");
+  } catch (const Exception &e) {}
+
+  try {
     config.GetHistogramsParams(histParams2D, "histParams2D");
   } catch (const Exception &e) {}
 
