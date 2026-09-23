@@ -62,6 +62,8 @@ class NanoGenParticle {
   bool IsMotherJPsi(const std::shared_ptr<PhysicsObjects> genParticles);
 
   std::shared_ptr<NanoGenParticle> GetFirstCopy(std::shared_ptr<PhysicsObjects> genParticles);
+  std::shared_ptr<NanoGenParticle> GetFirstMotherWithDifferentPdgId(
+      std::shared_ptr<PhysicsObjects> genParticles);
 
   void Print();
 

@@ -6,6 +6,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <set>
 
 using namespace std;
 
@@ -82,6 +83,22 @@ shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstCopy(shared_ptr<PhysicsObje
     mother = make_shared<NanoGenParticle>(genParticles->at(motherIndex));
   }
   return firstCopy;
+}
+
+shared_ptr<NanoGenParticle> NanoGenParticle::GetFirstMotherWithDifferentPdgId(
+    shared_ptr<PhysicsObjects> genParticles) {
+  int const originalPdgId = abs(GetPdgId());
+  int motherIndex = GetMotherIndex();
+  set<int> visited;
+  while (motherIndex >= 0 && static_cast<size_t>(motherIndex) < genParticles->size()) {
+    if (!visited.insert(motherIndex).second)
+      return nullptr;
+    auto mother = make_shared<NanoGenParticle>(genParticles->at(motherIndex));
+    if (abs(mother->GetPdgId()) != originalPdgId)
+      return mother;
+    motherIndex = mother->GetMotherIndex();
+  }
+  return nullptr;
 }
 
 bool NanoGenParticle::IsMotherJPsi(const shared_ptr<PhysicsObjects> genParticles) {
