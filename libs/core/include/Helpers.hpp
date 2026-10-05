@@ -16,6 +16,7 @@
 #include "TGraphPolar.h"
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TH3D.h"
 #include "TLatex.h"
 #include "TLeaf.h"
 #include "TLegend.h"
@@ -166,6 +167,17 @@ struct IrregularHistogramParams2D {
   std::string collection, variable, directory;
   std::vector<float> binEdgesX;
   std::vector<float> binEdgesY;
+};
+
+struct HistogramParams3D {
+  std::string variable, directory;
+  int nBinsX, nBinsY, nBinsZ;
+  double minX, maxX, minY, maxY, minZ, maxZ;
+};
+
+struct IrregularHistogramParams3D {
+  std::string variable, directory;
+  std::vector<double> binEdgesX, binEdgesY, binEdgesZ;
 };
 
 struct Profile2DParams {
