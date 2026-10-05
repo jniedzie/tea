@@ -35,6 +35,14 @@ HistogramsHandler::HistogramsHandler() {
   } catch (const Exception &e) {}
 
   try {
+    config.GetHistogramsParams(histParams3D, "histParams3D");
+  } catch (const Exception &e) {}
+
+  try {
+    config.GetHistogramsParams(irregularHistParams3D, "irregularHistParams3D");
+  } catch (const Exception &e) {}
+
+  try {
     config.GetHistogramsParams(profile2DParams, "profile2DParams");
   } catch (const Exception &e) {}
 
@@ -57,6 +65,17 @@ HistogramsHandler::HistogramsHandler() {
 HistogramsHandler::~HistogramsHandler() {}
 
 void HistogramsHandler::SetupHistograms() {
+  const auto checkProfileCollision = [this](const auto &definitions) {
+    for (const auto &[title, params] : definitions) {
+      if (profile2DParams.count(title) || irregularProfile2DParams.count(title)) {
+        fatal() << "Ambiguous histogram name: " << title << " is configured as both TH3D and TProfile2D" << endl;
+        exit(1);
+      }
+    }
+  };
+  checkProfileCollision(histParams3D);
+  checkProfileCollision(irregularHistParams3D);
+
   for (auto &[title, params] : histParams) {
     histogramDirectories[title] = params.directory;
     histograms1D[make_pair(title, "")] = new TH1D(title.c_str(), title.c_str(), params.nBins, params.min, params.max);
@@ -94,91 +113,51 @@ void HistogramsHandler::SetupHistograms() {
                        params.binEdgesY.size() - 1, params.binEdgesY.data());
   }
 
+  for (auto &[title, params] : histParams3D) {
+    histogramDirectories[title] = params.directory;
+    histograms3D[make_pair(title, "")] =
+        new TH3D(title.c_str(), title.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY, params.minY,
+                 params.maxY, params.nBinsZ, params.minZ, params.maxZ);
+  }
+
+  for (auto &[title, params] : irregularHistParams3D) {
+    histogramDirectories[title] = params.directory;
+    histograms3D[make_pair(title, "")] = new TH3D(
+        title.c_str(), title.c_str(), params.binEdgesX.size() - 1, params.binEdgesX.data(), params.binEdgesY.size() - 1,
+        params.binEdgesY.data(), params.binEdgesZ.size() - 1, params.binEdgesZ.data());
+  }
+
   // copy names of all histograms to unfilledHistograms vector
   for (auto &[names, hist] : histograms1D) { unfilledHistograms.push_back(names.first); }
   for (auto &[names, hist] : histograms2D) { unfilledHistograms.push_back(names.first); }
+  for (auto &[names, hist] : histograms3D) { unfilledHistograms.push_back(names.first); }
   for (auto &[names, profile] : profiles2D) { unfilledHistograms.push_back(names.first); }
 }
 
-void HistogramsHandler::SetupSFvariationHistograms() {
-  for (auto &[title, params] : histParams) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
+template <typename THist>
+void HistogramsHandler::SetupVariations(map<HistNames, THist *> &histograms) {
+  for (auto &[names, histogram] : histograms) {
+    if (!names.second.empty() || !histogram ||
+        find(SFvariationVariables.begin(), SFvariationVariables.end(), names.first) == SFvariationVariables.end()) {
       continue;
     }
     for (auto &[sfName, weight] : eventWeights) {
       if (sfName == "default") { continue; }
-      string titlesf = title + "_" + sfName;
-      histograms1D[make_pair(title, sfName)] =
-          new TH1D(titlesf.c_str(), titlesf.c_str(), params.nBins, params.min, params.max);
+      string title = names.first + "_" + sfName;
+      auto *variation = static_cast<THist *>(histogram->Clone(title.c_str()));
+      variation->SetTitle(title.c_str());
+      // Weights can first be set after nominal fills; variations must start empty.
+      variation->Reset();
+      histograms[make_pair(names.first, sfName)] = variation;
     }
   }
-
-  for (auto &[title, params] : irregularHistParams) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
-      continue;
-    }
-    for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") { continue; }
-      string titlesf = title + "_" + sfName;
-      histograms1D[make_pair(title, sfName)] =
-          new TH1D(titlesf.c_str(), titlesf.c_str(), params.binEdges.size() - 1, &params.binEdges[0]);
-    }
-  }
-
-  for (auto &[title, params] : histParams2D) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
-      continue;
-    }
-    for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") { continue; }
-      string titlesf = title + "_" + sfName;
-      histograms2D[make_pair(title, sfName)] = new TH2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX,
-                                                        params.maxX, params.nBinsY, params.minY, params.maxY);
-    }
-  }
-
-  for (auto &[title, params] : irregularHistParams2D) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
-      continue;
-    }
-    for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") { continue; }
-      string titlesf = title + "_" + sfName;
-      histograms2D[make_pair(title, sfName)] =
-          new TH2D(titlesf.c_str(), titlesf.c_str(), params.binEdgesX.size() - 1, &params.binEdgesX[0],
-                   params.binEdgesY.size() - 1, &params.binEdgesY[0]);
-    }
-  }
-
-  SetupProfile2DVariations();
 }
 
-void HistogramsHandler::SetupProfile2DVariations() {
-  for (auto &[title, params] : profile2DParams) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
-      continue;
-    }
-    for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") { continue; }
-      string titlesf = title + "_" + sfName;
-      profiles2D[make_pair(title, sfName)] =
-          new TProfile2D(titlesf.c_str(), titlesf.c_str(), params.nBinsX, params.minX, params.maxX, params.nBinsY,
-                         params.minY, params.maxY);
-    }
-  }
-
-  for (auto &[title, params] : irregularProfile2DParams) {
-    if (find(SFvariationVariables.begin(), SFvariationVariables.end(), title) == SFvariationVariables.end()) {
-      continue;
-    }
-    for (auto &[sfName, weight] : eventWeights) {
-      if (sfName == "default") { continue; }
-      string titlesf = title + "_" + sfName;
-      profiles2D[make_pair(title, sfName)] =
-          new TProfile2D(titlesf.c_str(), titlesf.c_str(), params.binEdgesX.size() - 1, params.binEdgesX.data(),
-                         params.binEdgesY.size() - 1, params.binEdgesY.data());
-    }
-  }
+void HistogramsHandler::SetupSFvariationHistograms() {
+  SetupVariations(histograms1D);
+  SetupVariations(histograms2D);
+  SetupVariations(histograms3D);
+  SetupVariations(profiles2D);
 }
 
 void HistogramsHandler::SetEventWeights(map<string, float> weights) {
@@ -189,82 +168,55 @@ void HistogramsHandler::SetEventWeights(map<string, float> weights) {
   }
 };
 
-void HistogramsHandler::Fill(string name, double value) {
-  double weight = eventWeights["default"];
-  CheckHistogram(name, "");
-  histograms1D[make_pair(name, "")]->Fill(value, weight);
+template <typename THist>
+THist *HistogramsHandler::FindHistogram(const map<HistNames, THist *> &histograms, HistNames names, const char *kind) {
+  auto it = histograms.find(names);
+  if (it == histograms.end() || !it->second) {
+    fatal() << "Couldn't find key: " << names.first << ", " << names.second << " in " << kind << " map" << endl;
+    exit(1);
+  }
+  return it->second;
+}
 
+template <typename THist, typename... Values>
+void HistogramsHandler::FillWeighted(map<HistNames, THist *> &histograms, const char *kind, const string &name,
+                                     Values... values) {
+  FindHistogram(histograms, {name, ""}, kind)->Fill(values..., eventWeights["default"]);
   RemoveFromUnfilled(name);
-
-  // handle SF variation histograms
   if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) { return; }
   for (auto &[sfName, weight] : eventWeights) {
     if (sfName == "default") { continue; }
-    CheckHistogram(name, sfName);
-    histograms1D[make_pair(name, sfName)]->Fill(value, weight);
+    FindHistogram(histograms, {name, sfName}, kind)->Fill(values..., weight);
   }
+}
+
+void HistogramsHandler::Fill(string name, double value) {
+  FillWeighted(histograms1D, "1D histograms", name, value);
 }
 
 void HistogramsHandler::Fill(string name, double x, double y) {
-  double weight = eventWeights["default"];
-  CheckHistogram2D(name, "");
-  histograms2D[make_pair(name, "")]->Fill(x, y, weight);
-
-  RemoveFromUnfilled(name);
-
-  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) { return; }
-  for (auto &[sfName, weight] : eventWeights) {
-    if (sfName == "default") { continue; }
-    CheckHistogram2D(name, sfName);
-    histograms2D[make_pair(name, sfName)]->Fill(x, y, weight);
-  }
+  FillWeighted(histograms2D, "2D histograms", name, x, y);
 }
 
-void HistogramsHandler::Fill(string name, double x, double y, double profileValue) {
-  double weight = eventWeights["default"];
-  CheckProfile2D(name, "");
-  profiles2D[make_pair(name, "")]->Fill(x, y, profileValue, weight);
-
-  RemoveFromUnfilled(name);
-
-  if (find(SFvariationVariables.begin(), SFvariationVariables.end(), name) == SFvariationVariables.end()) { return; }
-  for (auto &[sfName, variationWeight] : eventWeights) {
-    if (sfName == "default") { continue; }
-    CheckProfile2D(name, sfName);
-    profiles2D[make_pair(name, sfName)]->Fill(x, y, profileValue, variationWeight);
+void HistogramsHandler::Fill(string name, double x, double y, double zOrProfileValue) {
+  if (histograms3D.count({name, ""})) {
+    FillWeighted(histograms3D, "3D histograms", name, x, y, zOrProfileValue);
+  } else if (profiles2D.count({name, ""})) {
+    FillWeighted(profiles2D, "2D profiles", name, x, y, zOrProfileValue);
+  } else {
+    fatal() << "Couldn't find key: " << name << " in 3D histograms or 2D profiles maps" << endl;
+    exit(1);
   }
 }
 
 void HistogramsHandler::FillUnweighted(string name, double value) {
-  CheckHistogram(name, "");
-  histograms1D[make_pair(name, "")]->Fill(value);
+  FindHistogram(histograms1D, {name, ""}, "1D histograms")->Fill(value);
   RemoveFromUnfilled(name);
 }
 
 void HistogramsHandler::RemoveFromUnfilled(string name) {
   auto it = find(unfilledHistograms.begin(), unfilledHistograms.end(), name);
   if (it != unfilledHistograms.end()) { unfilledHistograms.erase(it); }
-}
-
-void HistogramsHandler::CheckHistogram(string name, string directory) {
-  if (!histograms1D.count(make_pair(name, directory))) {
-    fatal() << "Couldn't find key: " << name << ", " << directory << " in 1D histograms map" << endl;
-    exit(1);
-  }
-}
-
-void HistogramsHandler::CheckHistogram2D(string name, string directory) {
-  if (!histograms2D.count(make_pair(name, directory))) {
-    fatal() << "Couldn't find key: " << name << ", " << directory << " in 2D histograms map" << endl;
-    exit(1);
-  }
-}
-
-void HistogramsHandler::CheckProfile2D(string name, string variation) {
-  if (!profiles2D.count(make_pair(name, variation))) {
-    fatal() << "Couldn't find key: " << name << ", " << variation << " in 2D profiles map" << endl;
-    exit(1);
-  }
 }
 
 template <typename THist>
@@ -289,11 +241,14 @@ void HistogramsHandler::SaveHistogram(HistNames names, THist *hist, TFile *outpu
     directory->cd();
   }
 
-  if constexpr (std::is_same<THist, TH2D>::value || std::is_same<THist, TProfile2D>::value) {
-    if (hist->GetNbinsX() * hist->GetNbinsY() > 2000 * 2000) {
-      warn() << "You're creating a very large 2D histogram: " << name << " with ";
-      warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY() << " bins. ";
-      warn() << "This may cause memory issues." << endl;
+  if (hist->GetDimension() >= 2) {
+    const double bins = static_cast<double>(hist->GetNbinsX()) * hist->GetNbinsY() *
+                        (hist->GetDimension() == 3 ? hist->GetNbinsZ() : 1);
+    if (bins > 2000.0 * 2000.0) {
+      warn() << "You're creating a very large " << hist->GetDimension() << "D histogram: " << name << " with ";
+      warn() << hist->GetNbinsX() << " x " << hist->GetNbinsY();
+      if (hist->GetDimension() == 3) { warn() << " x " << hist->GetNbinsZ(); }
+      warn() << " bins. This may cause memory issues." << endl;
     }
   }
 
@@ -318,6 +273,7 @@ void HistogramsHandler::SaveHistograms() {
 
   for (auto &[names, hist] : histograms1D) { SaveHistogram(names, hist, outputFile); }
   for (auto &[names, hist] : histograms2D) { SaveHistogram(names, hist, outputFile); }
+  for (auto &[names, hist] : histograms3D) { SaveHistogram(names, hist, outputFile); }
   for (auto &[names, profile] : profiles2D) { SaveHistogram(names, profile, outputFile); }
 
   outputFile->Close();

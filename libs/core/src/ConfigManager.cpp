@@ -742,123 +742,127 @@ void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams2D> 
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<string, Profile2DParams> &profileParams, string collectionName) {
-  PyObject *pythonList = GetPythonList(collectionName);
+namespace {
+bool IsSequence(PyObject *value) {
+  return PyList_Check(value) || PyTuple_Check(value);
+}
 
-  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject *params = GetItem(pythonList, i);
-    auto nParams = GetCollectionSize(params);
-    if (nParams < 7 || nParams > 8) {
-      error() << "Invalid 2D profile definition at index " << i << " in '" << collectionName
-              << "': expected either 7 or 8 arguments" << endl;
+PyObject *SequenceItem(PyObject *sequence, Py_ssize_t index) {
+  return PyList_Check(sequence) ? PyList_GetItem(sequence, index) : PyTuple_GetItem(sequence, index);
+}
+
+bool IsNumeric(PyObject *value) {
+  return PyFloat_Check(value) || PyLong_Check(value);
+}
+
+bool ReadRegularAxis(PyObject *definition, int offset, int &bins, double &min, double &max) {
+  PyObject *binValue = SequenceItem(definition, offset);
+  PyObject *minValue = SequenceItem(definition, offset + 1);
+  PyObject *maxValue = SequenceItem(definition, offset + 2);
+  if (!PyLong_Check(binValue) || !IsNumeric(minValue) || !IsNumeric(maxValue)) { return false; }
+  const long count = PyLong_AsLong(binValue);
+  min = PyFloat_AsDouble(minValue);
+  max = PyFloat_AsDouble(maxValue);
+  if (PyErr_Occurred()) {
+    PyErr_Clear();
+    return false;
+  }
+  if (count <= 0 || count > numeric_limits<int>::max() || !isfinite(min) || !isfinite(max) || min >= max) {
+    return false;
+  }
+  bins = static_cast<int>(count);
+  return true;
+}
+
+bool ReadEdges(PyObject *sequence, vector<double> &edges) {
+  if (!IsSequence(sequence) || PySequence_Size(sequence) < 2) { return false; }
+  for (Py_ssize_t i = 0; i < PySequence_Size(sequence); ++i) {
+    PyObject *item = SequenceItem(sequence, i);
+    if (!IsNumeric(item)) { return false; }
+    const double value = PyFloat_AsDouble(item);
+    if (PyErr_Occurred()) {
+      PyErr_Clear();
+      return false;
+    }
+    if (!isfinite(value) || (!edges.empty() && value <= edges.back())) { return false; }
+    edges.push_back(value);
+  }
+  return true;
+}
+
+template <typename Params, int Dimensions>
+void ReadRegularDefinitions(PyObject *definitions, map<string, Params> &output, const string &collectionName) {
+  constexpr int required = 1 + 3 * Dimensions;
+  for (Py_ssize_t i = 0; i < PySequence_Size(definitions); ++i) {
+    PyObject *definition = SequenceItem(definitions, i);
+    const auto size = IsSequence(definition) ? PySequence_Size(definition) : 0;
+    if ((size != required && size != required + 1) || !PyUnicode_Check(SequenceItem(definition, 0)) ||
+        (size == required + 1 && !PyUnicode_Check(SequenceItem(definition, required)))) {
+      error() << "Invalid histogram definition at index " << i << " in '" << collectionName << "': expected a name, "
+              << Dimensions << " axis definitions and an optional string directory" << endl;
       continue;
     }
-    if (!PyUnicode_Check(GetItem(params, 0)) || !PyLong_Check(GetItem(params, 1)) ||
-        !(PyFloat_Check(GetItem(params, 2)) || PyLong_Check(GetItem(params, 2))) ||
-        !(PyFloat_Check(GetItem(params, 3)) || PyLong_Check(GetItem(params, 3))) || !PyLong_Check(GetItem(params, 4)) ||
-        !(PyFloat_Check(GetItem(params, 5)) || PyLong_Check(GetItem(params, 5))) ||
-        !(PyFloat_Check(GetItem(params, 6)) || PyLong_Check(GetItem(params, 6))) ||
-        (nParams == 8 && !PyUnicode_Check(GetItem(params, 7)))) {
-      error() << "Invalid types in 2D profile definition at index " << i << " in '" << collectionName << "'" << endl;
+    Params params;
+    bool valid = ReadRegularAxis(definition, 1, params.nBinsX, params.minX, params.maxX) &&
+                 ReadRegularAxis(definition, 4, params.nBinsY, params.minY, params.maxY);
+    if constexpr (Dimensions == 3) {
+      valid = valid && ReadRegularAxis(definition, 7, params.nBinsZ, params.minZ, params.maxZ);
+    }
+    if (!valid) {
+      error() << "Invalid histogram definition at index " << i << " in '" << collectionName
+              << "': bin counts must be positive integers and axis bounds must be finite and increasing" << endl;
       continue;
     }
-
-    const long nBinsX = PyLong_AsLong(GetItem(params, 1));
-    const double minX = PyFloat_AsDouble(GetItem(params, 2));
-    const double maxX = PyFloat_AsDouble(GetItem(params, 3));
-    const long nBinsY = PyLong_AsLong(GetItem(params, 4));
-    const double minY = PyFloat_AsDouble(GetItem(params, 5));
-    const double maxY = PyFloat_AsDouble(GetItem(params, 6));
-    const bool conversionFailed = PyErr_Occurred();
-    if (conversionFailed) { PyErr_Clear(); }
-    if (conversionFailed || nBinsX <= 0 || nBinsX > numeric_limits<int>::max() || nBinsY <= 0 ||
-        nBinsY > numeric_limits<int>::max() || !isfinite(minX) || !isfinite(maxX) || !isfinite(minY) ||
-        !isfinite(maxY) || minX >= maxX || minY >= maxY) {
-      error() << "Invalid 2D profile definition at index " << i << " in '" << collectionName
-              << "': bin counts must be positive and axis bounds must be finite and increasing" << endl;
-      continue;
-    }
-
-    Profile2DParams params2D;
-    params2D.variable = PyUnicode_AsUTF8(GetItem(params, 0));
-    params2D.nBinsX = nBinsX;
-    params2D.minX = minX;
-    params2D.maxX = maxX;
-    params2D.nBinsY = nBinsY;
-    params2D.minY = minY;
-    params2D.maxY = maxY;
-    params2D.directory = nParams == 8 ? PyUnicode_AsUTF8(GetItem(params, 7)) : "";
-    profileParams[params2D.variable] = params2D;
+    params.variable = PyUnicode_AsUTF8(SequenceItem(definition, 0));
+    params.directory = size == required + 1 ? PyUnicode_AsUTF8(SequenceItem(definition, required)) : "";
+    output[params.variable] = params;
   }
 }
 
-void ConfigManager::GetHistogramsParams(map<string, IrregularProfile2DParams> &profileParams, string collectionName) {
-  PyObject *pythonList = GetPythonList(collectionName);
-
-  for (Py_ssize_t i = 0; i < GetCollectionSize(pythonList); ++i) {
-    PyObject *params = GetItem(pythonList, i);
-    auto nParams = GetCollectionSize(params);
-    if (nParams < 3 || nParams > 4) {
-      error() << "Invalid 2D variable-bin profile definition at index " << i << " in '" << collectionName
-              << "': expected either 3 or 4 arguments" << endl;
+template <typename Params, int Dimensions>
+void ReadIrregularDefinitions(PyObject *definitions, map<string, Params> &output, const string &collectionName) {
+  constexpr int required = 1 + Dimensions;
+  for (Py_ssize_t i = 0; i < PySequence_Size(definitions); ++i) {
+    PyObject *definition = SequenceItem(definitions, i);
+    const auto size = IsSequence(definition) ? PySequence_Size(definition) : 0;
+    if ((size != required && size != required + 1) || !PyUnicode_Check(SequenceItem(definition, 0)) ||
+        (size == required + 1 && !PyUnicode_Check(SequenceItem(definition, required)))) {
+      error() << "Invalid variable-bin histogram definition at index " << i << " in '" << collectionName
+              << "': expected a name, " << Dimensions << " edge sequences and an optional string directory" << endl;
       continue;
     }
-    if (!PyUnicode_Check(GetItem(params, 0)) ||
-        (!PyList_Check(GetItem(params, 1)) && !PyTuple_Check(GetItem(params, 1))) ||
-        (!PyList_Check(GetItem(params, 2)) && !PyTuple_Check(GetItem(params, 2))) ||
-        (nParams == 4 && !PyUnicode_Check(GetItem(params, 3)))) {
-      error() << "Invalid 2D variable-bin profile definition at index " << i << " in '" << collectionName << "'"
-              << endl;
+    Params params;
+    bool valid = ReadEdges(SequenceItem(definition, 1), params.binEdgesX) &&
+                 ReadEdges(SequenceItem(definition, 2), params.binEdgesY);
+    if constexpr (Dimensions == 3) { valid = valid && ReadEdges(SequenceItem(definition, 3), params.binEdgesZ); }
+    if (!valid) {
+      error() << "Invalid variable-bin histogram definition at index " << i << " in '" << collectionName
+              << "': each axis needs at least two finite numeric edges in strictly increasing order" << endl;
       continue;
     }
-
-    PyObject *binEdgesX = GetItem(params, 1);
-    PyObject *binEdgesY = GetItem(params, 2);
-    if (GetCollectionSize(binEdgesX) < 2 || GetCollectionSize(binEdgesY) < 2) {
-      error() << "A 2D variable-bin profile needs at least two edges per axis at index " << i << " in '"
-              << collectionName << "'" << endl;
-      continue;
-    }
-
-    IrregularProfile2DParams params2D;
-    params2D.variable = PyUnicode_AsUTF8(GetItem(params, 0));
-    bool validEdges = true;
-    for (Py_ssize_t edge = 0; edge < GetCollectionSize(binEdgesX); ++edge) {
-      PyObject *item = GetItem(binEdgesX, edge);
-      if (!PyFloat_Check(item) && !PyLong_Check(item)) {
-        validEdges = false;
-        break;
-      }
-      const double value = PyFloat_AsDouble(item);
-      if (PyErr_Occurred() || !isfinite(value) || (!params2D.binEdgesX.empty() && value <= params2D.binEdgesX.back())) {
-        PyErr_Clear();
-        validEdges = false;
-        break;
-      }
-      params2D.binEdgesX.push_back(value);
-    }
-    for (Py_ssize_t edge = 0; validEdges && edge < GetCollectionSize(binEdgesY); ++edge) {
-      PyObject *item = GetItem(binEdgesY, edge);
-      if (!PyFloat_Check(item) && !PyLong_Check(item)) {
-        validEdges = false;
-        break;
-      }
-      const double value = PyFloat_AsDouble(item);
-      if (PyErr_Occurred() || !isfinite(value) || (!params2D.binEdgesY.empty() && value <= params2D.binEdgesY.back())) {
-        PyErr_Clear();
-        validEdges = false;
-        break;
-      }
-      params2D.binEdgesY.push_back(value);
-    }
-    if (!validEdges) {
-      error() << "Invalid 2D variable-bin profile definition at index " << i << " in '" << collectionName
-              << "': edges must be finite numeric values in strictly increasing order" << endl;
-      continue;
-    }
-    params2D.directory = nParams == 4 ? PyUnicode_AsUTF8(GetItem(params, 3)) : "";
-    profileParams[params2D.variable] = params2D;
+    params.variable = PyUnicode_AsUTF8(SequenceItem(definition, 0));
+    params.directory = size == required + 1 ? PyUnicode_AsUTF8(SequenceItem(definition, required)) : "";
+    output[params.variable] = params;
   }
+}
+}  // namespace
+
+void ConfigManager::GetHistogramsParams(map<string, Profile2DParams> &profileParams, string collectionName) {
+  ReadRegularDefinitions<Profile2DParams, 2>(GetPythonList(collectionName), profileParams, collectionName);
+}
+
+void ConfigManager::GetHistogramsParams(map<string, IrregularProfile2DParams> &profileParams, string collectionName) {
+  ReadIrregularDefinitions<IrregularProfile2DParams, 2>(GetPythonList(collectionName), profileParams, collectionName);
+}
+
+void ConfigManager::GetHistogramsParams(map<string, HistogramParams3D> &histogramsParams, string collectionName) {
+  ReadRegularDefinitions<HistogramParams3D, 3>(GetPythonList(collectionName), histogramsParams, collectionName);
+}
+
+void ConfigManager::GetHistogramsParams(map<string, IrregularHistogramParams3D> &histogramsParams,
+                                        string collectionName) {
+  ReadIrregularDefinitions<IrregularHistogramParams3D, 3>(GetPythonList(collectionName), histogramsParams,
+                                                          collectionName);
 }
 
 void ConfigManager::GetCuts(vector<pair<string, pair<float, float>>> &cuts) {
