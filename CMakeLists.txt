@@ -110,6 +110,29 @@ endforeach()
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(test_histogram3d tests/test_histogram3d.cpp)
+    target_link_libraries(test_histogram3d PRIVATE core extensions histogramming ${ROOT_LIBRARIES} Python3::Python)
+    set_target_properties(
+        test_histogram3d
+        PROPERTIES
+            CXX_STANDARD ${CMAKE_CXX_STANDARD}
+            BUILD_WITH_INSTALL_RPATH FALSE
+            BUILD_RPATH "$<TARGET_FILE_DIR:core>;$<TARGET_FILE_DIR:extensions>;$<TARGET_FILE_DIR:histogramming>"
+    )
+    add_test(
+        NAME tea_histogram3d
+        COMMAND test_histogram3d
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/histogram3d_config.py"
+                "${CMAKE_CURRENT_BINARY_DIR}/histogram3d_test.root"
+    )
+    add_test(
+        NAME tea_histogram3d_errors
+        COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_histogram3d_errors.py"
+                "$<TARGET_FILE:test_histogram3d>"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/histogram3d_config.py"
+                "${CMAKE_CURRENT_BINARY_DIR}/histogram3d_errors.root"
+    )
     add_executable(test_profile2d tests/test_profile2d.cpp)
     target_link_libraries(test_profile2d PRIVATE core extensions histogramming ${ROOT_LIBRARIES} Python3::Python)
     set_target_properties(
