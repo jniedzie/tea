@@ -1,5 +1,6 @@
 Universe              = vanilla
 executable            = <executable>
+initialdir            = <initial_dir>
 arguments             = $(ProcId)
 GetEnv                = True
 output                = <output_path>
@@ -7,9 +8,11 @@ error                 = <error_path>
 log                   = <log_path>
 request_memory        = <memory_request> GB
 +JobFlavour           = "<job_flavour>"
+max_materialize       = <materialize_max>
 
 should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
-transfer_output_files = condor_dummy.out
+transfer_input_files  = <transfer_input_files>
+transfer_output_files = ""
 
 queue <n_jobs>

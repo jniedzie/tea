@@ -44,7 +44,7 @@ def get_year_from_samples(samples):
 
 def get_facility():
   hostname = socket.gethostname()
-  if "lxplus" in hostname:
+  if "lxplus" in hostname or hostname.endswith(".cern.ch"):
     facility = "lxplus"
   elif "naf" in hostname:
     facility = "naf"

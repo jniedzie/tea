@@ -2,7 +2,14 @@ import os
 import importlib.util
 import uuid
 import ast
+import re
+import shutil
+import stat
 import subprocess
+import sys
+import shlex
+import tempfile
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from Logger import info, warn, error, fatal
@@ -21,6 +28,9 @@ class SubmissionSystem(Enum):
 
 class SubmissionManager:
   def __init__(self, submission_system, app_name, config_path, files_config_path):
+    self.submission_system = submission_system
+    self.condor_stage_dir = None
+    self.condor_transfer_files = []
     self.app_name = app_name
     self.config_path = config_path
     self.files_config_path = files_config_path
@@ -70,6 +80,11 @@ class SubmissionManager:
     self.job_flavour = args.job_flavour
     self.memory_request = args.memory
     self.materialize_max = args.max_materialize
+    if self.materialize_max is None:
+      self.materialize_max = 50 if get_facility() == "lxplus" else 5000
+    if self.materialize_max < 1:
+      fatal("--max_materialize must be at least 1")
+      exit()
     self.resubmit_job = args.resubmit_job
     self.resubmit_failed = args.resubmit_failed
     self.save_logs = args.save_logs
@@ -90,20 +105,14 @@ class SubmissionManager:
       info(f"Will submit {n_jobs} jobs and skip {len(input_files) - n_jobs} healthy ones")
       if n_jobs == 0:
         return
-      effective_n_jobs = self.__set_condor_script_variables(n_jobs)
       self.__set_run_script_variables()
+      effective_n_jobs = self.__set_condor_script_variables(n_jobs)
 
-      facility = get_facility()
-
-      if facility == "lxplus":
-        command = f"condor_submit -spool {self.condor_config_name}"
-      else:
-        command = f"condor_submit {self.condor_config_name}"
-
-      info(f"Submitting to condor: {command}")
+      command = ["condor_submit", os.path.abspath(self.condor_config_name)]
+      info(f"Submitting to condor: {shlex.join(command)}")
 
       if not args.dry:
-        os.system(command)
+        subprocess.run(command, cwd=self.condor_stage_dir, check=True)
 
       return self.condor_run_script_name, effective_n_jobs
 
@@ -406,9 +415,24 @@ class SubmissionManager:
 
   def __setup_temp_file_paths(self):
     hash_string = str(uuid.uuid4().hex[:6])
-    self.condor_config_name = f"tmp/condor_config_{hash_string}.sub"
-    self.condor_run_script_name = f"tmp/condor_run_{hash_string}.sh"
-    self.input_files_list_file_name = f"tmp/input_files_{hash_string}.txt"
+    directory = "tmp"
+    self.condor_transfer_files = []
+    if self.submission_system == SubmissionSystem.condor and get_facility() == "lxplus":
+      # Factory jobs must keep their submit-side Iwd and transfer sources on AFS.
+      # -spool does not relocate the Iwd of late-materialized jobs from EOS.
+      staging_root = os.path.realpath(os.path.expanduser(os.environ.get("TEA_CONDOR_DIR", "~/.local/state/tea/condor")))
+      if not staging_root.startswith("/afs/"):
+        raise RuntimeError("CERN Condor staging must be on AFS; set TEA_CONDOR_DIR to an AFS directory")
+      os.makedirs(staging_root, mode=0o700, exist_ok=True)
+      prefix = datetime.now().strftime("%Y%m%d_%H%M%S_")
+      self.condor_stage_dir = tempfile.mkdtemp(prefix=prefix, dir=staging_root)
+      directory = self.condor_stage_dir
+      info(f"Condor submission directory: {directory}")
+    self.condor_config_name = f"{directory}/condor_config_{hash_string}.sub"
+    self.condor_run_script_name = f"{directory}/condor_run_{hash_string}.sh"
+    self.input_files_list_file_name = f"{directory}/input_files_{hash_string}.txt"
+    if self.condor_stage_dir:
+      self.condor_transfer_files.append(self.input_files_list_file_name)
 
   def __copy_templates(self):
     condor_config_template_name = f"condor_config_{get_facility()}.template.sub"
@@ -417,11 +441,36 @@ class SubmissionManager:
       fatal(f"Condor config template not found: ../tea/templates/{condor_config_template_name}")
       exit()
 
-    os.system(f"cp ../tea/templates/{condor_config_template_name} {self.condor_config_name}")
-    os.system(f"cp ../tea/templates/condor_run.template.sh {self.condor_run_script_name}")
-    os.system(f"chmod 700 {self.condor_run_script_name}")
+    shutil.copyfile(f"../tea/templates/{condor_config_template_name}", self.condor_config_name)
+    shutil.copyfile("../tea/templates/condor_run.template.sh", self.condor_run_script_name)
+    os.chmod(self.condor_run_script_name, 0o700)
     info(f"Stored condor config at: {self.condor_config_name}")
     info(f"Stored run shell script at: {self.condor_run_script_name}")
+
+  def __render_template(self, file_name, replacements):
+    with open(file_name) as template_file:
+      contents = template_file.read()
+
+    for placeholder, value in replacements.items():
+      contents = contents.replace(placeholder, str(value))
+
+    unresolved_placeholders = sorted(set(re.findall(r"<[a-z_]+>", contents)))
+    if unresolved_placeholders:
+      placeholders = ", ".join(unresolved_placeholders)
+      raise RuntimeError(f"Unresolved placeholders in {file_name}: {placeholders}")
+
+    original_mode = stat.S_IMODE(os.stat(file_name).st_mode)
+    temporary_file_name = f"{file_name}.{uuid.uuid4().hex}.tmp"
+    try:
+      with open(temporary_file_name, "w") as rendered_file:
+        rendered_file.write(contents)
+        rendered_file.flush()
+        os.fsync(rendered_file.fileno())
+      os.chmod(temporary_file_name, original_mode)
+      os.replace(temporary_file_name, file_name)
+    finally:
+      if os.path.exists(temporary_file_name):
+        os.remove(temporary_file_name)
 
   def __save_file_list_to_file(self, input_files):
     with open(self.input_files_list_file_name, "w") as file:
@@ -481,132 +530,104 @@ class SubmissionManager:
     return len(failed_lines)
 
   def __setup_voms_proxy(self):
-    voms_proxy_path = os.popen("voms-proxy-info -path").read().strip()
-    if voms_proxy_path:
-      os.system(f"cp {voms_proxy_path} voms_proxy")
-      voms_proxy_path = voms_proxy_path.replace("/", "\\/")
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<voms_proxy>{self.sed_char}{voms_proxy_path}{self.sed_char}g' {self.condor_run_script_name}"
+    proxy_tool = shutil.which("voms-proxy-info")
+    if proxy_tool:
+      result = subprocess.run([proxy_tool, "-path"], capture_output=True, text=True, check=False)
+      voms_proxy_path = result.stdout.strip()
+      valid = (
+        subprocess.run([proxy_tool, "-exists", "-valid", "0:05"], capture_output=True, check=False).returncode == 0
       )
-    else:
-      warn("VOMS proxy not found. VOMS authentication will not be available.")
+      if result.returncode == 0 and voms_proxy_path and valid:
+        proxy_copy = os.path.abspath(os.path.join(self.condor_stage_dir or ".", "voms_proxy"))
+        shutil.copyfile(voms_proxy_path, proxy_copy)
+        os.chmod(proxy_copy, 0o600)
+        if self.condor_stage_dir:
+          self.condor_transfer_files.append(proxy_copy)
+          return 'export X509_USER_PROXY="$job_sandbox/voms_proxy"'
+        return f"export X509_USER_PROXY={shlex.quote(proxy_copy)}"
+    warn("No valid VOMS proxy found. VOMS authentication will not be available.")
+    return "unset X509_USER_PROXY"
 
   def __set_python_executable(self):
-    python_executable = os.popen("which python3").read().strip()
-    python_executable = python_executable.replace("/", "\\/")
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<python_path>{self.sed_char}{python_executable}{self.sed_char}g' {self.condor_run_script_name}"
-    )
+    return sys.executable
 
   def __set_run_script_variables(self):
-    self.__setup_voms_proxy()
-
-    # set file name
-    if hasattr(self.files_config, "file_name"):
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<file_name>{self.sed_char}--file_name {self.files_config.file_name}{self.sed_char}g' {self.condor_run_script_name}"
-      )
-    else:
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<file_name>{self.sed_char}{self.sed_char}g' {self.condor_run_script_name}"
-      )
-
-    # set working directory
-    workDir = os.getcwd().replace("/", "\\/")
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<work_dir>{self.sed_char}{workDir}{self.sed_char}g' {self.condor_run_script_name}"
+    file_name = (
+      f"--file_name {shlex.quote(self.files_config.file_name)}" if hasattr(self.files_config, "file_name") else ""
     )
-
-    self.__set_python_executable()
-
-    # set the app and app config to execute
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<app>{self.sed_char}{self.app_name}{self.sed_char}g' {self.condor_run_script_name}"
-    )
-    config_path_escaped = self.config_path.replace("/", "\\/")
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<config>{self.sed_char}{config_path_escaped}{self.sed_char}g' {self.condor_run_script_name}"
-    )
-
-    # set path to the list of input files
-    input_files_list_file_name_escaped = self.input_files_list_file_name.replace("/", "\\/")
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<input_files_list_file_name>{self.sed_char}{input_files_list_file_name_escaped}{self.sed_char}g' {self.condor_run_script_name}"
-    )
-
-    # set output directory
     output_trees_dir = ""
     output_hists_dir = ""
     if hasattr(self.files_config, "output_trees_dir"):
       if self.files_config.output_trees_dir != "":
-        output_trees_dir = "--output_trees_dir " + self.files_config.output_trees_dir.replace("/", "\\/")
+        output_trees_dir = "--output_trees_dir " + shlex.quote(self.files_config.output_trees_dir)
     if hasattr(self.files_config, "output_hists_dir"):
       if self.files_config.output_hists_dir != "":
-        output_hists_dir = "--output_hists_dir " + self.files_config.output_hists_dir.replace("/", "\\/")
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<output_trees_dir>{self.sed_char}{output_trees_dir}{self.sed_char}g' {self.condor_run_script_name}"
-    )
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<output_hists_dir>{self.sed_char}{output_hists_dir}{self.sed_char}g' {self.condor_run_script_name}"
-    )
+        output_hists_dir = "--output_hists_dir " + shlex.quote(self.files_config.output_hists_dir)
 
     extra_args = ""
     if self.extra_args is not None:
       for key, value in self.extra_args.items():
-        if isinstance(value, str):
-          value = value.replace("/", "\\/")
-        extra_args += f" --{key} {value}"
+        extra_args += f" --{key} {shlex.quote(str(value))}"
 
-    print(f"{extra_args=}")
-
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<extra_args>{self.sed_char}{extra_args}{self.sed_char}g' {self.condor_run_script_name}"
+    input_files_path = shlex.quote(self.input_files_list_file_name)
+    if self.condor_stage_dir:
+      input_files_path = f'"$job_sandbox/{os.path.basename(self.input_files_list_file_name)}"'
+    python_executable = self.__set_python_executable()
+    python_bin = os.path.dirname(python_executable)
+    runtime_setup = "\n".join(
+      [
+        f'export PATH={shlex.quote(python_bin)}:"$PATH"',
+        f'export PYTHONPATH={shlex.quote(os.getcwd())}:"${{PYTHONPATH:-}}"',
+        f'export LD_LIBRARY_PATH={shlex.quote(os.getcwd())}:"${{LD_LIBRARY_PATH:-}}"',
+      ]
+    )
+    self.__render_template(
+      self.condor_run_script_name,
+      {
+        "<proxy_setup>": self.__setup_voms_proxy(),
+        "<runtime_setup>": runtime_setup,
+        "<file_name>": file_name,
+        "<work_dir>": shlex.quote(os.getcwd()),
+        "<python_path>": shlex.quote(python_executable),
+        "<app>": shlex.quote(self.app_name),
+        "<config>": shlex.quote(self.config_path),
+        "<input_files_list_file_name>": input_files_path,
+        "<output_trees_dir>": output_trees_dir,
+        "<output_hists_dir>": output_hists_dir,
+        "<extra_args>": extra_args,
+      },
     )
 
   def __set_condor_script_variables(self, n_files):
-    condor_run_script_name_escaped = self.condor_run_script_name.replace("/", "\\/")
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<executable>{self.sed_char}{condor_run_script_name_escaped}{self.sed_char}g' {self.condor_config_name}"
-    )
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<memory_request>{self.sed_char}{self.memory_request}{self.sed_char}g' {self.condor_config_name}"
-    )
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<job_flavour>{self.sed_char}{self.job_flavour}{self.sed_char}g' {self.condor_config_name}"
-    )
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<materialize_max>{self.sed_char}{self.materialize_max}{self.sed_char}g' {self.condor_config_name}"
-    )
-
     if self.save_logs:
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}output\\/$(ClusterId).$(ProcId).out{self.sed_char}g' {self.condor_config_name}"
-      )
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}error\\/$(ClusterId).$(ProcId).err{self.sed_char}g' {self.condor_config_name}"
-      )
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}log\\/$(ClusterId).log{self.sed_char}g' {self.condor_config_name}"
-      )
+      log_directory = self.condor_stage_dir or "."
+      output_path = f"{log_directory}/output/$(ClusterId).$(ProcId).out"
+      error_path = f"{log_directory}/error/$(ClusterId).$(ProcId).err"
+      log_path = f"{log_directory}/log/$(ClusterId).log"
+      for name in ("output", "error", "log"):
+        os.makedirs(os.path.join(log_directory, name), exist_ok=True)
     else:
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<output_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
-      )
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<error_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
-      )
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}<log_path>{self.sed_char}\\/dev\\/null{self.sed_char}g' {self.condor_config_name}"
-      )
-
-    if self.resubmit_job is not None:
-      os.system(
-        f"{self.sed_command} 's{self.sed_char}$(ProcId){self.sed_char}{self.resubmit_job}{self.sed_char}g' {self.condor_config_name}"
-      )
+      output_path = "/dev/null"
+      error_path = "/dev/null"
+      log_path = "/dev/null"
 
     n_jobs = self.__get_effective_n_jobs(n_files)
-    os.system(
-      f"{self.sed_command} 's{self.sed_char}<n_jobs>{self.sed_char}{n_jobs}{self.sed_char}g' {self.condor_config_name}"
+    proc_id = self.resubmit_job if self.resubmit_job is not None else "$(ProcId)"
+    self.__render_template(
+      self.condor_config_name,
+      {
+        "<executable>": os.path.abspath(self.condor_run_script_name),
+        "<initial_dir>": self.condor_stage_dir or os.getcwd(),
+        "<transfer_input_files>": ",".join(self.condor_transfer_files),
+        "<memory_request>": self.memory_request,
+        "<job_flavour>": self.job_flavour,
+        "<materialize_max>": self.materialize_max,
+        "<output_path>": output_path,
+        "<error_path>": error_path,
+        "<log_path>": log_path,
+        "$(ProcId)": proc_id,
+        "<n_jobs>": n_jobs,
+      },
     )
     return n_jobs
 
