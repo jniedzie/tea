@@ -24,6 +24,7 @@ if [[ "${_build_sh_sourced}" -eq 1 && -n "${BASH_VERSION:-}" && $- == *i* ]]; th
 fi
 
 _build_sh_script_dir="$(cd "$(dirname "${_build_sh_self}")" && pwd)"
+_build_sh_macos_sdk_override="${CONDA_BUILD_SYSROOT:-${SDKROOT:-}}"
 # shellcheck source=environment/activate.sh
 source "${_build_sh_script_dir}/environment/activate.sh"
 if tea_env_activate; then
@@ -46,6 +47,22 @@ build_main() (
 
   mkdir -p "${bin_dir}" "${build_dir}"
 
+  cmake_args=("${repo_root}")
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    source "${_build_sh_script_dir}/environment/macos_toolchain.sh"
+    tea_macos_select_toolchain "${build_dir}/.macos-toolchain-check" "${_build_sh_macos_sdk_override}" || return $?
+    CC="${TEA_MACOS_CC}"
+    CXX="${TEA_MACOS_CXX}"
+    macos_sdk="${TEA_MACOS_SDK}"
+    export CC CXX
+    cmake_args=(
+      "-DCMAKE_C_COMPILER=${CC}"
+      "-DCMAKE_CXX_COMPILER=${CXX}"
+      "-DCMAKE_OSX_SYSROOT=${macos_sdk}"
+      "${repo_root}"
+    )
+  fi
+
   if [[ "${1:-}" == "--clean" ]]; then
     echo "Cleaning build and bin directories..."
     find "${build_dir}" "${bin_dir}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
@@ -58,6 +75,9 @@ build_main() (
     printf 'CMAKE=%s\n' "$(command -v cmake || true)"
     printf 'CORRECTION=%s\n' "$(command -v correction || true)"
     printf 'ROOT_CONFIG=%s\n' "$(command -v root-config || true)"
+    printf 'CC=%s\n' "${CC:-}"
+    printf 'CXX=%s\n' "${CXX:-}"
+    printf 'MACOS_SDK=%s\n' "${macos_sdk:-}"
     if command -v root-config >/dev/null 2>&1; then
       printf 'ROOT_CONFIG_PREFIX=%s\n' "$(root-config --prefix 2>/dev/null || true)"
       printf 'ROOT_CONFIG_INCDIR=%s\n' "$(root-config --incdir 2>/dev/null || true)"
@@ -76,7 +96,6 @@ build_main() (
 
   cd "${build_dir}"
 
-  cmake_args=("${repo_root}")
   if command -v correction >/dev/null 2>&1; then
     correction_cmake_args=()
     while IFS= read -r correction_cmake_arg; do
@@ -121,9 +140,9 @@ unset -f build_main
 
 if [[ "${_build_sh_sourced}" -eq 1 ]]; then
   [[ "${_build_sh_restore_history}" -eq 1 ]] && set -o history
-  unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir _build_sh_self
+  unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir _build_sh_self _build_sh_macos_sdk_override
   return "${_build_sh_status}"
 fi
 
-unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir _build_sh_self
+unset _build_sh_sourced _build_sh_restore_history _build_sh_script_dir _build_sh_self _build_sh_macos_sdk_override
 exit "${_build_sh_status}"
