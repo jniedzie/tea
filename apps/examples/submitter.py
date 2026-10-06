@@ -47,8 +47,10 @@ def get_args():
   parser.add_argument(
     "--max_materialize",
     type=int,
-    default=5000,
-    help=("An overall limit on the number of jobs that can be materialized in the condor_schedd at any one time."),
+    default=None,
+    help=(
+      "Maximum number of jobs materialized in the condor_schedd at once. Defaults to 50 on lxplus and 5000 elsewhere."
+    ),
   )
 
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")

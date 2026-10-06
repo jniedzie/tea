@@ -90,7 +90,7 @@ def get_facility():
   # matches none of these patterns. Jobs receive the facility as an argument instead
   # (SubmissionManager bakes it into the run script), so they never call this.
   hostname = socket.gethostname()
-  if "lxplus" in hostname:
+  if "lxplus" in hostname or hostname.endswith(".cern.ch"):
     facility = "lxplus"
   elif "naf" in hostname:
     facility = "naf"
