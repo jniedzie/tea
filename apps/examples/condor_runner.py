@@ -4,6 +4,7 @@ from Logger import info
 import argparse
 import os
 import ast
+import subprocess
 
 
 def get_args():
@@ -30,10 +31,13 @@ def try_parse_tuple(s):
 
 def main():
   # hack the xauth issue
-  os.system('echo "export DISPLAY=${DISPLAY}" > ${JOB_WORKING_DIR}/.display')
-  os.system('echo "export TERM=${TERM}" >> ${JOB_WORKING_DIR}/.display')
-  os.system("export XAUTHORITY=${JOB_WORKING_DIR}/.Xauthority")
-  os.system('/usr/bin/xauth "$@" </dev/stdin')
+  job_working_dir = os.environ.get("JOB_WORKING_DIR")
+  if job_working_dir:
+    with open(f"{job_working_dir}/.display", "w") as display_file:
+      display_file.write(f"export DISPLAY={os.environ.get('DISPLAY', '')}\n")
+      display_file.write(f"export TERM={os.environ.get('TERM', '')}\n")
+    os.environ["XAUTHORITY"] = f"{job_working_dir}/.Xauthority"
+    subprocess.run(["/usr/bin/xauth"], stdin=subprocess.DEVNULL, check=False)
 
   args, extra_args = get_args()
   app_name = args.app
@@ -92,8 +96,8 @@ def main():
   )
 
   info(f"\n\nExecuting {command_for_file=}")
-  os.system(command_for_file)
+  return subprocess.run(command_for_file, shell=True, check=False).returncode
 
 
 if __name__ == "__main__":
-  main()
+  raise SystemExit(main())
