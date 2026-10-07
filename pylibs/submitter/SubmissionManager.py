@@ -608,15 +608,19 @@ class SubmissionManager:
     n_jobs = self.__get_effective_n_jobs(n_files)
     if self.save_logs:
       log_directory = self.condor_stage_dir or "."
-      output_path = f"{log_directory}/output/$INT($(ProcId)/500,%03d)/$(ClusterId).$(ProcId).out"
-      error_path = f"{log_directory}/error/$INT($(ProcId)/500,%03d)/$(ClusterId).$(ProcId).err"
+      output_path = f"{log_directory}/output/$(ClusterId).$(ProcId).out"
+      error_path = f"{log_directory}/error/$(ClusterId).$(ProcId).err"
       log_path = f"{log_directory}/log/$(ClusterId).log"
-      os.makedirs(os.path.join(log_directory, "log"), exist_ok=True)
-      # AFS has a per-directory entry limit; each shard holds at most 500 logs.
-      indices = [self.resubmit_job] if self.resubmit_job is not None else range(n_jobs)
-      for shard in {index // 500 for index in indices}:
-        for name in ("output", "error"):
-          os.makedirs(os.path.join(log_directory, name, f"{shard:03d}"), exist_ok=True)
+      for name in ("output", "error", "log"):
+        os.makedirs(os.path.join(log_directory, name), exist_ok=True)
+      if self.condor_stage_dir:
+        # AFS has a per-directory entry limit; each shard holds at most 500 logs.
+        output_path = f"{log_directory}/output/$INT(log_group,%03d)/$(ClusterId).$(ProcId).out"
+        error_path = f"{log_directory}/error/$INT(log_group,%03d)/$(ClusterId).$(ProcId).err"
+        indices = [self.resubmit_job] if self.resubmit_job is not None else range(n_jobs)
+        for shard in {index // 500 for index in indices}:
+          for name in ("output", "error"):
+            os.makedirs(os.path.join(log_directory, name, f"{shard:03d}"), exist_ok=True)
     else:
       output_path = "/dev/null"
       error_path = "/dev/null"
