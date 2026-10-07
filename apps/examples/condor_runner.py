@@ -14,6 +14,7 @@ from Logger import error, info, warn
 import argparse
 import ast
 import os
+from pathlib import Path
 import shlex
 import shutil
 import subprocess
@@ -55,6 +56,54 @@ def try_parse_tuple(s):
     return ast.literal_eval(s)
   except (ValueError, SyntaxError):
     return s
+
+
+def eos_path(path):
+  if path.startswith("/eos/home-"):
+    _, _, home, user, rest = path.split("/", 4)
+    return f"/eos/user/{home[-1]}/{user}/{rest}"
+  return path if path.startswith("/eos/user/") else None
+
+
+def publish_output(local, final, facility=None, url_base=None):
+  remote = eos_path(final)
+  if remote is None:
+    stage_output(str(local), final, facility, url_base)
+    return
+  subprocess.run(["xrdfs", "root://eosuser.cern.ch", "mkdir", "-p", str(Path(remote).parent)],
+                 check=True, timeout=120)
+  subprocess.run(["xrdcp", "--silent", "--posc", "--rm-bad-cksum", "--cksum", "adler32",
+                  str(local), "root://eosuser.cern.ch/" + remote], check=True, timeout=900)
+
+
+def execute(command, facility=None, url_base=None):
+  """Stage EOS input/output locally and return the application's real status."""
+  with tempfile.TemporaryDirectory(prefix="tea_condor_") as temporary:
+    scratch = Path(temporary)
+    publications = []
+    for flag in ("--input_path", "--output_trees_path", "--output_hists_path"):
+      if flag not in command:
+        continue
+      index = command.index(flag) + 1
+      remote = eos_path(command[index])
+      if remote is None:
+        continue
+      local = scratch / (flag[2:] + ".root")
+      if flag == "--input_path":
+        subprocess.run(["xrdcp", "--silent", "--cksum", "adler32", "root://eosuser.cern.ch/" + remote,
+                        str(local)], check=True, timeout=900)
+      else:
+        publications.append((local, remote))
+      command[index] = str(local)
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+      return result.returncode
+    for local, remote in publications:
+      if not local.is_file():
+        raise RuntimeError(f"Application did not produce requested output: {local}")
+      validate_root_file(str(local))
+      publish_output(local, remote, facility, url_base)
+    return 0
 
 
 def main():
@@ -203,8 +252,7 @@ def main():
     # Log the argument vector that is actually executed: shlex.split drops the quoting the
     # string form still carries, so the string is not what ran.
     info(f"\n\nExecuting {command_args=}")
-    result = subprocess.run(command_args, check=False)
-    returncode = result.returncode
+    returncode = execute(command_args, args.facility, stage_url_base)
 
     if returncode == 0 and staged_outputs:
       published = []
@@ -212,7 +260,7 @@ def main():
       for scratch_path, final_path in staged_outputs:
         try:
           validate_root_file(scratch_path)
-          stage_output(scratch_path, final_path, args.facility, stage_url_base)
+          publish_output(scratch_path, final_path, args.facility, stage_url_base)
           published.append(final_path)
         except Exception as exception:
           # No direct-write fallback: writing the file to the final path after a failed

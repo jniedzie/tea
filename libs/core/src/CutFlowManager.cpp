@@ -152,9 +152,10 @@ float CutFlowManager::GetCurrentEventWeight() {
   if (weightsBranchName == "") { return weight; }
 
   try {
-    weight = eventReader->currentEvent->Get(weightsBranchName);
-  } catch (const Exception &e) {
-    error() << "CutFlowManager failed to get gen weights from branch " << weightsBranchName << endl;
+    weight = eventReader->currentEvent->GetAs<float>(weightsBranchName);
+  } catch (const std::exception &e) {
+    fatal() << "Cannot read configured event weight " << weightsBranchName << ": " << e.what() << endl;
+    exit(1);
   }
   return weight;
 }

@@ -1,9 +1,11 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 job_sandbox="$PWD"
 <proxy_setup>
+# Use the selected analysis runtime without inherited generator/ROOT settings.
+unset PYTHONPATH PYTHONHOME LD_LIBRARY_PATH LD_PRELOAD ROOTSYS
 <runtime_setup>
 
 job_number=$1
