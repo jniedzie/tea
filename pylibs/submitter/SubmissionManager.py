@@ -7,6 +7,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import sysconfig
 import shlex
 import tempfile
 from datetime import datetime
@@ -574,11 +575,16 @@ class SubmissionManager:
       input_files_path = f'"$job_sandbox/{os.path.basename(self.input_files_list_file_name)}"'
     python_executable = self.__set_python_executable()
     python_bin = os.path.dirname(python_executable)
+    runtime_libraries = os.pathsep.join([
+      os.getcwd(),
+      os.path.join(sys.prefix, "lib"),
+      os.path.join(sysconfig.get_path("platlib"), "correctionlib", "lib"),
+    ])
     runtime_setup = "\n".join(
       [
         f'export PATH={shlex.quote(python_bin)}:"$PATH"',
         f'export PYTHONPATH={shlex.quote(os.getcwd())}:"${{PYTHONPATH:-}}"',
-        f'export LD_LIBRARY_PATH={shlex.quote(os.getcwd())}:"${{LD_LIBRARY_PATH:-}}"',
+        f'export LD_LIBRARY_PATH={shlex.quote(runtime_libraries)}',
       ]
     )
     self.__render_template(
@@ -599,19 +605,23 @@ class SubmissionManager:
     )
 
   def __set_condor_script_variables(self, n_files):
+    n_jobs = self.__get_effective_n_jobs(n_files)
     if self.save_logs:
       log_directory = self.condor_stage_dir or "."
-      output_path = f"{log_directory}/output/$(ClusterId).$(ProcId).out"
-      error_path = f"{log_directory}/error/$(ClusterId).$(ProcId).err"
+      output_path = f"{log_directory}/output/$INT($(ProcId)/500,%03d)/$(ClusterId).$(ProcId).out"
+      error_path = f"{log_directory}/error/$INT($(ProcId)/500,%03d)/$(ClusterId).$(ProcId).err"
       log_path = f"{log_directory}/log/$(ClusterId).log"
-      for name in ("output", "error", "log"):
-        os.makedirs(os.path.join(log_directory, name), exist_ok=True)
+      os.makedirs(os.path.join(log_directory, "log"), exist_ok=True)
+      # AFS has a per-directory entry limit; each shard holds at most 500 logs.
+      indices = [self.resubmit_job] if self.resubmit_job is not None else range(n_jobs)
+      for shard in {index // 500 for index in indices}:
+        for name in ("output", "error"):
+          os.makedirs(os.path.join(log_directory, name, f"{shard:03d}"), exist_ok=True)
     else:
       output_path = "/dev/null"
       error_path = "/dev/null"
       log_path = "/dev/null"
 
-    n_jobs = self.__get_effective_n_jobs(n_files)
     proc_id = self.resubmit_job if self.resubmit_job is not None else "$(ProcId)"
     self.__render_template(
       self.condor_config_name,

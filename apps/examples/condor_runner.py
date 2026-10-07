@@ -4,7 +4,10 @@ from Logger import info
 import argparse
 import os
 import ast
+from pathlib import Path
+import shlex
 import subprocess
+import tempfile
 
 
 def get_args():
@@ -27,6 +30,45 @@ def try_parse_tuple(s):
     return ast.literal_eval(s)
   except (ValueError, SyntaxError):
     return s
+
+
+def eos_path(path):
+  if path.startswith("/eos/home-"):
+    _, _, home, user, rest = path.split("/", 4)
+    return f"/eos/user/{home[-1]}/{user}/{rest}"
+  return path if path.startswith("/eos/user/") else None
+
+
+def execute(command):
+  """Stage EOS input/output locally and return the application's real status."""
+  with tempfile.TemporaryDirectory(prefix="tea_condor_") as temporary:
+    scratch = Path(temporary)
+    publications = []
+    for flag in ("--input_path", "--output_trees_path", "--output_hists_path"):
+      if flag not in command:
+        continue
+      index = command.index(flag) + 1
+      remote = eos_path(command[index])
+      if remote is None:
+        continue
+      local = scratch / (flag[2:] + ".root")
+      if flag == "--input_path":
+        subprocess.run(["xrdcp", "--silent", "--cksum", "adler32", "root://eosuser.cern.ch/" + remote,
+                        str(local)], check=True, timeout=900)
+      else:
+        publications.append((local, remote))
+      command[index] = str(local)
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+      return result.returncode
+    for local, remote in publications:
+      if not local.is_file():
+        raise RuntimeError(f"Application did not produce requested output: {local}")
+      subprocess.run(["xrdfs", "root://eosuser.cern.ch", "mkdir", "-p", str(Path(remote).parent)],
+                     check=True, timeout=120)
+      subprocess.run(["xrdcp", "--silent", "--posc", "--rm-bad-cksum", "--cksum", "adler32",
+                      str(local), "root://eosuser.cern.ch/" + remote], check=True, timeout=900)
+    return 0
 
 
 def main():
@@ -96,7 +138,7 @@ def main():
   )
 
   info(f"\n\nExecuting {command_for_file=}")
-  return subprocess.run(command_for_file, shell=True, check=False).returncode
+  return execute(shlex.split(command_for_file))
 
 
 if __name__ == "__main__":

@@ -50,9 +50,10 @@ float NanoEventProcessor::GetGenWeight(const std::shared_ptr<NanoEvent> event) {
   float weight = 1.0;
   if (weightsBranchName.empty()) { return weight; }
   try {
-    weight = event->Get(weightsBranchName);
-  } catch (const Exception &e) {
-    warn() << "NanoEventProcessor failed to get gen weight from branch: " << weightsBranchName << endl;
+    weight = event->GetAs<float>(weightsBranchName);
+  } catch (const std::exception &e) {
+    fatal() << "Cannot read configured event weight " << weightsBranchName << ": " << e.what() << endl;
+    exit(1);
   }
   return weight;
 }
