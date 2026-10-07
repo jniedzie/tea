@@ -1,4 +1,5 @@
 Universe              = vanilla
+log_group             = int($(ProcId) / 500)
 executable            = <executable>
 initialdir            = <initial_dir>
 arguments             = $(ProcId)

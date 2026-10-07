@@ -634,8 +634,8 @@ class SubmissionManager:
     if self.save_logs:
       if self.condor_stage_dir:
         log_directory = self.condor_stage_dir
-        output_path = f"{log_directory}/output/$INT($(ProcId)/500,%03d)/$(ClusterId).$(ProcId).out"
-        error_path = f"{log_directory}/error/$INT($(ProcId)/500,%03d)/$(ClusterId).$(ProcId).err"
+        output_path = f"{log_directory}/output/$INT(log_group,%03d)/$(ClusterId).$(ProcId).out"
+        error_path = f"{log_directory}/error/$INT(log_group,%03d)/$(ClusterId).$(ProcId).err"
         log_path = f"{log_directory}/log/$(ClusterId).log"
         os.makedirs(os.path.join(log_directory, "log"), exist_ok=True)
         # AFS has a per-directory entry limit; each shard holds at most 500 logs.

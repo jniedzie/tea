@@ -59,20 +59,25 @@ def get_args():
   return args
 
 
+def load_config(path, description):
+  info(f"Reading {description} from path: {path}")
+  try:
+    spec = importlib.util.spec_from_file_location("files_module", path)
+    if spec is None or spec.loader is None:
+      raise ValueError("Expected a readable Python configuration file")
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    return config
+  except Exception as error:
+    raise RuntimeError(f"Cannot load {description} '{path}': {error}") from error
+
+
 def get_config(args):
-  info(f"Reading config from path: {args.config}")
-  spec = importlib.util.spec_from_file_location("files_module", args.config)
-  config = importlib.util.module_from_spec(spec)
-  spec.loader.exec_module(config)
-  return config
+  return load_config(args.config, "config")
 
 
 def get_files_config(args):
-  info(f"Reading files config from path: {args.files_config}")
-  spec = importlib.util.spec_from_file_location("files_module", args.files_config)
-  files_config = importlib.util.module_from_spec(spec)
-  spec.loader.exec_module(files_config)
-  return files_config
+  return load_config(args.files_config, "files config")
 
 
 def update_config(path, key, value):
@@ -120,7 +125,7 @@ def main():
   n_submission_systems = sum([args.local, args.condor, args.local_parallel])
   if n_submission_systems != 1:
     fatal("Please select exactly one of --local, --condor, or --local_parallel")
-    exit()
+    raise SystemExit(1)
 
   if args.local:
     submission_system = SubmissionSystem.local
@@ -223,4 +228,8 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    main()
+  except (OSError, ValueError, RuntimeError, ImportError) as error:
+    fatal(f"FATAL: Submission preparation failed: {error}. No further jobs will be started.")
+    raise SystemExit(1) from None
