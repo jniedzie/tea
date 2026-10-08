@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-from Logger import info
+from Logger import info, fatal
+from teaHelpers import ensure_root_compiler_environment
 
 import argparse
 import os
 import ast
 from pathlib import Path
 import shlex
+import signal
 import subprocess
 import tempfile
 
@@ -41,6 +43,7 @@ def eos_path(path):
 
 def execute(command):
   """Stage EOS input/output locally and return the application's real status."""
+  ensure_root_compiler_environment()
   with tempfile.TemporaryDirectory(prefix="tea_condor_") as temporary:
     scratch = Path(temporary)
     publications = []
@@ -60,13 +63,18 @@ def execute(command):
       command[index] = str(local)
     result = subprocess.run(command, check=False)
     if result.returncode:
+      if result.returncode < 0:
+        name = signal.Signals(-result.returncode).name
+        fatal(f"FATAL: Application {command[0]} was killed by {name}")
+        return 128 - result.returncode
+      fatal(f"FATAL: Application {command[0]} exited with status {result.returncode}")
       return result.returncode
     for local, remote in publications:
       if not local.is_file():
         raise RuntimeError(f"Application did not produce requested output: {local}")
       subprocess.run(["xrdfs", "root://eosuser.cern.ch", "mkdir", "-p", str(Path(remote).parent)],
                      check=True, timeout=120)
-      subprocess.run(["xrdcp", "--silent", "--posc", "--rm-bad-cksum", "--cksum", "adler32",
+      subprocess.run(["xrdcp", "--silent", "--force", "--posc", "--rm-bad-cksum", "--cksum", "adler32",
                       str(local), "root://eosuser.cern.ch/" + remote], check=True, timeout=900)
     return 0
 
@@ -83,8 +91,8 @@ def main():
 
   args, extra_args = get_args()
   app_name = args.app
-  executor = "python3 " if app_name[-3:] == ".py" else "./"
-  command = f"{executor}{app_name} --config {args.config}"
+  executor = "python3 " if app_name.endswith(".py") else ("" if os.path.isabs(app_name) else "./")
+  command = f"{executor}{shlex.quote(app_name)} --config {shlex.quote(args.config)}"
 
   input_files = open(args.input_files_file_name).read().splitlines()
   input_file_path = input_files[args.file_index]
@@ -142,4 +150,8 @@ def main():
 
 
 if __name__ == "__main__":
-  raise SystemExit(main())
+  try:
+    raise SystemExit(main())
+  except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, RuntimeError) as error:
+    fatal(f"FATAL: Histogram/ntuple job failed: {error}")
+    raise SystemExit(1) from None

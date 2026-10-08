@@ -4,6 +4,7 @@ import importlib.util
 import uuid
 import os
 import re
+import subprocess
 from SubmissionManager import SubmissionManager, SubmissionSystem
 
 from Logger import info, fatal, logger_print
@@ -230,6 +231,6 @@ def main():
 if __name__ == "__main__":
   try:
     main()
-  except (OSError, ValueError, RuntimeError, ImportError) as error:
+  except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as error:
     fatal(f"FATAL: Submission preparation failed: {error}. No further jobs will be started.")
     raise SystemExit(1) from None
