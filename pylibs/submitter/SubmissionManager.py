@@ -81,7 +81,7 @@ class SubmissionManager:
     self.memory_request = args.memory
     self.materialize_max = args.max_materialize
     if self.materialize_max is None:
-      self.materialize_max = 50 if get_facility() == "lxplus" else 5000
+      self.materialize_max = 500 if get_facility() == "lxplus" else 5000
     if self.materialize_max < 1:
       fatal("--max_materialize must be at least 1")
       exit()
@@ -112,7 +112,11 @@ class SubmissionManager:
       info(f"Submitting to condor: {shlex.join(command)}")
 
       if not args.dry:
-        subprocess.run(command, cwd=self.condor_stage_dir, check=True)
+        # CERN's credential helper uses system OpenSSL, not Conda libraries.
+        environment = dict(os.environ)
+        for key in ("LD_LIBRARY_PATH", "LD_PRELOAD", "PYTHONPATH", "PYTHONHOME", "ROOTSYS"):
+          environment.pop(key, None)
+        subprocess.run(command, cwd=self.condor_stage_dir, env=environment, check=True)
 
       return self.condor_run_script_name, effective_n_jobs, self.submission_id
 
@@ -565,6 +569,8 @@ class SubmissionManager:
     return "unset X509_USER_PROXY"
 
   def __set_python_executable(self):
+    if self.submission_system == SubmissionSystem.condor and get_facility() == "lxplus" and os.path.realpath(sys.executable).startswith("/eos/"):
+      raise RuntimeError("CERN worker Python is on EOS. Activate an AFS TEA environment before submitting; EOS runtime reads caused worker I/O errors.")
     return sys.executable
 
   def __set_run_script_variables(self):
@@ -595,19 +601,21 @@ class SubmissionManager:
       input_files_path = f'"$job_sandbox/{os.path.basename(self.input_files_list_file_name)}"'
     python_executable = self.__set_python_executable()
     python_bin = os.path.dirname(python_executable)
-    runtime_libraries = os.pathsep.join([
-      os.getcwd(),
-      os.path.join(sys.prefix, "lib"),
-      os.path.join(sysconfig.get_path("platlib"), "correctionlib", "lib"),
-    ])
+    runtime_libraries = os.pathsep.join(
+      [
+        os.getcwd(),
+        os.path.join(sys.prefix, "lib"),
+        os.path.join(sysconfig.get_path("platlib"), "correctionlib", "lib"),
+      ]
+    )
     runtime_setup = "\n".join(
       [
         f'export PATH={shlex.quote(python_bin)}:"$PATH"',
         f'export PYTHONPATH={shlex.quote(os.getcwd())}:"${{PYTHONPATH:-}}"',
-        f'export LD_LIBRARY_PATH={shlex.quote(runtime_libraries)}',
+        f"export LD_LIBRARY_PATH={shlex.quote(runtime_libraries)}",
       ]
     )
-    for key in ("TEA_GFAL_DOOR", "TEA_DCACHE_LOCAL_PREFIX", "TEA_STAGE_URL_BASE", "TEA_STAGE_LFN_PREFIX", "TEA_XROOTD_REDIRECTOR"):
+    for key in ("CONDA_BUILD_SYSROOT", "TEA_GFAL_DOOR", "TEA_DCACHE_LOCAL_PREFIX", "TEA_STAGE_URL_BASE", "TEA_STAGE_LFN_PREFIX", "TEA_XROOTD_REDIRECTOR"):
       if key in os.environ:
         runtime_setup += f"\nexport {key}={shlex.quote(os.environ[key])}"
     self.__render_template(
