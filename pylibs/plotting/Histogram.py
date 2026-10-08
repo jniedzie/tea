@@ -32,6 +32,8 @@ class Histogram:
   entries: int = 0
   scale_bin: bool = False
   scale_by_bin_width: bool = False
+  # Keep the configured data crop, but permit display whitespace for a legend.
+  allow_legend_x_extension: bool = False
 
   def __post_init__(self):
     self.hist = None
@@ -61,9 +63,6 @@ class Histogram:
       return
 
     self.entries = self.hist.GetEntries()
-    if self.hist.GetEntries() == 0:
-      self.hist.Fill(0.0, 1e-99)
-
     if not self.isGood():
       return
 
