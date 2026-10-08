@@ -431,8 +431,8 @@ class Styler:
   def adjustAxesForLegend(self, plot, hist, source_histograms, legends, pad):
     """Expand automatic axes just enough to keep drawn distributions out of legends.
 
-    The solver evaluates x-only, y-only, and combined extensions.  It never
-    shrinks a range and leaves plots without configured legends unchanged.
+    The solver evaluates x-only, y-only, and combined extensions from the
+    data range and leaves plots without configured legends unchanged.
     """
     if not getattr(self.config, "auto_adjust_axes_for_legend", False):
       return
@@ -445,11 +445,11 @@ class Styler:
 
     x_axis = plot.GetXaxis()
     x_min, x_max = x_axis.GetXmin(), x_axis.GetXmax()
-    # THStack.GetMinimum/GetMaximum describe its stacked contents, rather than
-    # the visible frame range. The frame is what the legend can overlap.
+    # ROOT can change the frame extrema while painting a logarithmic THStack.
+    # Start from the data/configuration every time, so repeated layout passes
+    # cannot amplify ROOT's padding or a previous legend extension.
     frame = plot.GetHistogram() if hasattr(plot, "GetHistogram") else None
-    y_min = frame.GetMinimum() if frame is not None else plot.GetMinimum()
-    y_max = frame.GetMaximum() if frame is not None else plot.GetMaximum()
+    y_min, y_max = self.getYAxisRangeForLayout(hist, source_histograms)
     if x_max <= x_min or y_max <= y_min:
       return
     if (hist.log_x and x_min <= 0) or (hist.log_y and y_min <= 0):
@@ -484,16 +484,19 @@ class Styler:
       return
 
     # Expand toward the legend horizontally, or leave room above the filled
-    # distributions vertically. Fixed endpoints remain authoritative.
+    # distributions vertically. Fixed endpoints stay fixed unless the
+    # histogram explicitly permits display-only X extension.
     legend_x_center = sum((box[0] + box[2]) / 2 for box in legend_boxes) / len(legend_boxes)
     grow_x_upper = legend_x_center >= (left + right) / 2
 
     extensions = [index / 100.0 for index in range(101)] + [1.5, 2.0, 3.0]
-    # A vertical expansion changes the apparent peak height, especially on a
-    # logarithmic axis. Prefer equally small horizontal whitespace and use y
-    # only when it is materially cheaper or needed with x.
+    # On log Y, score the actual number of added decades, rather than a
+    # fraction of the existing span. Never add more than two decades solely
+    # for a legend; a tall legend needs horizontal whitespace instead.
     y_extension_penalty = 1.75 if hist.log_y else 1.25
     x_range_is_fixed = hist.x_max is not None if grow_x_upper else hist.x_min is not None
+    if getattr(hist, "allow_legend_x_extension", False):
+      x_range_is_fixed = False
     x_extensions = (0.0,) if x_range_is_fixed else extensions
     transform_y = math.log10 if hist.log_y else lambda value: value
     low, high = transform_y(y_min), transform_y(y_max)
@@ -503,17 +506,11 @@ class Styler:
       axis = source.GetXaxis()
       for index in range(1, source.GetNbinsX() + 1):
         value = source.GetBinContent(index) + source.GetBinError(index)
-        if value > y_min:
+        if math.isfinite(value) and value > y_min:
           bins.append((axis.GetBinLowEdge(index), axis.GetBinUpEdge(index), transform_y(value)))
-    best = None
-    # For each horizontal extension solve the required y maximum directly in
-    # screen coordinates. This avoids both grid-sized overshoots and silent
-    # failures when the required y extension exceeds the candidate grid.
-    for x_extension in x_extensions:
-      candidate_x_min, candidate_x_max = self.__extendAxisRange(
-        x_min, x_max, x_extension, grow_x_upper, hist.log_x
-      )
-      required_high = high
+
+    def required_y_high(candidate_x_min, candidate_x_max, y_low, y_high):
+      required_high = y_high
       for bin_low, bin_high, value in bins:
         if bin_high <= candidate_x_min or bin_low >= candidate_x_max:
           continue
@@ -525,12 +522,51 @@ class Styler:
           if x2 < lx1 - 0.012 or x1 > lx2 + 0.012:
             continue
           fraction = (ly1 - 0.012 - bottom) / (top - bottom)
-          required_high = max(required_high, low + (value - low) / fraction) if fraction > 0 else math.inf
+          required_high = max(required_high, y_low + (value - y_low) / fraction) if fraction > 0 else math.inf
+      return required_high
+
+    # Include the exact x-only solution. A coarse search can miss the point
+    # where the last occupied bin clears the legend or stop short for a wide
+    # legend. Solve using the whole bin edge, including its error envelope.
+    horizontal_candidate = None
+    if not x_range_is_fixed:
+      transform_x = math.log10 if hist.log_x else lambda value: value
+      x_low, x_high = transform_x(x_min), transform_x(x_max)
+      horizontal_extension = 0.0
+      for bin_low, bin_high, _ in bins:
+        if bin_high <= x_min or bin_low >= x_max:
+          continue
+        for lx1, _, lx2, _ in legend_boxes:
+          if grow_x_upper:
+            fraction = (lx1 - 0.012 - left) / (right - left)
+            required_span = (transform_x(min(bin_high, x_max)) - x_low) / fraction if fraction > 0 else math.inf
+          else:
+            fraction = (right - lx2 - 0.012) / (right - left)
+            required_span = (x_high - transform_x(max(bin_low, x_min))) / fraction if fraction > 0 else math.inf
+          horizontal_extension = max(horizontal_extension, required_span / (x_high - x_low) - 1)
+      if math.isfinite(horizontal_extension):
+        x_extensions = sorted(set(extensions + [horizontal_extension + 1e-6]))
+        horizontal_candidate = self.__extendAxisRange(
+          x_min, x_max, horizontal_extension + 1e-6, grow_x_upper, hist.log_x
+        )
+    best = None
+    # For each horizontal extension solve the required y maximum directly in
+    # screen coordinates. This avoids both grid-sized overshoots and silent
+    # failures when the required y extension exceeds the candidate grid.
+    for x_extension in x_extensions:
+      candidate_x_min, candidate_x_max = self.__extendAxisRange(
+        x_min, x_max, x_extension, grow_x_upper, hist.log_x
+      )
+      required_high = required_y_high(candidate_x_min, candidate_x_max, low, high)
       if not math.isfinite(required_high) or (hist.log_y and required_high > 300):
         continue
       if hist.y_max is not None and required_high > high:
         continue
       y_extension = (required_high - high) / (high - low)
+      if hist.log_y:
+        y_extension = required_high - high
+        if y_extension > 2.0:
+          continue
       score = x_extension ** 2 + (y_extension_penalty * y_extension) ** 2
       if best is None or score < best[0]:
         best = (score, candidate_x_min, candidate_x_max,
@@ -543,14 +579,37 @@ class Styler:
       ):
         warn("Legend clearance could not be satisfied for " + hist.name)
         return
-      x_axis.SetLimits(candidate_x_min, candidate_x_max)
-      plot.SetMinimum(y_min)
-      plot.SetMaximum(candidate_y_max)
-      if frame is not None:
-        frame.GetXaxis().SetLimits(candidate_x_min, candidate_x_max)
-        frame.SetMinimum(y_min)
-        frame.SetMaximum(candidate_y_max)
-      pad.Modified()
+      # ROOT adds its own log-axis padding when painting a stack. Check the
+      # painted coordinates too, and correct small residual overlaps within
+      # the same Y budget. Fall back to horizontal clearance if needed.
+      for attempt in range(4):
+        x_axis.SetLimits(candidate_x_min, candidate_x_max)
+        plot.SetMinimum(y_min)
+        plot.SetMaximum(candidate_y_max)
+        if frame is not None:
+          frame.GetXaxis().SetLimits(candidate_x_min, candidate_x_max)
+          frame.SetMinimum(y_min)
+          frame.SetMaximum(candidate_y_max)
+        pad.Modified()
+        pad.Update()
+        actual_low, actual_high = pad.GetUymin(), pad.GetUymax()
+        actual_min = 10 ** actual_low if hist.log_y else actual_low
+        actual_max = 10 ** actual_high if hist.log_y else actual_high
+        if not self.__legendOverlapsDistributions(
+          source_histograms, legend_boxes, candidate_x_min, candidate_x_max,
+          actual_min, actual_max, hist.log_x, hist.log_y, left, right, bottom, top,
+        ):
+          return
+        required_high = required_y_high(candidate_x_min, candidate_x_max, actual_low, actual_high)
+        corrected_high = transform_y(candidate_y_max) + required_high - actual_high + 0.01 * (actual_high - actual_low)
+        if hist.y_max is None and math.isfinite(corrected_high) and (not hist.log_y or corrected_high <= high + 2.0):
+          candidate_y_max = 10 ** corrected_high if hist.log_y else corrected_high
+        elif horizontal_candidate is not None:
+          candidate_x_min, candidate_x_max = horizontal_candidate
+          candidate_y_max = y_max
+        else:
+          break
+      warn("Legend clearance could not be satisfied within bounded axis ranges for " + hist.name)
       return
     warn("Configured axis limits leave no room for the legend in " + hist.name)
 
