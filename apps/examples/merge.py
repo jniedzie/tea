@@ -181,11 +181,21 @@ def cmssw_provenance_tag(cmssw_src=None, commit_hash=None):
   return commit
 
 
-def load_files_config(config_path):
+def load_files_config(config_path, *, allow_incomplete=False):
+  previous = os.environ.get("SHIFT_ALLOW_INCOMPLETE_NANO")
+  if allow_incomplete:
+    os.environ["SHIFT_ALLOW_INCOMPLETE_NANO"] = "1"
   spec = importlib.util.spec_from_file_location("files_config", config_path)
   files_config = importlib.util.module_from_spec(spec)
   sys.modules["files_config"] = files_config
-  spec.loader.exec_module(files_config)
+  try:
+    spec.loader.exec_module(files_config)
+  finally:
+    if allow_incomplete:
+      if previous is None:
+        os.environ.pop("SHIFT_ALLOW_INCOMPLETE_NANO", None)
+      else:
+        os.environ["SHIFT_ALLOW_INCOMPLETE_NANO"] = previous
   return files_config
 
 
@@ -870,13 +880,23 @@ def select_available_jobs(jobs, allow_incomplete):
       "Use --allow-incomplete to merge only the available files."
     )
   selected = []
+  incomplete = {}
   for job in jobs:
     inputs = [path for path in job[-1] if available[path]]
     if len(inputs) != len(job[-1]):
-      action = "merging available files" if inputs else "skipping this empty bin"
-      warn(f"Incomplete merge for {job[5]}: {len(inputs)}/{len(job[-1])} inputs available; {action}.")
+      output = Path(job[5])
+      production = output.parent.parent
+      bin_name = production.name.rsplit('_', 1)[-1]
+      if output.parent.name == 'histograms_merged' and re.fullmatch(r'[0-9.]+to(?:[0-9.]+|-1|inf)', bin_name):
+        incomplete.setdefault(production.parent.name, []).append(bin_name)
+      else:
+        incomplete.setdefault(output.parent.name, [])
     if inputs:
       selected.append((*job[:-1], inputs))
+  if incomplete:
+    warn('Incomplete histogram productions:\n' + '\n'.join(
+      f"  {process}: {', '.join(bins)}" if bins else f'  {process}'
+      for process, bins in incomplete.items()))
   return selected
 
 
@@ -1107,7 +1127,7 @@ def main():
     provenance_tag = cmssw_provenance_tag(args.cmssw_src, args.commit_hash)
     info(f"CMSSW provenance tag: {provenance_tag}")
 
-  files_config = load_files_config(args.files_config)
+  files_config = load_files_config(args.files_config, allow_incomplete=args.allow_incomplete)
   samples = files_config.samples if hasattr(files_config, "samples") else [""]
   input_file_pattern = getattr(files_config, "input_file_pattern", "*.root")
   if os.path.basename(input_file_pattern) != input_file_pattern:
@@ -1152,8 +1172,8 @@ def main():
     return
 
   if args.dry:
-    print_job_summary(jobs, args.condor)
     if not args.condor:
+      print_job_summary(jobs, False)
       return
 
   if args.condor:
