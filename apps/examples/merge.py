@@ -43,7 +43,7 @@ def positive_int(value):
 def parse_args():
   parser = argparse.ArgumentParser(description="Merge ROOT files in batches of N.")
   inputs = parser.add_mutually_exclusive_group(required=True)
-  inputs.add_argument("--files_config", help="Path to the files config.")
+  inputs.add_argument("--files_config", help="Files config of the preceding step; merge its tree/histogram outputs.")
   inputs.add_argument("--job-file", help=argparse.SUPPRESS)
   parser.add_argument("--job_flavour", default="workday", help="Condor job flavour.")
   parser.add_argument("--memory", type=float, default=2.0, help="Condor memory request in GB.")
@@ -842,24 +842,36 @@ def collect_jobs(
   return jobs
 
 
-def collect_explicit_jobs(entries):
-  """Group exact input/output triples by destination, without directory globs."""
+def collect_explicit_jobs(entries, chunk_size=-1, provenance_tag=None, skip_no_keys=False):
+  """Merge the preceding step's exact output paths, grouped by kind/directory."""
   groups = {}
   seen = set()
-  for input_file, tree_output, hist_output in entries:
-    if input_file in seen:
-      raise ValueError(f"Duplicate merge input: {input_file}")
-    seen.add(input_file)
-    for kind, output in (("trees", tree_output), ("histograms", hist_output)):
-      if output:
-        if output in seen or output == input_file:
-          raise ValueError(f"Merge output is also an input: {output}")
-        groups.setdefault((kind, output), []).append(input_file)
-  if seen.intersection(output for _, output in groups):
+  for _, tree_output, hist_output in entries:
+    for kind, path in (("trees", tree_output), ("histograms", hist_output)):
+      if not path:
+        continue
+      path = os.path.normpath(path)
+      if path in seen:
+        raise ValueError(f"Duplicate preceding-step output: {path}")
+      seen.add(path)
+      groups.setdefault((kind, os.path.dirname(path)), []).append(path)
+
+  jobs = []
+  provenance_suffix = f"_{provenance_tag}" if provenance_tag else ""
+  for (kind, input_dir), paths in sorted(groups.items()):
+    paths = sorted(paths)
+    if skip_no_keys:
+      paths = skip_files_without_keys(paths)
+    if not paths:
+      continue
+    output_dir = f"{input_dir}_merged" if input_dir else "./_merged"
+    batches = [paths] if chunk_size == -1 else chunk_files(paths, chunk_size)
+    for batch_index, inputs in enumerate(batches):
+      output = os.path.join(output_dir, f"ntuple_{batch_index}{provenance_suffix}.root")
+      jobs.append((kind, input_dir, batch_index, input_dir, output_dir, output, inputs))
+  if seen.intersection(job[5] for job in jobs):
     raise ValueError("Merge outputs must be separate from input files")
-  return [(kind, str(Path(output).parent.parent), 0,
-           str(Path(inputs[0]).parent), str(Path(output).parent), output, inputs)
-          for (kind, output), inputs in sorted(groups.items())]
+  return jobs
 
 
 def select_available_jobs(jobs, allow_incomplete):
@@ -1133,18 +1145,22 @@ def main():
   if os.path.basename(input_file_pattern) != input_file_pattern:
     raise ValueError("input_file_pattern must be a basename glob, not a path")
   merge_targets = get_merge_targets(files_config)
-  explicit_inputs = hasattr(files_config, "input_output_file_list")
-  if explicit_inputs and (args.n_files_to_merge != -1 or args.add_hash or args.skip_no_keys):
-    raise ValueError("Explicit merge destinations require -n -1 without --add-hash or --skip-no-keys")
+  explicit_inputs = hasattr(files_config, "input_output_file_list") or hasattr(files_config, "get_input_output_file_lists")
+  if args.n_files_to_merge != -1 and args.n_files_to_merge < 1:
+    raise ValueError("--n-files-to-merge must be -1 or a positive integer")
   if not merge_targets and not explicit_inputs:
-    raise ValueError("files_config must define output_hists_dir and/or output_trees_dir")
+    raise ValueError("files_config must define preceding-step tree/histogram outputs")
 
   jobs_by_kind = []
   if explicit_inputs:
-    explicit_jobs = collect_explicit_jobs(files_config.input_output_file_list)
+    entries = (files_config.input_output_file_list if hasattr(files_config, "input_output_file_list") else
+               [entry for group in files_config.get_input_output_file_lists() for entry in group])
+    explicit_jobs = collect_explicit_jobs(entries, args.n_files_to_merge, provenance_tag, args.skip_no_keys)
     for kind in sorted({job[0] for job in explicit_jobs}):
       jobs_by_kind.append((kind, "", [job for job in explicit_jobs if job[0] == kind]))
-  for merge_kind, base_dir in merge_targets:
+  # Exact per-file outputs take precedence over directory discovery, matching
+  # the submitter's input_output_file_list contract and excluding stale files.
+  for merge_kind, base_dir in ([] if explicit_inputs else merge_targets):
     jobs = collect_jobs(
       samples,
       base_dir,
