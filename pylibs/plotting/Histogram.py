@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from copy import deepcopy
 from array import array
 from itertools import count
-from typing import Optional
+from typing import Callable, Optional, Union
+from math import isclose, isfinite
+from bisect import bisect_left
 import ROOT
 
 from Sample import SampleType
@@ -34,6 +36,11 @@ class Histogram:
   scale_by_bin_width: bool = False
   # Keep the configured data crop, but permit display whitespace for a legend.
   allow_legend_x_extension: bool = False
+  # Keys are stored category/status values, including negative failure codes.
+  bin_labels: Optional[dict[int, str]] = None
+  bin_edges: Optional[Union[tuple[float, ...], Callable]] = None
+  # Display the booked domain without manufacturing bins from overflow.
+  show_full_x_range: bool = False
 
   def __post_init__(self):
     self.hist = None
@@ -113,7 +120,31 @@ class Histogram:
     self.hist.SetLineColorAlpha(sample.line_color, sample.line_alpha)
     self.hist.SetFillColorAlpha(sample.fill_color, sample.fill_alpha)
     self.hist.SetFillStyle(sample.fill_style)
-    self.hist.Rebin(self.rebin)
+    if self.bin_edges is None:
+      self.hist.Rebin(self.rebin)
+    else:
+      if self.rebin != 1:
+        raise ValueError(f"{self.name}: choose either integer or variable rebinning")
+      edges = tuple(self.bin_edges(self.hist) if callable(self.bin_edges) else self.bin_edges)
+      source_edges = tuple(self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2))
+      aligned = lambda a, b: isclose(a, b, rel_tol=1.e-10, abs_tol=1.e-8)
+      def is_source_edge(edge):
+        index = bisect_left(source_edges, edge)
+        return any(aligned(edge, source_edges[i]) for i in (index - 1, index) if 0 <= i < len(source_edges))
+      if (len(edges) < 2 or not all(isfinite(edge) for edge in edges)
+          or any(a >= b for a, b in zip(edges, edges[1:]))
+          or not aligned(edges[0], source_edges[0])
+          or not aligned(edges[-1], source_edges[-1])
+          or any(not is_source_edge(edge) for edge in edges)):
+        raise ValueError(f"{self.name}: variable bins must use existing edges and retain the full range")
+      self.hist = self.hist.Rebin(len(edges) - 1, f"{self.hist.GetName()}_rebin_{next(_cropped_histogram_ids)}", array("d", edges))
+      self.hist.SetDirectory(0)
+    if self.bin_labels:
+      axis = self.hist.GetXaxis()
+      for value, label in self.bin_labels.items():
+        index = axis.FindFixBin(value)
+        if 1 <= index <= self.hist.GetNbinsX():
+          axis.SetBinLabel(index, label)
     self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
     if self.scale_bin:
       self.hist.Scale(1.0 / self.rebin)

@@ -448,7 +448,10 @@ class HistogramPlotter:
 
   def __setup_canvas(self, canvas, hist):
     sources = self.__getPlottedHistograms(hist)
-    self.styler.preparePlotLayout(hist, sources, canvas, self.show_ratios)
+    self.styler.preparePlotLayout(
+      hist, sources, canvas, self.show_ratios,
+      legends=self.legends.get(hist.getName(), {}).values(),
+    )
     has_categorical_labels = any(
       any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
       for source in sources
@@ -514,7 +517,13 @@ class HistogramPlotter:
   def drawStacks(self):
     self.__configureAutomaticMargins()
     for hist in self.config.histograms:
-      canvas = TCanvas(hist.getName(), hist.getName(), self.config.canvas_size[0], self.config.canvas_size[1])
+      sources = self.__getPlottedHistograms(hist)
+      has_categorical_labels = bool(self.styler.categoricalLabels(sources))
+      canvas_size = (
+        getattr(self.config, "categorical_canvas_size", self.config.canvas_size)
+        if has_categorical_labels else self.config.canvas_size
+      )
+      canvas = TCanvas(hist.getName(), hist.getName(), canvas_size[0], canvas_size[1])
       self.__setup_canvas(canvas, hist)
 
       ratio_stack = self.__drawRatioPlot(canvas, hist)

@@ -874,6 +874,35 @@ def collect_explicit_jobs(entries, chunk_size=-1, provenance_tag=None, skip_no_k
   return jobs
 
 
+def collect_input_group_jobs(groups, chunk_size=-1, provenance_tag=None, skip_no_keys=False):
+  """Batch exact raw inputs into explicitly selected output directories."""
+  jobs = []
+  seen = set()
+  suffix = f"_{provenance_tag}" if provenance_tag else ""
+  output_dirs = set()
+  for output_dir, paths in sorted(groups.items()):
+    output_dir = os.path.normpath(output_dir)
+    if output_dir in output_dirs:
+      raise ValueError(f"Duplicate merge output directory: {output_dir}")
+    output_dirs.add(output_dir)
+    inputs = sorted(os.path.normpath(path) for path in paths)
+    for path in inputs:
+      if path in seen:
+        raise ValueError(f"Duplicate merge input: {path}")
+      seen.add(path)
+    if skip_no_keys:
+      inputs = skip_files_without_keys(inputs)
+    if not inputs:
+      continue
+    batches = [inputs] if chunk_size == -1 else chunk_files(inputs, chunk_size)
+    for index, batch in enumerate(batches):
+      output = os.path.join(output_dir, f"ntuple_{index}{suffix}.root")
+      jobs.append(("trees", output_dir, index, "", output_dir, output, batch))
+  if seen.intersection(job[5] for job in jobs):
+    raise ValueError("Merge outputs must be separate from input files")
+  return jobs
+
+
 def select_available_jobs(jobs, allow_incomplete):
   """Check the expected inventory before starting any local or Condor merge."""
   available = {}
@@ -1146,12 +1175,18 @@ def main():
     raise ValueError("input_file_pattern must be a basename glob, not a path")
   merge_targets = get_merge_targets(files_config)
   explicit_inputs = hasattr(files_config, "input_output_file_list") or hasattr(files_config, "get_input_output_file_lists")
+  raw_groups = hasattr(files_config, "merge_input_groups")
+  if raw_groups and (explicit_inputs or merge_targets):
+    raise ValueError("merge_input_groups cannot be combined with preceding-step outputs")
   if args.n_files_to_merge != -1 and args.n_files_to_merge < 1:
     raise ValueError("--n-files-to-merge must be -1 or a positive integer")
-  if not merge_targets and not explicit_inputs:
+  if not merge_targets and not explicit_inputs and not raw_groups:
     raise ValueError("files_config must define preceding-step tree/histogram outputs")
 
   jobs_by_kind = []
+  if raw_groups:
+    jobs_by_kind.append(("trees", "", collect_input_group_jobs(
+      files_config.merge_input_groups, args.n_files_to_merge, provenance_tag, args.skip_no_keys)))
   if explicit_inputs:
     entries = (files_config.input_output_file_list if hasattr(files_config, "input_output_file_list") else
                [entry for group in files_config.get_input_output_file_lists() for entry in group])
@@ -1173,7 +1208,7 @@ def main():
     if jobs:
       jobs_by_kind.append((merge_kind, base_dir, jobs))
 
-  if explicit_inputs and (not args.dry or args.allow_incomplete):
+  if (explicit_inputs or raw_groups) and (not args.dry or args.allow_incomplete):
     # Check the entire inventory before any submission, then freeze that subset.
     selected = select_available_jobs([job for _, _, group in jobs_by_kind for job in group],
                                      args.allow_incomplete)

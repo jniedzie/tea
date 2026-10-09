@@ -26,6 +26,7 @@ class Styler:
       "top": 0.06,
       "bottom": self.bottomMargin,
     }
+    self.sharedLayoutMargins = dict(self.automaticMargins)
 
     self.plotMargins = getattr(self.config, "plot_margins", None)
     if self.plotMargins is not None:
@@ -243,6 +244,7 @@ class Styler:
       }
     )
     tick_measurement_canvas.Close()
+    self.sharedLayoutMargins = dict(self.automaticMargins)
     self.__setStyle()
 
   @staticmethod
@@ -257,11 +259,22 @@ class Styler:
           labels[axis.GetBinCenter(index)] = str(label)
     return sorted(labels.items())
 
-  def preparePlotLayout(self, hist, sources, canvas, has_ratio=False):
+  def preparePlotLayout(self, hist, sources, canvas, has_ratio=False, legends=()):
     """Only the bottom margin depends on this plot's tick labels and title."""
     canvas.cd()
+    # A categorical plot can opt into its own canvas and external legend.
+    # Restore the shared continuous layout before sizing each new plot.
+    if self.plotMargins is None:
+      self.leftMargin = self.sharedLayoutMargins["left"]
+      self.rightMargin = self.sharedLayoutMargins["right"]
+      self.topMargin = self.sharedLayoutMargins["top"]
+      self.automaticMargins.update(
+        left=self.leftMargin, right=self.rightMargin, top=self.topMargin
+      )
     labels = [(x, label) for x, label in self.categoricalLabels(sources)
               if (hist.x_min is None or x >= hist.x_min) and (hist.x_max is None or x <= hist.x_max)]
+    if labels and getattr(self.config, "categorical_legend_outside", False) and not has_ratio:
+      self.__configureCategoricalLegendLayout(hist, sources, canvas, legends)
     height = max(1, canvas.GetWh())
     title_height = self.__textHeight(hist.x_label, 43, self.labelFontSize) if hist.x_label else 0
     if labels:
@@ -277,6 +290,56 @@ class Styler:
     # Enlarge the ratio pad for long labels while retaining a visible ratio
     # frame. Numeric plots keep the established 30 percent ratio pad.
     self.ratioPadFraction = max(0.3, bottom + 0.16) if has_ratio else 0.3
+
+  def __configureCategoricalLegendLayout(self, hist, sources, canvas, legends):
+    """Reserve a measured right column without changing fonts or category bins."""
+    if self.plotMargins is not None:
+      return
+    width, height = max(1, canvas.GetWw()), max(1, canvas.GetWh())
+    minimum, maximum = self.getYAxisRangeForLayout(hist, sources)
+    if hist.log_y and minimum > 0 and maximum > 0:
+      tick_width = max(
+        self.__textWidth("1" if exponent == 0 else f"10^{{{exponent}}}", 43, self.labelFontSize)
+        for exponent in range(math.floor(math.log10(minimum)), math.ceil(math.log10(maximum)) + 1)
+      )
+    else:
+      tick_width = self.__widestYAxisLabel(minimum, maximum)
+    title_thickness = self.__textHeight(hist.y_label or "Events", 43, self.labelFontSize)
+    self.leftMargin = max(0.09, (tick_width + title_thickness + 18) / width)
+    self.topMargin = max(0.04, 40 / height)
+
+    visible = [legend for legend in legends if legend is not None]
+    legend_widths = []
+    for legend in visible:
+      entries = legend.GetListOfPrimitives()
+      labels = [str(entry.GetLabel()) for entry in entries if hasattr(entry, "GetLabel") and entry.GetLabel()]
+      if not labels:
+        continue
+      size = legend.GetTextSize()
+      if size <= 1:
+        size *= height
+      font = legend.GetTextFont() // 10 * 10 + 3
+      text_width = max(self.__textWidth(label, font, size) for label in labels)
+      # TLegend allocates GetMargin() of its width to the sample swatches.
+      legend_widths.append((text_width + 12) / max(0.1, 1 - legend.GetMargin()) / width)
+    column_width = max(legend_widths, default=0)
+    outer_margin = 0.02
+    column_left = 1 - outer_margin - column_width
+    label_gap = (self.labelFontSize + 12) / width
+    self.rightMargin = outer_margin + column_width + label_gap if visible else outer_margin
+    if self.leftMargin + self.rightMargin >= 0.9:
+      raise ValueError("Categorical legend leaves too little plot width; increase categorical_canvas_size")
+    for legend in visible:
+      # Before its first Paint(), TPave initializes NDC from the constructor's
+      # stored X coordinates. Set both forms so the first Draw honors the new
+      # column just as subsequent paints do.
+      legend.SetX1(column_left)
+      legend.SetX2(1 - outer_margin)
+      legend.SetX1NDC(column_left)
+      legend.SetX2NDC(1 - outer_margin)
+    self.automaticMargins.update(
+      left=self.leftMargin, right=self.rightMargin, top=self.topMargin
+    )
 
   @staticmethod
   def prepareDisplayFrame(stack):
@@ -727,7 +790,7 @@ class Styler:
 
     # Histogram booking often reserves a broad diagnostic domain.  Frame the
     # populated bins instead; an empty histogram still falls back to booking.
-    if occupied_x_ranges:
+    if occupied_x_ranges and not getattr(hist, "show_full_x_range", False):
       x_min = min(x_range[0] for x_range in occupied_x_ranges)
       x_max = max(x_range[1] for x_range in occupied_x_ranges)
     else:
