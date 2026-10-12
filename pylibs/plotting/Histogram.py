@@ -8,6 +8,7 @@ import ROOT
 from Sample import SampleType
 from HistogramNormalizer import NormalizationType
 from Logger import info, warn, error
+from GroupedHistogram2D import HistogramGroup2D
 
 
 _cropped_histogram_ids = count()
@@ -149,6 +150,9 @@ class Histogram2D:
   suffix: str = ""
   norm_scale: float = 1.0
   comparable_axes: bool = False
+  groups: Optional[tuple[HistogramGroup2D, ...]] = None
+  show_contours: Optional[bool] = None
+  contour_fractions: Optional[tuple[float, ...]] = None
 
   def __post_init__(self):
     self.hist = None

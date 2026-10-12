@@ -10,6 +10,7 @@ from Sample import SampleType
 from Styler import Styler
 from HistogramNormalizer import HistogramNormalizer
 from CmsLabelsManager import CmsLabelsManager
+from GroupedHistogram2D import GroupedHistogram2DPlotter, resolve_groups
 from Logger import info, warn, error, fatal, install_root_warning_collector
 
 
@@ -22,6 +23,7 @@ class HistogramPlotter:
 
     self.normalizer = HistogramNormalizer(config)
     self.styler = Styler(config)
+    self.grouped2D = GroupedHistogram2DPlotter(config, self.styler, self.normalizer)
     self.cmsLabelsManager = CmsLabelsManager(config)
 
     self.legends = {}
@@ -111,13 +113,24 @@ class HistogramPlotter:
 
     self.histosamples.append((copy.deepcopy(hist), copy.deepcopy(sample)))
 
-  def addHistosample2D(self, hist, sample, input_file):
+  def addHistosample2D(self, hist: Any, sample: Any, input_file: Any) -> None:
+    groups = resolve_groups(self.config, hist)
+    if groups and not any(sample.name in group.samples for group in groups):
+      return
     if self.__histosample2DExists(hist, sample):
       warn(f"Skipping adding 2D histogram {hist.getName()} for sample {sample.name} because it already exists")
       return
     hist.load(input_file)
 
-    if not hist.isGood():
+    if groups:
+      if (
+        hist.hist is None or not hist.hist or not hist.hist.InheritsFrom("TH2") or hist.hist.InheritsFrom("TProfile2D")
+      ):
+        group_names = ", ".join(group.name for group in groups if sample.name in group.samples)
+        raise ValueError(
+          f"Missing or invalid TH2 histogram '{hist.getName()}', dataset '{sample.name}', groups '{group_names}'"
+        )
+    elif not hist.isGood():
       warn(f"Some histograms were missing for some of the samples.")
       return
 
@@ -383,7 +396,6 @@ class HistogramPlotter:
         legend.Draw()
 
   def _hist_to_graph(self, hist):
-
     n = hist.GetNbinsX()
     x = []
     y = []
@@ -557,9 +569,23 @@ class HistogramPlotter:
         extension = output_format.lstrip(".")
         self.__save_canvas(canvas, self.config.output_path + "/" + title + "." + extension)
 
-  def drawHists2D(self):
+  def drawHists2D(self) -> None:
     if hasattr(self.config, "histograms2D"):
-      self.__drawObjects2D(self.histosamples2D, "2D histogram", normalize=True)
+      legacy_names = set()
+      for hist in self.config.histograms2D:
+        if resolve_groups(self.config, hist):
+          canvas = self.grouped2D.draw(hist, self.histosamples2D)
+          for output_format in self.output_formats:
+            extension = output_format.lstrip(".")
+            path = self.config.output_path + "/" + hist.getOutputName() + "_grouped." + extension
+            self.__save_canvas(canvas, path)
+        else:
+          legacy_names.add(hist.getName())
+      self.__drawObjects2D(
+        [(hist, sample) for hist, sample in self.histosamples2D if hist.getName() in legacy_names],
+        "2D histogram",
+        normalize=True,
+      )
 
   def drawProfiles2D(self) -> None:
     if hasattr(self.config, "profiles2D"):

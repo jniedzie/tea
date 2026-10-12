@@ -2,7 +2,7 @@ import ROOT
 from ROOT import TColor
 from Sample import Sample, SampleType
 from Legend import Legend
-from Histogram import Histogram, Histogram2D, Profile2D
+from Histogram import Histogram, Histogram2D, HistogramGroup2D, Profile2D
 from HistogramNormalizer import NormalizationType
 from CmsLabelsManager import CmsLabel
 
@@ -117,6 +117,19 @@ profiles2D = (
 
 # show_grid_2D = True
 # show_y_equals_x_2D = True  # Draw y=x on Histogram2D/Profile2D entries with comparable_axes=True.
+
+# Optional grouped overlays; member histograms are weighted before summing.
+# groups2D = (
+#   HistogramGroup2D("background", ("DY", "tt"), "Background", ROOT.kDeepSea, alpha=0.7),
+#   HistogramGroup2D("signal", ("ttZ",), "Signal", ROOT.kSunset, alpha=0.5),
+# )
+# legend2D = Legend(0.16, 0.72, 0.46, 0.88, "f", fill_color=ROOT.kWhite)
+# show_contours_2D = True
+# contour_fractions_2D = (0.68, 0.95)
+# Histogram2D fields groups, show_contours, and contour_fractions override these defaults.
+# groups=() retains individual plots. Grouped plots support to_lumi and none.
+# Contours use displayed positive weight and bin area; negative bins are clipped only for contours.
+# All group heatmaps and their colorbars share z_min/z_max (automatic when omitted).
 
 legend_width = 0.15
 legend_min_x = 0.40

@@ -24,7 +24,10 @@ class HistogramNormalizer:
     # Check if any of histograms in the config has NormalizationType different than none or to_one:
     normalize_hists = False
 
-    histograms = config.histograms if hasattr(config, "histograms") else [config.histogram]
+    histograms = list(getattr(config, "histograms", ()))
+    if not hasattr(config, "histograms") and hasattr(config, "histogram"):
+      histograms.append(config.histogram)
+    histograms.extend(getattr(config, "histograms2D", ()))
     for hist in histograms:
       if hist.norm_type != NormalizationType.none and hist.norm_type != NormalizationType.to_one:
         normalize_hists = True
@@ -132,7 +135,6 @@ class HistogramNormalizer:
     hist.hist.Scale(scale)
 
   def __setBackgroundEntries(self):
-
     self.signal_initial_sum_weights = {}
     self.signal_final_sum_weights = {}
     self.data_final_entries = {}
