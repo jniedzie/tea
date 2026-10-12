@@ -17,6 +17,7 @@ class EventReader {
 
   long long GetNevents() const;
   std::shared_ptr<Event> GetEvent(int iEvent);
+  TFile *GetInputFile() const { return inputFile; }
 
   bool IsVectorBranch(TBranch *branch);
 
