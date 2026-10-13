@@ -85,8 +85,11 @@ class HistogramNormalizer:
       error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
       return
     if sample.type == SampleType.signal:
-      if hist.hist.Integral() != 0:
-        hist.hist.Scale(total_backgrounds_integral / hist.hist.Integral())
+      # Histogram.setup has already converted a density to counts / unit x.
+      # Its width-weighted integral is the area, including signed weights.
+      integral = hist.hist.Integral("width") if hist.scale_by_bin_width else hist.hist.Integral()
+      if integral != 0:
+        hist.hist.Scale(total_backgrounds_integral / integral)
       return
     if sample.type == SampleType.data:
       hist.hist.Scale(total_backgrounds_integral / self.data_final_entries[sample.name])

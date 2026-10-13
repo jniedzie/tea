@@ -8,7 +8,7 @@ from typing import Any
 
 from Sample import SampleType
 from Styler import Styler
-from HistogramNormalizer import HistogramNormalizer
+from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from CmsLabelsManager import CmsLabelsManager
 from Logger import info, warn, error, fatal, install_root_warning_collector
 
@@ -64,6 +64,13 @@ class HistogramPlotter:
     output_directory = os.path.dirname(path)
     if output_directory:
       os.makedirs(output_directory, exist_ok=True)
+    # Batch exports can retain a cached frame after late legends/labels.
+    # Repaint the pads as well as the canvas before writing the final figure.
+    for primitive in canvas.GetListOfPrimitives():
+      if primitive.InheritsFrom("TPad"):
+        primitive.Modified()
+    canvas.Modified()
+    canvas.Update()
     original_error_level = ROOT.gErrorIgnoreLevel
     ROOT.gErrorIgnoreLevel = ROOT.kError
     try:
@@ -222,10 +229,15 @@ class HistogramPlotter:
 
       hist.setup(sample)
       hist_normalized = self.normalizer.getBackgroundNormalizedToLumi(hist, sample)
+      # Density plots divide by bin width in setup. Match the displayed area,
+      # retaining the ordinary bin sum for count plots and other modes.
+      integral = (hist_normalized.Integral("width")
+                  if hist.norm_type == NormalizationType.to_background and hist.scale_by_bin_width
+                  else hist_normalized.Integral())
       if hist.getName() in self.total_backgrounds_integral:
-        self.total_backgrounds_integral[hist.getName()] += hist_normalized.Integral()
+        self.total_backgrounds_integral[hist.getName()] += integral
       else:
-        self.total_backgrounds_integral[hist.getName()] = hist_normalized.Integral()
+        self.total_backgrounds_integral[hist.getName()] = integral
 
     # normalize and setup data for data integral
     for hist, sample in self.histosamples:
