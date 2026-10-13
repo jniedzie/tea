@@ -5,6 +5,7 @@ from array import array
 from itertools import count
 from pathlib import Path
 import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 
@@ -18,6 +19,11 @@ except ImportError:
   ROOT = None
 else:
   from Histogram import Histogram
+  from HistogramNormalizer import NormalizationType
+  from HistogramPlotter import HistogramPlotter
+  from CmsLabelsManager import CmsLabel
+  from Legend import Legend
+  from Sample import Sample, SampleType
   from Styler import Styler
   ROOT.gROOT.SetBatch(True)
 
@@ -235,6 +241,51 @@ class PlotLayoutTest(unittest.TestCase):
       label_pixel = pad.UtoAbsPixel(texts[label].GetX())
       self.assertLessEqual(abs(expected_pixel - label_pixel), 1, label)
     self.assertEqual(source.GetXaxis().GetXmax(), 4.5)
+
+  def test_batch_exports_keep_last_canvas_legends_and_header(self):
+    try:
+      from PIL import Image
+    except ImportError:
+      self.skipTest("Pillow is required for exported-image verification")
+    with tempfile.TemporaryDirectory() as directory:
+      specifications = [Histogram(f"export_{index}", norm_type=NormalizationType.none, log_y=True,
+                                  x_label="observable", y_label="entries") for index in range(3)]
+      samples = [Sample(name="background", type=SampleType.background,
+                        legend_description="background", fill_color=ROOT.kBlue),
+                 Sample(name="signal", type=SampleType.signal,
+                        legend_description="signal", line_color=ROOT.kRed)]
+      config = SimpleNamespace(
+        histograms=specifications, samples=samples, output_path=directory,
+        output_formats=["png"], canvas_size=(800, 600), show_ratio_plots=False,
+        show_cms_labels=True, cms_label=CmsLabel.pas_sim, label_outside_axes=True,
+        luminosity=1., beam_label="simulation", auto_adjust_axes_for_legend=True,
+        plot_margins={"left": .10, "right": .37, "top": .12, "bottom": .14},
+        legends={SampleType.background: Legend(.65, .48, .99, .90, "f"),
+                 SampleType.signal: Legend(.65, .12, .99, .45, "l")},
+        plotting_options={SampleType.background: "hist", SampleType.signal: "nostack hist",
+                          SampleType.data: "nostack e"},
+      )
+      plotter = HistogramPlotter(config)
+      for spec in specifications:
+        for sample in samples:
+          source = self.source([0, 2, 4, 6], [10, 20, 30])
+          source.SetEntries(3)
+          histogram = Histogram(spec.name, norm_type=NormalizationType.none, log_y=True,
+                                x_label=spec.x_label, y_label=spec.y_label)
+          histogram.set_hist(source)
+          plotter.histosamples.append((histogram, sample))
+      plotter.setupLegends()
+      plotter.buildStacks()
+      plotter.drawStacks()
+      for spec in specifications:
+        with Image.open(Path(directory) / (spec.name + ".png")) as exported:
+          image = exported.convert("RGB")
+          width, height = image.size
+          legends = image.crop((int(.66 * width), int(.14 * height), width, int(.91 * height)))
+          header = image.crop((int(.08 * width), int(.02 * height), int(.63 * width), int(.105 * height)))
+          dark_pixels = lambda region: sum(max(pixel) < 220 for pixel in region.getdata())
+          self.assertGreater(dark_pixels(legends), 100, spec.name + " legends")
+          self.assertGreater(dark_pixels(header), 100, spec.name + " header")
 
 
 if __name__ == "__main__":
