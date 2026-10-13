@@ -23,6 +23,9 @@ class HistogramGroup2D:
   legend_description: str
   palette: int = ROOT.kBird
   alpha: float = 0.6
+  draw_heatmap: bool = True
+  show_contours: bool | None = None
+  contour_color: int | None = None
 
   def __post_init__(self) -> None:
     if not self.name or not self.samples or len(set(self.samples)) != len(self.samples):
@@ -31,6 +34,10 @@ class HistogramGroup2D:
       raise ValueError(f"Invalid opacity for 2D group '{self.name}'")
     if int(self.palette) != 1 and not 51 <= int(self.palette) <= 113:
       raise ValueError(f"Unsupported ROOT palette ID for 2D group '{self.name}': {self.palette}")
+    if not isinstance(self.draw_heatmap, bool) or not (
+      self.show_contours is None or isinstance(self.show_contours, bool)
+    ):
+      raise ValueError(f"Invalid drawing toggles for 2D group '{self.name}'")
 
 
 def resolve_groups(config: Any, hist: Any) -> tuple[HistogramGroup2D, ...]:
@@ -88,7 +95,8 @@ def probability_regions(
     warn(f"Negative bins clipped to zero for probability contours only: {context}")
   total = math.fsum(weight for _, weight in cells)
   if total <= 0:
-    raise ValueError(f"No positive displayed weight for probability contours: {context}")
+    warn(f"No positive displayed weight; skipping probability contours: {context}")
+    return density, ()
   ordered = sorted(cells, reverse=True)
   regions = []
   for fraction in fractions:
@@ -171,11 +179,13 @@ class GroupedHistogram2DPlotter:
     if hist.log_z:
       positive = [value for value in values if value > 0]
       if not positive:
-        raise ValueError(f"Logarithmic grouped plot '{hist.getName()}' has no positive displayed bins")
-      minimum, maximum = min(positive), max(positive)
-      if minimum == maximum:
-        minimum *= 0.5
-        maximum *= 2.0
+        warn(f"Logarithmic grouped plot '{hist.getName()}' has no positive displayed bins; drawing an empty heatmap")
+        minimum, maximum = 1.0, 10.0
+      else:
+        minimum, maximum = min(positive), max(positive)
+        if minimum == maximum:
+          minimum *= 0.5
+          maximum *= 2.0
     else:
       minimum, maximum = min(0.0, min(values)), max(0.0, max(values))
       if minimum == maximum:
@@ -212,33 +222,38 @@ class GroupedHistogram2DPlotter:
 
   def _draw(self, hist: Any, groups: list[tuple[HistogramGroup2D, Any]], saved_palette: tuple[int, ...]) -> Any:
     size = getattr(self.config, "canvas_size_2Dhists", self.config.canvas_size)
+    heatmaps = [(group, item) for group, item in groups if group.draw_heatmap]
     column_width = 160
-    width = size[0] + column_width * len(groups)
+    width = size[0] + column_width * len(heatmaps)
     name = hist.getOutputName() + "_grouped"
     canvas = ROOT.TCanvas(f"{name}_{next(_ids)}", hist.title, width, size[1])
     canvas.SetCanvasSize(width, size[1])
     plot = ROOT.TPad(f"tea_plot_{next(_ids)}", "", 0, 0, size[0] / width, 1)
+    plot.SetNumber(1)
     plot.Draw()
     plot.cd()
     self.styler.setup_2d_pad(plot, square_frame=hist.comparable_axes, with_colorbar=False)
     plot.SetLogx(hist.log_x)
     plot.SetLogy(hist.log_y)
-    plot.SetLogz(hist.log_z)
+    plot.SetLogz(hist.log_z and bool(heatmaps))
     plot.SetGridx(getattr(self.config, "show_grid_2D", False))
     plot.SetGridy(getattr(self.config, "show_grid_2D", False))
-    for _, item in groups:
+    for group, item in groups:
       self.styler.setupFigure2D(item, hist)
       self.styler.getComparable2DAxisRange(item, hist)
-    minimum, maximum = self.shared_limits(hist, groups)
-    palettes = []
+      if not all(math.isfinite(item.GetBinContent(x, y)) for x, y in displayed_bins(item)):
+        raise ValueError(f"Nonfinite displayed bin content: group '{group.name}', histogram '{hist.getName()}'")
+    minimum, maximum = self.shared_limits(hist, heatmaps) if heatmaps else (0.0, 1.0)
+    palettes = {}
     for group, item in groups:
       ROOT.gStyle.SetPalette(int(group.palette))
       opaque = tuple(ROOT.gStyle.GetColorPalette(index) for index in range(ROOT.gStyle.GetNumberOfColors()))
       transparent = tuple(ROOT.TColor.GetColorTransparent(color, group.alpha) for color in opaque)
-      palettes.append((opaque, transparent))
-      item.SetMinimum(minimum)
-      item.SetMaximum(maximum)
-      item.SetContour(len(opaque))
+      palettes[group.name] = (opaque, transparent)
+      if group.draw_heatmap:
+        item.SetMinimum(minimum)
+        item.SetMaximum(maximum)
+        item.SetContour(len(opaque))
     legend_config = getattr(self.config, "legend2D", Legend(0.16, 0.72, 0.46, 0.88, "f", fill_color=ROOT.kWhite))
     legend = legend_config.getRootLegend()
     frame = clone_histogram(groups[0][1], "frame")
@@ -247,13 +262,17 @@ class GroupedHistogram2DPlotter:
     frame.SetMaximum(maximum)
     frame.Draw("AXIS")
     self.retained.append(frame)
-    for (group, item), (opaque, transparent) in zip(groups, palettes):
+    for group, item in heatmaps:
+      opaque, transparent = palettes[group.name]
       self.palette_exec(transparent)
       item.Draw("COL1 SAME")
       swatch = ROOT.TBox()
-      swatch.SetFillColor(opaque[-1])
+      swatch.SetFillColor(opaque[len(opaque) // 2] if group.palette == ROOT.kGreyScale else opaque[-1])
       swatch.SetFillStyle(1001)
-      legend.AddEntry(swatch, group.legend_description, "f")
+      label = group.legend_description
+      if not any(item.GetBinContent(x, y) > 0 for x, y in displayed_bins(item)):
+        label += " (no positive displayed weight)"
+      legend.AddEntry(swatch, label, "f")
       self.retained.extend((item, swatch))
     contours_enabled = (
       getattr(self.config, "show_contours_2D", False) if hist.show_contours is None else hist.show_contours
@@ -263,38 +282,58 @@ class GroupedHistogram2DPlotter:
       if hist.contour_fractions is None
       else hist.contour_fractions
     )
-    if contours_enabled:
-      styles = {0.68: 1, 0.95: 2}
-      for index, fraction in enumerate(value for value in fractions if value not in styles):
-        styles[fraction] = index % 8 + 3
-      for (group, item), (opaque, _) in zip(groups, palettes):
-        context = f"group '{group.name}', histogram '{hist.getName()}'"
-        density, regions = probability_regions(item, fractions, context)
-        self.retained.append(density)
-        for fraction, threshold, _ in regions:
-          style = styles[fraction]
-          values = [density.GetBinContent(x, y) for x, y in displayed_bins(density)]
-          if min(values) >= threshold:
-            xaxis, yaxis = density.GetXaxis(), density.GetYaxis()
-            line = ROOT.TBox(
-              xaxis.GetBinLowEdge(xaxis.GetFirst()),
-              yaxis.GetBinLowEdge(yaxis.GetFirst()),
-              xaxis.GetBinUpEdge(xaxis.GetLast()),
-              yaxis.GetBinUpEdge(yaxis.GetLast()),
-            )
-            line.SetFillStyle(0)
-            option = "same"
-          else:
-            line = clone_histogram(density, "contour")
-            line.SetContour(1, array("d", [math.nextafter(threshold, -math.inf)]))
-            option = "CONT3 SAME"
-          line.SetLineColor(opaque[-1])
-          line.SetLineWidth(2)
-          line.SetLineStyle(style)
-          line.Draw(option)
-          self.retained.append(line)
-          if group == groups[0][0]:
-            legend.AddEntry(line, f"{fraction:.0%} region", "l")
+    styles = {0.68: 1, 0.95: 2}
+    for index, fraction in enumerate(value for value in fractions if value not in styles):
+      styles[fraction] = index % 8 + 3
+    drawn_fractions = set()
+    for group, item in groups:
+      enabled = contours_enabled if group.show_contours is None else group.show_contours
+      if not enabled:
+        continue
+      opaque, _ = palettes[group.name]
+      color = opaque[-1] if group.contour_color is None else group.contour_color
+      context = f"group '{group.name}', histogram '{hist.getName()}'"
+      density, regions = probability_regions(item, fractions, context)
+      self.retained.append(density)
+      if not group.draw_heatmap:
+        swatch = ROOT.TLine()
+        swatch.SetLineColor(color)
+        swatch.SetLineWidth(2)
+        label = group.legend_description if regions else group.legend_description + " (no positive displayed weight)"
+        legend.AddEntry(swatch, label, "l")
+        self.retained.append(swatch)
+      for fraction, threshold, _ in regions:
+        style = styles[fraction]
+        values = [density.GetBinContent(x, y) for x, y in displayed_bins(density)]
+        if min(values) >= threshold:
+          xaxis, yaxis = density.GetXaxis(), density.GetYaxis()
+          line = ROOT.TBox(
+            xaxis.GetBinLowEdge(xaxis.GetFirst()),
+            yaxis.GetBinLowEdge(yaxis.GetFirst()),
+            xaxis.GetBinUpEdge(xaxis.GetLast()),
+            yaxis.GetBinUpEdge(yaxis.GetLast()),
+          )
+          line.SetFillStyle(0)
+          option = "same"
+        else:
+          line = clone_histogram(density, "contour")
+          line.SetContour(1, array("d", [math.nextafter(threshold, -math.inf)]))
+          option = "CONT3 SAME"
+        line.SetLineColor(color)
+        line.SetLineWidth(2)
+        line.SetLineStyle(style)
+        line.Draw(option)
+        self.retained.append(line)
+        drawn_fractions.add(fraction)
+    for fraction in fractions:
+      if fraction not in drawn_fractions:
+        continue
+      swatch = ROOT.TLine()
+      swatch.SetLineColor(ROOT.kBlack)
+      swatch.SetLineWidth(2)
+      swatch.SetLineStyle(styles[fraction])
+      legend.AddEntry(swatch, f"{fraction:.0%} region", "l")
+      self.retained.append(swatch)
     comparable = self.styler.getComparable2DAxisRange(groups[0][1], hist)
     if comparable is not None and getattr(self.config, "show_y_equals_x_2D", False):
       diagonal = ROOT.TLine(comparable[0], comparable[0], comparable[1], comparable[1])
@@ -304,7 +343,8 @@ class GroupedHistogram2DPlotter:
     legend.Draw()
     self.retained.extend((plot, legend))
     self.palette_exec(saved_palette)
-    for index, ((group, item), (opaque, _)) in enumerate(zip(groups, palettes)):
+    for index, (group, item) in enumerate(heatmaps):
+      opaque, _ = palettes[group.name]
       canvas.cd()
       bar_pad = ROOT.TPad(
         f"tea_bar_{next(_ids)}",

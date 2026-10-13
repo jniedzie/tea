@@ -126,6 +126,10 @@ profiles2D = (
 # legend2D = Legend(0.16, 0.72, 0.46, 0.88, "f", fill_color=ROOT.kWhite)
 # show_contours_2D = True
 # contour_fractions_2D = (0.68, 0.95)
+# For independent signal contours over a background heatmap, set
+# draw_heatmap=False, show_contours=True, contour_color=ROOT.kRed on the signal
+# group, and show_contours=False on the background group. The default continues
+# to support multiple heatmaps, each with its own color bar.
 # Histogram2D fields groups, show_contours, and contour_fractions override these defaults.
 # groups=() retains individual plots. Grouped plots support to_lumi and none.
 # Contours use displayed positive weight and bin area; negative bins are clipped only for contours.

@@ -575,6 +575,9 @@ class HistogramPlotter:
       for hist in self.config.histograms2D:
         if resolve_groups(self.config, hist):
           canvas = self.grouped2D.draw(hist, self.histosamples2D)
+          self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
+          canvas.Modified()
+          canvas.Update()
           for output_format in self.output_formats:
             extension = output_format.lstrip(".")
             path = self.config.output_path + "/" + hist.getOutputName() + "_grouped." + extension
