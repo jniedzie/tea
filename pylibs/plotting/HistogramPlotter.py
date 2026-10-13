@@ -106,7 +106,6 @@ class HistogramPlotter:
     hist.load(input_file)
 
     if not hist.isGood():
-      warn("Some histograms were missing for some of the samples.")
       return
 
     if sample.type == SampleType.background and hist.entries < self.bkgRawEventsThreshold:
@@ -530,6 +529,9 @@ class HistogramPlotter:
     self.__configureAutomaticMargins()
     for hist in self.config.histograms:
       sources = self.__getPlottedHistograms(hist)
+      if not sources:
+        info(f"Skipping plot {hist.getName()}: no selected sample has drawable entries.")
+        continue
       has_categorical_labels = bool(self.styler.categoricalLabels(sources))
       canvas_size = (
         getattr(self.config, "categorical_canvas_size", self.config.canvas_size)
