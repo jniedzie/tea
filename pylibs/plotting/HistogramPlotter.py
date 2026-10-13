@@ -71,12 +71,21 @@ class HistogramPlotter:
         primitive.Modified()
     canvas.Modified()
     canvas.Update()
+    original_paper_width, original_paper_height = array("f", [0.]), array("f", [0.])
+    gStyle.GetPaperSize(original_paper_width, original_paper_height)
+    if os.path.splitext(path)[1].lower() == ".pdf":
+      # Fit the drawable canvas onto ROOT's A4 page without changing its aspect.
+      width, height = canvas.GetWw(), canvas.GetWh()
+      paper_width, paper_height = (28., 20.) if width >= height else (20., 28.)
+      scale = min(paper_width / width, paper_height / height)
+      gStyle.SetPaperSize(width * scale, height * scale)
     original_error_level = ROOT.gErrorIgnoreLevel
     ROOT.gErrorIgnoreLevel = ROOT.kError
     try:
       canvas.SaveAs(path)
     finally:
       ROOT.gErrorIgnoreLevel = original_error_level
+      gStyle.SetPaperSize(original_paper_width[0], original_paper_height[0])
 
   def __histosampleExists(self, hist, sample):
     for h, s in self.histosamples:
