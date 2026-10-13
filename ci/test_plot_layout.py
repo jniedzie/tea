@@ -5,6 +5,8 @@ from array import array
 from itertools import count
 from pathlib import Path
 import sys
+import shutil
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -241,6 +243,51 @@ class PlotLayoutTest(unittest.TestCase):
       label_pixel = pad.UtoAbsPixel(texts[label].GetX())
       self.assertLessEqual(abs(expected_pixel - label_pixel), 1, label)
     self.assertEqual(source.GetXaxis().GetXmax(), 4.5)
+
+  def test_pdf_exports_fit_the_page_and_preserve_canvas_aspect_and_global_style(self):
+    converter = shutil.which("pdftoppm")
+    if converter is None:
+      self.skipTest("pdftoppm is required for rendered-PDF verification")
+    try:
+      from PIL import Image
+    except ImportError:
+      self.skipTest("Pillow is required for rendered-PDF verification")
+    with tempfile.TemporaryDirectory() as directory:
+      config = SimpleNamespace(histograms=[], samples=[], output_path=directory,
+                               show_ratio_plots=False)
+      plotter = HistogramPlotter(config)
+      previous_width, previous_height = array("f", [0.]), array("f", [0.])
+      ROOT.gStyle.GetPaperSize(previous_width, previous_height)
+      self.addCleanup(ROOT.gStyle.SetPaperSize, previous_width[0], previous_height[0])
+      ROOT.gStyle.SetPaperSize(13., 17.)
+      original_error_level = ROOT.gErrorIgnoreLevel
+      for dimensions in ((1400, 850), (1200, 850), (600, 800)):
+        with self.subTest(dimensions=dimensions):
+          canvas = ROOT.TCanvas(f"pdf_canvas_{next(self.identifiers)}", "", *dimensions)
+          self.canvases.append(canvas)
+          canvas.SetFillColor(ROOT.kRed)
+          path = Path(directory) / ("page_%d_%d.pdf" % dimensions)
+          plotter._HistogramPlotter__save_canvas(canvas, str(path))
+          paper_width, paper_height = array("f", [0.]), array("f", [0.])
+          ROOT.gStyle.GetPaperSize(paper_width, paper_height)
+          self.assertEqual((paper_width[0], paper_height[0]), (13., 17.))
+          self.assertEqual(ROOT.gErrorIgnoreLevel, original_error_level)
+          subprocess.run([converter, "-r", "50", "-png", "-singlefile", str(path),
+                          str(path.with_suffix(""))], check=True, capture_output=True)
+          with Image.open(path.with_suffix(".png")) as exported:
+            image = exported.convert("RGB")
+            red_pixels = [(index % image.width, index // image.width)
+                          for index, color in enumerate(image.getdata())
+                          if color[0] > 200 and color[1] < 100 and color[2] < 100]
+            left = min(x for x, y in red_pixels)
+            top = min(y for x, y in red_pixels)
+            width = max(x for x, y in red_pixels) - left + 1
+            height = max(y for x, y in red_pixels) - top + 1
+            self.assertLess(left / image.width, .10)
+            self.assertLess(top / image.height, .12)
+            self.assertGreater(width / image.width, .85)
+            self.assertGreater(height / image.height, .75)
+            self.assertAlmostEqual(width / height, canvas.GetWw() / canvas.GetWh(), delta=.015)
 
   def test_batch_exports_keep_last_canvas_legends_and_header(self):
     try:
