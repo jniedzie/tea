@@ -61,7 +61,7 @@ void CutFlowManager::RegisterPreExistingCutFlows() {
       TObject *obj = key->ReadObj();
       auto hist = (TH1D *)obj;
       string cutName = key->GetName();
-      float sumOfWeights = hist->GetBinContent(1);
+      double sumOfWeights = hist->GetBinContent(1);
       bool containsInitial = cutName == "0_initial";
       delete obj;
 
@@ -116,7 +116,7 @@ void CutFlowManager::RegisterCut(string cutName, string collectionName) {
 string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
   // Find full names in the cut flow matching the given cut name
   vector<string> matchingFullCutNames;
-  map<string, float> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, double> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
   for (auto &[existingCutName, sumOfWeights] : weights) {
     size_t underscorePos = existingCutName.find("_");
     if (underscorePos != string::npos) {
@@ -144,15 +144,15 @@ string CutFlowManager::GetFullCutName(string cutName, string collectionName) {
   exit(1);
 }
 
-float CutFlowManager::GetCurrentEventWeight() {
+double CutFlowManager::GetCurrentEventWeight() {
   if (eventWeight != 0) { return eventWeight; }
 
-  float weight = 1.0;
+  double weight = 1.0;
 
   if (weightsBranchName == "") { return weight; }
 
   try {
-    weight = eventReader->currentEvent->GetAs<float>(weightsBranchName);
+    weight = eventReader->currentEvent->GetAs<double>(weightsBranchName);
   } catch (const std::exception &e) {
     fatal() << "Cannot read configured event weight " << weightsBranchName << ": " << e.what() << endl;
     exit(1);
@@ -175,8 +175,8 @@ void CutFlowManager::UpdateCutFlow(string cutName, string collectionName) {
 
 void CutFlowManager::SaveSingleCutFlow(string collectionName) {
   if (!eventWriter) { error() << "No existing eventWriter for CutFlowManager - cannot save CutFlow" << endl; }
-  map<string, float> weights = weightsAfterCuts;
-  map<string, float> rawEvents = rawEventsAfterCuts;
+  map<string, double> weights = weightsAfterCuts;
+  map<string, double> rawEvents = rawEventsAfterCuts;
   string cutFlowName = "CutFlow";
   if (collectionName != "") {
     cutFlowName = "CollectionCutFlow_" + collectionName;
@@ -197,22 +197,22 @@ bool CutFlowManager::HasCut(string cutName, string collectionName) {
   return find(cuts.begin(), cuts.end(), cutName) != cuts.end();
 }
 
-map<string, float> CutFlowManager::GetCutFlow(string collectionName) {
+map<string, double> CutFlowManager::GetCutFlow(string collectionName) {
   if (collectionName != "") { return weightsAfterCollectionCuts[collectionName]; }
   return weightsAfterCuts;
 }
 
-map<string, float> CutFlowManager::GetRawEventsCutFlow(string collectionName) {
+map<string, double> CutFlowManager::GetRawEventsCutFlow(string collectionName) {
   if (collectionName != "") { return rawEventsAfterCollectionCuts[collectionName]; }
   return rawEventsAfterCuts;
 }
 
 void CutFlowManager::Print(string collectionName) {
-  map<string, float> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
-  map<string, float> rawEvents =
+  map<string, double> weights = collectionName == "" ? weightsAfterCuts : weightsAfterCollectionCuts[collectionName];
+  map<string, double> rawEvents =
       collectionName == "" ? rawEventsAfterCuts : rawEventsAfterCollectionCuts[collectionName];
-  map<int, pair<string, float>> sortedWeightsAfterCuts;
-  map<int, pair<string, float>> sortedRawEventsAfterCuts;
+  map<int, pair<string, double>> sortedWeightsAfterCuts;
+  map<int, pair<string, double>> sortedRawEventsAfterCuts;
   for (auto &[cutName, sumOfWeights] : weights) {
     string number = cutName.substr(0, cutName.find("_"));
     int index = stoi(number);
@@ -232,8 +232,8 @@ void CutFlowManager::Print(string collectionName) {
 
   for (auto &[index, values] : sortedWeightsAfterCuts) {
     string cutName = get<0>(values);
-    float genWeight = get<1>(values);
-    float rawEvents = get<1>(sortedRawEventsAfterCuts[index]);
+    double genWeight = get<1>(values);
+    double rawEvents = get<1>(sortedRawEventsAfterCuts[index]);
     cout << "║ " << setw(27) << left  << cutName
          << " │ " << setw(21) << right << genWeight
          << " │ " << setw(17) << right << rawEvents << " ║\n";
@@ -253,7 +253,7 @@ bool CutFlowManager::isRawEventsEmpty(string collectionName) {
   return rawEventsAfterCuts.empty();
 }
 
-void CutFlowManager::WriteCutFlow(map<string, float> weights, string cutFlowName) {
+void CutFlowManager::WriteCutFlow(map<string, double> weights, string cutFlowName) {
   eventWriter->outFile->mkdir(cutFlowName.c_str());
   eventWriter->outFile->cd(cutFlowName.c_str());
 

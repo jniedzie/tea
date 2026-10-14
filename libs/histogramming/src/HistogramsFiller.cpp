@@ -87,8 +87,8 @@ void HistogramsFiller::FillCutFlow(const std::shared_ptr<CutFlowManager> cutFlow
   auto cutFlowHist = new TH1D("cutFlow", "cutFlow", cutFlowLength, 0, cutFlowLength);
   auto rawEventsCutFlowHist = new TH1D("rawEventsCutFlow", "rawEventsCutFlow", cutFlowLength, 0, cutFlowLength);
 
-  map<int, pair<string, float>> sortedWeightsAfterCuts;
-  map<int, pair<string, float>> sortedRawEventsAfterCuts;
+  map<int, pair<string, double>> sortedWeightsAfterCuts;
+  map<int, pair<string, double>> sortedRawEventsAfterCuts;
   auto cutFlow = cutFlowManager->GetCutFlow();
   auto rawEventsCutFlow = cutFlowManager->GetRawEventsCutFlow();
   for (auto &[cutName, sumOfWeights] : cutFlow) {
