@@ -34,7 +34,13 @@ class Histogram:
   entries: int = 0
   scale_bin: bool = False
   scale_by_bin_width: bool = False
+  # Keep the configured data crop, but permit display whitespace for a legend.
+  allow_legend_x_extension: bool = False
+  # Keys are stored category/status values, including negative failure codes.
+  bin_labels: Optional[dict[int, str]] = None
   bin_edges: Optional[Union[tuple[float, ...], Callable]] = None
+  # Display the booked domain without manufacturing bins from overflow.
+  show_full_x_range: bool = False
 
   def __post_init__(self):
     self.hist = None
@@ -152,6 +158,12 @@ class Histogram:
         len(edges) - 1, f"{self.hist.GetName()}_rebin_{next(_cropped_histogram_ids)}", array("d", edges)
       )
       self.hist.SetDirectory(0)
+    if self.bin_labels:
+      axis = self.hist.GetXaxis()
+      for value, label in self.bin_labels.items():
+        index = axis.FindFixBin(value)
+        if 1 <= index <= self.hist.GetNbinsX():
+          axis.SetBinLabel(index, label)
     self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
     if self.scale_bin:
       self.hist.Scale(1.0 / self.rebin)

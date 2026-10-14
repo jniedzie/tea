@@ -44,6 +44,7 @@ class HistogramPlotter:
     self.ratiosamples = []
     self.histosamples2D = []
     self.profilesamples2D = []
+    # Check duplicates without scanning every histogram from earlier samples.
     self.data_integral = {}
     self.total_backgrounds_integral = {}
 
@@ -58,7 +59,6 @@ class HistogramPlotter:
 
     if not os.path.exists(self.config.output_path):
       os.makedirs(self.config.output_path)
-    info(f"Output directory: {os.path.abspath(self.config.output_path)}")
 
   def __save_canvas(self, canvas, path):
     original_error_level = ROOT.gErrorIgnoreLevel
@@ -351,6 +351,7 @@ class HistogramPlotter:
     ratio_hist = self.__getRatioStack(hist)
     if ratio_hist:
       canvas.cd(2)
+      self.styler.prepareDisplayFrame(ratio_hist)
       ratio_hist.Draw("p e0")
       ratio_histograms = ratio_hist.GetStack()
       source_histograms = [ratio_histograms.Last()] if ratio_histograms and ratio_histograms.GetSize() > 0 else None
@@ -418,6 +419,8 @@ class HistogramPlotter:
       options = f"{options} same" if firstPlotted else options
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() > 0:
+        if not firstPlotted:
+          self.styler.prepareDisplayFrame(stack)
         stack.Draw(options)
         firstPlotted = True
 
@@ -435,7 +438,12 @@ class HistogramPlotter:
       None,
     )
     if first_stack is not None:
-      self.styler.setupFigure(first_stack, hist, source_histograms=plotted_histograms)
+      self.styler.setupFigure(
+        first_stack,
+        hist,
+        source_histograms=plotted_histograms,
+        error_histograms=self.__getPlottedHistograms(hist, errors_only=True),
+      )
 
   def __drawRatioHists(self, canvas, hist):
     canvas.cd(1)
@@ -452,26 +460,51 @@ class HistogramPlotter:
       firstPlotted = True
 
   def __setup_canvas(self, canvas, hist):
+    sources = self.__getPlottedHistograms(hist)
+    self.styler.preparePlotLayout(
+      hist,
+      sources,
+      canvas,
+      self.show_ratios,
+      legends=self.legends.get(hist.getName(), {}).values(),
+    )
+    has_categorical_labels = any(
+      source.GetXaxis().GetLabels()
+      and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
+      for source in sources
+    )
     if self.show_ratios:
       canvas.Divide(1, 2)
       self.styler.setup_ratio_pad(canvas.GetPad(2))
       self.styler.setup_main_pad_with_ratio(canvas.GetPad(1))
     else:
       canvas.Divide(1, 1)
-      self.styler.setup_main_pad_without_ratio(canvas.GetPad(1))
+      self.styler.setup_main_pad_without_ratio(canvas.GetPad(1), has_categorical_labels)
 
     canvas.GetPad(1).SetLogx(hist.log_x)
     canvas.GetPad(1).SetLogy(hist.log_y)
 
-  def __getPlottedHistograms(self, hist):
+  def __getPlottedHistograms(self, hist, errors_only=False):
     plotted_histograms = []
     for sample_type in SampleType:
       stack = self.stacks[sample_type][hist.getName()]
       if stack.GetNhists() == 0:
         continue
-      stack_histograms = stack.GetStack()
-      if stack_histograms and stack_histograms.GetSize() > 0:
-        plotted_histograms.append(stack_histograms.Last())
+
+      options = self.config.plotting_options[sample_type].lower()
+      if errors_only:
+        # The background band is drawn independently of the stack options.
+        if sample_type == SampleType.background:
+          plotted_histograms.append(self.__getBackgroundUncertaintyHist(hist))
+        if "e" not in options.replace("nostack", "").replace("same", ""):
+          continue
+      # Components keep small contributions visible on logarithmic axes.
+      # Only stacked drawing needs their sum; a nostack overlay never draws it.
+      plotted_histograms.extend(item for item in stack.GetHists())
+      if "nostack" not in options:
+        stack_histograms = stack.GetStack()
+        if stack_histograms and stack_histograms.GetSize() > 0:
+          plotted_histograms.append(stack_histograms.Last())
     return plotted_histograms
 
   def __configureAutomaticMargins(self):
@@ -482,7 +515,13 @@ class HistogramPlotter:
     for hist in self.config.histograms:
       sources = self.__getPlottedHistograms(hist)
       if sources:
-        y_ranges.append(self.styler.getYAxisRangeForLayout(hist, sources))
+        y_ranges.append(
+          self.styler.getYAxisRangeForLayout(
+            hist,
+            sources,
+            error_histograms=self.__getPlottedHistograms(hist, errors_only=True),
+          )
+        )
 
       if not self.show_ratios:
         continue
@@ -493,16 +532,34 @@ class HistogramPlotter:
       y_ranges.append(self.styler.getYAxisRangeForLayout(hist, ratio_sources, is_ratio=True))
 
     x_labels = [hist.x_label for hist in self.config.histograms]
-    self.styler.configureAutomaticMargins(y_ranges, self.config.canvas_size, x_labels, has_ratio=self.show_ratios)
+    x_tick_labels = []
+    for hist in self.config.histograms:
+      for source in self.__getPlottedHistograms(hist):
+        axis = source.GetXaxis()
+        if not axis.GetLabels():
+          continue
+        x_tick_labels.extend(
+          axis.GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1) if axis.GetBinLabel(index)
+        )
+    self.styler.configureAutomaticMargins(
+      y_ranges, self.config.canvas_size, x_labels, x_tick_labels=x_tick_labels, has_ratio=self.show_ratios
+    )
 
   def drawStacks(self):
+    info("Preparing plot layout...")
     self.__configureAutomaticMargins()
     for hist in self.config.histograms:
       sources = self.__getPlottedHistograms(hist)
       if not sources:
         warn(f"Skipping plot {hist.getName()}: no selected sample has drawable entries.")
         continue
-      canvas = TCanvas(hist.getName(), hist.getName(), self.config.canvas_size[0], self.config.canvas_size[1])
+      has_categorical_labels = bool(self.styler.categoricalLabels(sources))
+      canvas_size = (
+        getattr(self.config, "categorical_canvas_size", self.config.canvas_size)
+        if has_categorical_labels
+        else self.config.canvas_size
+      )
+      canvas = TCanvas(hist.getName(), hist.getName(), canvas_size[0], canvas_size[1])
       self.__setup_canvas(canvas, hist)
 
       ratio_stack = self.__drawRatioPlot(canvas, hist)
@@ -510,6 +567,39 @@ class HistogramPlotter:
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawLegends(canvas, hist)
+
+      # The uncertainty band is drawn after the first stack range pass and can
+      # itself enter the legend area. Re-evaluate against the drawn legend and
+      # include that band, so the final rendered frame—not just the stack—is
+      # legend-safe.
+      first_stack = next(
+        (
+          self.stacks[sample_type][hist.getName()]
+          for sample_type in SampleType
+          if self.stacks[sample_type][hist.getName()].GetNhists() > 0
+        ),
+        None,
+      )
+      if first_stack is not None:
+        final_sources = self.__getPlottedHistograms(hist)
+        error_sources = self.__getPlottedHistograms(hist, errors_only=True)
+        self.styler.adjustAxesForLegend(
+          first_stack,
+          hist,
+          final_sources,
+          self.legends.get(hist.getName(), {}).values(),
+          canvas.GetPad(1),
+          error_histograms=error_sources,
+        )
+        pad = canvas.GetPad(1)
+        # The legend solver already paints adjusted axes. Update only pending
+        # drawing changes when it left the axes alone.
+        pad.Update()
+        if self.show_ratios and ratio_stack is not None:
+          self.styler.drawCategoricalAxis(ratio_stack, hist, final_sources, canvas.GetPad(2))
+        else:
+          self.styler.drawCategoricalAxis(first_stack, hist, final_sources, pad)
+
       self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
       # Keep every frame border identical and on top of plotted objects.
@@ -589,8 +679,6 @@ class HistogramPlotter:
       self.__drawLegends(canvas, hist_nom)
       self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
 
-      canvas.Update()
-
       path = self.config.output_path + "/" + hist_nom.getName() + ".pdf"
       self.__save_canvas(canvas, path)
 
@@ -604,6 +692,7 @@ class HistogramPlotter:
 
     title = "backgrounds_" + ("sum" if doRatio else "unc") + "_" + hist.getName()
     backgrounds_sum = base_hist.Clone(title)
+    backgrounds_sum.SetDirectory(0)
     backgrounds_sum.Reset()
 
     for background_hist in self.stacks[SampleType.background][hist.getName()].GetHists():
