@@ -46,6 +46,13 @@ class CondorSubmissionTest(unittest.TestCase):
       self.assertTrue(path.startswith(staging_dir + "/"))
     self.assertEqual(manager.condor_transfer_files, [manager.input_files_list_file_name])
 
+  def test_invalid_materialization_limit_is_rejected(self):
+    for limit in (0, -1):
+      with self.subTest(limit=limit):
+        args = SimpleNamespace(job_flavour="espresso", memory=1, max_materialize=limit)
+        with self.assertRaisesRegex(ValueError, "--max_materialize must be at least 1"):
+          self.manager().run_condor(args)
+
   def test_eos_staging_override_is_rejected(self):
     manager = self.manager()
     with (

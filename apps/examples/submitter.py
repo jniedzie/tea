@@ -50,7 +50,7 @@ def get_args():
     type=int,
     default=None,
     help=(
-      "Maximum number of jobs materialized in the condor_schedd at once. Defaults to 50 on lxplus and 5000 elsewhere."
+      "Maximum number of jobs materialized in the condor_schedd at once. Defaults to 500 on lxplus and 5000 elsewhere."
     ),
   )
 

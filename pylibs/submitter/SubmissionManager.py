@@ -83,8 +83,7 @@ class SubmissionManager:
     if self.materialize_max is None:
       self.materialize_max = 500 if get_facility() == "lxplus" else 5000
     if self.materialize_max < 1:
-      fatal("--max_materialize must be at least 1")
-      exit()
+      raise ValueError("--max_materialize must be at least 1")
     self.resubmit_job = args.resubmit_job
     self.resubmit_failed = args.resubmit_failed
     self.save_logs = args.save_logs
