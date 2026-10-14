@@ -147,6 +147,7 @@ class PlotLayoutTest(unittest.TestCase):
     plotter._HistogramPlotter__setup_canvas(canvas, spec)
     plotter._HistogramPlotter__drawHists(canvas, spec)
     plotter._HistogramPlotter__drawUncertainties(canvas, spec)
+    plotter._HistogramPlotter__drawSignalUncertainties(canvas, spec)
     pad = canvas.cd(1)
     legend = ROOT.TLegend(0.70, 0.20, 0.98, 0.90)
     for source in backgrounds + list(signals):
@@ -186,6 +187,85 @@ class PlotLayoutTest(unittest.TestCase):
         self.assertAlmostEqual(pad.GetUymax(), 1.2 * upper, delta=1e3)
         errors = plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True)
         self.assertEqual(len(errors), 1 + (len(signals) if options == "nostack e" else 0))
+
+  def test_signal_stat_uncertainties_are_optional(self):
+    spec = Histogram("optional_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signal = self.source([0, 1, 2], [20, 10])
+    signal.SetBinError(2, 50)
+    plotter, pad, _ = self.draw_plotter_stacks(spec, [], [signal])
+    self.assertFalse(plotter.signal_uncertainties.get(spec.getName()))
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * 20)
+
+  def test_signal_stat_uncertainties_preserve_separate_lines_and_upper_errors(self):
+    spec = Histogram("signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signals = [self.source([0, 1, 2], [20, 10]), self.source([0, 1, 2], [15, 6])]
+    signals[0].SetBinError(2, 50)
+    for source, color in zip(signals, (ROOT.kRed, ROOT.kGreen + 2)):
+      source.SetLineColor(color)
+      source.SetLineWidth(3)
+    original_errors = [[source.GetBinError(index) for index in (1, 2)] for source in signals]
+    plotter, pad, _ = self.draw_plotter_stacks(spec, [], signals, show_signal_stat_uncertainty=True)
+    graphs = plotter.signal_uncertainties[spec.getName()]
+    self.assertEqual(len(graphs), 2)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (10 + 50))
+    for graph, source, errors in zip(graphs, signals, original_errors):
+      self.assertEqual(graph.GetLineColor(), source.GetLineColor())
+      self.assertEqual(graph.GetLineWidth(), source.GetLineWidth())
+      self.assertEqual(graph.GetMarkerSize(), 0)
+      self.assertIn(graph, list(pad.GetListOfPrimitives()))
+      for point, expected_error in enumerate(errors):
+        self.assertEqual(graph.GetPointY(point), source.GetBinContent(point + 1))
+        self.assertEqual(graph.GetErrorXlow(point), 0)
+        self.assertEqual(graph.GetErrorXhigh(point), 0)
+        self.assertEqual(graph.GetErrorYlow(point), expected_error)
+        self.assertEqual(graph.GetErrorYhigh(point), expected_error)
+        self.assertEqual(source.GetBinError(point + 1), expected_error)
+
+  def test_signal_stat_uncertainties_use_asymmetric_and_weighted_bin_errors(self):
+    for poisson in (False, True):
+      with self.subTest(poisson=poisson):
+        spec = Histogram("signal_bin_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+        signal = self.source([0, 1, 2], [1, 3])
+        if poisson:
+          signal.Sumw2(False)
+          signal.SetBinErrorOption(ROOT.TH1.kPoisson)
+          self.assertGreater(signal.GetBinErrorUp(2), signal.GetBinErrorLow(2))
+        else:
+          signal.Reset()
+          signal.Fill(0.5, 2)
+          signal.Fill(0.5, 3)
+          signal.Fill(1.5, 4)
+          signal.Scale(2)
+          self.assertAlmostEqual(signal.GetBinError(1), 2 * hypot(2, 3))
+        plotter, _, _ = self.draw_plotter_stacks(spec, [], [signal], show_signal_stat_uncertainty=True)
+        graph = plotter.signal_uncertainties[spec.getName()][0]
+        for point in range(2):
+          self.assertAlmostEqual(graph.GetErrorYlow(point), signal.GetBinErrorLow(point + 1))
+          self.assertAlmostEqual(graph.GetErrorYhigh(point), signal.GetBinErrorUp(point + 1))
+
+  def test_signal_stat_uncertainties_do_not_duplicate_explicit_error_drawing(self):
+    spec = Histogram("explicit_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signal = self.source([0, 1, 2], [20, 10])
+    signal.SetBinError(2, 50)
+    plotter, pad, _ = self.draw_plotter_stacks(
+      spec, [], [signal], signal_options="nostack e", show_signal_stat_uncertainty=True
+    )
+    self.assertFalse(plotter.signal_uncertainties.get(spec.getName()))
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (10 + 50))
+
+  def test_stacked_signal_stat_uncertainties_follow_cumulative_histograms(self):
+    spec = Histogram("stacked_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signals = [self.source([0, 1, 2], [10, 4]), self.source([0, 1, 2], [5, 3])]
+    plotter, pad, _ = self.draw_plotter_stacks(
+      spec, [], signals, signal_options="hist", show_signal_stat_uncertainty=True
+    )
+    graphs = plotter.signal_uncertainties[spec.getName()]
+    self.assertEqual(len(graphs), 2)
+    self.assertEqual(graphs[0].GetPointY(0), 10)
+    self.assertEqual(graphs[1].GetPointY(0), 15)
+    expected_error = hypot(signals[0].GetBinError(1), signals[1].GetBinError(1))
+    self.assertAlmostEqual(graphs[1].GetErrorYhigh(0), expected_error)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (15 + expected_error))
 
   def test_automatic_y_max_includes_stacked_background_total(self):
     spec = Histogram("stack_range_%d" % next(self.identifiers))
