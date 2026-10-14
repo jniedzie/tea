@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Any
 
 import numpy as np
@@ -155,14 +156,24 @@ def search(
     or any(q not in DIRECTIONS for q in quadrant_order)
   ):
     raise ValueError("Select unique quadrants from A, B, C, D")
-  if any(key not in signals for key in selected):
-    raise ValueError("Missing selected signal histogram")
+  requested = list(selected)
+  excluded = {}
+  for key in requested:
+    if key not in signals:
+      excluded[key] = "No usable signal histogram"
+    elif not math.isfinite(signals[key].Integral()) or signals[key].Integral() <= 0:
+      excluded[key] = "Nonpositive or nonfinite in-range signal yield"
+  selected = [key for key in requested if key not in excluded]
+  for key, reason in excluded.items():
+    warnings.warn(f"Excluding optimization signal {key}: {reason}", RuntimeWarning, stacklevel=2)
   helper = ABCDHelper()
   correlation = float(background.GetCorrelationFactor())
   coefficient = settings.get("overlap_metric", "intersection")
   overlaps = {key: overlap(hist, background, coefficient) for key, hist in signals.items()}
   result = {
     "optimization_signals": selected,
+    "requested_optimization_signals": requested,
+    "excluded_optimization_signals": excluded,
     "objective": "sum_individual_significances",
     "correlation": correlation if math.isfinite(correlation) else None,
     "overlap": overlaps,
@@ -175,13 +186,8 @@ def search(
     for fields in maps.values():
       for name in ("significance", "leakage"):
         fields[f"{name}:{key}"] = np.full(shape, np.nan)
-  empty = [key for key in selected if not math.isfinite(signals[key].Integral()) or signals[key].Integral() <= 0]
-  if empty:
-    return {
-      **result,
-      "status": "unavailable",
-      "reason": f"Required signals have nonpositive in-range yield: {empty}",
-    }, maps
+  if not selected:
+    return {**result, "status": "unavailable", "reason": "No usable optimization signals remain"}, maps
   limit = settings.get("max_correlation")
   if limit is not None and (result["correlation"] is None or abs(correlation) > limit):
     return {**result, "status": "rejected", "reason": "Correlation constraint"}, maps

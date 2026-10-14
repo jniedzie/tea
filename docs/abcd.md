@@ -72,7 +72,9 @@ boundaries, the low side uses `<` and the high side uses `>=`; bin indices
 identify the first high-side bin. Flow bins are excluded. Prediction,
 significance, leakage, validation and projections share this boundary convention.
 Stored squared-weight errors determine discrepancies and prediction errors;
-signed bins are preserved. Empty required models produce `unavailable`, no
+signed bins are preserved. Empty or missing selected models are excluded with warnings and recorded in the
+result; remaining models still must all pass. With no usable models, the result is
+`unavailable`. No
 valid boundary produces `rejected`, and malformed inputs fail the command.
 
 Defaults: `max_closure=.2`, `max_error=2`, `min_n_events=20`,

@@ -190,6 +190,7 @@ class ABCDPlotter:
       fixed,
       order,
     )
+    self.selected = self.result["optimization_signals"]
     self.result.update(
       settings=self.settings,
       normalization=self.normalization,
