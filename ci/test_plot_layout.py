@@ -3,6 +3,7 @@
 
 from array import array
 from itertools import count
+from math import hypot
 from pathlib import Path
 import sys
 import shutil
@@ -117,6 +118,193 @@ class PlotLayoutTest(unittest.TestCase):
       top = pad.YtoAbsPixel(pad.YtoPad(height))
       self.assertGreater(top, legend_bottom, "bin %d overlaps the rendered legend" % index)
 
+  def draw_plotter_stacks(self, spec, backgrounds, signals=(), signal_options="nostack hist",
+                          show_signal_stat_uncertainty=False):
+    directory = tempfile.TemporaryDirectory()
+    self.addCleanup(directory.cleanup)
+    config = SimpleNamespace(
+      histograms=[spec], samples=[], output_path=directory.name, canvas_size=(800, 600),
+      show_ratio_plots=False, auto_adjust_axes_for_legend=True,
+      show_signal_stat_uncertainty=show_signal_stat_uncertainty,
+      plot_margins={"left": .13, "right": .35, "top": .08, "bottom": .14},
+      plotting_options={SampleType.background: "hist", SampleType.signal: signal_options,
+                        SampleType.data: "nostack e"},
+    )
+    plotter = HistogramPlotter(config)
+    for source in backgrounds:
+      plotter.stacks[SampleType.background][spec.getName()].Add(source)
+    for source in signals:
+      plotter.stacks[SampleType.signal][spec.getName()].Add(source)
+    canvas = ROOT.TCanvas("range_canvas_%d" % next(self.identifiers), "", 800, 600)
+    self.canvases.append(canvas)
+    plotter._HistogramPlotter__setup_canvas(canvas, spec)
+    plotter._HistogramPlotter__drawHists(canvas, spec)
+    plotter._HistogramPlotter__drawUncertainties(canvas, spec)
+    plotter._HistogramPlotter__drawSignalUncertainties(canvas, spec)
+    pad = canvas.cd(1)
+    legend = ROOT.TLegend(.70, .20, .98, .90)
+    for source in backgrounds + list(signals):
+      legend.AddEntry(source, "Sample", "l")
+    legend.Draw()
+    sources = plotter._HistogramPlotter__getPlottedHistograms(spec)
+    first_stack = next(plotter.stacks[sample_type][spec.getName()] for sample_type in SampleType
+                       if plotter.stacks[sample_type][spec.getName()].GetNhists() > 0)
+    plotter.styler.adjustAxesForLegend(
+      first_stack, spec, sources, [legend], pad,
+      error_histograms=plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True),
+    )
+    pad.Modified()
+    pad.Update()
+    self.objects.extend([plotter, legend])
+    return plotter, pad, sources
+
+  def test_signal_overlays_use_drawn_upper_errors_with_twenty_percent_padding(self):
+    for options in ("nostack hist", "NOSTACK HIST", "nostackb", "nostack e"):
+      with self.subTest(options=options):
+        spec = Histogram("overlay_range_%d" % next(self.identifiers), x_min=0, x_max=6)
+        backgrounds = [self.source([0, 2, 4, 6], [10e9, 5e9, 1e9])]
+        signals = [self.source([0, 2, 4, 6], [peak * 1e9, 1e9, 1e9])
+                   for peak in (56, 30, 24, 18, 12, 8, 6, 4)]
+        if options != "nostack e":
+          signals[0].SetBinError(1, 1e15)
+        plotter, pad, sources = self.draw_plotter_stacks(spec, backgrounds, signals, options)
+        # Eight overlaid signals have no visible cumulative sum.
+        self.assertEqual(len(sources), len(signals) + len(backgrounds) + 1)
+        upper = 56e9 + (.15 * 56e9 if options == "nostack e" else 0)
+        self.assertAlmostEqual(pad.GetUymax(), 1.2 * upper, delta=1e3)
+        errors = plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True)
+        self.assertEqual(len(errors), 1 + (len(signals) if options == "nostack e" else 0))
+
+  def test_signal_stat_uncertainties_are_optional(self):
+    spec = Histogram("optional_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signal = self.source([0, 1, 2], [20, 10])
+    signal.SetBinError(2, 50)
+    plotter, pad, _ = self.draw_plotter_stacks(spec, [], [signal])
+    self.assertFalse(plotter.signal_uncertainties.get(spec.getName()))
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * 20)
+
+  def test_signal_stat_uncertainties_preserve_separate_lines_and_upper_errors(self):
+    spec = Histogram("signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signals = [self.source([0, 1, 2], [20, 10]), self.source([0, 1, 2], [15, 6])]
+    signals[0].SetBinError(2, 50)
+    for source, color in zip(signals, (ROOT.kRed, ROOT.kGreen + 2)):
+      source.SetLineColor(color)
+      source.SetLineWidth(3)
+    original_errors = [[source.GetBinError(index) for index in (1, 2)] for source in signals]
+    plotter, pad, _ = self.draw_plotter_stacks(
+      spec, [], signals, show_signal_stat_uncertainty=True)
+    graphs = plotter.signal_uncertainties[spec.getName()]
+    self.assertEqual(len(graphs), 2)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (10 + 50))
+    for graph, source, errors in zip(graphs, signals, original_errors):
+      self.assertEqual(graph.GetLineColor(), source.GetLineColor())
+      self.assertEqual(graph.GetLineWidth(), source.GetLineWidth())
+      self.assertEqual(graph.GetMarkerSize(), 0)
+      self.assertIn(graph, list(pad.GetListOfPrimitives()))
+      for point, expected_error in enumerate(errors):
+        self.assertEqual(graph.GetPointY(point), source.GetBinContent(point + 1))
+        self.assertEqual(graph.GetErrorXlow(point), 0)
+        self.assertEqual(graph.GetErrorXhigh(point), 0)
+        self.assertEqual(graph.GetErrorYlow(point), expected_error)
+        self.assertEqual(graph.GetErrorYhigh(point), expected_error)
+        self.assertEqual(source.GetBinError(point + 1), expected_error)
+
+  def test_signal_stat_uncertainties_use_asymmetric_and_weighted_bin_errors(self):
+    for poisson in (False, True):
+      with self.subTest(poisson=poisson):
+        spec = Histogram("signal_bin_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+        signal = self.source([0, 1, 2], [1, 3])
+        if poisson:
+          signal.Sumw2(False)
+          signal.SetBinErrorOption(ROOT.TH1.kPoisson)
+          self.assertGreater(signal.GetBinErrorUp(2), signal.GetBinErrorLow(2))
+        else:
+          signal.Reset()
+          signal.Fill(.5, 2)
+          signal.Fill(.5, 3)
+          signal.Fill(1.5, 4)
+          signal.Scale(2)
+          self.assertAlmostEqual(signal.GetBinError(1), 2 * hypot(2, 3))
+        plotter, _, _ = self.draw_plotter_stacks(
+          spec, [], [signal], show_signal_stat_uncertainty=True)
+        graph = plotter.signal_uncertainties[spec.getName()][0]
+        for point in range(2):
+          self.assertAlmostEqual(graph.GetErrorYlow(point), signal.GetBinErrorLow(point + 1))
+          self.assertAlmostEqual(graph.GetErrorYhigh(point), signal.GetBinErrorUp(point + 1))
+
+  def test_signal_stat_uncertainties_do_not_duplicate_explicit_error_drawing(self):
+    spec = Histogram("explicit_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signal = self.source([0, 1, 2], [20, 10])
+    signal.SetBinError(2, 50)
+    plotter, pad, _ = self.draw_plotter_stacks(
+      spec, [], [signal], signal_options="nostack e", show_signal_stat_uncertainty=True)
+    self.assertFalse(plotter.signal_uncertainties.get(spec.getName()))
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (10 + 50))
+
+  def test_stacked_signal_stat_uncertainties_follow_cumulative_histograms(self):
+    spec = Histogram("stacked_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
+    signals = [self.source([0, 1, 2], [10, 4]), self.source([0, 1, 2], [5, 3])]
+    plotter, pad, _ = self.draw_plotter_stacks(
+      spec, [], signals, signal_options="hist", show_signal_stat_uncertainty=True)
+    graphs = plotter.signal_uncertainties[spec.getName()]
+    self.assertEqual(len(graphs), 2)
+    self.assertEqual(graphs[0].GetPointY(0), 10)
+    self.assertEqual(graphs[1].GetPointY(0), 15)
+    expected_error = hypot(signals[0].GetBinError(1), signals[1].GetBinError(1))
+    self.assertAlmostEqual(graphs[1].GetErrorYhigh(0), expected_error)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (15 + expected_error))
+
+  def test_automatic_y_max_includes_stacked_background_total(self):
+    spec = Histogram("stack_range_%d" % next(self.identifiers))
+    backgrounds = [self.source([0, 1, 2], [50, 10]), self.source([0, 1, 2], [40, 5])]
+    _, pad, sources = self.draw_plotter_stacks(spec, backgrounds)
+    self.assertEqual(len(sources), 3)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (90 + hypot(.15 * 50, .15 * 40)))
+
+  def test_automatic_y_max_includes_systematic_background_band(self):
+    spec = Histogram("systematic_range_%d" % next(self.identifiers), error=.5)
+    backgrounds = [self.source([0, 1, 2], [50, 10]), self.source([0, 1, 2], [40, 5])]
+    _, pad, _ = self.draw_plotter_stacks(spec, backgrounds)
+    upper_error = hypot(hypot(.15 * 50, .15 * 40), .5 * 90)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (90 + upper_error))
+
+  def test_log_y_range_keeps_small_stacked_components(self):
+    spec = Histogram("log_stack_range_%d" % next(self.identifiers), log_y=True)
+    backgrounds = [self.source([0, 1, 2], [1e8, 2e8]), self.source([0, 1, 2], [100, 200])]
+    plotter, pad, sources = self.draw_plotter_stacks(spec, backgrounds)
+    minimum, maximum = plotter.styler.getYAxisRangeForLayout(
+      spec, sources, error_histograms=plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True),
+    )
+    self.assertAlmostEqual(minimum, 70)
+    self.assertAlmostEqual(maximum, 1.2 * (2e8 + 200 + hypot(.15 * 2e8, .15 * 200)))
+    self.assertLess(10 ** pad.GetUymin(), 100)
+    self.assertGreater(10 ** pad.GetUymax(), 2e8 + 200)
+
+  def test_automatic_y_max_follows_upper_error_of_lower_content_bin(self):
+    source = self.source([0, 1, 2], [100, 80])
+    source.SetBinError(1, 5)
+    source.SetBinError(2, 50)
+    spec = Histogram("largest_upper_error")
+    _, pad, _, _ = self.draw(source, spec)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (80 + 50))
+
+  def test_automatic_y_max_uses_asymmetric_upper_poisson_error(self):
+    source = self.source([0, 1, 2], [1, 3])
+    source.Sumw2(False)
+    source.SetBinErrorOption(ROOT.TH1.kPoisson)
+    self.assertGreater(source.GetBinErrorUp(2), source.GetBinError(2))
+    self.assertGreater(source.GetBinErrorUp(2), source.GetBinErrorLow(2))
+    spec = Histogram("poisson_upper_error")
+    _, pad, _, _ = self.draw(source, spec)
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (3 + source.GetBinErrorUp(2)))
+
+  def test_explicit_y_max_remains_exact_with_axis_exponent(self):
+    source = self.source([0, 1, 2], [10e9, 20e9])
+    spec = Histogram("explicit_y_max", y_max=50e9)
+    _, pad, _, _ = self.draw(source, spec)
+    self.assertEqual(self.styler.getYAxisRangeForLayout(spec, [source])[1], 50e9)
+    self.assertAlmostEqual(pad.GetUymax(), 50e9, delta=1e3)
+
   def test_bottom_margin_is_per_plot_and_shared_other_margins_are_stable(self):
     numeric = self.source([0, 1, 2], [1e8, 2e8])
     categorical = self.source([-0.5, 0.5, 1.5], [1e8, 2e8], ["unmatched", "different mothers"])
@@ -201,6 +389,47 @@ class PlotLayoutTest(unittest.TestCase):
     self.assertGreater(10 ** pad.GetUxmax(), 30)
     self.assertLess(pad.GetUymax() - pad.GetUymin(), 3)
     self.assert_legend_clear(pad, source, legend)
+
+  def test_legend_clearance_keeps_mixed_bins_and_signed_error_envelopes(self):
+    sources = [
+      self.source([0, 1, 2, 3, 4], [1e8, 2e8, 3e8, 2e8]),
+      self.source([0, 1, 2, 3, 4], [-8e8, 3e8, -8e8, 1e8]),
+      self.source([0, 1, 3, 4], [2e8, 5e8, 2e8]),
+      self.source([0.5, 1.5, 2.5, 3.5, 4.5], [5e8, 1e8, 6e8, 3e8]),
+    ]
+    # A negative weighted content can still have a positive error envelope.
+    sources[1].SetBinError(1, 2e9)
+    sources[1].SetBinError(3, 4e9)
+    spec = Histogram("mixed_bins", log_y=True, y_min=1e7)
+    _, pad, stack, _ = self.draw(sources[0], spec)
+    for source in sources[1:]:
+      source.Draw("same e2")
+    self.styler.setupFigure(stack, spec, source_histograms=sources)
+    legend = ROOT.TLegend(0.58, 0.35, 0.90, 0.90)
+    legend.SetTextFont(43)
+    legend.SetTextSize(22)
+    for index, source in enumerate(sources):
+      legend.AddEntry(source, "Sample %d" % index, "f")
+    legend.Draw()
+    self.objects.append(legend)
+    self.styler.adjustAxesForLegend(stack, spec, sources, [legend], pad)
+    pad.Modified()
+    pad.Update()
+    for source in sources:
+      self.assert_legend_clear(pad, source, legend)
+    self.assertEqual([source.GetNbinsX() for source in sources], [4, 4, 3, 4])
+    self.assertEqual(sources[1].GetBinContent(3), -8e8)
+    self.assertEqual(sources[1].GetBinError(3), 4e9)
+
+  def test_categorical_detection_ignores_empty_label_lists_and_cleared_labels(self):
+    source = self.source([0, 1, 2], [1, 2])
+    self.assertFalse(source.GetXaxis().GetLabels())
+    self.assertEqual(self.styler.categoricalLabels([source]), [])
+    source.GetXaxis().SetBinLabel(2, "second")
+    self.assertEqual(self.styler.categoricalLabels([source]), [(1.5, "second")])
+    source.GetXaxis().SetBinLabel(2, "")
+    self.assertTrue(source.GetXaxis().GetLabels())
+    self.assertEqual(self.styler.categoricalLabels([source]), [])
 
   def test_broad_log_distribution_does_not_gain_decades_for_tall_legend(self):
     source = self.source([0, 4000, 8000, 12000, 16000, 20000], [1e2, 1e9, 1e10, 1e10, 1e9])
@@ -304,6 +533,7 @@ class PlotLayoutTest(unittest.TestCase):
       config = SimpleNamespace(
         histograms=specifications, samples=samples, output_path=directory,
         output_formats=["png"], canvas_size=(800, 600), show_ratio_plots=False,
+        show_signal_stat_uncertainty=True,
         show_cms_labels=True, cms_label=CmsLabel.pas_sim, label_outside_axes=True,
         luminosity=1., beam_label="simulation", auto_adjust_axes_for_legend=True,
         plot_margins={"left": .10, "right": .37, "top": .12, "bottom": .14},
@@ -325,6 +555,7 @@ class PlotLayoutTest(unittest.TestCase):
       plotter.buildStacks()
       plotter.drawStacks()
       for spec in specifications:
+        self.assertEqual(len(plotter.signal_uncertainties[spec.getName()]), 1)
         with Image.open(Path(directory) / (spec.name + ".png")) as exported:
           image = exported.convert("RGB")
           width, height = image.size

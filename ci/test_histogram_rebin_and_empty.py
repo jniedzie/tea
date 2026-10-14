@@ -118,7 +118,85 @@ class HistogramRebinTest(unittest.TestCase):
 
 
 @unittest.skipIf(ROOT is None, 'PyROOT is required')
+class LegendHeaderTest(unittest.TestCase):
+  def plotter(self, samples, legends):
+    directory = tempfile.TemporaryDirectory()
+    self.addCleanup(directory.cleanup)
+    histogram = Histogram('category', legend_label='Both-Both')
+    config = SimpleNamespace(histograms=[histogram], samples=[], legends=legends,
+        output_path=directory.name, show_ratio_plots=False)
+    plotter = HistogramPlotter(config)
+    plotter.histosamples = [(histogram, sample) for sample in samples]
+    return plotter, histogram
+
+  def test_category_appears_once_in_highest_legend_regardless_of_sample_order(self):
+    samples = [Sample(name='sm', type=SampleType.background), Sample(name='bsm', type=SampleType.signal)]
+    legends = {SampleType.background: Legend(y2=.5, title='SM'),
+               SampleType.signal: Legend(y2=.9, title='BSM')}
+    for order in (samples, list(reversed(samples))):
+      with self.subTest(order=[sample.name for sample in order]):
+        plotter, histogram = self.plotter(order, legends)
+        plotter.setupLegends()
+        headers = {key: legend.GetHeader() for key, legend in plotter.legends[histogram.name].items()}
+        self.assertEqual(headers[SampleType.background], 'SM')
+        self.assertEqual(headers[SampleType.signal], 'BSM (Both-Both)')
+
+  def test_custom_legend_title_is_preserved(self):
+    samples = [Sample(name='special', type=SampleType.signal,
+                      custom_legend=Legend(y2=.95, title='Special signal')),
+               Sample(name='sm', type=SampleType.background)]
+    plotter, histogram = self.plotter(samples, {SampleType.background: Legend(y2=.8, title='SM')})
+    plotter.setupLegends()
+    self.assertEqual(plotter.legends[histogram.name]['special'].GetHeader(), 'Special signal (Both-Both)')
+    self.assertEqual(plotter.legends[histogram.name][SampleType.background].GetHeader(), 'SM')
+
+  def test_single_visible_legend_keeps_category(self):
+    samples = [Sample(name='sm', type=SampleType.background), Sample(name='bsm', type=SampleType.signal)]
+    plotter, histogram = self.plotter(samples, {SampleType.background: Legend(title='SM'), SampleType.signal: None})
+    plotter.setupLegends()
+    self.assertEqual(plotter.legends[histogram.name][SampleType.background].GetHeader(), 'SM (Both-Both)')
+    self.assertIsNone(plotter.legends[histogram.name][SampleType.signal])
+
+  def test_ratio_legends_show_category_once(self):
+    samples = [Sample(name='sm', type=SampleType.background), Sample(name='bsm', type=SampleType.signal)]
+    plotter, histogram = self.plotter(samples, {SampleType.background: Legend(y2=.9, title='SM'),
+                                               SampleType.signal: Legend(y2=.5, title='BSM')})
+    plotter.histosamples = []
+    passed = Histogram('selected_pass', legend_label=histogram.legend_label)
+    total = Histogram('selected_total')
+    plotter.ratiosamples = [(passed, total, sample) for sample in samples]
+    plotter.setupLegends()
+    self.assertEqual(plotter.legends['selected_ratio'][SampleType.background].GetHeader(), 'SM (Both-Both)')
+    self.assertEqual(plotter.legends['selected_ratio'][SampleType.signal].GetHeader(), 'BSM')
+
+
+@unittest.skipIf(ROOT is None, 'PyROOT is required')
 class EmptyHistogramPlotTest(unittest.TestCase):
+  def test_duplicate_samples_are_skipped_but_failed_loads_can_be_retried(self):
+    with tempfile.TemporaryDirectory() as temporary:
+      histogram = Histogram('present', norm_type=NormalizationType.none)
+      retry = Histogram('later', norm_type=NormalizationType.none)
+      samples = [Sample(name='one'), Sample(name='two')]
+      config = SimpleNamespace(histograms=[histogram, retry], samples=samples,
+          output_path=temporary, show_ratio_plots=False)
+      plotter = HistogramPlotter(config)
+      source = ROOT.TH1D('duplicate_plot_source', '', 4, 0, 4)
+      source.SetDirectory(0)
+      source.Fill(1.5, 3.)
+      input_file = SimpleNamespace(Get=lambda name: source)
+      plotter.addHistosample(histogram, samples[0], input_file)
+      plotter.addHistosample(histogram, Sample(name='one'), input_file)
+      plotter.addHistosample(histogram, samples[1], input_file)
+      self.assertEqual(len(plotter.histosamples), 2)
+      missing_file = SimpleNamespace(Get=lambda name: None, GetName=lambda: 'partial.root')
+      with patch('Histogram.warn'):
+        plotter.addHistosample(retry, samples[0], missing_file)
+      plotter.addHistosample(retry, samples[0], input_file)
+      self.assertEqual(len(plotter.histosamples), 3)
+      # Loading another sample must retain independent mutable ROOT contents.
+      plotter.histosamples[0][0].hist.Scale(2.)
+      self.assertEqual(plotter.histosamples[1][0].hist.Integral(), 3.)
+
   def test_empty_input_needs_no_legend_or_empty_pdf_and_emits_no_missing_warning(self):
     with tempfile.TemporaryDirectory() as temporary:
       histogram = Histogram('empty', norm_type=NormalizationType.none)
@@ -136,7 +214,8 @@ class EmptyHistogramPlotTest(unittest.TestCase):
         plotter.buildStacks()
         plotter.drawStacks()
         load_warning.assert_not_called()
-        plot_warning.assert_not_called()
+        plot_warning.assert_called_once_with(
+            'Skipping plot empty: no selected sample has drawable entries.')
       self.assertEqual(plotter.histosamples, [])
       self.assertEqual(source.GetEntries(), 0)
       self.assertEqual(source.Integral(), 0)
