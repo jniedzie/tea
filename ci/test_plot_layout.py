@@ -484,6 +484,120 @@ class PlotLayoutTest(unittest.TestCase):
       self.assertLessEqual(abs(expected_pixel - label_pixel), 1, label)
     self.assertEqual(source.GetXaxis().GetXmax(), 4.5)
 
+  def test_pdf_exports_fit_the_page_and_preserve_canvas_aspect_and_global_style(self):
+    converter = shutil.which("pdftoppm")
+    if converter is None:
+      self.skipTest("pdftoppm is required for rendered-PDF verification")
+    try:
+      from PIL import Image
+    except ImportError:
+      self.skipTest("Pillow is required for rendered-PDF verification")
+    with tempfile.TemporaryDirectory() as directory:
+      config = SimpleNamespace(histograms=[], samples=[], output_path=directory, show_ratio_plots=False)
+      plotter = HistogramPlotter(config)
+      previous_width, previous_height = array("f", [0.0]), array("f", [0.0])
+      ROOT.gStyle.GetPaperSize(previous_width, previous_height)
+      self.addCleanup(ROOT.gStyle.SetPaperSize, previous_width[0], previous_height[0])
+      ROOT.gStyle.SetPaperSize(13.0, 17.0)
+      original_error_level = ROOT.gErrorIgnoreLevel
+      for dimensions in ((1400, 850), (1200, 850), (600, 800)):
+        with self.subTest(dimensions=dimensions):
+          canvas = ROOT.TCanvas(f"pdf_canvas_{next(self.identifiers)}", "", *dimensions)
+          self.canvases.append(canvas)
+          canvas.SetFillColor(ROOT.kRed)
+          path = Path(directory) / ("page_%d_%d.pdf" % dimensions)
+          plotter._HistogramPlotter__save_canvas(canvas, str(path))
+          paper_width, paper_height = array("f", [0.0]), array("f", [0.0])
+          ROOT.gStyle.GetPaperSize(paper_width, paper_height)
+          self.assertEqual((paper_width[0], paper_height[0]), (13.0, 17.0))
+          self.assertEqual(ROOT.gErrorIgnoreLevel, original_error_level)
+          subprocess.run(
+            [converter, "-r", "50", "-png", "-singlefile", str(path), str(path.with_suffix(""))],
+            check=True,
+            capture_output=True,
+          )
+          with Image.open(path.with_suffix(".png")) as exported:
+            image = exported.convert("RGB")
+            red_pixels = [
+              (index % image.width, index // image.width)
+              for index, color in enumerate(image.getdata())
+              if color[0] > 200 and color[1] < 100 and color[2] < 100
+            ]
+            left = min(x for x, y in red_pixels)
+            top = min(y for x, y in red_pixels)
+            width = max(x for x, y in red_pixels) - left + 1
+            height = max(y for x, y in red_pixels) - top + 1
+            self.assertLess(left / image.width, 0.10)
+            self.assertLess(top / image.height, 0.12)
+            self.assertGreater(width / image.width, 0.85)
+            self.assertGreater(height / image.height, 0.75)
+            self.assertAlmostEqual(width / height, canvas.GetWw() / canvas.GetWh(), delta=0.015)
+
+  def test_batch_exports_keep_last_canvas_legends_and_header(self):
+    try:
+      from PIL import Image
+    except ImportError:
+      self.skipTest("Pillow is required for exported-image verification")
+    with tempfile.TemporaryDirectory() as directory:
+      specifications = [
+        Histogram(
+          f"export_{index}", norm_type=NormalizationType.none, log_y=True, x_label="observable", y_label="entries"
+        )
+        for index in range(3)
+      ]
+      samples = [
+        Sample(name="background", type=SampleType.background, legend_description="background", fill_color=ROOT.kBlue),
+        Sample(name="signal", type=SampleType.signal, legend_description="signal", line_color=ROOT.kRed),
+      ]
+      config = SimpleNamespace(
+        histograms=specifications,
+        samples=samples,
+        output_path=directory,
+        output_formats=["png"],
+        canvas_size=(800, 600),
+        show_ratio_plots=False,
+        show_signal_stat_uncertainty=True,
+        show_cms_labels=True,
+        cms_label=CmsLabel.pas_sim,
+        label_outside_axes=True,
+        luminosity=1.0,
+        beam_label="simulation",
+        auto_adjust_axes_for_legend=True,
+        plot_margins={"left": 0.10, "right": 0.37, "top": 0.12, "bottom": 0.14},
+        legends={
+          SampleType.background: Legend(0.65, 0.48, 0.99, 0.90, "f"),
+          SampleType.signal: Legend(0.65, 0.12, 0.99, 0.45, "l"),
+        },
+        plotting_options={
+          SampleType.background: "hist",
+          SampleType.signal: "nostack hist",
+          SampleType.data: "nostack e",
+        },
+      )
+      plotter = HistogramPlotter(config)
+      for spec in specifications:
+        for sample in samples:
+          source = self.source([0, 2, 4, 6], [10, 20, 30])
+          source.SetEntries(3)
+          histogram = Histogram(
+            spec.name, norm_type=NormalizationType.none, log_y=True, x_label=spec.x_label, y_label=spec.y_label
+          )
+          histogram.set_hist(source)
+          plotter.histosamples.append((histogram, sample))
+      plotter.setupLegends()
+      plotter.buildStacks()
+      plotter.drawStacks()
+      for spec in specifications:
+        self.assertEqual(len(plotter.signal_uncertainties[spec.getName()]), 1)
+        with Image.open(Path(directory) / (spec.name + ".png")) as exported:
+          image = exported.convert("RGB")
+          width, height = image.size
+          legends = image.crop((int(0.66 * width), int(0.14 * height), width, int(0.91 * height)))
+          header = image.crop((int(0.08 * width), int(0.02 * height), int(0.63 * width), int(0.105 * height)))
+          dark_pixels = lambda region: sum(max(pixel) < 220 for pixel in region.getdata())
+          self.assertGreater(dark_pixels(legends), 100, spec.name + " legends")
+          self.assertGreater(dark_pixels(header), 100, spec.name + " header")
+
 
 if __name__ == "__main__":
   unittest.main()
