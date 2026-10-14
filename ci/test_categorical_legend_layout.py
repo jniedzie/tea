@@ -19,6 +19,7 @@ except ImportError:
 else:
   from Histogram import Histogram
   from Styler import Styler
+
   ROOT.gROOT.SetBatch(True)
 
 
@@ -29,9 +30,12 @@ class CategoricalLegendLayoutTest(unittest.TestCase):
   def setUp(self):
     self.objects = []
     self.canvases = []
-    self.styler = Styler(SimpleNamespace(
-      categorical_legend_outside=True, auto_adjust_axes_for_legend=True,
-    ))
+    self.styler = Styler(
+      SimpleNamespace(
+        categorical_legend_outside=True,
+        auto_adjust_axes_for_legend=True,
+      )
+    )
     self.styler.configureAutomaticMargins([(1e-30, 1e30)], (800, 600))
 
   def tearDown(self):
@@ -45,10 +49,14 @@ class CategoricalLegendLayoutTest(unittest.TestCase):
     source = ROOT.TH1D(f"category_source_{identifier}", "", 34, -32.5, 1.5)
     source.SetDirectory(0)
     labels = {
-      -32: "-32: invalid charge", -31: "-31: transport call limit",
-      -30: "-30: invalid derivative", -4: "-4: no convergence",
-      -3: "-3: invalid covariance/update", -1: "-1: missing detector state",
-      0: "0: disabled/unpaired", 1: "1: valid",
+      -32: "-32: invalid charge",
+      -31: "-31: transport call limit",
+      -30: "-30: invalid derivative",
+      -4: "-4: no convergence",
+      -3: "-3: invalid covariance/update",
+      -1: "-1: missing detector state",
+      0: "0: disabled/unpaired",
+      1: "1: valid",
     }
     for value, label in labels.items():
       index = source.FindFixBin(value)
@@ -89,7 +97,8 @@ class CategoricalLegendLayoutTest(unittest.TestCase):
     self.assertLess(pad.GetLeftMargin(), 0.15)
     legend_left = pad.UtoAbsPixel(legend.GetX1NDC())
     texts = {
-      str(item.GetTitle()): item for item in pad.GetListOfPrimitives()
+      str(item.GetTitle()): item
+      for item in pad.GetListOfPrimitives()
       if item.InheritsFrom("TLatex") and str(item.GetTitle()) in labels.values()
     }
     self.assertEqual(set(texts), set(labels.values()))

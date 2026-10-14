@@ -76,12 +76,12 @@ class HistogramPlotter:
         primitive.Modified()
     canvas.Modified()
     canvas.Update()
-    original_paper_width, original_paper_height = array("f", [0.]), array("f", [0.])
+    original_paper_width, original_paper_height = array("f", [0.0]), array("f", [0.0])
     gStyle.GetPaperSize(original_paper_width, original_paper_height)
     if os.path.splitext(path)[1].lower() == ".pdf":
       # Fit the drawable canvas onto ROOT's A4 page without changing its aspect.
       width, height = canvas.GetWw(), canvas.GetWh()
-      paper_width, paper_height = (28., 20.) if width >= height else (20., 28.)
+      paper_width, paper_height = (28.0, 20.0) if width >= height else (20.0, 28.0)
       scale = min(paper_width / width, paper_height / height)
       gStyle.SetPaperSize(width * scale, height * scale)
     original_error_level = ROOT.gErrorIgnoreLevel
@@ -247,9 +247,11 @@ class HistogramPlotter:
       hist_normalized = self.normalizer.getBackgroundNormalizedToLumi(hist, sample)
       # Density plots divide by bin width in setup. Match the displayed area,
       # retaining the ordinary bin sum for count plots and other modes.
-      integral = (hist_normalized.Integral("width")
-                  if hist.norm_type == NormalizationType.to_background and hist.scale_by_bin_width
-                  else hist_normalized.Integral())
+      integral = (
+        hist_normalized.Integral("width")
+        if hist.norm_type == NormalizationType.to_background and hist.scale_by_bin_width
+        else hist_normalized.Integral()
+      )
       if hist.getName() in self.total_backgrounds_integral:
         self.total_backgrounds_integral[hist.getName()] += integral
       else:
@@ -488,7 +490,9 @@ class HistogramPlotter:
     )
     if first_stack is not None:
       self.styler.setupFigure(
-        first_stack, hist, source_histograms=plotted_histograms,
+        first_stack,
+        hist,
+        source_histograms=plotted_histograms,
         error_histograms=self.__getPlottedHistograms(hist, errors_only=True),
       )
 
@@ -509,7 +513,10 @@ class HistogramPlotter:
   def __setup_canvas(self, canvas, hist):
     sources = self.__getPlottedHistograms(hist)
     self.styler.preparePlotLayout(
-      hist, sources, canvas, self.show_ratios,
+      hist,
+      sources,
+      canvas,
+      self.show_ratios,
       legends=self.legends.get(hist.getName(), {}).values(),
     )
     has_categorical_labels = any(
@@ -561,9 +568,13 @@ class HistogramPlotter:
     for hist in self.config.histograms:
       sources = self.__getPlottedHistograms(hist)
       if sources:
-        y_ranges.append(self.styler.getYAxisRangeForLayout(
-          hist, sources, error_histograms=self.__getPlottedHistograms(hist, errors_only=True),
-        ))
+        y_ranges.append(
+          self.styler.getYAxisRangeForLayout(
+            hist,
+            sources,
+            error_histograms=self.__getPlottedHistograms(hist, errors_only=True),
+          )
+        )
 
       if not self.show_ratios:
         continue
@@ -581,12 +592,11 @@ class HistogramPlotter:
         if not axis.GetLabels():
           continue
         x_tick_labels.extend(
-          axis.GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1)
-          if axis.GetBinLabel(index)
+          axis.GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1) if axis.GetBinLabel(index)
         )
     self.styler.configureAutomaticMargins(
-      y_ranges, self.config.canvas_size, x_labels, x_tick_labels=x_tick_labels,
-      has_ratio=self.show_ratios)
+      y_ranges, self.config.canvas_size, x_labels, x_tick_labels=x_tick_labels, has_ratio=self.show_ratios
+    )
 
   def drawStacks(self):
     info("Preparing plot layout...")
@@ -599,7 +609,8 @@ class HistogramPlotter:
       has_categorical_labels = bool(self.styler.categoricalLabels(sources))
       canvas_size = (
         getattr(self.config, "categorical_canvas_size", self.config.canvas_size)
-        if has_categorical_labels else self.config.canvas_size
+        if has_categorical_labels
+        else self.config.canvas_size
       )
       canvas = TCanvas(hist.getName(), hist.getName(), canvas_size[0], canvas_size[1])
       self.__setup_canvas(canvas, hist)
@@ -627,8 +638,11 @@ class HistogramPlotter:
         final_sources = self.__getPlottedHistograms(hist)
         error_sources = self.__getPlottedHistograms(hist, errors_only=True)
         self.styler.adjustAxesForLegend(
-          first_stack, hist, final_sources,
-          self.legends.get(hist.getName(), {}).values(), canvas.GetPad(1),
+          first_stack,
+          hist,
+          final_sources,
+          self.legends.get(hist.getName(), {}).values(),
+          canvas.GetPad(1),
           error_histograms=error_sources,
         )
         pad = canvas.GetPad(1)

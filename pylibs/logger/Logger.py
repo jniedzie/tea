@@ -60,7 +60,7 @@ class ProgressBar:
       # Leave one column unused so a full progress line does not wrap.
       columns = shutil.get_terminal_size().columns - 1
       counter_width = len(f"[] {percentage}% ( {self.current}/{self.total}) | {elapsed}s")
-      label = label[:max(0, columns - counter_width - 5)]
+      label = label[: max(0, columns - counter_width - 5)]
     suffix = f" {percentage}% ({label} {self.current}/{self.total}) | {elapsed}s"
     if self.is_terminal:
       available = columns - len(suffix) - 2
@@ -76,7 +76,7 @@ class ProgressBar:
       if self.is_terminal:
         available = max(0, columns - len(line) - 3)
         if len(detail) > available:
-          detail = detail[:max(0, available - 3)] + ("..." if available >= 3 else "")
+          detail = detail[: max(0, available - 3)] + ("..." if available >= 3 else "")
       if detail:
         line += f" | {detail}"
     if self.is_terminal:
@@ -117,7 +117,7 @@ def info_frame(message):
   lines = []
   for line in str(message).splitlines() or [""]:
     # Wrap without stripping spaces, which can be part of a file path.
-    lines.extend(line[index:index + max_width] for index in range(0, len(line), max_width))
+    lines.extend(line[index : index + max_width] for index in range(0, len(line), max_width))
     if not line:
       lines.append("")
   width = max(len(line) for line in lines)

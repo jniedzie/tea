@@ -28,6 +28,7 @@ else:
   from Legend import Legend
   from Sample import Sample, SampleType
   from Styler import Styler
+
   ROOT.gROOT.SetBatch(True)
 
 
@@ -40,7 +41,9 @@ class PlotLayoutTest(unittest.TestCase):
     self.canvases = []
     self.styler = Styler(SimpleNamespace(auto_adjust_axes_for_legend=True))
     self.styler.configureAutomaticMargins(
-      [(1, 1e13)], (800, 600), ["#chi^{2}", "generator mother"],
+      [(1, 1e13)],
+      (800, 600),
+      ["#chi^{2}", "generator mother"],
       x_tick_labels=["unmatched", "different mothers", "bottom hadron"],
     )
 
@@ -118,17 +121,21 @@ class PlotLayoutTest(unittest.TestCase):
       top = pad.YtoAbsPixel(pad.YtoPad(height))
       self.assertGreater(top, legend_bottom, "bin %d overlaps the rendered legend" % index)
 
-  def draw_plotter_stacks(self, spec, backgrounds, signals=(), signal_options="nostack hist",
-                          show_signal_stat_uncertainty=False):
+  def draw_plotter_stacks(
+    self, spec, backgrounds, signals=(), signal_options="nostack hist", show_signal_stat_uncertainty=False
+  ):
     directory = tempfile.TemporaryDirectory()
     self.addCleanup(directory.cleanup)
     config = SimpleNamespace(
-      histograms=[spec], samples=[], output_path=directory.name, canvas_size=(800, 600),
-      show_ratio_plots=False, auto_adjust_axes_for_legend=True,
+      histograms=[spec],
+      samples=[],
+      output_path=directory.name,
+      canvas_size=(800, 600),
+      show_ratio_plots=False,
+      auto_adjust_axes_for_legend=True,
       show_signal_stat_uncertainty=show_signal_stat_uncertainty,
-      plot_margins={"left": .13, "right": .35, "top": .08, "bottom": .14},
-      plotting_options={SampleType.background: "hist", SampleType.signal: signal_options,
-                        SampleType.data: "nostack e"},
+      plot_margins={"left": 0.13, "right": 0.35, "top": 0.08, "bottom": 0.14},
+      plotting_options={SampleType.background: "hist", SampleType.signal: signal_options, SampleType.data: "nostack e"},
     )
     plotter = HistogramPlotter(config)
     for source in backgrounds:
@@ -142,15 +149,22 @@ class PlotLayoutTest(unittest.TestCase):
     plotter._HistogramPlotter__drawUncertainties(canvas, spec)
     plotter._HistogramPlotter__drawSignalUncertainties(canvas, spec)
     pad = canvas.cd(1)
-    legend = ROOT.TLegend(.70, .20, .98, .90)
+    legend = ROOT.TLegend(0.70, 0.20, 0.98, 0.90)
     for source in backgrounds + list(signals):
       legend.AddEntry(source, "Sample", "l")
     legend.Draw()
     sources = plotter._HistogramPlotter__getPlottedHistograms(spec)
-    first_stack = next(plotter.stacks[sample_type][spec.getName()] for sample_type in SampleType
-                       if plotter.stacks[sample_type][spec.getName()].GetNhists() > 0)
+    first_stack = next(
+      plotter.stacks[sample_type][spec.getName()]
+      for sample_type in SampleType
+      if plotter.stacks[sample_type][spec.getName()].GetNhists() > 0
+    )
     plotter.styler.adjustAxesForLegend(
-      first_stack, spec, sources, [legend], pad,
+      first_stack,
+      spec,
+      sources,
+      [legend],
+      pad,
       error_histograms=plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True),
     )
     pad.Modified()
@@ -163,14 +177,13 @@ class PlotLayoutTest(unittest.TestCase):
       with self.subTest(options=options):
         spec = Histogram("overlay_range_%d" % next(self.identifiers), x_min=0, x_max=6)
         backgrounds = [self.source([0, 2, 4, 6], [10e9, 5e9, 1e9])]
-        signals = [self.source([0, 2, 4, 6], [peak * 1e9, 1e9, 1e9])
-                   for peak in (56, 30, 24, 18, 12, 8, 6, 4)]
+        signals = [self.source([0, 2, 4, 6], [peak * 1e9, 1e9, 1e9]) for peak in (56, 30, 24, 18, 12, 8, 6, 4)]
         if options != "nostack e":
           signals[0].SetBinError(1, 1e15)
         plotter, pad, sources = self.draw_plotter_stacks(spec, backgrounds, signals, options)
         # Eight overlaid signals have no visible cumulative sum.
         self.assertEqual(len(sources), len(signals) + len(backgrounds) + 1)
-        upper = 56e9 + (.15 * 56e9 if options == "nostack e" else 0)
+        upper = 56e9 + (0.15 * 56e9 if options == "nostack e" else 0)
         self.assertAlmostEqual(pad.GetUymax(), 1.2 * upper, delta=1e3)
         errors = plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True)
         self.assertEqual(len(errors), 1 + (len(signals) if options == "nostack e" else 0))
@@ -191,8 +204,7 @@ class PlotLayoutTest(unittest.TestCase):
       source.SetLineColor(color)
       source.SetLineWidth(3)
     original_errors = [[source.GetBinError(index) for index in (1, 2)] for source in signals]
-    plotter, pad, _ = self.draw_plotter_stacks(
-      spec, [], signals, show_signal_stat_uncertainty=True)
+    plotter, pad, _ = self.draw_plotter_stacks(spec, [], signals, show_signal_stat_uncertainty=True)
     graphs = plotter.signal_uncertainties[spec.getName()]
     self.assertEqual(len(graphs), 2)
     self.assertAlmostEqual(pad.GetUymax(), 1.2 * (10 + 50))
@@ -220,13 +232,12 @@ class PlotLayoutTest(unittest.TestCase):
           self.assertGreater(signal.GetBinErrorUp(2), signal.GetBinErrorLow(2))
         else:
           signal.Reset()
-          signal.Fill(.5, 2)
-          signal.Fill(.5, 3)
+          signal.Fill(0.5, 2)
+          signal.Fill(0.5, 3)
           signal.Fill(1.5, 4)
           signal.Scale(2)
           self.assertAlmostEqual(signal.GetBinError(1), 2 * hypot(2, 3))
-        plotter, _, _ = self.draw_plotter_stacks(
-          spec, [], [signal], show_signal_stat_uncertainty=True)
+        plotter, _, _ = self.draw_plotter_stacks(spec, [], [signal], show_signal_stat_uncertainty=True)
         graph = plotter.signal_uncertainties[spec.getName()][0]
         for point in range(2):
           self.assertAlmostEqual(graph.GetErrorYlow(point), signal.GetBinErrorLow(point + 1))
@@ -237,7 +248,8 @@ class PlotLayoutTest(unittest.TestCase):
     signal = self.source([0, 1, 2], [20, 10])
     signal.SetBinError(2, 50)
     plotter, pad, _ = self.draw_plotter_stacks(
-      spec, [], [signal], signal_options="nostack e", show_signal_stat_uncertainty=True)
+      spec, [], [signal], signal_options="nostack e", show_signal_stat_uncertainty=True
+    )
     self.assertFalse(plotter.signal_uncertainties.get(spec.getName()))
     self.assertAlmostEqual(pad.GetUymax(), 1.2 * (10 + 50))
 
@@ -245,7 +257,8 @@ class PlotLayoutTest(unittest.TestCase):
     spec = Histogram("stacked_signal_errors_%d" % next(self.identifiers), x_min=0, x_max=2)
     signals = [self.source([0, 1, 2], [10, 4]), self.source([0, 1, 2], [5, 3])]
     plotter, pad, _ = self.draw_plotter_stacks(
-      spec, [], signals, signal_options="hist", show_signal_stat_uncertainty=True)
+      spec, [], signals, signal_options="hist", show_signal_stat_uncertainty=True
+    )
     graphs = plotter.signal_uncertainties[spec.getName()]
     self.assertEqual(len(graphs), 2)
     self.assertEqual(graphs[0].GetPointY(0), 10)
@@ -259,13 +272,13 @@ class PlotLayoutTest(unittest.TestCase):
     backgrounds = [self.source([0, 1, 2], [50, 10]), self.source([0, 1, 2], [40, 5])]
     _, pad, sources = self.draw_plotter_stacks(spec, backgrounds)
     self.assertEqual(len(sources), 3)
-    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (90 + hypot(.15 * 50, .15 * 40)))
+    self.assertAlmostEqual(pad.GetUymax(), 1.2 * (90 + hypot(0.15 * 50, 0.15 * 40)))
 
   def test_automatic_y_max_includes_systematic_background_band(self):
-    spec = Histogram("systematic_range_%d" % next(self.identifiers), error=.5)
+    spec = Histogram("systematic_range_%d" % next(self.identifiers), error=0.5)
     backgrounds = [self.source([0, 1, 2], [50, 10]), self.source([0, 1, 2], [40, 5])]
     _, pad, _ = self.draw_plotter_stacks(spec, backgrounds)
-    upper_error = hypot(hypot(.15 * 50, .15 * 40), .5 * 90)
+    upper_error = hypot(hypot(0.15 * 50, 0.15 * 40), 0.5 * 90)
     self.assertAlmostEqual(pad.GetUymax(), 1.2 * (90 + upper_error))
 
   def test_log_y_range_keeps_small_stacked_components(self):
@@ -273,10 +286,12 @@ class PlotLayoutTest(unittest.TestCase):
     backgrounds = [self.source([0, 1, 2], [1e8, 2e8]), self.source([0, 1, 2], [100, 200])]
     plotter, pad, sources = self.draw_plotter_stacks(spec, backgrounds)
     minimum, maximum = plotter.styler.getYAxisRangeForLayout(
-      spec, sources, error_histograms=plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True),
+      spec,
+      sources,
+      error_histograms=plotter._HistogramPlotter__getPlottedHistograms(spec, errors_only=True),
     )
     self.assertAlmostEqual(minimum, 70)
-    self.assertAlmostEqual(maximum, 1.2 * (2e8 + 200 + hypot(.15 * 2e8, .15 * 200)))
+    self.assertAlmostEqual(maximum, 1.2 * (2e8 + 200 + hypot(0.15 * 2e8, 0.15 * 200)))
     self.assertLess(10 ** pad.GetUymin(), 100)
     self.assertGreater(10 ** pad.GetUymax(), 2e8 + 200)
 
@@ -339,10 +354,8 @@ class PlotLayoutTest(unittest.TestCase):
 
   def test_tall_mass_legend_extends_x_without_extreme_log_y(self):
     source = self.source([0, 1, 2, 4, 6, 8, 10], [1e8, 3e8, 1e9, 4e8, 2e8, 1e8])
-    spec = Histogram("mass", log_y=True, x_max=10, allow_legend_x_extension=True,
-                     x_label="m_{#mu#mu} [GeV]")
-    _, pad, stack, legend = self.draw(source, spec, with_legend=True,
-                                     legend_box=(0.58, 0.20, 0.90, 0.90))
+    spec = Histogram("mass", log_y=True, x_max=10, allow_legend_x_extension=True, x_label="m_{#mu#mu} [GeV]")
+    _, pad, stack, legend = self.draw(source, spec, with_legend=True, legend_box=(0.58, 0.20, 0.90, 0.90))
     self.assertGreater(pad.GetUxmax(), 15)
     self.assertLess(pad.GetUymax() - pad.GetUymin(), 5)
 
@@ -375,8 +388,7 @@ class PlotLayoutTest(unittest.TestCase):
   def test_tall_left_legend_extends_lower_x(self):
     source = self.source([1, 2, 3, 4, 5], [1e8] * 4)
     spec = Histogram("left_legend", log_y=True)
-    _, pad, _, legend = self.draw(source, spec, with_legend=True,
-                                 legend_box=(0.16, 0.20, 0.48, 0.90))
+    _, pad, _, legend = self.draw(source, spec, with_legend=True, legend_box=(0.16, 0.20, 0.48, 0.90))
     self.assertLess(pad.GetUxmin(), 0)
     self.assertLess(pad.GetUymax() - pad.GetUymin(), 3)
     self.assert_legend_clear(pad, source, legend)
@@ -384,8 +396,7 @@ class PlotLayoutTest(unittest.TestCase):
   def test_tall_legend_with_log_x_extends_x(self):
     source = self.source([1, 2, 4, 8, 16], [1e8] * 4)
     spec = Histogram("log_x_legend", log_x=True, log_y=True)
-    _, pad, _, legend = self.draw(source, spec, with_legend=True,
-                                 legend_box=(0.58, 0.20, 0.90, 0.90))
+    _, pad, _, legend = self.draw(source, spec, with_legend=True, legend_box=(0.58, 0.20, 0.90, 0.90))
     self.assertGreater(10 ** pad.GetUxmax(), 30)
     self.assertLess(pad.GetUymax() - pad.GetUymin(), 3)
     self.assert_legend_clear(pad, source, legend)
@@ -434,8 +445,7 @@ class PlotLayoutTest(unittest.TestCase):
   def test_broad_log_distribution_does_not_gain_decades_for_tall_legend(self):
     source = self.source([0, 4000, 8000, 12000, 16000, 20000], [1e2, 1e9, 1e10, 1e10, 1e9])
     spec = Histogram("vz", log_y=True, x_label="v_{z} [cm]")
-    _, pad, _, legend = self.draw(source, spec, with_legend=True,
-                                 legend_box=(0.58, 0.20, 0.90, 0.90))
+    _, pad, _, legend = self.draw(source, spec, with_legend=True, legend_box=(0.58, 0.20, 0.90, 0.90))
     self.assertGreater(pad.GetUxmax(), 30000)
     self.assertGreater(pad.GetUymin(), 0)
     self.assertLess(pad.GetUymax(), 13)
@@ -445,9 +455,9 @@ class PlotLayoutTest(unittest.TestCase):
     source = self.source([0, 2, 4, 6, 8, 10], [1e8, 3e8, 1e9, 4e8, 2e8])
     spec = Histogram("fixed_mass", log_y=True, x_min=0, x_max=10)
     from unittest.mock import patch
+
     with patch("Styler.warn") as warning:
-      _, pad, _, _ = self.draw(source, spec, with_legend=True,
-                               legend_box=(0.58, 0.20, 0.90, 0.90))
+      _, pad, _, _ = self.draw(source, spec, with_legend=True, legend_box=(0.58, 0.20, 0.90, 0.90))
     warning.assert_called_once()
     self.assertAlmostEqual(pad.GetUxmax(), 10)
     self.assertLess(pad.GetUymax() - pad.GetUymin(), 5)
@@ -461,7 +471,8 @@ class PlotLayoutTest(unittest.TestCase):
     pad.Modified()
     pad.Update()
     texts = {
-      str(item.GetTitle()): item for item in pad.GetListOfPrimitives()
+      str(item.GetTitle()): item
+      for item in pad.GetListOfPrimitives()
       if item.InheritsFrom("TLatex") and str(item.GetTitle()) in labels
     }
     self.assertEqual(set(texts), set(labels))
@@ -482,13 +493,12 @@ class PlotLayoutTest(unittest.TestCase):
     except ImportError:
       self.skipTest("Pillow is required for rendered-PDF verification")
     with tempfile.TemporaryDirectory() as directory:
-      config = SimpleNamespace(histograms=[], samples=[], output_path=directory,
-                               show_ratio_plots=False)
+      config = SimpleNamespace(histograms=[], samples=[], output_path=directory, show_ratio_plots=False)
       plotter = HistogramPlotter(config)
-      previous_width, previous_height = array("f", [0.]), array("f", [0.])
+      previous_width, previous_height = array("f", [0.0]), array("f", [0.0])
       ROOT.gStyle.GetPaperSize(previous_width, previous_height)
       self.addCleanup(ROOT.gStyle.SetPaperSize, previous_width[0], previous_height[0])
-      ROOT.gStyle.SetPaperSize(13., 17.)
+      ROOT.gStyle.SetPaperSize(13.0, 17.0)
       original_error_level = ROOT.gErrorIgnoreLevel
       for dimensions in ((1400, 850), (1200, 850), (600, 800)):
         with self.subTest(dimensions=dimensions):
@@ -497,26 +507,31 @@ class PlotLayoutTest(unittest.TestCase):
           canvas.SetFillColor(ROOT.kRed)
           path = Path(directory) / ("page_%d_%d.pdf" % dimensions)
           plotter._HistogramPlotter__save_canvas(canvas, str(path))
-          paper_width, paper_height = array("f", [0.]), array("f", [0.])
+          paper_width, paper_height = array("f", [0.0]), array("f", [0.0])
           ROOT.gStyle.GetPaperSize(paper_width, paper_height)
-          self.assertEqual((paper_width[0], paper_height[0]), (13., 17.))
+          self.assertEqual((paper_width[0], paper_height[0]), (13.0, 17.0))
           self.assertEqual(ROOT.gErrorIgnoreLevel, original_error_level)
-          subprocess.run([converter, "-r", "50", "-png", "-singlefile", str(path),
-                          str(path.with_suffix(""))], check=True, capture_output=True)
+          subprocess.run(
+            [converter, "-r", "50", "-png", "-singlefile", str(path), str(path.with_suffix(""))],
+            check=True,
+            capture_output=True,
+          )
           with Image.open(path.with_suffix(".png")) as exported:
             image = exported.convert("RGB")
-            red_pixels = [(index % image.width, index // image.width)
-                          for index, color in enumerate(image.getdata())
-                          if color[0] > 200 and color[1] < 100 and color[2] < 100]
+            red_pixels = [
+              (index % image.width, index // image.width)
+              for index, color in enumerate(image.getdata())
+              if color[0] > 200 and color[1] < 100 and color[2] < 100
+            ]
             left = min(x for x, y in red_pixels)
             top = min(y for x, y in red_pixels)
             width = max(x for x, y in red_pixels) - left + 1
             height = max(y for x, y in red_pixels) - top + 1
-            self.assertLess(left / image.width, .10)
-            self.assertLess(top / image.height, .12)
-            self.assertGreater(width / image.width, .85)
-            self.assertGreater(height / image.height, .75)
-            self.assertAlmostEqual(width / height, canvas.GetWw() / canvas.GetWh(), delta=.015)
+            self.assertLess(left / image.width, 0.10)
+            self.assertLess(top / image.height, 0.12)
+            self.assertGreater(width / image.width, 0.85)
+            self.assertGreater(height / image.height, 0.75)
+            self.assertAlmostEqual(width / height, canvas.GetWw() / canvas.GetWh(), delta=0.015)
 
   def test_batch_exports_keep_last_canvas_legends_and_header(self):
     try:
@@ -524,31 +539,49 @@ class PlotLayoutTest(unittest.TestCase):
     except ImportError:
       self.skipTest("Pillow is required for exported-image verification")
     with tempfile.TemporaryDirectory() as directory:
-      specifications = [Histogram(f"export_{index}", norm_type=NormalizationType.none, log_y=True,
-                                  x_label="observable", y_label="entries") for index in range(3)]
-      samples = [Sample(name="background", type=SampleType.background,
-                        legend_description="background", fill_color=ROOT.kBlue),
-                 Sample(name="signal", type=SampleType.signal,
-                        legend_description="signal", line_color=ROOT.kRed)]
+      specifications = [
+        Histogram(
+          f"export_{index}", norm_type=NormalizationType.none, log_y=True, x_label="observable", y_label="entries"
+        )
+        for index in range(3)
+      ]
+      samples = [
+        Sample(name="background", type=SampleType.background, legend_description="background", fill_color=ROOT.kBlue),
+        Sample(name="signal", type=SampleType.signal, legend_description="signal", line_color=ROOT.kRed),
+      ]
       config = SimpleNamespace(
-        histograms=specifications, samples=samples, output_path=directory,
-        output_formats=["png"], canvas_size=(800, 600), show_ratio_plots=False,
+        histograms=specifications,
+        samples=samples,
+        output_path=directory,
+        output_formats=["png"],
+        canvas_size=(800, 600),
+        show_ratio_plots=False,
         show_signal_stat_uncertainty=True,
-        show_cms_labels=True, cms_label=CmsLabel.pas_sim, label_outside_axes=True,
-        luminosity=1., beam_label="simulation", auto_adjust_axes_for_legend=True,
-        plot_margins={"left": .10, "right": .37, "top": .12, "bottom": .14},
-        legends={SampleType.background: Legend(.65, .48, .99, .90, "f"),
-                 SampleType.signal: Legend(.65, .12, .99, .45, "l")},
-        plotting_options={SampleType.background: "hist", SampleType.signal: "nostack hist",
-                          SampleType.data: "nostack e"},
+        show_cms_labels=True,
+        cms_label=CmsLabel.pas_sim,
+        label_outside_axes=True,
+        luminosity=1.0,
+        beam_label="simulation",
+        auto_adjust_axes_for_legend=True,
+        plot_margins={"left": 0.10, "right": 0.37, "top": 0.12, "bottom": 0.14},
+        legends={
+          SampleType.background: Legend(0.65, 0.48, 0.99, 0.90, "f"),
+          SampleType.signal: Legend(0.65, 0.12, 0.99, 0.45, "l"),
+        },
+        plotting_options={
+          SampleType.background: "hist",
+          SampleType.signal: "nostack hist",
+          SampleType.data: "nostack e",
+        },
       )
       plotter = HistogramPlotter(config)
       for spec in specifications:
         for sample in samples:
           source = self.source([0, 2, 4, 6], [10, 20, 30])
           source.SetEntries(3)
-          histogram = Histogram(spec.name, norm_type=NormalizationType.none, log_y=True,
-                                x_label=spec.x_label, y_label=spec.y_label)
+          histogram = Histogram(
+            spec.name, norm_type=NormalizationType.none, log_y=True, x_label=spec.x_label, y_label=spec.y_label
+          )
           histogram.set_hist(source)
           plotter.histosamples.append((histogram, sample))
       plotter.setupLegends()
@@ -559,8 +592,8 @@ class PlotLayoutTest(unittest.TestCase):
         with Image.open(Path(directory) / (spec.name + ".png")) as exported:
           image = exported.convert("RGB")
           width, height = image.size
-          legends = image.crop((int(.66 * width), int(.14 * height), width, int(.91 * height)))
-          header = image.crop((int(.08 * width), int(.02 * height), int(.63 * width), int(.105 * height)))
+          legends = image.crop((int(0.66 * width), int(0.14 * height), width, int(0.91 * height)))
+          header = image.crop((int(0.08 * width), int(0.02 * height), int(0.63 * width), int(0.105 * height)))
           dark_pixels = lambda region: sum(max(pixel) < 220 for pixel in region.getdata())
           self.assertGreater(dark_pixels(legends), 100, spec.name + " legends")
           self.assertGreater(dark_pixels(header), 100, spec.name + " header")

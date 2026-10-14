@@ -14,6 +14,7 @@ def main():
   # Announce it first, and select batch mode before importing those classes.
   info("Initializing ROOT...")
   import ROOT
+
   ROOT.gROOT.SetBatch(True)
   from HistogramPlotter import HistogramPlotter
 

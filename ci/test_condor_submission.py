@@ -35,6 +35,7 @@ class CondorSubmissionTest(unittest.TestCase):
     with (
       patch.object(MODULE, "get_facility", return_value="lxplus"),
       patch.dict(os.environ, {"HOME": "/afs/cern.ch/user/t/test", "TEA_CONDOR_DIR": staging_root}),
+      patch.object(MODULE.os.path, "realpath", side_effect=lambda path: path),
       patch.object(MODULE.os, "makedirs"),
       patch.object(MODULE.tempfile, "mkdtemp", return_value=staging_dir) as make_temporary,
     ):
@@ -94,6 +95,7 @@ class CondorSubmissionTest(unittest.TestCase):
         patch.object(MODULE.shutil, "which", return_value="voms-proxy-info"),
         patch.object(MODULE.subprocess, "run", side_effect=results),
         patch.object(MODULE.os, "getcwd", return_value=str(stage / "missing bin")),
+        patch.object(MODULE, "get_facility", return_value="lxplus"),
       ):
         manager._SubmissionManager__set_run_script_variables()
         manager._SubmissionManager__set_condor_script_variables(501)

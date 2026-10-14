@@ -305,11 +305,12 @@ class Styler:
       self.leftMargin = self.sharedLayoutMargins["left"]
       self.rightMargin = self.sharedLayoutMargins["right"]
       self.topMargin = self.sharedLayoutMargins["top"]
-      self.automaticMargins.update(
-        left=self.leftMargin, right=self.rightMargin, top=self.topMargin
-      )
-    labels = [(x, label) for x, label in self.categoricalLabels(sources)
-              if (hist.x_min is None or x >= hist.x_min) and (hist.x_max is None or x <= hist.x_max)]
+      self.automaticMargins.update(left=self.leftMargin, right=self.rightMargin, top=self.topMargin)
+    labels = [
+      (x, label)
+      for x, label in self.categoricalLabels(sources)
+      if (hist.x_min is None or x >= hist.x_min) and (hist.x_max is None or x <= hist.x_max)
+    ]
     if labels and getattr(self.config, "categorical_legend_outside", False) and not has_ratio:
       self.__configureCategoricalLegendLayout(hist, sources, canvas, legends)
     height = max(1, canvas.GetWh())
@@ -374,9 +375,7 @@ class Styler:
       legend.SetX2(1 - outer_margin)
       legend.SetX1NDC(column_left)
       legend.SetX2NDC(1 - outer_margin)
-    self.automaticMargins.update(
-      left=self.leftMargin, right=self.rightMargin, top=self.topMargin
-    )
+    self.automaticMargins.update(left=self.leftMargin, right=self.rightMargin, top=self.topMargin)
 
   @staticmethod
   def prepareDisplayFrame(stack):
@@ -387,9 +386,13 @@ class Styler:
     limits without modifying the histograms or stretching categorical bins.
     """
     sources = list(stack.GetHists())
-    frame = ROOT.TH1D(stack.GetName() + "_display", "", 100,
-                      min(h.GetXaxis().GetXmin() for h in sources),
-                      max(h.GetXaxis().GetXmax() for h in sources))
+    frame = ROOT.TH1D(
+      stack.GetName() + "_display",
+      "",
+      100,
+      min(h.GetXaxis().GetXmin() for h in sources),
+      max(h.GetXaxis().GetXmax() for h in sources),
+    )
     frame.SetDirectory(0)
     stack.SetHistogram(frame)
     ROOT.SetOwnership(frame, False)  # THStack owns its display histogram.
@@ -443,8 +446,11 @@ class Styler:
       values.extend(source.GetBinContent(i) for i in range(1, source.GetNbinsX() + 1))
     if error_histograms is None:
       error_histograms = source_histograms or []
-    upper_values = [source.GetBinContent(i) + source.GetBinErrorUp(i)
-                    for source in error_histograms for i in range(1, source.GetNbinsX() + 1)]
+    upper_values = [
+      source.GetBinContent(i) + source.GetBinErrorUp(i)
+      for source in error_histograms
+      for i in range(1, source.GetNbinsX() + 1)
+    ]
     positive_values = [value for value in values if value > 0]
     content_maximum = max(positive_values) if positive_values else 1.0
     if hist.log_y and not is_ratio:
@@ -492,7 +498,8 @@ class Styler:
       x_axis.SetTitle(hist.x_label)
       source_histograms = source_histograms or [plot.GetHistogram()]
       has_categorical_labels = any(
-        source and source.GetXaxis().GetLabels()
+        source
+        and source.GetXaxis().GetLabels()
         and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
         for source in source_histograms
       )
@@ -504,8 +511,7 @@ class Styler:
         x_title_offset = self.mainXAxisTitleOffset
       if has_categorical_labels:
         x_title_offset = (
-          self.categoricalRatioXAxisTitleOffsetForLayout if is_ratio
-          else self.categoricalMainXAxisTitleOffsetForLayout
+          self.categoricalRatioXAxisTitleOffsetForLayout if is_ratio else self.categoricalMainXAxisTitleOffsetForLayout
         )
       x_axis.SetTitleOffset(x_title_offset)
 
@@ -618,18 +624,19 @@ class Styler:
           edges = (axis.GetBinLowEdge(index), axis.GetBinUpEdge(index))
           if edges not in bin_envelopes or value > bin_envelopes[edges]:
             bin_envelopes[edges] = value
-    bins = [(bin_low, bin_high, transform_y(value))
-            for (bin_low, bin_high), value in bin_envelopes.items()]
+    bins = [(bin_low, bin_high, transform_y(value)) for (bin_low, bin_high), value in bin_envelopes.items()]
 
     def required_y_high(candidate_x_min, candidate_x_max, y_low, y_high):
       required_high = y_high
       for bin_low, bin_high, value in bins:
         if bin_high <= candidate_x_min or bin_low >= candidate_x_max:
           continue
-        x1 = self.__projectToNdc(max(bin_low, candidate_x_min), candidate_x_min, candidate_x_max,
-                                hist.log_x, left, right)
-        x2 = self.__projectToNdc(min(bin_high, candidate_x_max), candidate_x_min, candidate_x_max,
-                                hist.log_x, left, right)
+        x1 = self.__projectToNdc(
+          max(bin_low, candidate_x_min), candidate_x_min, candidate_x_max, hist.log_x, left, right
+        )
+        x2 = self.__projectToNdc(
+          min(bin_high, candidate_x_max), candidate_x_min, candidate_x_max, hist.log_x, left, right
+        )
         for lx1, ly1, lx2, _ in legend_boxes:
           if x2 < lx1 - 0.012 or x1 > lx2 + 0.012:
             continue
@@ -668,11 +675,9 @@ class Styler:
     for x_extension in x_extensions:
       # Candidates are sorted and the Y penalty is nonnegative. Larger X
       # extensions cannot improve on a score already below this lower bound.
-      if best is not None and x_extension ** 2 >= best[0]:
+      if best is not None and x_extension**2 >= best[0]:
         break
-      candidate_x_min, candidate_x_max = self.__extendAxisRange(
-        x_min, x_max, x_extension, grow_x_upper, hist.log_x
-      )
+      candidate_x_min, candidate_x_max = self.__extendAxisRange(x_min, x_max, x_extension, grow_x_upper, hist.log_x)
       required_high = required_y_high(candidate_x_min, candidate_x_max, low, high)
       if not math.isfinite(required_high) or (hist.log_y and required_high > 300):
         continue
@@ -683,15 +688,24 @@ class Styler:
         y_extension = required_high - high
         if y_extension > 2.0:
           continue
-      score = x_extension ** 2 + (y_extension_penalty * y_extension) ** 2
+      score = x_extension**2 + (y_extension_penalty * y_extension) ** 2
       if best is None or score < best[0]:
-        best = (score, candidate_x_min, candidate_x_max,
-                10 ** required_high if hist.log_y else required_high)
+        best = (score, candidate_x_min, candidate_x_max, 10**required_high if hist.log_y else required_high)
     if best is not None:
       _, candidate_x_min, candidate_x_max, candidate_y_max = best
       if self.__legendOverlapsDistributions(
-        source_histograms, legend_boxes, candidate_x_min, candidate_x_max,
-        y_min, candidate_y_max, hist.log_x, hist.log_y, left, right, bottom, top,
+        source_histograms,
+        legend_boxes,
+        candidate_x_min,
+        candidate_x_max,
+        y_min,
+        candidate_y_max,
+        hist.log_x,
+        hist.log_y,
+        left,
+        right,
+        bottom,
+        top,
         error_histograms=error_histograms,
       ):
         warn("Legend clearance could not be satisfied for " + hist.name)
@@ -710,18 +724,28 @@ class Styler:
         pad.Modified()
         pad.Update()
         actual_low, actual_high = pad.GetUymin(), pad.GetUymax()
-        actual_min = 10 ** actual_low if hist.log_y else actual_low
-        actual_max = 10 ** actual_high if hist.log_y else actual_high
+        actual_min = 10**actual_low if hist.log_y else actual_low
+        actual_max = 10**actual_high if hist.log_y else actual_high
         if not self.__legendOverlapsDistributions(
-          source_histograms, legend_boxes, candidate_x_min, candidate_x_max,
-          actual_min, actual_max, hist.log_x, hist.log_y, left, right, bottom, top,
+          source_histograms,
+          legend_boxes,
+          candidate_x_min,
+          candidate_x_max,
+          actual_min,
+          actual_max,
+          hist.log_x,
+          hist.log_y,
+          left,
+          right,
+          bottom,
+          top,
           error_histograms=error_histograms,
         ):
           return
         required_high = required_y_high(candidate_x_min, candidate_x_max, actual_low, actual_high)
         corrected_high = transform_y(candidate_y_max) + required_high - actual_high + 0.01 * (actual_high - actual_low)
         if hist.y_max is None and math.isfinite(corrected_high) and (not hist.log_y or corrected_high <= high + 2.0):
-          candidate_y_max = 10 ** corrected_high if hist.log_y else corrected_high
+          candidate_y_max = 10**corrected_high if hist.log_y else corrected_high
         elif horizontal_candidate is not None:
           candidate_x_min, candidate_x_max = horizontal_candidate
           candidate_y_max = y_max
@@ -772,7 +796,7 @@ class Styler:
         log_maximum += extension * span
       else:
         log_minimum -= extension * span
-      return 10 ** log_minimum, 10 ** log_maximum
+      return 10**log_minimum, 10**log_maximum
     span = maximum - minimum
     if grow_upper:
       maximum += extension * span
@@ -789,9 +813,20 @@ class Styler:
     return ndc_minimum + (value - minimum) / (maximum - minimum) * (ndc_maximum - ndc_minimum)
 
   def __legendOverlapsDistributions(
-      self, source_histograms, legend_boxes, x_min, x_max, y_min, y_max,
-      log_x, log_y, left, right, bottom, top,
-      error_histograms=None,
+    self,
+    source_histograms,
+    legend_boxes,
+    x_min,
+    x_max,
+    y_min,
+    y_max,
+    log_x,
+    log_y,
+    left,
+    right,
+    bottom,
+    top,
+    error_histograms=None,
   ):
     # Leave one percent of the drawable pad as a visual buffer around legends.
     clearance = 0.01
@@ -830,15 +865,11 @@ class Styler:
     occupied_x_ranges = []
     for source in source_histograms:
       occupied_bins = [
-        bin_index
-        for bin_index in range(1, source.GetNbinsX() + 1)
-        if source.GetBinContent(bin_index) != 0
+        bin_index for bin_index in range(1, source.GetNbinsX() + 1) if source.GetBinContent(bin_index) != 0
       ]
       if occupied_bins:
         axis = source.GetXaxis()
-        occupied_x_ranges.append(
-          (axis.GetBinLowEdge(occupied_bins[0]), axis.GetBinUpEdge(occupied_bins[-1]))
-        )
+        occupied_x_ranges.append((axis.GetBinLowEdge(occupied_bins[0]), axis.GetBinUpEdge(occupied_bins[-1])))
 
     # A categorical axis has one immutable physical bin per label. Changing
     # its numeric limits shifts ROOT's labels relative to those bins, so only
@@ -872,7 +903,10 @@ class Styler:
 
     if hist.y_min is None or hist.y_max is None:
       minimum, maximum = self.getYAxisRangeForLayout(
-        hist, source_histograms, is_ratio=is_ratio, error_histograms=error_histograms,
+        hist,
+        source_histograms,
+        is_ratio=is_ratio,
+        error_histograms=error_histograms,
       )
       plot.SetMinimum(minimum)
       plot.SetMaximum(maximum)

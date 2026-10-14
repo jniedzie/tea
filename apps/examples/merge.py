@@ -21,7 +21,15 @@ import time
 
 from Logger import info, warn, fatal
 import teaHelpers
-from teaHelpers import ensure_root_compiler_environment, eos_xrootd_url, get_facility, is_lfn, read_url, stage_dest_url, validate_root_file
+from teaHelpers import (
+  ensure_root_compiler_environment,
+  eos_xrootd_url,
+  get_facility,
+  is_lfn,
+  read_url,
+  stage_dest_url,
+  validate_root_file,
+)
 
 
 DEFAULT_HADD_WORKERS = min(16, os.cpu_count() or 1)
@@ -866,6 +874,10 @@ def collect_jobs(
   return jobs, file_sizes
 
 
+def merge_file_identity(path):
+  return os.path.normpath(path) if is_lfn(path) else os.path.realpath(path)
+
+
 def collect_explicit_jobs(entries, chunk_size=-1, provenance_tag=None, skip_no_keys=False, redirector=None):
   """Merge the preceding step's exact output paths, grouped by kind/directory."""
   groups = {}
@@ -875,9 +887,10 @@ def collect_explicit_jobs(entries, chunk_size=-1, provenance_tag=None, skip_no_k
       if not path:
         continue
       path = os.path.normpath(path)
-      if path in seen:
+      identity = merge_file_identity(path)
+      if identity in seen:
         raise ValueError(f"Duplicate preceding-step output: {path}")
-      seen.add(path)
+      seen.add(identity)
       groups.setdefault((kind, os.path.dirname(path)), []).append(path)
 
   jobs = []
@@ -893,7 +906,7 @@ def collect_explicit_jobs(entries, chunk_size=-1, provenance_tag=None, skip_no_k
     for batch_index, inputs in enumerate(batches):
       output = os.path.join(output_dir, f"ntuple_{batch_index}{provenance_suffix}.root")
       jobs.append((kind, input_dir, batch_index, input_dir, output_dir, output, inputs))
-  if seen.intersection(job[5] for job in jobs):
+  if seen.intersection(merge_file_identity(job[5]) for job in jobs):
     raise ValueError("Merge outputs must be separate from input files")
   return jobs
 
@@ -906,14 +919,16 @@ def collect_input_group_jobs(groups, chunk_size=-1, provenance_tag=None, skip_no
   output_dirs = set()
   for output_dir, paths in sorted(groups.items()):
     output_dir = os.path.normpath(output_dir)
-    if output_dir in output_dirs:
+    output_identity = merge_file_identity(output_dir)
+    if output_identity in output_dirs:
       raise ValueError(f"Duplicate merge output directory: {output_dir}")
-    output_dirs.add(output_dir)
+    output_dirs.add(output_identity)
     inputs = sorted(os.path.normpath(path) for path in paths)
     for path in inputs:
-      if path in seen:
+      identity = merge_file_identity(path)
+      if identity in seen:
         raise ValueError(f"Duplicate merge input: {path}")
-      seen.add(path)
+      seen.add(identity)
     if skip_no_keys:
       inputs = skip_files_without_keys(inputs, redirector)
     if not inputs:
@@ -922,7 +937,7 @@ def collect_input_group_jobs(groups, chunk_size=-1, provenance_tag=None, skip_no
     for index, batch in enumerate(batches):
       output = os.path.join(output_dir, f"ntuple_{index}{suffix}.root")
       jobs.append(("trees", output_dir, index, "", output_dir, output, batch))
-  if seen.intersection(job[5] for job in jobs):
+  if seen.intersection(merge_file_identity(job[5]) for job in jobs):
     raise ValueError("Merge outputs must be separate from input files")
   return jobs
 
@@ -952,17 +967,18 @@ def select_available_jobs(jobs, allow_incomplete, redirector=None):
     if len(inputs) != len(job[-1]):
       output = Path(job[5])
       production = output.parent.parent
-      bin_name = production.name.rsplit('_', 1)[-1]
-      if output.parent.name == 'histograms_merged' and re.fullmatch(r'[0-9.]+to(?:[0-9.]+|-1|inf)', bin_name):
+      bin_name = production.name.rsplit("_", 1)[-1]
+      if output.parent.name == "histograms_merged" and re.fullmatch(r"[0-9.]+to(?:[0-9.]+|-1|inf)", bin_name):
         incomplete.setdefault(production.parent.name, []).append(bin_name)
       else:
         incomplete.setdefault(output.parent.name, [])
     if inputs:
       selected.append((*job[:-1], inputs))
   if incomplete:
-    warn('Incomplete histogram productions:\n' + '\n'.join(
-      f"  {process}: {', '.join(bins)}" if bins else f'  {process}'
-      for process, bins in incomplete.items()))
+    warn(
+      "Incomplete histogram productions:\n"
+      + "\n".join(f"  {process}: {', '.join(bins)}" if bins else f"  {process}" for process, bins in incomplete.items())
+    )
   return selected
 
 
@@ -977,8 +993,9 @@ def run_condor_merge(job):
     validate_root_file(path)
   with tempfile.TemporaryDirectory(prefix="tea_merge_") as scratch:
     local_output = os.path.join(scratch, os.path.basename(output))
-    command = build_hadd_command(local_output, inputs, job["preserve_input_compression"],
-                                 job["hadd_files_per_pass"], job["hadd_workers"], scratch)
+    command = build_hadd_command(
+      local_output, inputs, job["preserve_input_compression"], job["hadd_files_per_pass"], job["hadd_workers"], scratch
+    )
     run_command(command)
     validate_root_file(local_output)
     remote = eos_xrootd_url(output)
@@ -1042,22 +1059,42 @@ def create_condor_job(
   safe_sample = re.sub(r"[^A-Za-z0-9_.-]", "_", sample)
   script_path = os.path.join(condor_dir, f"{merge_kind}_{safe_sample}_{batch_index}.sh")
   job_path = script_path.removesuffix(".sh") + ".json"
-  write_file(job_path, json.dumps(dict(output_file=output_file, input_files=input_files,
-                                     preserve_input_compression=preserve_input_compression,
-                                     hadd_files_per_pass=hadd_files_per_pass, hadd_workers=hadd_workers,
-                                     redirector=redirector, stage_url_base=stage_url_base)))
+  write_file(
+    job_path,
+    json.dumps(
+      dict(
+        output_file=output_file,
+        input_files=input_files,
+        preserve_input_compression=preserve_input_compression,
+        hadd_files_per_pass=hadd_files_per_pass,
+        hadd_workers=hadd_workers,
+        redirector=redirector,
+        stage_url_base=stage_url_base,
+      )
+    ),
+  )
   tea_dir = Path(__file__).resolve().parents[2]
   # Match SubmissionManager's captured runtime; worker startup must not install
   # or refresh the shared environment while other jobs are using it.
   python_path = os.pathsep.join(str(tea_dir / "pylibs" / name) for name in ("logger", "helpers"))
-  libraries = os.pathsep.join([os.path.join(sys.prefix, "lib"),
-                             os.path.join(sysconfig.get_path("platlib"), "correctionlib", "lib")])
-  runtime_setup = [f'export PATH={shlex.quote(os.path.dirname(sys.executable))}:"$PATH"',
-                   f"export PYTHONPATH={shlex.quote(python_path)}",
-                   f"export LD_LIBRARY_PATH={shlex.quote(libraries)}"]
+  libraries = os.pathsep.join(
+    [os.path.join(sys.prefix, "lib"), os.path.join(sysconfig.get_path("platlib"), "correctionlib", "lib")]
+  )
+  runtime_setup = [
+    f'export PATH={shlex.quote(os.path.dirname(sys.executable))}:"$PATH"',
+    f"export PYTHONPATH={shlex.quote(python_path)}",
+    f"export LD_LIBRARY_PATH={shlex.quote(libraries)}",
+  ]
   if os.environ.get("CONDA_BUILD_SYSROOT"):
     runtime_setup.append("export CONDA_BUILD_SYSROOT=" + shlex.quote(os.environ["CONDA_BUILD_SYSROOT"]))
-  for key in ("TEA_GFAL_DOOR", "TEA_DCACHE_LOCAL_PREFIX", "TEA_STAGE_URL_BASE", "TEA_STAGE_LFN_PREFIX", "TEA_XROOTD_REDIRECTOR", "X509_USER_PROXY"):
+  for key in (
+    "TEA_GFAL_DOOR",
+    "TEA_DCACHE_LOCAL_PREFIX",
+    "TEA_STAGE_URL_BASE",
+    "TEA_STAGE_LFN_PREFIX",
+    "TEA_XROOTD_REDIRECTOR",
+    "X509_USER_PROXY",
+  ):
     if key in os.environ:
       runtime_setup.append(f"export {key}={shlex.quote(os.environ[key])}")
 
@@ -1268,7 +1305,9 @@ def main():
       )
 
   merge_targets = get_merge_targets(files_config)
-  explicit_inputs = hasattr(files_config, "input_output_file_list") or hasattr(files_config, "get_input_output_file_lists")
+  explicit_inputs = hasattr(files_config, "input_output_file_list") or hasattr(
+    files_config, "get_input_output_file_lists"
+  )
   raw_groups = hasattr(files_config, "merge_input_groups")
   if raw_groups and (explicit_inputs or merge_targets):
     raise ValueError("merge_input_groups cannot be combined with preceding-step outputs")
@@ -1283,17 +1322,27 @@ def main():
   jobs_by_kind = []
   input_file_sizes = {}
   if raw_groups:
-    jobs_by_kind.append(("trees", "", collect_input_group_jobs(
-      files_config.merge_input_groups, args.n_files_to_merge, provenance_tag, args.skip_no_keys, redirector)))
+    jobs_by_kind.append(
+      (
+        "trees",
+        "",
+        collect_input_group_jobs(
+          files_config.merge_input_groups, args.n_files_to_merge, provenance_tag, args.skip_no_keys, redirector
+        ),
+      )
+    )
   if explicit_inputs:
-    entries = (files_config.input_output_file_list if hasattr(files_config, "input_output_file_list") else
-               [entry for group in files_config.get_input_output_file_lists() for entry in group])
+    entries = (
+      files_config.input_output_file_list
+      if hasattr(files_config, "input_output_file_list")
+      else [entry for group in files_config.get_input_output_file_lists() for entry in group]
+    )
     explicit_jobs = collect_explicit_jobs(entries, args.n_files_to_merge, provenance_tag, args.skip_no_keys, redirector)
     for kind in sorted({job[0] for job in explicit_jobs}):
       jobs_by_kind.append((kind, "", [job for job in explicit_jobs if job[0] == kind]))
   # Exact per-file outputs take precedence over directory discovery, matching
   # the submitter's input_output_file_list contract and excluding stale files.
-  for merge_kind, base_dir in ([] if explicit_inputs else merge_targets):
+  for merge_kind, base_dir in [] if explicit_inputs else merge_targets:
     jobs, file_sizes = collect_jobs(
       samples,
       base_dir,
@@ -1311,10 +1360,10 @@ def main():
 
   if (explicit_inputs or raw_groups) and (not args.dry or args.allow_incomplete):
     # Check the entire inventory before any submission, then freeze that subset.
-    selected = select_available_jobs([job for _, _, group in jobs_by_kind for job in group],
-                                     args.allow_incomplete, redirector)
-    jobs_by_kind = [(kind, base, [job for job in selected if job[0] == kind])
-                    for kind, base, _ in jobs_by_kind]
+    selected = select_available_jobs(
+      [job for _, _, group in jobs_by_kind for job in group], args.allow_incomplete, redirector
+    )
+    jobs_by_kind = [(kind, base, [job for job in selected if job[0] == kind]) for kind, base, _ in jobs_by_kind]
     jobs_by_kind = [(kind, base, group) for kind, base, group in jobs_by_kind if group]
 
   jobs = [job for _, _, merge_jobs in jobs_by_kind for job in merge_jobs]

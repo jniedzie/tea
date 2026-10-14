@@ -110,6 +110,12 @@ endforeach()
 
 include(CTest)
 if(BUILD_TESTING)
+    file(GLOB TEA_PYTHON_REGRESSIONS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ci/test_*.py")
+    foreach(TEST_SCRIPT IN LISTS TEA_PYTHON_REGRESSIONS)
+        get_filename_component(TEST_NAME "${TEST_SCRIPT}" NAME_WE)
+        add_test(NAME "tea_${TEST_NAME}" COMMAND "${Python3_EXECUTABLE}" "${TEST_SCRIPT}")
+    endforeach()
+
     add_executable(test_profile2d tests/test_profile2d.cpp)
     target_link_libraries(test_profile2d PRIVATE core extensions histogramming ${ROOT_LIBRARIES} Python3::Python)
     set_target_properties(

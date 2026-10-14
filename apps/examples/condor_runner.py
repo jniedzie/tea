@@ -71,10 +71,22 @@ def publish_output(local, final, facility=None, url_base=None):
   if remote is None:
     stage_output(str(local), final, facility, url_base)
     return
-  subprocess.run(["xrdfs", "root://eosuser.cern.ch", "mkdir", "-p", str(Path(remote).parent)],
-                 check=True, timeout=120)
-  subprocess.run(["xrdcp", "--silent", "--force", "--posc", "--rm-bad-cksum", "--cksum", "adler32",
-                  str(local), "root://eosuser.cern.ch/" + remote], check=True, timeout=900)
+  subprocess.run(["xrdfs", "root://eosuser.cern.ch", "mkdir", "-p", str(Path(remote).parent)], check=True, timeout=120)
+  subprocess.run(
+    [
+      "xrdcp",
+      "--silent",
+      "--force",
+      "--posc",
+      "--rm-bad-cksum",
+      "--cksum",
+      "adler32",
+      str(local),
+      "root://eosuser.cern.ch/" + remote,
+    ],
+    check=True,
+    timeout=900,
+  )
 
 
 def execute(command, facility=None, url_base=None):
@@ -92,8 +104,11 @@ def execute(command, facility=None, url_base=None):
         continue
       local = scratch / (flag[2:] + ".root")
       if flag == "--input_path":
-        subprocess.run(["xrdcp", "--silent", "--cksum", "adler32", "root://eosuser.cern.ch/" + remote,
-                        str(local)], check=True, timeout=900)
+        subprocess.run(
+          ["xrdcp", "--silent", "--cksum", "adler32", "root://eosuser.cern.ch/" + remote, str(local)],
+          check=True,
+          timeout=900,
+        )
       else:
         publications.append((local, remote))
       command[index] = str(local)

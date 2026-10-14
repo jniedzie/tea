@@ -569,8 +569,14 @@ class SubmissionManager:
     return "unset X509_USER_PROXY"
 
   def __set_python_executable(self):
-    if self.submission_system == SubmissionSystem.condor and get_facility() == "lxplus" and os.path.realpath(sys.executable).startswith("/eos/"):
-      raise RuntimeError("CERN worker Python is on EOS. Activate an AFS TEA environment before submitting; EOS runtime reads caused worker I/O errors.")
+    if (
+      self.submission_system == SubmissionSystem.condor
+      and get_facility() == "lxplus"
+      and os.path.realpath(sys.executable).startswith("/eos/")
+    ):
+      raise RuntimeError(
+        "CERN worker Python is on EOS. Activate an AFS TEA environment before submitting; EOS runtime reads caused worker I/O errors."
+      )
     return sys.executable
 
   def __set_run_script_variables(self):
@@ -615,7 +621,14 @@ class SubmissionManager:
         f"export LD_LIBRARY_PATH={shlex.quote(runtime_libraries)}",
       ]
     )
-    for key in ("CONDA_BUILD_SYSROOT", "TEA_GFAL_DOOR", "TEA_DCACHE_LOCAL_PREFIX", "TEA_STAGE_URL_BASE", "TEA_STAGE_LFN_PREFIX", "TEA_XROOTD_REDIRECTOR"):
+    for key in (
+      "CONDA_BUILD_SYSROOT",
+      "TEA_GFAL_DOOR",
+      "TEA_DCACHE_LOCAL_PREFIX",
+      "TEA_STAGE_URL_BASE",
+      "TEA_STAGE_LFN_PREFIX",
+      "TEA_XROOTD_REDIRECTOR",
+    ):
       if key in os.environ:
         runtime_setup += f"\nexport {key}={shlex.quote(os.environ[key])}"
     self.__render_template(

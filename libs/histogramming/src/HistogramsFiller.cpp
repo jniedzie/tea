@@ -63,17 +63,16 @@ void HistogramsFiller::FillDefaultVariables(const std::shared_ptr<Event> event) 
     static string const suffix = "_variable";
     if (branchName.size() <= suffix.size() ||
         branchName.compare(branchName.size() - suffix.size(), suffix.size(), suffix) != 0) {
-      warn() << "Skipping irregular default histogram '" << title
-             << "': variable name must end in '_variable'" << endl;
+      warn() << "Skipping irregular default histogram '" << title << "': variable name must end in '_variable'" << endl;
       continue;
     }
     string const sourceBranchName = branchName.substr(0, branchName.size() - suffix.size());
     auto collection = event->GetCollection(collectionName);
-    if (!collection) continue;
+    if (!collection) { continue; }
     for (auto object : *collection) {
-      if (!object) continue;
+      if (!object) { continue; }
       if (sourceBranchName == "p") {
-        if (!object->HasBranch("pt") || !object->HasBranch("pz")) continue;
+        if (!object->HasBranch("pt") || !object->HasBranch("pz")) { continue; }
         histogramsHandler->Fill(title, std::hypot(object->GetAs<float>("pt"), object->GetAs<float>("pz")));
       } else if (object->HasBranch(sourceBranchName)) {
         histogramsHandler->Fill(title, object->GetAs<float>(sourceBranchName));

@@ -128,7 +128,8 @@ class Histogram:
         edges = source_edges
       else:
         edges = tuple(self.bin_edges(self.hist) if callable(self.bin_edges) else self.bin_edges)
-      aligned = lambda a, b: isclose(a, b, rel_tol=1.e-10, abs_tol=1.e-8)
+      aligned = lambda a, b: isclose(a, b, rel_tol=1.0e-10, abs_tol=1.0e-8)
+
       def source_edge_index(edge):
         index = bisect_left(source_edges, edge)
         match = None
@@ -137,10 +138,14 @@ class Histogram:
             if match is None or abs(edge - source_edges[candidate]) < abs(edge - source_edges[match]):
               match = candidate
         return match
-      if (len(edges) < 2 or not all(isfinite(edge) for edge in edges)
-          or any(a >= b for a, b in zip(edges, edges[1:]))
-          or not aligned(edges[0], source_edges[0])
-          or not aligned(edges[-1], source_edges[-1])):
+
+      if (
+        len(edges) < 2
+        or not all(isfinite(edge) for edge in edges)
+        or any(a >= b for a, b in zip(edges, edges[1:]))
+        or not aligned(edges[0], source_edges[0])
+        or not aligned(edges[-1], source_edges[-1])
+      ):
         raise ValueError(f"{self.name}: variable bins must use existing edges and retain the full range")
       indices = tuple(source_edge_index(edge) for edge in edges)
       if any(index is None for index in indices) or any(a >= b for a, b in zip(indices, indices[1:])):
@@ -151,7 +156,9 @@ class Histogram:
       # A final short group stays visible instead of being moved into overflow.
       edges = tuple(source_edges[indices[index]] for index in range(0, len(indices) - 1, self.rebin))
       edges += (source_edges[indices[-1]],)
-      self.hist = self.hist.Rebin(len(edges) - 1, f"{self.hist.GetName()}_rebin_{next(_cropped_histogram_ids)}", array("d", edges))
+      self.hist = self.hist.Rebin(
+        len(edges) - 1, f"{self.hist.GetName()}_rebin_{next(_cropped_histogram_ids)}", array("d", edges)
+      )
       self.hist.SetDirectory(0)
     if self.bin_labels:
       axis = self.hist.GetXaxis()
