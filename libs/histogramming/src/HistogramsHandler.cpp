@@ -27,6 +27,10 @@ HistogramsHandler::HistogramsHandler() {
   } catch (const Exception &e) {}
 
   try {
+    config.GetHistogramsParams(irregularHistParams, "irregularDefaultHistParams");
+  } catch (const Exception &e) {}
+
+  try {
     config.GetHistogramsParams(histParams2D, "histParams2D");
   } catch (const Exception &e) {}
 
@@ -181,7 +185,7 @@ void HistogramsHandler::SetupProfile2DVariations() {
   }
 }
 
-void HistogramsHandler::SetEventWeights(map<string, float> weights) {
+void HistogramsHandler::SetEventWeights(map<string, double> weights) {
   eventWeights = weights;
   if (!sfSetup) {
     SetupSFvariationHistograms();
@@ -238,6 +242,18 @@ void HistogramsHandler::Fill(string name, double x, double y, double profileValu
 void HistogramsHandler::FillUnweighted(string name, double value) {
   CheckHistogram(name, "");
   histograms1D[make_pair(name, "")]->Fill(value);
+  RemoveFromUnfilled(name);
+}
+
+void HistogramsHandler::FillWithWeight(string name, double value, double weight) {
+  CheckHistogram(name, "");
+  histograms1D[make_pair(name, "")]->Fill(value, weight);
+  RemoveFromUnfilled(name);
+}
+
+void HistogramsHandler::FillWithWeight(string name, double valueX, double valueY, double weight) {
+  CheckHistogram2D(name, "");
+  histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
   RemoveFromUnfilled(name);
 }
 

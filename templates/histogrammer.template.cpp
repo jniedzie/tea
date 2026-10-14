@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   for (int iEvent = 0; iEvent < eventReader->GetNevents(); iEvent++) {
     auto event = eventReader->GetEvent(iEvent);  // Get the event
 
-    map<string, float> weight = {{"default", 1.0}};
+    map<string, double> weight = {{"default", 1.0}};
     histogramsHandler->SetEventWeights(weight);
 
     histogramsFiller->FillDefaultVariables(event);
