@@ -133,7 +133,7 @@ void HistogramsHandler::SetupSFvariationHistograms() {
   }
 }
 
-void HistogramsHandler::SetEventWeights(map<string, float> weights) {
+void HistogramsHandler::SetEventWeights(map<string, double> weights) {
   eventWeights = weights;
   if (!sfSetup) {
     SetupSFvariationHistograms();

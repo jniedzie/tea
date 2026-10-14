@@ -15,7 +15,7 @@ class HistogramsHandler {
   HistogramsHandler();
   ~HistogramsHandler();
 
-  void SetEventWeights(std::map<std::string, float> weights);
+  void SetEventWeights(std::map<std::string, double> weights);
 
   void Fill(std::string name, double value);
   void Fill(std::string name, double valueX, double valueY);
@@ -44,7 +44,7 @@ class HistogramsHandler {
   std::map<std::string, IrregularHistogramParams2D> irregularHistParams2D;
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
-  std::map<std::string, float> eventWeights;
+  std::map<std::string, double> eventWeights;
   bool sfSetup = false;
 
   void RemoveFromUnfilled(std::string name);
