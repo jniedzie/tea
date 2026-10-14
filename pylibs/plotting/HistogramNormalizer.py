@@ -85,8 +85,11 @@ class HistogramNormalizer:
       error(f"Couldn't normalize to background, no background intergral is given: {hist.name}, {sample.name}")
       return
     if sample.type == SampleType.signal:
-      if hist.hist.Integral() != 0:
-        hist.hist.Scale(total_backgrounds_integral / hist.hist.Integral())
+      # Histogram.setup has already converted a density to counts / unit x.
+      # Its width-weighted integral is the area, including signed weights.
+      integral = hist.hist.Integral("width") if hist.scale_by_bin_width else hist.hist.Integral()
+      if integral != 0:
+        hist.hist.Scale(total_backgrounds_integral / integral)
       return
     if sample.type == SampleType.data:
       hist.hist.Scale(total_backgrounds_integral / self.data_final_entries[sample.name])
@@ -146,14 +149,18 @@ class HistogramNormalizer:
         file = self.input_files.get(sample.name)
         if file is None:
           file = TFile.Open(sample.file_path, "READ")
-          self.input_files[sample.name] = file
       except OSError:
         error(f"Couldn't open file {sample.file_path}")
         continue
 
+      if not file or file.IsZombie():
+        error(f"Couldn't open file {sample.file_path}")
+        continue
+      self.input_files[sample.name] = file
+
       cut_flow = file.Get("cutFlow")
 
-      if cut_flow is None or type(cut_flow) == TObject:
+      if not cut_flow or type(cut_flow) == TObject:
         error(f"Couldn't find cut flow histogram for sample {sample.name}")
         continue
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from Sample import SampleType
 from Styler import Styler
-from HistogramNormalizer import HistogramNormalizer
+from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from CmsLabelsManager import CmsLabelsManager
 from Logger import info, warn, error, fatal, install_root_warning_collector
 
@@ -103,7 +103,6 @@ class HistogramPlotter:
     hist.load(input_file)
 
     if not hist.isGood():
-      warn("Some histograms were missing for some of the samples.")
       return
 
     if sample.type == SampleType.background and hist.entries < self.bkgRawEventsThreshold:
@@ -219,10 +218,17 @@ class HistogramPlotter:
 
       hist.setup(sample)
       hist_normalized = self.normalizer.getBackgroundNormalizedToLumi(hist, sample)
+      # Density plots divide by bin width in setup. Match the displayed area,
+      # retaining the ordinary bin sum for count plots and other modes.
+      integral = (
+        hist_normalized.Integral("width")
+        if hist.norm_type == NormalizationType.to_background and hist.scale_by_bin_width
+        else hist_normalized.Integral()
+      )
       if hist.getName() in self.total_backgrounds_integral:
-        self.total_backgrounds_integral[hist.getName()] += hist_normalized.Integral()
+        self.total_backgrounds_integral[hist.getName()] += integral
       else:
-        self.total_backgrounds_integral[hist.getName()] = hist_normalized.Integral()
+        self.total_backgrounds_integral[hist.getName()] = integral
 
     # normalize and setup data for data integral
     for hist, sample in self.histosamples:
@@ -492,6 +498,10 @@ class HistogramPlotter:
   def drawStacks(self):
     self.__configureAutomaticMargins()
     for hist in self.config.histograms:
+      sources = self.__getPlottedHistograms(hist)
+      if not sources:
+        warn(f"Skipping plot {hist.getName()}: no selected sample has drawable entries.")
+        continue
       canvas = TCanvas(hist.getName(), hist.getName(), self.config.canvas_size[0], self.config.canvas_size[1])
       self.__setup_canvas(canvas, hist)
 
