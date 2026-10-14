@@ -1,7 +1,7 @@
 from enum import Enum
 from ROOT import TFile, TObject
 from Sample import SampleType
-from Logger import warn, error, info
+from Logger import warn, error, info, ProgressBar
 
 
 class NormalizationType(Enum):
@@ -144,19 +144,23 @@ class HistogramNormalizer:
     self.total_background = 0
     self.total_background_cross_section = 0
 
-    for sample in self.config.samples:
+    for sample in ProgressBar.iterate(self.config.samples, label="Reading normalization"):
       try:
         file = self.input_files.get(sample.name)
         if file is None:
           file = TFile.Open(sample.file_path, "READ")
-          self.input_files[sample.name] = file
       except OSError:
         error(f"Couldn't open file {sample.file_path}")
         continue
 
+      if not file or file.IsZombie():
+        error(f"Couldn't open file {sample.file_path}")
+        continue
+      self.input_files[sample.name] = file
+
       cut_flow = file.Get("cutFlow")
 
-      if cut_flow is None or type(cut_flow) == TObject:
+      if not cut_flow or type(cut_flow) == TObject:
         error(f"Couldn't find cut flow histogram for sample {sample.name}")
         continue
 

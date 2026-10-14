@@ -41,6 +41,8 @@ class Histogram:
   bin_edges: Optional[Union[tuple[float, ...], Callable]] = None
   # Display the booked domain without manufacturing bins from overflow.
   show_full_x_range: bool = False
+  # Short selection label appended to the sample legend header.
+  legend_label: str = ""
 
   def __post_init__(self):
     self.hist = None

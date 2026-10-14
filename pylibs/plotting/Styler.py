@@ -288,6 +288,8 @@ class Styler:
     labels = {}
     for source in sources:
       axis = source.GetXaxis()
+      if not axis.GetLabels():
+        continue
       for index in range(1, source.GetNbinsX() + 1):
         label = axis.GetBinLabel(index)
         if label:
@@ -429,7 +431,7 @@ class Styler:
       primitives.append(text.DrawLatex(right, label_y - (longest + 8) / height, hist.x_label))
     pad._tea_category_primitives = primitives
 
-  def getYAxisRangeForLayout(self, hist, source_histograms, is_ratio=False):
+  def getYAxisRangeForLayout(self, hist, source_histograms, is_ratio=False, error_histograms=None):
     """Return the final Y range used to size labels before canvases are made."""
     if is_ratio:
       ratio_limits = getattr(self.config, "ratio_limits", None)
@@ -439,6 +441,10 @@ class Styler:
     values = []
     for source in source_histograms or []:
       values.extend(source.GetBinContent(i) for i in range(1, source.GetNbinsX() + 1))
+    if error_histograms is None:
+      error_histograms = source_histograms or []
+    upper_values = [source.GetBinContent(i) + source.GetBinErrorUp(i)
+                    for source in error_histograms for i in range(1, source.GetNbinsX() + 1)]
     positive_values = [value for value in values if value > 0]
     content_maximum = max(positive_values) if positive_values else 1.0
     if hist.log_y and not is_ratio:
@@ -446,7 +452,9 @@ class Styler:
       automatic_minimum = 0.7 * content_minimum
     else:
       automatic_minimum = min(0.0, min(values) if values else 0.0)
-    automatic_maximum = 1.3 * content_maximum
+    # Leave headroom above the upper uncertainty, including asymmetric errors.
+    upper_maximum = max([content_maximum] + upper_values)
+    automatic_maximum = 1.2 * (upper_maximum if upper_maximum > 0 else 1.0)
 
     minimum = hist.y_min
     if minimum is None or ((hist.log_y and not is_ratio) and minimum <= 0):
@@ -454,32 +462,27 @@ class Styler:
     maximum = hist.y_max
     if maximum is None or maximum <= 0:
       maximum = automatic_maximum
-    if not hist.log_y or is_ratio:
+    if (not hist.log_y or is_ratio) and (hist.y_max is None or hist.y_max <= 0):
       maximum = self.__addTopLabelClearance(minimum, maximum)
     return minimum, maximum
 
-  def setupFigure(self, plot, hist, is_ratio=False, source_histograms=None):
+  def setupFigure(self, plot, hist, is_ratio=False, source_histograms=None, error_histograms=None):
     if plot is None or type(plot) is TObject:
       return
 
     if is_ratio:
       ratio_limits = getattr(self.config, "ratio_limits", None)
       if ratio_limits is None:
-        self.__setAutomaticLimits(plot, hist, source_histograms, is_ratio=True)
+        self.__setAutomaticLimits(plot, hist, source_histograms, is_ratio=True, error_histograms=error_histograms)
       else:
         plot.SetMinimum(ratio_limits[0])
         plot.SetMaximum(ratio_limits[1])
     else:
-      self.__setAutomaticLimits(plot, hist, source_histograms)
+      self.__setAutomaticLimits(plot, hist, source_histograms, error_histograms=error_histograms)
       if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
         plot.SetMinimum(hist.y_min)
       if hist.y_max is not None and hist.y_max > 0:
         plot.SetMaximum(hist.y_max)
-      if not hist.log_y:
-        frame = plot.GetHistogram()
-        if frame is not None:
-          plot.SetMaximum(self.__addTopLabelClearance(frame.GetMinimum(), frame.GetMaximum()))
-
     try:
       plot.SetTitle("" if is_ratio else hist.title)
       if hist.x_min is not None and hist.x_max is not None:
@@ -489,7 +492,8 @@ class Styler:
       x_axis.SetTitle(hist.x_label)
       source_histograms = source_histograms or [plot.GetHistogram()]
       has_categorical_labels = any(
-        source and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
+        source and source.GetXaxis().GetLabels()
+        and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
         for source in source_histograms
       )
       if is_ratio:
@@ -526,7 +530,7 @@ class Styler:
       warn("Couldn't set axes limits")
       return
 
-  def adjustAxesForLegend(self, plot, hist, source_histograms, legends, pad):
+  def adjustAxesForLegend(self, plot, hist, source_histograms, legends, pad, error_histograms=None):
     """Expand automatic axes just enough to keep drawn distributions out of legends.
 
     The solver evaluates x-only, y-only, and combined extensions from the
@@ -547,7 +551,7 @@ class Styler:
     # Start from the data/configuration every time, so repeated layout passes
     # cannot amplify ROOT's padding or a previous legend extension.
     frame = plot.GetHistogram() if hasattr(plot, "GetHistogram") else None
-    y_min, y_max = self.getYAxisRangeForLayout(hist, source_histograms)
+    y_min, y_max = self.getYAxisRangeForLayout(hist, source_histograms, error_histograms=error_histograms)
     if x_max <= x_min or y_max <= y_min:
       return
     if (hist.log_x and x_min <= 0) or (hist.log_y and y_min <= 0):
@@ -598,14 +602,24 @@ class Styler:
     x_extensions = (0.0,) if x_range_is_fixed else extensions
     transform_y = math.log10 if hist.log_y else lambda value: value
     low, high = transform_y(y_min), transform_y(y_max)
-    # Cache the actual drawn envelope, including stacked totals and errors.
-    bins = []
-    for source in source_histograms:
+    # Components, stacked totals and uncertainties usually share bin edges.
+    # Only the highest error envelope at each physical interval can constrain
+    # legend clearance; keep different binnings as separate intervals.
+    bin_envelopes = {}
+    sources = [(source, error_histograms is None) for source in source_histograms]
+    sources.extend((source, True) for source in error_histograms or [])
+    for source, has_errors in sources:
       axis = source.GetXaxis()
       for index in range(1, source.GetNbinsX() + 1):
-        value = source.GetBinContent(index) + source.GetBinError(index)
+        value = source.GetBinContent(index)
+        if has_errors:
+          value += source.GetBinErrorUp(index)
         if math.isfinite(value) and value > y_min:
-          bins.append((axis.GetBinLowEdge(index), axis.GetBinUpEdge(index), transform_y(value)))
+          edges = (axis.GetBinLowEdge(index), axis.GetBinUpEdge(index))
+          if edges not in bin_envelopes or value > bin_envelopes[edges]:
+            bin_envelopes[edges] = value
+    bins = [(bin_low, bin_high, transform_y(value))
+            for (bin_low, bin_high), value in bin_envelopes.items()]
 
     def required_y_high(candidate_x_min, candidate_x_max, y_low, y_high):
       required_high = y_high
@@ -652,6 +666,10 @@ class Styler:
     # screen coordinates. This avoids both grid-sized overshoots and silent
     # failures when the required y extension exceeds the candidate grid.
     for x_extension in x_extensions:
+      # Candidates are sorted and the Y penalty is nonnegative. Larger X
+      # extensions cannot improve on a score already below this lower bound.
+      if best is not None and x_extension ** 2 >= best[0]:
+        break
       candidate_x_min, candidate_x_max = self.__extendAxisRange(
         x_min, x_max, x_extension, grow_x_upper, hist.log_x
       )
@@ -674,6 +692,7 @@ class Styler:
       if self.__legendOverlapsDistributions(
         source_histograms, legend_boxes, candidate_x_min, candidate_x_max,
         y_min, candidate_y_max, hist.log_x, hist.log_y, left, right, bottom, top,
+        error_histograms=error_histograms,
       ):
         warn("Legend clearance could not be satisfied for " + hist.name)
         return
@@ -696,6 +715,7 @@ class Styler:
         if not self.__legendOverlapsDistributions(
           source_histograms, legend_boxes, candidate_x_min, candidate_x_max,
           actual_min, actual_max, hist.log_x, hist.log_y, left, right, bottom, top,
+          error_histograms=error_histograms,
         ):
           return
         required_high = required_y_high(candidate_x_min, candidate_x_max, actual_low, actual_high)
@@ -771,15 +791,20 @@ class Styler:
   def __legendOverlapsDistributions(
       self, source_histograms, legend_boxes, x_min, x_max, y_min, y_max,
       log_x, log_y, left, right, bottom, top,
+      error_histograms=None,
   ):
     # Leave one percent of the drawable pad as a visual buffer around legends.
     clearance = 0.01
-    for source in source_histograms:
+    sources = [(source, error_histograms is None) for source in source_histograms]
+    sources.extend((source, True) for source in error_histograms or [])
+    for source, has_errors in sources:
       axis = source.GetXaxis()
       for bin_index in range(1, source.GetNbinsX() + 1):
         if axis.GetBinUpEdge(bin_index) <= x_min or axis.GetBinLowEdge(bin_index) >= x_max:
           continue
-        value = source.GetBinContent(bin_index) + source.GetBinError(bin_index)
+        value = source.GetBinContent(bin_index)
+        if has_errors:
+          value += source.GetBinErrorUp(bin_index)
         if value <= y_min:
           continue
         x1 = self.__projectToNdc(axis.GetBinLowEdge(bin_index), x_min, x_max, log_x, left, right)
@@ -792,7 +817,7 @@ class Styler:
             return True
     return False
 
-  def __setAutomaticLimits(self, plot, hist, source_histograms=None, is_ratio=False):
+  def __setAutomaticLimits(self, plot, hist, source_histograms=None, is_ratio=False, error_histograms=None):
     """Set missing bounds from all plotted contributions, with a small margin."""
     if not hasattr(plot, "GetHistogram"):
       return
@@ -819,7 +844,8 @@ class Styler:
     # its numeric limits shifts ROOT's labels relative to those bins, so only
     # continuous histograms receive occupied-bin automatic x ranges.
     has_categorical_labels = any(
-      any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
+      source.GetXaxis().GetLabels()
+      and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
       for source in source_histograms
     )
 
@@ -845,7 +871,9 @@ class Styler:
       )
 
     if hist.y_min is None or hist.y_max is None:
-      minimum, maximum = self.getYAxisRangeForLayout(hist, source_histograms, is_ratio=is_ratio)
+      minimum, maximum = self.getYAxisRangeForLayout(
+        hist, source_histograms, is_ratio=is_ratio, error_histograms=error_histograms,
+      )
       plot.SetMinimum(minimum)
       plot.SetMaximum(maximum)
 
