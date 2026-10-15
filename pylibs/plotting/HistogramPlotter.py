@@ -66,12 +66,31 @@ class HistogramPlotter:
       os.makedirs(self.config.output_path)
 
   def __save_canvas(self, canvas, path):
+    output_directory = os.path.dirname(path)
+    if output_directory:
+      os.makedirs(output_directory, exist_ok=True)
+    # Batch exports can retain a cached frame after late legends/labels.
+    # Repaint the pads as well as the canvas before writing the final figure.
+    for primitive in canvas.GetListOfPrimitives():
+      if primitive.InheritsFrom("TPad"):
+        primitive.Modified()
+    canvas.Modified()
+    canvas.Update()
+    original_paper_width, original_paper_height = array("f", [0.0]), array("f", [0.0])
+    gStyle.GetPaperSize(original_paper_width, original_paper_height)
+    if os.path.splitext(path)[1].lower() == ".pdf":
+      # Fit the drawable canvas onto ROOT's A4 page without changing its aspect.
+      width, height = canvas.GetWw(), canvas.GetWh()
+      paper_width, paper_height = (28.0, 20.0) if width >= height else (20.0, 28.0)
+      scale = min(paper_width / width, paper_height / height)
+      gStyle.SetPaperSize(width * scale, height * scale)
     original_error_level = ROOT.gErrorIgnoreLevel
     ROOT.gErrorIgnoreLevel = ROOT.kError
     try:
       canvas.SaveAs(path)
     finally:
       ROOT.gErrorIgnoreLevel = original_error_level
+      gStyle.SetPaperSize(original_paper_width[0], original_paper_height[0])
 
   def __histosampleExists(self, hist, sample):
     return (hist.getName(), sample.name) in self.histosample_keys
@@ -635,7 +654,8 @@ class HistogramPlotter:
         else:
           self.styler.drawCategoricalAxis(first_stack, hist, final_sources, pad)
 
-      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
+      # The export refreshes the finished pad, including labels and borders.
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1), update=False)
 
       # Keep every frame border identical and on top of plotted objects.
       pad_count = 2 if self.show_ratios else 1
@@ -648,8 +668,6 @@ class HistogramPlotter:
         frame.SetFillColor(0)
         frame.SetFillStyle(0)
         pad.RedrawAxis()
-      canvas.Update()
-
       for output_format in self.output_formats:
         path = self.config.output_path + "/" + hist.getName() + "." + output_format
         self.__save_canvas(canvas, path)
@@ -712,7 +730,7 @@ class HistogramPlotter:
 
       self.__drawRatioHists(canvas, hist_nom)
       self.__drawLegends(canvas, hist_nom)
-      self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
+      self.cmsLabelsManager.drawLabels(canvas.GetPad(1), update=False)
 
       path = self.config.output_path + "/" + hist_nom.getName() + ".pdf"
       self.__save_canvas(canvas, path)
