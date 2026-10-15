@@ -1,7 +1,7 @@
 from enum import Enum
 from ROOT import TFile, TObject
 from Sample import SampleType
-from Logger import warn, error, info
+from Logger import warn, error, info, ProgressBar
 
 
 class NormalizationType(Enum):
@@ -144,7 +144,7 @@ class HistogramNormalizer:
     self.total_background = 0
     self.total_background_cross_section = 0
 
-    for sample in self.config.samples:
+    for sample in ProgressBar.iterate(self.config.samples, label="Reading normalization"):
       try:
         file = self.input_files.get(sample.name)
         if file is None:
