@@ -2,7 +2,9 @@ from dataclasses import dataclass, field
 from copy import deepcopy
 from array import array
 from itertools import count
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Union
+from math import isclose, isfinite
+from bisect import bisect_left
 import ROOT
 
 from Sample import SampleType
@@ -31,6 +33,8 @@ class Histogram:
   error: float = -1.0
   entries: int = 0
   scale_bin: bool = False
+  scale_by_bin_width: bool = False
+  bin_edges: Optional[Union[tuple[float, ...], Callable]] = None
 
   def __post_init__(self):
     self.hist = None
@@ -51,12 +55,11 @@ class Histogram:
   def load(self, input_file):
     self.hist = input_file.Get(self.name)
 
-    if self.hist is None:
-      warn(f"Could not find histogram: {self.name}")
-      return
-
     if not self.hist or type(self.hist) is ROOT.TObject:
-      warn("Some histograms are invalid.")
+      source = input_file.GetName() if hasattr(input_file, "GetName") else "input file"
+      warn(f"Could not find histogram: {self.name} in {source}")
+      self.hist = None
+      self.entries = 0
       return
 
     # TFile.Get reuses its cached object. Keep fills, cropping and setup's
@@ -66,9 +69,6 @@ class Histogram:
     ROOT.SetOwnership(self.hist, True)
 
     self.entries = self.hist.GetEntries()
-    if self.hist.GetEntries() == 0:
-      self.hist.Fill(0.0, 1e-99)
-
     if not self.isGood():
       return
 
@@ -100,18 +100,16 @@ class Histogram:
       self.hist = new_histogram
 
   def isGood(self):
-    if self.hist is None:
-      warn(f"Could not find histogram: {self.name}")
-      return
     if not self.hist or type(self.hist) is ROOT.TObject:
-      warn("Some histograms are invalid.")
-      return
+      return False
     if self.hist.GetEntries() == 0:
       return False
 
     return True
 
   def setup(self, sample):
+    if type(self.rebin) is not int or self.rebin < 1:
+      raise ValueError(f"{self.name}: rebin must be a positive integer")
     self.hist.SetLineStyle(sample.line_style)
     self.hist.SetLineColor(sample.line_color)
     self.hist.SetLineWidth(sample.line_width)
@@ -121,10 +119,52 @@ class Histogram:
     self.hist.SetLineColorAlpha(sample.line_color, sample.line_alpha)
     self.hist.SetFillColorAlpha(sample.fill_color, sample.fill_alpha)
     self.hist.SetFillStyle(sample.fill_style)
-    self.hist.Rebin(self.rebin)
+    variable_axis = self.hist.GetXaxis().GetXbins().GetSize() > 0
+    if self.bin_edges is None and not variable_axis:
+      self.hist.Rebin(self.rebin)
+    else:
+      source_edges = tuple(self.hist.GetBinLowEdge(i) for i in range(1, self.hist.GetNbinsX() + 2))
+      if self.bin_edges is None:
+        edges = source_edges
+      else:
+        edges = tuple(self.bin_edges(self.hist) if callable(self.bin_edges) else self.bin_edges)
+      aligned = lambda a, b: isclose(a, b, rel_tol=1.0e-10, abs_tol=1.0e-8)
+
+      def source_edge_index(edge):
+        index = bisect_left(source_edges, edge)
+        match = None
+        for candidate in (index - 1, index):
+          if 0 <= candidate < len(source_edges) and aligned(edge, source_edges[candidate]):
+            if match is None or abs(edge - source_edges[candidate]) < abs(edge - source_edges[match]):
+              match = candidate
+        return match
+
+      if (
+        len(edges) < 2
+        or not all(isfinite(edge) for edge in edges)
+        or any(a >= b for a, b in zip(edges, edges[1:]))
+        or not aligned(edges[0], source_edges[0])
+        or not aligned(edges[-1], source_edges[-1])
+      ):
+        raise ValueError(f"{self.name}: variable bins must use existing edges and retain the full range")
+      indices = tuple(source_edge_index(edge) for edge in edges)
+      if any(index is None for index in indices) or any(a >= b for a, b in zip(indices, indices[1:])):
+        raise ValueError(f"{self.name}: variable bins must use distinct existing edges")
+      if indices[0] != 0 or indices[-1] != len(source_edges) - 1:
+        raise ValueError(f"{self.name}: variable bins must retain the full range")
+      # Snap tolerated round-off to the recorded edges, then merge display bins.
+      # A final short group stays visible instead of being moved into overflow.
+      edges = tuple(source_edges[indices[index]] for index in range(0, len(indices) - 1, self.rebin))
+      edges += (source_edges[indices[-1]],)
+      self.hist = self.hist.Rebin(
+        len(edges) - 1, f"{self.hist.GetName()}_rebin_{next(_cropped_histogram_ids)}", array("d", edges)
+      )
+      self.hist.SetDirectory(0)
     self.hist.SetBinErrorOption(ROOT.TH1.kPoisson)
     if self.scale_bin:
       self.hist.Scale(1.0 / self.rebin)
+    if self.scale_by_bin_width:
+      self.hist.Scale(1.0, "width")
 
   def setupRatio(self, sample):
     if sample.type == SampleType.background:
