@@ -59,6 +59,12 @@ class Histogram:
       warn("Some histograms are invalid.")
       return
 
+    # TFile.Get reuses its cached object. Keep fills, cropping and setup's
+    # in-place rebinning local to this histogram, including for empty inputs.
+    self.hist = self.hist.Clone()
+    self.hist.SetDirectory(0)
+    ROOT.SetOwnership(self.hist, True)
+
     self.entries = self.hist.GetEntries()
     if self.hist.GetEntries() == 0:
       self.hist.Fill(0.0, 1e-99)
@@ -81,6 +87,8 @@ class Histogram:
         new_n_bins,
         array("d", new_bin_edges),
       )
+      new_histogram.SetDirectory(0)
+      ROOT.SetOwnership(new_histogram, True)
 
       for i in range(1, new_n_bins + 1):
         original_bin = self.hist.FindBin(new_bin_edges[i - 1])
