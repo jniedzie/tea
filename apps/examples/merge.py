@@ -1004,7 +1004,7 @@ def run_condor_merge(job):
       run_command(["xrdfs", "root://" + host, "mkdir", "-p", os.path.dirname("/" + path)])
       run_command(["xrdcp", "--force", "--posc", "--cksum", "adler32", local_output, remote])
     else:
-      stage_output(local_output, output, job.get("stage_url_base"))
+      stage_output(local_output, output, url_base=job.get("stage_url_base"))
 
 
 def print_job_summary(jobs, use_condor):
@@ -1043,6 +1043,13 @@ def shell_command(arguments, expanded):
   return " ".join(f'"{argument}"' if argument == expanded else shlex.quote(argument) for argument in arguments)
 
 
+def absolute_local_path(path):
+  """Keep relative local paths tied to the submission cwd when workers change cwd."""
+  if os.path.isabs(path) or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", path):
+    return path
+  return os.path.abspath(path)
+
+
 def create_condor_job(
   condor_dir,
   merge_kind,
@@ -1063,8 +1070,8 @@ def create_condor_job(
     job_path,
     json.dumps(
       dict(
-        output_file=output_file,
-        input_files=input_files,
+        output_file=absolute_local_path(output_file),
+        input_files=[absolute_local_path(path) for path in input_files],
         preserve_input_compression=preserve_input_compression,
         hadd_files_per_pass=hadd_files_per_pass,
         hadd_workers=hadd_workers,

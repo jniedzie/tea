@@ -137,14 +137,14 @@ def classify_root_file(file_path, redirector=None):
   """
   import ROOT
 
-  # An LFN has no local existence to test, so the open *is* the test: a file that is not
+  # An LFN or XRootD URL has no local existence to test, so the open *is* the test: a file that is not
   # there comes back as unreadable rather than missing. Callers only ever branch on
   # "healthy or not", so the two are interchangeable for them -- but keeping the
   # os.path.exists short-circuit here would report every LFN as missing, which is what
   # used to make __keep_only_failed_inputs resubmit an entire successful submission.
   if is_lfn(file_path):
     file_path = read_url(file_path, redirector)
-  elif not os.path.exists(file_path):
+  elif not str(file_path).startswith("root://") and not os.path.exists(file_path):
     return ROOT_FILE_MISSING
 
   with ROOT_VALIDATION_LOCK:
