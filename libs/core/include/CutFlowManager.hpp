@@ -19,8 +19,8 @@ class CutFlowManager {
   void RegisterCut(std::string cutName, std::string collectionName = "");
   void UpdateCutFlow(std::string cutName, std::string collectionName = "");
   bool HasCut(std::string cutName, std::string collectionName = "");
-  std::map<std::string, float> GetCutFlow(std::string collectionName = "");
-  std::map<std::string, float> GetRawEventsCutFlow(std::string collectionName = "");
+  std::map<std::string, double> GetCutFlow(std::string collectionName = "");
+  std::map<std::string, double> GetRawEventsCutFlow(std::string collectionName = "");
   void Print(std::string collectionName = "");
 
   bool isEmpty(std::string collectionName = "");
@@ -29,7 +29,7 @@ class CutFlowManager {
   void SaveCutFlow();
 
   // event weights (standard and up/down variations) mapped to strings naming type the of event weigth
-  void SetEventWeight(float weight) { eventWeight = weight; };
+  void SetEventWeight(double weight) { eventWeight = weight; };
 
  private:
   std::string weightsBranchName;
@@ -37,11 +37,11 @@ class CutFlowManager {
   std::shared_ptr<EventReader> eventReader;
   std::shared_ptr<EventWriter> eventWriter;
 
-  std::map<std::string, float> weightsAfterCuts;
-  std::map<std::string, float> rawEventsAfterCuts;
-  std::map<std::string, std::map<std::string, float>> weightsAfterCollectionCuts;
-  std::map<std::string, std::map<std::string, float>> rawEventsAfterCollectionCuts;
-  float eventWeight = 0;
+  std::map<std::string, double> weightsAfterCuts;
+  std::map<std::string, double> rawEventsAfterCuts;
+  std::map<std::string, std::map<std::string, double>> weightsAfterCollectionCuts;
+  std::map<std::string, std::map<std::string, double>> rawEventsAfterCollectionCuts;
+  double eventWeight = 0;
 
   int currentIndex;
   std::map<std::string, int> currentCollectionIndex;
@@ -52,11 +52,11 @@ class CutFlowManager {
   std::map<std::string, std::vector<std::string>> existingCollectionCuts;
   bool weightsBranchWarningPrinted = false;
 
-  float GetCurrentEventWeight();
+  double GetCurrentEventWeight();
   std::string GetFullCutName(std::string cutName, std::string collectionName = "");
   void RegisterPreExistingCutFlows();
   void SaveSingleCutFlow(std::string collectionName = "");
-  void WriteCutFlow(std::map<std::string, float> weights, std::string cutFlowName);
+  void WriteCutFlow(std::map<std::string, double> weights, std::string cutFlowName);
 };
 
 #endif /* CutFlowManager_hpp */

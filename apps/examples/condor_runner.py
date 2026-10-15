@@ -9,18 +9,20 @@ redirected this way, so an app that writes a third output from a config key of i
 still writes it straight to the mount.
 """
 
-from Logger import error, info, warn
+from Logger import error, fatal, info, warn
 
 import argparse
 import ast
 import os
+from pathlib import Path
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 
-from teaHelpers import is_lfn, stage_output, stage_preflight, validate_root_file
+from teaHelpers import ensure_root_compiler_environment, is_lfn, stage_output, stage_preflight, validate_root_file
 
 
 def get_args():
@@ -57,17 +59,89 @@ def try_parse_tuple(s):
     return s
 
 
+def eos_path(path):
+  if path.startswith("/eos/home-"):
+    _, _, home, user, rest = path.split("/", 4)
+    return f"/eos/user/{home[-1]}/{user}/{rest}"
+  return path if path.startswith("/eos/user/") else None
+
+
+def publish_output(local, final, facility=None, url_base=None):
+  remote = eos_path(final)
+  if remote is None:
+    stage_output(str(local), final, facility, url_base)
+    return
+  subprocess.run(["xrdfs", "root://eosuser.cern.ch", "mkdir", "-p", str(Path(remote).parent)], check=True, timeout=120)
+  subprocess.run(
+    [
+      "xrdcp",
+      "--silent",
+      "--force",
+      "--posc",
+      "--rm-bad-cksum",
+      "--cksum",
+      "adler32",
+      str(local),
+      "root://eosuser.cern.ch/" + remote,
+    ],
+    check=True,
+    timeout=900,
+  )
+
+
+def execute(command, facility=None, url_base=None):
+  """Stage EOS input/output locally and return the application's real status."""
+  ensure_root_compiler_environment()
+  with tempfile.TemporaryDirectory(prefix="tea_condor_") as temporary:
+    scratch = Path(temporary)
+    publications = []
+    for flag in ("--input_path", "--output_trees_path", "--output_hists_path"):
+      if flag not in command:
+        continue
+      index = command.index(flag) + 1
+      remote = eos_path(command[index])
+      if remote is None:
+        continue
+      local = scratch / (flag[2:] + ".root")
+      if flag == "--input_path":
+        subprocess.run(
+          ["xrdcp", "--silent", "--cksum", "adler32", "root://eosuser.cern.ch/" + remote, str(local)],
+          check=True,
+          timeout=900,
+        )
+      else:
+        publications.append((local, remote))
+      command[index] = str(local)
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+      if result.returncode < 0:
+        name = signal.Signals(-result.returncode).name
+        fatal(f"FATAL: Application {command[0]} was killed by {name}")
+        return 128 - result.returncode
+      fatal(f"FATAL: Application {command[0]} exited with status {result.returncode}")
+      return result.returncode
+    for local, remote in publications:
+      if not local.is_file():
+        raise RuntimeError(f"Application did not produce requested output: {local}")
+      validate_root_file(str(local))
+      publish_output(local, remote, facility, url_base)
+    return 0
+
+
 def main():
   # hack the xauth issue
-  os.system('echo "export DISPLAY=${DISPLAY}" > ${JOB_WORKING_DIR}/.display')
-  os.system('echo "export TERM=${TERM}" >> ${JOB_WORKING_DIR}/.display')
-  os.system("export XAUTHORITY=${JOB_WORKING_DIR}/.Xauthority")
-  os.system('/usr/bin/xauth "$@" </dev/stdin')
+  job_working_dir = os.environ.get("JOB_WORKING_DIR")
+  if job_working_dir:
+    with open(f"{job_working_dir}/.display", "w") as display_file:
+      display_file.write(f"export DISPLAY={os.environ.get('DISPLAY', '')}\n")
+      display_file.write(f"export TERM={os.environ.get('TERM', '')}\n")
+    os.environ["XAUTHORITY"] = f"{job_working_dir}/.Xauthority"
+    subprocess.run(["/usr/bin/xauth"], stdin=subprocess.DEVNULL, check=False)
 
   args, extra_args = get_args()
   app_name = args.app
-  executor = "python3 " if app_name[-3:] == ".py" else "./"
-  command = f"{executor}{app_name} --config {args.config}"
+  executor = "python3 " if app_name.endswith(".py") else ("" if os.path.isabs(app_name) else "./")
+  command = f"{executor}{shlex.quote(app_name)} --config {shlex.quote(args.config)}"
 
   input_files = open(args.input_files_file_name).read().splitlines()
   input_file_path = input_files[args.file_index]
@@ -200,8 +274,7 @@ def main():
     # Log the argument vector that is actually executed: shlex.split drops the quoting the
     # string form still carries, so the string is not what ran.
     info(f"\n\nExecuting {command_args=}")
-    result = subprocess.run(command_args, check=False)
-    returncode = result.returncode
+    returncode = execute(command_args, args.facility, stage_url_base)
 
     if returncode == 0 and staged_outputs:
       published = []
@@ -209,7 +282,7 @@ def main():
       for scratch_path, final_path in staged_outputs:
         try:
           validate_root_file(scratch_path)
-          stage_output(scratch_path, final_path, args.facility, stage_url_base)
+          publish_output(scratch_path, final_path, args.facility, stage_url_base)
           published.append(final_path)
         except Exception as exception:
           # No direct-write fallback: writing the file to the final path after a failed
@@ -229,4 +302,8 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    raise SystemExit(main())
+  except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, RuntimeError) as error:
+    fatal(f"FATAL: Histogram/ntuple job failed: {error}")
+    raise SystemExit(1) from None

@@ -15,12 +15,15 @@ class HistogramsHandler {
   HistogramsHandler();
   ~HistogramsHandler();
 
-  void SetEventWeights(std::map<std::string, float> weights);
+  void SetEventWeights(std::map<std::string, double> weights);
 
   void Fill(std::string name, double value);
   void Fill(std::string name, double x, double y);
   void Fill(std::string name, double x, double y, double profileValue);
   void FillUnweighted(std::string name, double value);
+  // Explicit weights for custom diagnostics, without float truncation or SFs.
+  void FillWithWeight(std::string name, double value, double weight);
+  void FillWithWeight(std::string name, double valueX, double valueY, double weight);
 
   void SetHistogram1D(HistNames names, TH1D *histogram) { histograms1D[names] = histogram; }
   TH1D *GetHistogram1D(HistNames names) { return histograms1D[names]; }
@@ -47,7 +50,7 @@ class HistogramsHandler {
   std::map<std::string, IrregularProfile2DParams> irregularProfile2DParams;
   std::vector<std::string> SFvariationVariables;
   std::string outputPath;
-  std::map<std::string, float> eventWeights;
+  std::map<std::string, double> eventWeights;
   bool sfSetup = false;
 
   void RemoveFromUnfilled(std::string name);

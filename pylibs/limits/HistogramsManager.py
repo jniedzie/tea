@@ -29,11 +29,8 @@ class HistogramsManager:
 
     self.histosamples = []
 
-    if not os.path.exists(os.path.dirname(self.config.datacards_output_path)):
-      os.makedirs(os.path.dirname(self.config.datacards_output_path))
-
-    if not os.path.exists(os.path.dirname(self.config.plots_output_path)):
-      os.makedirs(os.path.dirname(self.config.plots_output_path))
+    os.makedirs(self.config.datacards_output_path, exist_ok=True)
+    os.makedirs(self.config.plots_output_path, exist_ok=True)
 
   def addHistosample(self, hist, sample):
     file = self.__get_file(sample)
@@ -145,6 +142,8 @@ class HistogramsManager:
     return hists_dict
 
   def __get_file(self, sample):
+    if sample.name in self.input_files:
+      return self.input_files[sample.name]
     try:
       file = ROOT.TFile.Open(sample.file_path, "READ")
     except OSError:
