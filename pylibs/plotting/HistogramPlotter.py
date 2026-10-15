@@ -249,7 +249,7 @@ class HistogramPlotter:
       # retaining the ordinary bin sum for count plots and other modes.
       integral = (
         hist_normalized.Integral("width")
-        if hist.norm_type == NormalizationType.to_background and hist.scale_by_bin_width
+        if hist.norm_type in (NormalizationType.to_background, NormalizationType.to_data) and hist.scale_by_bin_width
         else hist_normalized.Integral()
       )
       if hist.getName() in self.total_backgrounds_integral:
@@ -267,7 +267,9 @@ class HistogramPlotter:
         continue
 
       hist.setup(sample)
-      self.data_integral[hist.getName()] = hist.hist.Integral()
+      self.data_integral[hist.getName()] = (
+        hist.hist.Integral("width") if hist.scale_by_bin_width else hist.hist.Integral()
+      )
 
     # normalize background
     for hist, sample in self.histosamples:
@@ -616,7 +618,6 @@ class HistogramPlotter:
       self.__setup_canvas(canvas, hist)
 
       ratio_stack = self.__drawRatioPlot(canvas, hist)
-      self.__drawLineAtOne(canvas, ratio_stack)
       self.__drawHists(canvas, hist)
       self.__drawUncertainties(canvas, hist)
       self.__drawSignalUncertainties(canvas, hist)
@@ -650,7 +651,17 @@ class HistogramPlotter:
         # drawing changes when it left the axes alone.
         pad.Update()
         if self.show_ratios and ratio_stack is not None:
-          self.styler.drawCategoricalAxis(ratio_stack, hist, final_sources, canvas.GetPad(2))
+          # The main frame includes every sample and the final legend clearance.
+          # Reuse its coordinates after both passes so ratio bins, labels and
+          # the unity line stay aligned even when data have a shorter tail.
+          x_axis = first_stack.GetXaxis()
+          ratio_stack.GetXaxis().SetLimits(x_axis.GetXmin(), x_axis.GetXmax())
+          ratio_pad = canvas.GetPad(2)
+          ratio_pad.SetLogx(pad.GetLogx())
+          ratio_pad.Modified()
+          ratio_pad.Update()
+          self.__drawLineAtOne(canvas, ratio_stack)
+          self.styler.drawCategoricalAxis(ratio_stack, hist, final_sources, ratio_pad)
         else:
           self.styler.drawCategoricalAxis(first_stack, hist, final_sources, pad)
 

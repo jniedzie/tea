@@ -172,6 +172,105 @@ class PlotLayoutTest(unittest.TestCase):
     self.objects.extend([plotter, legend])
     return plotter, pad, sources
 
+  def export_ratio_plot(self, spec, background, data, signal=None, legend_box=None):
+    directory = tempfile.TemporaryDirectory()
+    self.addCleanup(directory.cleanup)
+    config = SimpleNamespace(
+      histograms=[spec],
+      samples=[],
+      output_path=directory.name,
+      output_formats=["root"],
+      canvas_size=(800, 600),
+      show_ratio_plots=True,
+      auto_adjust_axes_for_legend=True,
+      plotting_options={SampleType.background: "hist", SampleType.signal: "nostack hist", SampleType.data: "nostack e"},
+    )
+    plotter = HistogramPlotter(config)
+    # Feed already prepared histograms directly, without input-file normalization.
+    plotter.show_ratios = True
+    for sample_type, source in (
+      (SampleType.background, background),
+      (SampleType.data, data),
+      (SampleType.signal, signal),
+    ):
+      if source is not None:
+        plotter.stacks[sample_type][spec.getName()].Add(source)
+    if legend_box is not None:
+      legend = ROOT.TLegend(*legend_box)
+      for index in range(6):
+        legend.AddEntry(background, "Sample %d" % index, "f")
+      plotter.legends[spec.getName()] = {SampleType.background: legend}
+      self.objects.append(legend)
+    plotter.drawStacks()
+    self.objects.append(plotter)
+    original = ROOT.gROOT.GetListOfCanvases().FindObject(spec.getName())
+    if original:
+      self.canvases.append(original)
+    root_file = ROOT.TFile.Open(str(Path(directory.name) / (spec.getName() + ".root")))
+    self.addCleanup(root_file.Close)
+    canvas = root_file.Get(spec.getName())
+    self.canvases.append(canvas)
+    canvas.Draw()
+    canvas.Update()
+    return canvas
+
+  def assert_ratio_x_alignment(self, canvas, coordinates):
+    main, ratio = canvas.GetPad(1), canvas.GetPad(2)
+    self.assertEqual(main.GetLogx(), ratio.GetLogx())
+    self.assertAlmostEqual(main.GetUxmin(), ratio.GetUxmin())
+    self.assertAlmostEqual(main.GetUxmax(), ratio.GetUxmax())
+    for coordinate in coordinates:
+      self.assertAlmostEqual(
+        main.XtoAbsPixel(main.XtoPad(coordinate)),
+        ratio.XtoAbsPixel(ratio.XtoPad(coordinate)),
+        delta=1,
+      )
+    unity_line = next(item for item in ratio.GetListOfPrimitives() if item.InheritsFrom("TGraph"))
+    x_min = 10 ** main.GetUxmin() if main.GetLogx() else main.GetUxmin()
+    x_max = 10 ** main.GetUxmax() if main.GetLogx() else main.GetUxmax()
+    self.assertAlmostEqual(unity_line.GetPointX(0), x_min)
+    self.assertAlmostEqual(unity_line.GetPointX(1), x_max)
+
+  def test_ratio_x_range_includes_background_and_signal_tails_and_empty_data(self):
+    for data_values in ([0, 20, 10, 0, 0, 0, 0, 0], [0] * 8):
+      with self.subTest(data_values=data_values):
+        spec = Histogram("ratio_tails_%d" % next(self.identifiers))
+        edges = list(range(9))
+        background = self.source(edges, [0, 20, 10, 10, 0, 0, 0, 0])
+        data = self.source(edges, data_values)
+        signal = self.source(edges, [0, 0, 0, 0, 0, 10, 0, 0])
+        canvas = self.export_ratio_plot(spec, background, data, signal)
+        self.assert_ratio_x_alignment(canvas, [1, 3, 6])
+        self.assertGreater(canvas.GetPad(1).GetUxmax(), 6)
+
+  def test_ratio_x_range_includes_final_legend_extension(self):
+    spec = Histogram(
+      "ratio_legend_%d" % next(self.identifiers), log_y=True, x_min=0, x_max=10, allow_legend_x_extension=True
+    )
+    background = self.source([0, 2, 4, 6, 8, 10], [1, 4, 10, 100, 1000])
+    data = self.source([0, 2, 4, 6, 8, 10], [1, 4, 10, 100, 1000])
+    canvas = self.export_ratio_plot(spec, background, data, legend_box=(0.58, 0.20, 0.90, 0.90))
+    self.assertGreater(canvas.GetPad(1).GetUxmax(), 10)
+    self.assert_ratio_x_alignment(canvas, [2, 6, 10])
+
+  def test_ratio_log_x_and_category_coordinates_match_main_pad(self):
+    for labels in ((), ("first", "second", "third")):
+      with self.subTest(labels=labels):
+        spec = Histogram("ratio_log_x_%d" % next(self.identifiers), log_x=True)
+        background = self.source([1, 2, 4, 8], [10, 20, 30], labels)
+        data = self.source([1, 2, 4, 8], [10, 20, 0], labels)
+        canvas = self.export_ratio_plot(spec, background, data)
+        self.assert_ratio_x_alignment(canvas, [1.5, 3, 6])
+        category_labels = [
+          item
+          for item in canvas.GetPad(2).GetListOfPrimitives()
+          if item.InheritsFrom("TLatex") and item.GetTitle() in labels
+        ]
+        self.assertEqual(len(category_labels), len(labels))
+        for text, center in zip(category_labels, [1.5, 3, 6]):
+          pad = canvas.GetPad(1)
+          self.assertAlmostEqual(pad.UtoAbsPixel(text.GetX()), pad.XtoAbsPixel(pad.XtoPad(center)), delta=1)
+
   def test_signal_overlays_use_drawn_upper_errors_with_twenty_percent_padding(self):
     for options in ("nostack hist", "NOSTACK HIST", "nostackb", "nostack e"):
       with self.subTest(options=options):

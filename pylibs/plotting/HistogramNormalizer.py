@@ -110,7 +110,8 @@ class HistogramNormalizer:
     hist.hist.Scale(scale)
 
   def __normalizeToData(self, hist, sample, data_integral, total_backgrounds_integral):
-    if hist.hist.Integral() == 0:
+    integral = hist.hist.Integral("width") if hist.scale_by_bin_width else hist.hist.Integral()
+    if integral == 0:
       error(f"Couldn't normalize to data: {hist.name}, {sample.name}, background integral is 0")
       return
     if data_integral is None:
@@ -128,7 +129,7 @@ class HistogramNormalizer:
           s = self.to_data_scales[sample.name][1] + scale
           self.to_data_scales[sample.name] = (n, s)
     elif sample.type == SampleType.signal:
-      scale = data_integral / hist.hist.Integral()
+      scale = data_integral / integral
     elif sample.type == SampleType.data:
       scale = 1
 
