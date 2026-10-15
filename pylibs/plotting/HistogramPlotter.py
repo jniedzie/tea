@@ -222,7 +222,7 @@ class HistogramPlotter:
       # retaining the ordinary bin sum for count plots and other modes.
       integral = (
         hist_normalized.Integral("width")
-        if hist.norm_type == NormalizationType.to_background and hist.scale_by_bin_width
+        if hist.norm_type in (NormalizationType.to_background, NormalizationType.to_data) and hist.scale_by_bin_width
         else hist_normalized.Integral()
       )
       if hist.getName() in self.total_backgrounds_integral:
@@ -240,7 +240,9 @@ class HistogramPlotter:
         continue
 
       hist.setup(sample)
-      self.data_integral[hist.getName()] = hist.hist.Integral()
+      self.data_integral[hist.getName()] = (
+        hist.hist.Integral("width") if hist.scale_by_bin_width else hist.hist.Integral()
+      )
 
     # normalize background
     for hist, sample in self.histosamples:

@@ -121,6 +121,56 @@ class HistogramRebinTest(unittest.TestCase):
     self.assertAlmostEqual(histogram.hist.Integral("width"), 42.0)
     self.assertAlmostEqual(histogram.hist.GetBinError(1), sqrt(55.0) / 8.0 * 42.0 / 17.0)
 
+  def test_to_data_preserves_event_yields_for_unequal_width_bins(self):
+    for density, data_values in ((False, (100.0, 0.0)), (True, (100.0, 0.0)), (True, (0.0, 100.0))):
+      with self.subTest(density=density, data_values=data_values), tempfile.TemporaryDirectory() as temporary:
+        histogram = Histogram("events", norm_type=NormalizationType.to_data, scale_by_bin_width=density)
+        samples = []
+        for sample_type, values in (
+          (SampleType.data, data_values),
+          (SampleType.background, tuple(reversed(data_values))),
+          (SampleType.signal, (0.0, 50.0)),
+        ):
+          path = str(Path(temporary) / f"{sample_type.name}.root")
+          output = ROOT.TFile.Open(path, "RECREATE")
+          source = ROOT.TH1D("events", "", 2, array("d", (0.0, 1.0, 11.0)))
+          source.Sumw2()
+          for index, value in enumerate(values, 1):
+            source.SetBinContent(index, value)
+            source.SetBinError(index, sqrt(abs(value)))
+          source.Write()
+          cut_flow = ROOT.TH1D("cutFlow", "", 1, 0.0, 1.0)
+          cut_flow.SetBinContent(1, 100.0)
+          cut_flow.Write()
+          output.Close()
+          samples.append(Sample(name=sample_type.name, type=sample_type, file_path=path, cross_section=100.0))
+
+        config = SimpleNamespace(
+          histograms=[histogram],
+          samples=samples,
+          luminosity=1.0,
+          output_path=temporary,
+          show_ratio_plots=False,
+          legends={sample_type: Legend() for sample_type in SampleType},
+        )
+        plotter = HistogramPlotter(config)
+        try:
+          for sample in samples:
+            plotter.addHistosample(histogram, sample, plotter.normalizer.input_files[sample.name])
+          plotter.setupLegends()
+          plotter.buildStacks()
+          self.assertAlmostEqual(plotter.data_integral["events"], 100.0)
+          self.assertAlmostEqual(plotter.total_backgrounds_integral["events"], 100.0)
+          for prepared, sample in plotter.histosamples:
+            integral = prepared.hist.Integral("width") if density else prepared.hist.Integral()
+            self.assertAlmostEqual(integral, 100.0, msg=sample.name)
+            if sample.type == SampleType.signal:
+              width = 10.0 if density else 1.0
+              self.assertAlmostEqual(prepared.hist.GetBinError(2), sqrt(50.0) * 2.0 / width)
+        finally:
+          for input_file in plotter.normalizer.input_files.values():
+            input_file.Close()
+
 
 @unittest.skipIf(ROOT is None, "PyROOT is required")
 class EmptyHistogramPlotTest(unittest.TestCase):
