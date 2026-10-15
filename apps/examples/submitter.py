@@ -4,6 +4,7 @@ import importlib.util
 import uuid
 import os
 import re
+import subprocess
 from SubmissionManager import SubmissionManager, SubmissionSystem
 
 from Logger import info, fatal, logger_print
@@ -47,8 +48,10 @@ def get_args():
   parser.add_argument(
     "--max_materialize",
     type=int,
-    default=5000,
-    help=("An overall limit on the number of jobs that can be materialized in the condor_schedd at any one time."),
+    default=None,
+    help=(
+      "Maximum number of jobs materialized in the condor_schedd at once. Defaults to 500 on lxplus and 5000 elsewhere."
+    ),
   )
 
   parser.add_argument("--dry", action="store_true", default=False, help="dry run, without submitting to condor")
@@ -57,20 +60,25 @@ def get_args():
   return args
 
 
+def load_config(path, description):
+  info(f"Reading {description} from path: {path}")
+  try:
+    spec = importlib.util.spec_from_file_location("files_module", path)
+    if spec is None or spec.loader is None:
+      raise ValueError("Expected a readable Python configuration file")
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    return config
+  except Exception as error:
+    raise RuntimeError(f"Cannot load {description} '{path}': {error}") from error
+
+
 def get_config(args):
-  info(f"Reading config from path: {args.config}")
-  spec = importlib.util.spec_from_file_location("files_module", args.config)
-  config = importlib.util.module_from_spec(spec)
-  spec.loader.exec_module(config)
-  return config
+  return load_config(args.config, "config")
 
 
 def get_files_config(args):
-  info(f"Reading files config from path: {args.files_config}")
-  spec = importlib.util.spec_from_file_location("files_module", args.files_config)
-  files_config = importlib.util.module_from_spec(spec)
-  spec.loader.exec_module(files_config)
-  return files_config
+  return load_config(args.files_config, "files config")
 
 
 def update_config(path, key, value):
@@ -118,7 +126,7 @@ def main():
   n_submission_systems = sum([args.local, args.condor, args.local_parallel])
   if n_submission_systems != 1:
     fatal("Please select exactly one of --local, --condor, or --local_parallel")
-    exit()
+    raise SystemExit(1)
 
   if args.local:
     submission_system = SubmissionSystem.local
@@ -221,4 +229,8 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    main()
+  except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as error:
+    fatal(f"FATAL: Submission preparation failed: {error}. No further jobs will be started.")
+    raise SystemExit(1) from None
