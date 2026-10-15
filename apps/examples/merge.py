@@ -6,6 +6,7 @@ import getpass
 import glob
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -13,13 +14,22 @@ import shlex
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import threading
 import time
 
-from Logger import info, warn
+from Logger import info, warn, fatal
 import teaHelpers
-from teaHelpers import get_facility, is_lfn, read_url, stage_dest_url, validate_root_file
+from teaHelpers import (
+  ensure_root_compiler_environment,
+  eos_xrootd_url,
+  get_facility,
+  is_lfn,
+  read_url,
+  stage_dest_url,
+  validate_root_file,
+)
 
 
 DEFAULT_HADD_WORKERS = min(16, os.cpu_count() or 1)
@@ -43,7 +53,16 @@ def positive_int(value):
 
 def parse_args():
   parser = argparse.ArgumentParser(description="Merge ROOT files in batches of N.")
-  parser.add_argument("--files_config", required=True, help="Path to the files config.")
+  inputs = parser.add_mutually_exclusive_group(required=True)
+  inputs.add_argument("--files_config", help="Files config of the preceding step; merge its tree/histogram outputs.")
+  inputs.add_argument("--job-file", help=argparse.SUPPRESS)
+  parser.add_argument("--job_flavour", default="workday", help="Condor job flavour.")
+  parser.add_argument("--memory", type=float, default=2.0, help="Condor memory request in GB.")
+  parser.add_argument(
+    "--allow-incomplete",
+    action="store_true",
+    help="Merge only existing, nonempty files from the expected input list; warn about missing files and skip empty bins.",
+  )
   parser.add_argument(
     "-n",
     "--n-files-to-merge",
@@ -59,7 +78,7 @@ def parse_args():
   parser.add_argument(
     "--dry",
     action="store_true",
-    help="Print the merge plan without running hadd or submitting Condor jobs.",
+    help="Print the merge plan; with --condor also prepare submission files without submitting.",
   )
   parser.add_argument(
     "--add-hash",
@@ -173,11 +192,21 @@ def cmssw_provenance_tag(cmssw_src=None, commit_hash=None):
   return commit
 
 
-def load_files_config(config_path):
+def load_files_config(config_path, *, allow_incomplete=False):
+  previous = os.environ.get("SHIFT_ALLOW_INCOMPLETE_NANO")
+  if allow_incomplete:
+    os.environ["SHIFT_ALLOW_INCOMPLETE_NANO"] = "1"
   spec = importlib.util.spec_from_file_location("files_config", config_path)
   files_config = importlib.util.module_from_spec(spec)
   sys.modules["files_config"] = files_config
-  spec.loader.exec_module(files_config)
+  try:
+    spec.loader.exec_module(files_config)
+  finally:
+    if allow_incomplete:
+      if previous is None:
+        os.environ.pop("SHIFT_ALLOW_INCOMPLETE_NANO", None)
+      else:
+        os.environ["SHIFT_ALLOW_INCOMPLETE_NANO"] = previous
   return files_config
 
 
@@ -650,7 +679,7 @@ def build_hadd_command(
     command.extend(["-j", str(hadd_workers)])
     if partial_dir:
       command.extend(["-d", partial_dir])
-  command.extend(["-k", "-v", "99"])
+  command.extend(["-v", "99"])
   if hadd_files_per_pass is not None:
     # hadd's -n limit includes the target file itself.
     command.extend(["-n", str(hadd_files_per_pass + 1)])
@@ -845,6 +874,139 @@ def collect_jobs(
   return jobs, file_sizes
 
 
+def merge_file_identity(path):
+  return os.path.normpath(path) if is_lfn(path) else os.path.realpath(path)
+
+
+def collect_explicit_jobs(entries, chunk_size=-1, provenance_tag=None, skip_no_keys=False, redirector=None):
+  """Merge the preceding step's exact output paths, grouped by kind/directory."""
+  groups = {}
+  seen = set()
+  for _, tree_output, hist_output in entries:
+    for kind, path in (("trees", tree_output), ("histograms", hist_output)):
+      if not path:
+        continue
+      path = os.path.normpath(path)
+      identity = merge_file_identity(path)
+      if identity in seen:
+        raise ValueError(f"Duplicate preceding-step output: {path}")
+      seen.add(identity)
+      groups.setdefault((kind, os.path.dirname(path)), []).append(path)
+
+  jobs = []
+  provenance_suffix = f"_{provenance_tag}" if provenance_tag else ""
+  for (kind, input_dir), paths in sorted(groups.items()):
+    paths = sorted(paths)
+    if skip_no_keys:
+      paths = skip_files_without_keys(paths, redirector)
+    if not paths:
+      continue
+    output_dir = f"{input_dir}_merged" if input_dir else "./_merged"
+    batches = [paths] if chunk_size == -1 else chunk_files(paths, chunk_size)
+    for batch_index, inputs in enumerate(batches):
+      output = os.path.join(output_dir, f"ntuple_{batch_index}{provenance_suffix}.root")
+      jobs.append((kind, input_dir, batch_index, input_dir, output_dir, output, inputs))
+  if seen.intersection(merge_file_identity(job[5]) for job in jobs):
+    raise ValueError("Merge outputs must be separate from input files")
+  return jobs
+
+
+def collect_input_group_jobs(groups, chunk_size=-1, provenance_tag=None, skip_no_keys=False, redirector=None):
+  """Batch exact raw inputs into explicitly selected output directories."""
+  jobs = []
+  seen = set()
+  suffix = f"_{provenance_tag}" if provenance_tag else ""
+  output_dirs = set()
+  for output_dir, paths in sorted(groups.items()):
+    output_dir = os.path.normpath(output_dir)
+    output_identity = merge_file_identity(output_dir)
+    if output_identity in output_dirs:
+      raise ValueError(f"Duplicate merge output directory: {output_dir}")
+    output_dirs.add(output_identity)
+    inputs = sorted(os.path.normpath(path) for path in paths)
+    for path in inputs:
+      identity = merge_file_identity(path)
+      if identity in seen:
+        raise ValueError(f"Duplicate merge input: {path}")
+      seen.add(identity)
+    if skip_no_keys:
+      inputs = skip_files_without_keys(inputs, redirector)
+    if not inputs:
+      continue
+    batches = [inputs] if chunk_size == -1 else chunk_files(inputs, chunk_size)
+    for index, batch in enumerate(batches):
+      output = os.path.join(output_dir, f"ntuple_{index}{suffix}.root")
+      jobs.append(("trees", output_dir, index, "", output_dir, output, batch))
+  if seen.intersection(merge_file_identity(job[5]) for job in jobs):
+    raise ValueError("Merge outputs must be separate from input files")
+  return jobs
+
+
+def select_available_jobs(jobs, allow_incomplete, redirector=None):
+  """Check the expected inventory before starting any local or Condor merge."""
+  available = {}
+  for job in jobs:
+    for path in job[-1]:
+      if path not in available:
+        try:
+          size = file_size(path, redirector)
+          available[path] = size is not None and size > 0
+        except FileNotFoundError:
+          available[path] = False
+  missing = [path for path, present in available.items() if not present]
+  if missing and not allow_incomplete:
+    raise RuntimeError(
+      f"Histogram production is incomplete: {len(missing)} missing/empty inputs; "
+      f"first: {missing[0]}. No merge jobs submitted or started. "
+      "Use --allow-incomplete to merge only the available files."
+    )
+  selected = []
+  incomplete = {}
+  for job in jobs:
+    inputs = [path for path in job[-1] if available[path]]
+    if len(inputs) != len(job[-1]):
+      output = Path(job[5])
+      production = output.parent.parent
+      bin_name = production.name.rsplit("_", 1)[-1]
+      if output.parent.name == "histograms_merged" and re.fullmatch(r"[0-9.]+to(?:[0-9.]+|-1|inf)", bin_name):
+        incomplete.setdefault(production.parent.name, []).append(bin_name)
+      else:
+        incomplete.setdefault(output.parent.name, [])
+    if inputs:
+      selected.append((*job[:-1], inputs))
+  if incomplete:
+    warn(
+      "Incomplete histogram productions:\n"
+      + "\n".join(f"  {process}: {', '.join(bins)}" if bins else f"  {process}" for process, bins in incomplete.items())
+    )
+  return selected
+
+
+def run_condor_merge(job):
+  """Use the existing hadd and ROOT checks, with local output and EOS publication."""
+  ensure_root_compiler_environment()
+  output = job["output_file"]
+  redirector = job.get("redirector")
+  inputs = [eos_xrootd_url(path) or read_url(path, redirector) for path in job["input_files"]]
+  # Check every planned input; hadd -k would otherwise silently skip bad files.
+  for path in inputs:
+    validate_root_file(path)
+  with tempfile.TemporaryDirectory(prefix="tea_merge_") as scratch:
+    local_output = os.path.join(scratch, os.path.basename(output))
+    command = build_hadd_command(
+      local_output, inputs, job["preserve_input_compression"], job["hadd_files_per_pass"], job["hadd_workers"], scratch
+    )
+    run_command(command)
+    validate_root_file(local_output)
+    remote = eos_xrootd_url(output)
+    if remote:
+      host, path = remote.split("//", 2)[1:]
+      run_command(["xrdfs", "root://" + host, "mkdir", "-p", os.path.dirname("/" + path)])
+      run_command(["xrdcp", "--force", "--posc", "--cksum", "adler32", local_output, remote])
+    else:
+      stage_output(local_output, output, url_base=job.get("stage_url_base"))
+
+
 def print_job_summary(jobs, use_condor):
   mode = "condor" if use_condor else "local"
   info(f"Dry run: planned {len(jobs)} merge jobs in {mode} mode")
@@ -881,6 +1043,13 @@ def shell_command(arguments, expanded):
   return " ".join(f'"{argument}"' if argument == expanded else shlex.quote(argument) for argument in arguments)
 
 
+def absolute_local_path(path):
+  """Keep relative local paths tied to the submission cwd when workers change cwd."""
+  if os.path.isabs(path) or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", path):
+    return path
+  return os.path.abspath(path)
+
+
 def create_condor_job(
   condor_dir,
   merge_kind,
@@ -894,33 +1063,63 @@ def create_condor_job(
   redirector=None,
   stage_url_base=None,
 ):
-  safe_sample = sample.replace("/", "_")
+  safe_sample = re.sub(r"[^A-Za-z0-9_.-]", "_", sample)
   script_path = os.path.join(condor_dir, f"{merge_kind}_{safe_sample}_{batch_index}.sh")
-  working_output = "$work_dir/" + os.path.basename(output_file)
-  hadd_command = build_hadd_command(
-    working_output,
-    input_files,
-    preserve_input_compression,
-    hadd_files_per_pass,
-    hadd_workers,
-    redirector=redirector,
+  job_path = script_path.removesuffix(".sh") + ".json"
+  write_file(
+    job_path,
+    json.dumps(
+      dict(
+        output_file=absolute_local_path(output_file),
+        input_files=[absolute_local_path(path) for path in input_files],
+        preserve_input_compression=preserve_input_compression,
+        hadd_files_per_pass=hadd_files_per_pass,
+        hadd_workers=hadd_workers,
+        redirector=redirector,
+        stage_url_base=stage_url_base,
+      )
+    ),
   )
+  tea_dir = Path(__file__).resolve().parents[2]
+  # Match SubmissionManager's captured runtime; worker startup must not install
+  # or refresh the shared environment while other jobs are using it.
+  python_path = os.pathsep.join(str(tea_dir / "pylibs" / name) for name in ("logger", "helpers"))
+  libraries = os.pathsep.join(
+    [os.path.join(sys.prefix, "lib"), os.path.join(sysconfig.get_path("platlib"), "correctionlib", "lib")]
+  )
+  runtime_setup = [
+    f'export PATH={shlex.quote(os.path.dirname(sys.executable))}:"$PATH"',
+    f"export PYTHONPATH={shlex.quote(python_path)}",
+    f"export LD_LIBRARY_PATH={shlex.quote(libraries)}",
+  ]
+  if os.environ.get("CONDA_BUILD_SYSROOT"):
+    runtime_setup.append("export CONDA_BUILD_SYSROOT=" + shlex.quote(os.environ["CONDA_BUILD_SYSROOT"]))
+  for key in (
+    "TEA_GFAL_DOOR",
+    "TEA_DCACHE_LOCAL_PREFIX",
+    "TEA_STAGE_URL_BASE",
+    "TEA_STAGE_LFN_PREFIX",
+    "TEA_XROOTD_REDIRECTOR",
+    "X509_USER_PROXY",
+  ):
+    if key in os.environ:
+      runtime_setup.append(f"export {key}={shlex.quote(os.environ[key])}")
 
   script_content = "\n".join(
     [
       "#!/bin/bash",
-      "set -e",
-      "touch condor_dummy.out",
-      'work_dir=$(mktemp -d "${_CONDOR_SCRATCH_DIR:-${TMPDIR:-/tmp}}/tea_merge_XXXXXX")',
-      "trap 'rm -rf \"$work_dir\"' EXIT",
-      shell_command(hadd_command, working_output),
-      shell_command(stage_command(output_file, stage_url_base), working_output),
+      "set -euo pipefail",
+      'job_sandbox="$PWD"',
+      "unset PYTHONPATH PYTHONHOME LD_LIBRARY_PATH LD_PRELOAD ROOTSYS",
+      *runtime_setup,
+      f"exec {shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve()))} "
+      f'--job-file "$job_sandbox/{os.path.basename(job_path)}"',
       "",
     ]
   )
   write_file(script_path, script_content)
   os.chmod(script_path, 0o755)
-  return script_path
+  return script_path, job_path
 
 
 def submit_condor_jobs(
@@ -932,6 +1131,9 @@ def submit_condor_jobs(
   hadd_workers: int,
   redirector: str | None = None,
   stage_url_base: str | None = None,
+  job_flavour="workday",
+  memory=2.0,
+  dry=False,
 ) -> None:
   os.makedirs(condor_dir, exist_ok=True)
   facility = get_facility()
@@ -959,13 +1161,17 @@ def submit_condor_jobs(
 
   submit_lines = [
     "universe = vanilla",
-    "getenv = True",
+    "getenv = False",
     "executable = $(script)",
+    f"initialdir = {condor_dir}",
     f"log = {condor_dir}/$(ClusterId).$(ProcId).log",
     f"output = {condor_dir}/$(ClusterId).$(ProcId).out",
     f"error = {condor_dir}/$(ClusterId).$(ProcId).err",
     f"request_cpus = {hadd_workers}",
     f"request_disk = {required_disk_kib}K",
+    f"request_memory = {memory} GB",
+    f'+JobFlavour = "{job_flavour}"',
+    "on_exit_hold = (ExitBySignal =?= True) || (ExitCode =!= 0)",
   ]
 
   if facility == "lxplus":
@@ -973,7 +1179,8 @@ def submit_condor_jobs(
       [
         "should_transfer_files = YES",
         "when_to_transfer_output = ON_EXIT",
-        "transfer_output_files = condor_dummy.out",
+        "transfer_input_files = $(job_config)",
+        'transfer_output_files = ""',
       ]
     )
   else:
@@ -981,8 +1188,8 @@ def submit_condor_jobs(
 
   submit_lines.extend(
     [
-      "queue script from (",
-      *executable_paths,
+      "queue script, job_config from (",
+      *(f"{script} {config}" for script, config in executable_paths),
       ")",
       "",
     ]
@@ -992,11 +1199,9 @@ def submit_condor_jobs(
   submit_content = "\n".join(submit_lines)
   write_file(submit_path, submit_content)
 
-  command = ["condor_submit", submit_path]
-  if facility == "lxplus":
-    command = ["condor_submit", "-spool", submit_path]
-
-  run_command(command)
+  info(f"Prepared Condor merge submission: {submit_path}")
+  if not dry:
+    run_command(["condor_submit", submit_path])
 
 
 def run_jobs_locally(
@@ -1064,6 +1269,9 @@ def run_jobs_locally(
 
 def main():
   args = parse_args()
+  if args.job_file:
+    run_condor_merge(json.loads(Path(args.job_file).read_text()))
+    return
   if not args.add_hash and (args.cmssw_src or args.commit_hash):
     raise ValueError("--cmssw-src and --commit-hash require --add-hash")
   provenance_tag = None
@@ -1071,7 +1279,7 @@ def main():
     provenance_tag = cmssw_provenance_tag(args.cmssw_src, args.commit_hash)
     info(f"CMSSW provenance tag: {provenance_tag}")
 
-  files_config = load_files_config(args.files_config)
+  files_config = load_files_config(args.files_config, allow_incomplete=args.allow_incomplete)
   redirector = config_redirector(files_config)
   stage_url_base = getattr(files_config, "stage_url_base", "") or None
   samples = files_config.samples if hasattr(files_config, "samples") else [""]
@@ -1104,14 +1312,44 @@ def main():
       )
 
   merge_targets = get_merge_targets(files_config)
-  if not merge_targets:
-    raise ValueError("files_config must define output_hists_dir and/or output_trees_dir")
+  explicit_inputs = hasattr(files_config, "input_output_file_list") or hasattr(
+    files_config, "get_input_output_file_lists"
+  )
+  raw_groups = hasattr(files_config, "merge_input_groups")
+  if raw_groups and (explicit_inputs or merge_targets):
+    raise ValueError("merge_input_groups cannot be combined with preceding-step outputs")
+  if args.n_files_to_merge != -1 and args.n_files_to_merge < 1:
+    raise ValueError("--n-files-to-merge must be -1 or a positive integer")
+  if not merge_targets and not explicit_inputs and not raw_groups:
+    raise ValueError("files_config must define preceding-step tree/histogram outputs")
+
   if explicit_input_files is not None and len(merge_targets) != 1:
     raise ValueError("input_files can only be combined with exactly one of output_hists_dir/output_trees_dir")
 
   jobs_by_kind = []
   input_file_sizes = {}
-  for merge_kind, base_dir in merge_targets:
+  if raw_groups:
+    jobs_by_kind.append(
+      (
+        "trees",
+        "",
+        collect_input_group_jobs(
+          files_config.merge_input_groups, args.n_files_to_merge, provenance_tag, args.skip_no_keys, redirector
+        ),
+      )
+    )
+  if explicit_inputs:
+    entries = (
+      files_config.input_output_file_list
+      if hasattr(files_config, "input_output_file_list")
+      else [entry for group in files_config.get_input_output_file_lists() for entry in group]
+    )
+    explicit_jobs = collect_explicit_jobs(entries, args.n_files_to_merge, provenance_tag, args.skip_no_keys, redirector)
+    for kind in sorted({job[0] for job in explicit_jobs}):
+      jobs_by_kind.append((kind, "", [job for job in explicit_jobs if job[0] == kind]))
+  # Exact per-file outputs take precedence over directory discovery, matching
+  # the submitter's input_output_file_list contract and excluding stale files.
+  for merge_kind, base_dir in [] if explicit_inputs else merge_targets:
     jobs, file_sizes = collect_jobs(
       samples,
       base_dir,
@@ -1127,19 +1365,35 @@ def main():
     if jobs:
       jobs_by_kind.append((merge_kind, base_dir, jobs))
 
+  if (explicit_inputs or raw_groups) and (not args.dry or args.allow_incomplete):
+    # Check the entire inventory before any submission, then freeze that subset.
+    selected = select_available_jobs(
+      [job for _, _, group in jobs_by_kind for job in group], args.allow_incomplete, redirector
+    )
+    jobs_by_kind = [(kind, base, [job for job in selected if job[0] == kind]) for kind, base, _ in jobs_by_kind]
+    jobs_by_kind = [(kind, base, group) for kind, base, group in jobs_by_kind if group]
+
   jobs = [job for _, _, merge_jobs in jobs_by_kind for job in merge_jobs]
+  for job in jobs:
+    for input_file in job[-1]:
+      if input_file not in input_file_sizes:
+        input_file_sizes[input_file] = file_size(input_file, redirector) or 0
 
   if not jobs:
     info("No input files found to merge.")
     return
 
   if args.dry:
-    print_job_summary(jobs, args.condor)
-    return
+    if not args.condor:
+      print_job_summary(jobs, False)
+      return
 
   if args.condor:
-    condor_base_dir = os.path.join("tmp", "condor_merge")
-    os.makedirs(condor_base_dir, exist_ok=True)
+    staging_root = os.path.abspath(os.path.join("tmp", "condor_merge"))
+    if get_facility() == "lxplus" and not os.path.realpath(staging_root).startswith("/afs/"):
+      raise RuntimeError("CERN Condor merge submission files must be on AFS")
+    os.makedirs(staging_root, exist_ok=True)
+    condor_base_dir = tempfile.mkdtemp(prefix="merge_", dir=staging_root)
 
     for merge_kind, _, merge_jobs in jobs_by_kind:
       submit_condor_jobs(
@@ -1151,6 +1405,9 @@ def main():
         args.hadd_workers,
         redirector,
         stage_url_base,
+        args.job_flavour,
+        args.memory,
+        args.dry,
       )
     return
 
@@ -1218,5 +1475,14 @@ def main():
     merge_progress.finish(merge_succeeded)
 
 
+def cli():
+  try:
+    main()
+  except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as error:
+    fatal(f"FATAL: Merge failed: {error}")
+    return 1
+  return 0
+
+
 if __name__ == "__main__":
-  main()
+  raise SystemExit(cli())
