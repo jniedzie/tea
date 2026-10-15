@@ -3,13 +3,13 @@ import ROOT
 import argparse
 import importlib
 import re
+import ast
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, default="", help="Path to the config file.")
-args = parser.parse_args()
-config = importlib.import_module(args.config.replace(".py", "").replace("/", "."))
-
-input_path = f"{config.results_output_path}/limits_{config.histogram.getName()}.txt"
+config = None
+input_path = None
 
 
 def load_limits():
@@ -28,11 +28,19 @@ def load_limits():
         if match:
           break
 
-      mass_str, _, values_str = match.groups()
-      mass = float(mass_str.replace("p", "."))
-      values = list(map(float, values_str.replace("'", "").split(", ")))
+      point, separator, values_str = line.strip().partition(": ")
+      point_coordinates = getattr(config, "limit_points", {})
+      if point in point_coordinates:
+        mass = float(point_coordinates[point])
+      elif match:
+        mass_str, _, _ = match.groups()
+        mass = float(mass_str.replace("p", "."))
+      else:
+        raise ValueError(f"No x coordinate configured for limit point {point!r}")
+      values = ast.literal_eval(values_str)
+      values = [None if value is None else float(value) for value in values]
       data[mass] = values
-  return data
+  return dict(sorted(data.items()))
 
 
 def draw_legend(graphs):
@@ -48,7 +56,7 @@ def draw_legend(graphs):
 
 
 def draw_cms_label():
-  tex = ROOT.TLatex(0.15, 0.92, "#bf{CMS} #it{Preliminary}")
+  tex = ROOT.TLatex(0.15, 0.92, getattr(config, "experiment_label", "#bf{CMS} #it{Preliminary}"))
   tex.SetNDC()
   tex.SetTextFont(42)
   tex.SetTextSize(0.045)
@@ -57,7 +65,8 @@ def draw_cms_label():
 
 
 def draw_lumi_label():
-  tex = ROOT.TLatex(0.60, 0.92, f"#scale[0.8]{{pp, {config.luminosity / 1000:.0f} fb^{{-1}} (#sqrt{{s}} = 13 TeV)}}")
+  label = getattr(config, "luminosity_label", f"#scale[0.8]{{pp, {config.luminosity / 1000:.0f} fb^{{-1}} (#sqrt{{s}} = 13 TeV)}}")
+  tex = ROOT.TLatex(0.60, 0.92, label)
   tex.SetNDC()
   tex.SetTextFont(42)
   tex.SetTextSize(0.045)
@@ -103,7 +112,8 @@ class BrazilGraph:
     return graph
 
   def set_point(self, i, x_value, r_value, scale):
-    self.obs_graph.SetPoint(i, x_value, r_value[0] * scale)
+    if r_value[0] is not None:
+      self.obs_graph.SetPoint(i, x_value, r_value[0] * scale)
     self.exp_graph.SetPoint(i, x_value, r_value[3] * scale)
 
     self.exp_graph_1sigma.SetPoint(i, x_value, r_value[3] * scale)
@@ -147,12 +157,13 @@ def draw_brazil_plots():
       print(f"Invalid number of values for {mass}: {r_value}")
       continue
 
-    graph.set_point(i, mass, r_value, config.reference_cross_section)
+    scales = getattr(config, "reference_cross_sections", {})
+    graph.set_point(i, mass, r_value, scales.get(mass, config.reference_cross_section))
 
   canvas = ROOT.TCanvas("canvas", "", 800, 600)
   canvas.cd()
-  canvas.SetLogx()
-  canvas.SetLogy()
+  canvas.SetLogx(getattr(config, "log_x", True))
+  canvas.SetLogy(getattr(config, "log_y", True))
   ROOT.gPad.SetLeftMargin(0.15)
   ROOT.gPad.SetBottomMargin(0.15)
 
@@ -170,10 +181,16 @@ def draw_brazil_plots():
   canvas.RedrawAxis()
   canvas.Update()
   input_file_name = input_path.split("/")[-1]
-  canvas.SaveAs(f"{config.results_output_path}/{input_file_name.replace('.txt', '')}.pdf")
+  output_path = getattr(config, "plots_output_path", config.results_output_path)
+  os.makedirs(output_path, exist_ok=True)
+  canvas.SaveAs(f"{output_path}/{input_file_name.replace('.txt', '')}.pdf")
 
 
 def main():
+  global config, input_path
+  args = parser.parse_args()
+  config = importlib.import_module(args.config.replace(".py", "").replace("/", "."))
+  input_path = f"{config.results_output_path}/limits_{config.histogram.getName()}.txt"
   ROOT.gROOT.SetBatch(True)
   draw_brazil_plots()
 

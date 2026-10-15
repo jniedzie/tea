@@ -93,8 +93,8 @@ class DatacardsProcessor:
 
     datacards_path = self.config.datacards_output_path + self.datacard_file_name + ".txt"
     info(f"Storing datacard in {datacards_path}")
-    outfile = open(datacards_path, "w")
-    outfile.write(self.datacard)
+    with open(datacards_path, "w") as outfile:
+      outfile.write(self.datacard)
 
     info(f"Storing histograms in {datacards_path.replace('.txt', '.root')}")
     self.__save_histograms(add_uncertainties_on_zero)
@@ -107,9 +107,11 @@ class DatacardsProcessor:
       self.histosamples[key][0].set_hist(histograms[key])
 
   def __remove_empty_histograms(self, n_backgrounds):
+    if getattr(self.config, "retain_zero_backgrounds", False):
+      return n_backgrounds
     to_remove = []
     for name, (hist, _) in self.histosamples.items():
-      if hist.hist.Integral() < 1e-90 and "data_obs" not in name:
+      if hist.hist.Integral() < 1e-90 and name not in ("data_obs", "signal"):
         to_remove.append(name)
         if "signal" not in name:
           n_backgrounds -= 1
@@ -343,13 +345,13 @@ class DatacardsProcessor:
     self.__insert_background_sum_hist(abcd_point_ydown, "bkg_ydown")
 
   def __get_dummy_histogram(self):
-    hist = list(self.histosamples.values())[0].Clone()
+    hist, sample = deepcopy(next(iter(self.histosamples.values())))
     hist.hist.Reset()
 
-    for i in range(1, hist.GetNbinsX()):
+    for i in range(1, hist.hist.GetNbinsX() + 1):
       hist.hist.SetBinContent(i, 1e-99)
 
-    return hist
+    return hist, sample
 
   def __add_header(self, n_backgrounds):
     # define number of parameters
@@ -387,7 +389,8 @@ class DatacardsProcessor:
     else:
       obs_rate = self.histosamples["data_obs"][0].hist.Integral()
     self.datacard += "bin bin1\n"
-    self.datacard += f"observation {round(obs_rate)}\n"
+    observation = obs_rate if getattr(self.config, "asimov_observation", False) else round(obs_rate)
+    self.datacard += f"observation {observation}\n"
 
     # prepare lines for MC processes
     self.datacard += "bin"
@@ -465,11 +468,13 @@ class DatacardsProcessor:
         rate = hist.hist.IntegralAndError(1, hist.hist.GetNbinsX(), rate_err)
 
         self.datacard += f" {rate}"
-        statistical_errors[name] = 1 + rate_err.value / rate
+        statistical_errors[name] = 1 + rate_err.value / rate if rate > 0 else 1.0
 
     self.datacard += "\n"
 
     # add a row with statistical errors
+    if not getattr(self.config, "include_mc_stat_uncertainties", True):
+      return
     for name, stat_error in statistical_errors.items():
       self.datacard += f"stat_err_{name} lnN\t"
       for name_, stat_error_ in statistical_errors.items():
@@ -537,7 +542,8 @@ class DatacardsProcessor:
             self.datacard += " -"
       self.datacard += "\n"
 
-    if not self.do_abcd:
+    if (not self.do_abcd and self.config.include_shapes
+        and getattr(self.config, "include_mc_stat_uncertainties", True)):
       self.datacard += "bin1   autoMCStats  10\n"
 
   def __get_variation_string(self, unc, get_max_variation):
@@ -583,7 +589,7 @@ class DatacardsProcessor:
     data_obs = self.histosamples["data_obs"][0].hist.Clone()
     signal_hist = self.__get_signal_hist()
 
-    if data_obs is not None and signal_hist is not None:
+    if isinstance(data_obs, ROOT.TH2) and signal_hist is not None:
       canvas = ROOT.TCanvas("canvas", "canvas", 200, 200)
 
       data_obs.SetLineColor(ROOT.kBlack)
