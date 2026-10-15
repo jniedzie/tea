@@ -205,7 +205,7 @@ class PlotLayoutTest(unittest.TestCase):
     self.objects.append(plotter)
     original = ROOT.gROOT.GetListOfCanvases().FindObject(spec.getName())
     if original:
-      self.canvases.append(original)
+      original.Close()
     root_file = ROOT.TFile.Open(str(Path(directory.name) / (spec.getName() + ".root")))
     self.addCleanup(root_file.Close)
     canvas = root_file.Get(spec.getName())
