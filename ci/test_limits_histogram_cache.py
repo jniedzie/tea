@@ -2,11 +2,13 @@
 """Keep cached ROOT inputs unchanged when preparing limits for several signals."""
 
 from pathlib import Path
+import gc
 import math
 import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+import weakref
 
 import ROOT
 
@@ -131,11 +133,27 @@ class LimitsHistogramCacheTest(unittest.TestCase):
     for histogram in histograms:
       histogram.load(input_files["background"])
       self.assertFalse(histogram.hist.GetDirectory())
+      self.assertTrue(histogram.hist.__python_owns__)
     input_files["background"].Close()
     self.assertEqual(histograms[0].hist.GetNbinsX(), 8)
     self.assertEqual(histograms[0].hist.Integral(), 36.0)
     self.assertEqual(histograms[1].hist.GetNbinsX(), 4)
     self.assertEqual(histograms[1].hist.Integral(), 18.0)
+
+  def test_reloading_template_releases_detached_histograms(self):
+    input_files = self.open_inputs()
+    for options in ({}, {"x_min": 2.0, "x_max": 6.0}):
+      with self.subTest(options=options):
+        histogram = Histogram(name="observable", norm_type=NormalizationType.none, **options)
+        histogram.load(input_files["background"])
+        self.assertTrue(histogram.hist.__python_owns__)
+        previous = weakref.ref(histogram.hist)
+        histogram.load(input_files["data"])
+        gc.collect()
+        self.assertIsNone(previous())
+        self.assertTrue(histogram.hist.__python_owns__)
+        self.assertFalse(histogram.hist.GetDirectory())
+        self.assertEqual(input_files["background"].Get("observable").GetNbinsX(), 8)
 
   def test_missing_histogram_still_returns_without_cloning(self):
     input_files = self.open_inputs()
