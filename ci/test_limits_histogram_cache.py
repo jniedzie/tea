@@ -107,22 +107,22 @@ class LimitsHistogramCacheTest(unittest.TestCase):
       self.assertEqual(list(source.GetSumw2()), [4.0, *[float(index * index) for index in range(1, 9)], 9.0])
       self.assertEqual(source.GetBinErrorOption(), ROOT.TH1.kNormal)
 
-  def test_empty_histogram_placeholder_does_not_change_cached_input(self):
+  def test_empty_inputs_are_skipped_without_changing_cached_histograms(self):
     input_files = self.open_inputs(empty=True)
     histogram = Histogram(name="observable", rebin=2, norm_type=NormalizationType.none)
     managers = self.managers_for_two_signals(histogram, input_files)
 
-    for sample in self.samples[2:]:
-      for manager in managers:
-        prepared = manager[sample.name]
-        self.assertEqual(prepared.entries, 0)
-        self.assertEqual(prepared.hist.GetEntries(), 1.0)
-        self.assertEqual(prepared.hist.GetNbinsX(), 4)
-        self.assertEqual(prepared.hist.Integral(), 1e-99)
+    self.assertEqual(managers, [{}, {}])
+    self.assertEqual(histogram.entries, 0)
+    self.assertEqual(histogram.hist.GetEntries(), 0.0)
+    self.assertFalse(histogram.isGood())
+
+    for sample in self.samples:
       source = input_files[sample.name].Get("observable")
       self.assertEqual(source.GetEntries(), 0.0)
       self.assertEqual(source.GetNbinsX(), 8)
-      self.assertEqual(source.Integral(), 0.0)
+      self.assertEqual([source.GetBinContent(index) for index in range(source.GetNcells())], [0.0] * 10)
+      self.assertEqual(list(source.GetSumw2()), [0.0] * 10)
 
   def test_loaded_histogram_survives_closing_its_input(self):
     input_files = self.open_inputs()

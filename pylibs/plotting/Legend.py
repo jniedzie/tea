@@ -13,12 +13,12 @@ class Legend:
   text_size: float = 20
   fill_color: int = None
 
-  def getRootLegend(self):
+  def getRootLegend(self, label=""):
     legend = TLegend(self.x1, self.y1, self.x2, self.y2)
-    self.__setupLegend(legend)
+    self.__setupLegend(legend, label)
     return legend
 
-  def __setupLegend(self, legend):
+  def __setupLegend(self, legend, label):
     legend.SetBorderSize(0)
     # Keep the plot visible behind the legend by default.  A fill color
     # opts back into a solid legend background for users who need one.
@@ -30,5 +30,8 @@ class Legend:
     legend.SetTextSize(self.text_size)
 
     # set legend title
-    if self.title != "":
-      legend.SetHeader(self.title)
+    title = self.title
+    if label:
+      title = f"{title} ({label})" if title else label
+    if title != "":
+      legend.SetHeader(title)
