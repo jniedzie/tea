@@ -244,6 +244,29 @@ class EmptyHistogramPlotTest(unittest.TestCase):
       self.assertIn("missing", warning.call_args.args[0])
       self.assertIn("input.root", warning.call_args.args[0])
 
+  def test_explicit_empty_view_saves_axes_without_inventing_counts(self):
+    with tempfile.TemporaryDirectory() as temporary:
+      histogram = Histogram("empty", norm_type=NormalizationType.none, allow_empty=True,
+                            x_label="mass [GeV]", y_label="raw dimuons", log_y=True)
+      sample = Sample(name="two_event_canary")
+      config = SimpleNamespace(
+        histograms=[histogram], samples=[sample], output_path=temporary,
+        show_ratio_plots=False, canvas_size=(400, 300),
+        legends={SampleType.background: Legend()},
+        plotting_options={SampleType.background: "hist", SampleType.signal: "nostack hist",
+                          SampleType.data: "nostack e"},
+      )
+      source = ROOT.TH1D("explicit_empty_source", "", 10, 0, 200)
+      source.SetDirectory(0)
+      plotter = HistogramPlotter(config)
+      plotter.addHistosample(histogram, sample, SimpleNamespace(Get=lambda name: source))
+      plotter.setupLegends()
+      plotter.buildStacks()
+      plotter.drawStacks()
+      self.assertEqual(source.GetEntries(), 0)
+      self.assertEqual(source.Integral(), 0)
+      self.assertTrue((Path(temporary) / "empty.pdf").is_file())
+
 
 if __name__ == "__main__":
   unittest.main()

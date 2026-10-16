@@ -43,6 +43,8 @@ class Histogram:
   show_full_x_range: bool = False
   # Short selection label appended to the sample legend header.
   legend_label: str = ""
+  # Diagnostic views may show a booked empty distribution without inventing entries.
+  allow_empty: bool = False
 
   def __post_init__(self):
     self.hist = None
@@ -102,7 +104,7 @@ class Histogram:
   def isGood(self):
     if not self.hist or type(self.hist) is ROOT.TObject:
       return False
-    if self.hist.GetEntries() == 0:
+    if self.hist.GetEntries() == 0 and not self.allow_empty:
       return False
 
     return True
