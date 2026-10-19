@@ -219,14 +219,12 @@ void HistogramsHandler::FillUnweighted(string name, double value) {
 }
 
 void HistogramsHandler::FillWithWeight(string name, double value, double weight) {
-  CheckHistogram(name, "");
-  histograms1D[make_pair(name, "")]->Fill(value, weight);
+  FindHistogram(histograms1D, {name, ""}, "1D histograms")->Fill(value, weight);
   RemoveFromUnfilled(name);
 }
 
 void HistogramsHandler::FillWithWeight(string name, double valueX, double valueY, double weight) {
-  CheckHistogram2D(name, "");
-  histograms2D[make_pair(name, "")]->Fill(valueX, valueY, weight);
+  FindHistogram(histograms2D, {name, ""}, "2D histograms")->Fill(valueX, valueY, weight);
   RemoveFromUnfilled(name);
 }
 
