@@ -1,5 +1,7 @@
 """merge.py planning logic: merge targets, sample directories, chunking, input_files guards."""
 
+import json
+from pathlib import Path
 import sys
 import types
 
@@ -17,7 +19,7 @@ def run_main_with_config(monkeypatch, tmp_path, files_config):
   """Drive merge.main() far enough to hit the config validation, and no further."""
   config_path = tmp_path / "files_config.py"
   config_path.write_text("")
-  monkeypatch.setattr(merge, "load_files_config", lambda path: files_config)
+  monkeypatch.setattr(merge, "load_files_config", lambda path, **kwargs: files_config)
   monkeypatch.setattr(sys, "argv", ["merge.py", "--files_config", str(config_path), "--dry"])
   merge.main()
 
@@ -146,14 +148,14 @@ def test_input_files_are_sorted_into_a_deterministic_plan(monkeypatch, tmp_path,
 
 def test_merge_targets_are_required(monkeypatch, tmp_path):
   files_config = make_files_config(samples=["DYto2L"])
-  with pytest.raises(ValueError, match="output_hists_dir"):
+  with pytest.raises(ValueError, match="tree/histogram outputs"):
     run_main_with_config(monkeypatch, tmp_path, files_config)
 
 
 def test_empty_output_dirs_alone_are_not_a_merge_target(monkeypatch, tmp_path):
   monkeypatch.chdir(tmp_path)
   files_config = make_files_config(output_hists_dir="", output_trees_dir="")
-  with pytest.raises(ValueError, match="output_hists_dir"):
+  with pytest.raises(ValueError, match="tree/histogram outputs"):
     run_main_with_config(monkeypatch, tmp_path, files_config)
   assert not (tmp_path / "_merged").exists()
 
@@ -263,8 +265,8 @@ def test_hadd_reads_lfn_inputs_through_the_redirector():
   assert command[-2] == "/scratch/ntuple_0.root"
 
 
-def test_condor_merge_job_merges_into_scratch_and_stages(tmp_path):
-  script_path = merge.create_condor_job(
+def test_condor_merge_job_merges_into_scratch_and_stages(monkeypatch, tmp_path):
+  script_path, job_path = merge.create_condor_job(
     str(tmp_path),
     "histograms",
     "DYto2L/2024",
@@ -275,14 +277,147 @@ def test_condor_merge_job_merges_into_scratch_and_stages(tmp_path):
     hadd_files_per_pass=None,
     hadd_workers=1,
     redirector="maite.iihe.ac.be:1094",
+    stage_url_base="davs://door.example:2880",
   )
-  script = open(script_path).read()
-
-  assert "_CONDOR_SCRATCH_DIR" in script
-  assert '"$work_dir/ntuple_0.root"' in script
-  assert "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root" in script
-  assert "teaHelpers.stage_output" in script
+  script = Path(script_path).read_text()
+  job = json.loads(Path(job_path).read_text())
+  assert '--job-file "$job_sandbox/' in script
+  assert job["input_files"] == ["/store/user/u/hists/ntuple_0.root"]
+  assert job["redirector"] == "maite.iihe.ac.be:1094"
+  assert job["stage_url_base"] == "davs://door.example:2880"
   assert "mkdir -p /store" not in script
+
+  commands = []
+  checked = []
+  published = []
+  monkeypatch.setattr(merge, "ensure_root_compiler_environment", lambda: None)
+  monkeypatch.setattr(merge, "run_command", commands.append)
+  monkeypatch.setattr(merge, "validate_root_file", checked.append)
+  monkeypatch.setattr(merge, "stage_output", lambda *args, **kwargs: published.append((args, kwargs)))
+  merge.run_condor_merge(job)
+  command = commands[0]
+  working_output = command[-2]
+  assert command[-1] == "root://maite.iihe.ac.be:1094//store/user/u/hists/ntuple_0.root"
+  assert working_output != job["output_file"]
+  assert Path(working_output).name == "ntuple_0.root"
+  assert checked == [command[-1], working_output]
+  assert published == [((working_output, job["output_file"]), {"url_base": job["stage_url_base"]})]
+  assert not Path(working_output).parent.exists()
+
+
+@pytest.mark.parametrize(
+  ("input_path", "expected_url"),
+  [
+    ("/store/user/u/a.root", "root://door:1094//store/user/u/a.root"),
+    ("/eos/home-u/user/a.root", "root://eoshome-u.cern.ch//eos/user/u/user/a.root"),
+    ("/eos/user/u/user/a.root", "root://eoshome-u.cern.ch//eos/user/u/user/a.root"),
+    ("root://other:1094//store/user/u/a.root?token=abc", "root://other:1094//store/user/u/a.root?token=abc"),
+  ],
+)
+@pytest.mark.parametrize("input_keys", [0, 1])
+def test_condor_worker_validates_remote_inputs_with_root(monkeypatch, tmp_path, input_path, expected_url, input_keys):
+  # Exercise the real validator: mocking validate_root_file hid the URL/local-path
+  # mismatch that rejected every remote input before hadd could run.
+  opened = []
+  published = []
+  commands = []
+
+  def open_file(path, mode):
+    opened.append(path)
+    assert mode == "READ"
+    return types.SimpleNamespace(
+      IsZombie=lambda: False,
+      GetNkeys=lambda: input_keys if path == expected_url else 1,
+      TestBit=lambda bit: False,
+      Close=lambda: None,
+    )
+
+  root = types.SimpleNamespace(
+    gErrorIgnoreLevel=1000,
+    kFatal=6000,
+    TFile=types.SimpleNamespace(Open=open_file, kRecovered=1),
+  )
+  monkeypatch.setitem(sys.modules, "ROOT", root)
+  monkeypatch.setattr(merge, "ensure_root_compiler_environment", lambda: None)
+  monkeypatch.setattr(merge, "stage_output", lambda *args, **kwargs: published.append((args, kwargs)))
+
+  def run_hadd(command):
+    commands.append(command)
+    assert command[-1] == expected_url
+    Path(command[-2]).write_text("merged output")
+
+  monkeypatch.setattr(merge, "run_command", run_hadd)
+  job = dict(
+    output_file=str(tmp_path / "merged.root"),
+    input_files=[input_path],
+    preserve_input_compression=False,
+    hadd_files_per_pass=None,
+    hadd_workers=1,
+    redirector="door:1094",
+  )
+  if input_keys:
+    merge.run_condor_merge(job)
+    assert len(commands) == len(published) == 1
+    assert opened == [expected_url, commands[0][-2]]
+  else:
+    with pytest.raises(RuntimeError, match="no_keys"):
+      merge.run_condor_merge(job)
+    assert opened == [expected_url]
+    assert not commands
+    assert not published
+  assert root.gErrorIgnoreLevel == 1000
+
+
+@pytest.mark.parametrize("worker_directory", ["condor", "sandbox"])
+def test_condor_job_resolves_local_paths_before_changing_worker_directory(monkeypatch, tmp_path, worker_directory):
+  submission_dir = tmp_path / "submission"
+  (submission_dir / "inputs").mkdir(parents=True)
+  (submission_dir / "inputs" / "a.root").write_text("input payload")
+  condor_dir = submission_dir / "condor"
+  condor_dir.mkdir()
+  worker_dir = submission_dir / worker_directory
+  worker_dir.mkdir(exist_ok=True)
+  monkeypatch.chdir(submission_dir)
+  _, job_path = merge.create_condor_job(
+    str(condor_dir), "histograms", "sample", 0, "merged/a.root", ["inputs/a.root"], False, None, 1
+  )
+  job = json.loads(Path(job_path).read_text())
+  monkeypatch.chdir(worker_dir)
+  monkeypatch.setattr(merge, "ensure_root_compiler_environment", lambda: None)
+  monkeypatch.setattr(merge.teaHelpers, "get_facility", lambda: "default")
+
+  def validate_local_file(path):
+    assert Path(path).is_file(), f"worker cannot find {path} from {Path.cwd()}"
+
+  def run_hadd(command):
+    Path(command[-2]).write_text(Path(command[-1]).read_text())
+
+  monkeypatch.setattr(merge, "validate_root_file", validate_local_file)
+  monkeypatch.setattr(merge, "run_command", run_hadd)
+  merge.run_condor_merge(job)
+  assert job["input_files"] == [str(submission_dir / "inputs" / "a.root")]
+  assert job["output_file"] == str(submission_dir / "merged" / "a.root")
+  assert (submission_dir / "merged" / "a.root").read_text() == "input payload"
+  assert not (worker_dir / "merged").exists()
+
+
+@pytest.mark.parametrize(
+  "remote_path",
+  [
+    "/store/user/u/a.root",
+    "/eos/user/u/user/a.root",
+    "root://door:1094//store/user/u/a.root?token=abc",
+    "srm://door.example/store/user/u/a.root",
+    "gsiftp://door.example/store/user/u/a.root",
+  ],
+)
+def test_condor_job_keeps_remote_paths_unchanged(tmp_path, remote_path):
+  _, job_path = merge.create_condor_job(
+    str(tmp_path), "histograms", "sample", 0, remote_path, [remote_path], False, None, 1
+  )
+  job = json.loads(Path(job_path).read_text())
+  assert job["input_files"] == [remote_path]
+  assert job["output_file"] == remote_path
 
 
 @pytest.mark.parametrize(
@@ -340,7 +475,88 @@ def test_a_remote_output_without_scratch_is_a_hard_error(monkeypatch, tmp_path):
 
   config_path = tmp_path / "files_config.py"
   config_path.write_text("")
-  monkeypatch.setattr(merge, "load_files_config", lambda path: files_config)
+  monkeypatch.setattr(merge, "load_files_config", lambda path, **kwargs: files_config)
   monkeypatch.setattr(sys, "argv", ["merge.py", "--files_config", str(config_path)])
   with pytest.raises(RuntimeError, match="requires local scratch"):
     merge.main()
+
+
+def test_preceding_step_outputs_take_precedence_over_directory_discovery(monkeypatch, tmp_path, capsys):
+  expected = str(tmp_path / "hists" / "expected.root")
+  files_config = make_files_config(
+    output_hists_dir=str(tmp_path / "hists"),
+    input_output_file_list=[("raw.root", None, expected)],
+  )
+  monkeypatch.setattr(merge, "collect_jobs", lambda *args: pytest.fail("exact outputs must exclude directory globs"))
+  run_main_with_config(monkeypatch, tmp_path, files_config)
+  assert f"input: {expected}" in capsys.readouterr().out
+
+
+def test_remote_incomplete_inventory_requires_opt_in_and_keeps_only_nonempty_files(monkeypatch):
+  paths = ["/store/user/u/hists/good.root", "/store/user/u/hists/empty.root", "/store/user/u/hists/missing.root"]
+  jobs = [("histograms", "sample", 0, "", "hists_merged", "hists_merged/ntuple_0.root", paths)]
+  commands = []
+
+  def fake_run(command, **kwargs):
+    commands.append(command)
+    if command[-1].endswith("missing.root"):
+      return FakeCompletedProcess(returncode=54)
+    return FakeCompletedProcess(stdout="Size: 17\n" if command[-1].endswith("good.root") else "Size: 0\n")
+
+  monkeypatch.setattr(merge.subprocess, "run", fake_run)
+  with pytest.raises(RuntimeError, match="2 missing/empty inputs"):
+    merge.select_available_jobs(jobs, False, "door:1094")
+  selected = merge.select_available_jobs(jobs, True, "door:1094")
+  assert selected == [(*jobs[0][:-1], [paths[0]])]
+  assert all(command[:3] == ["xrdfs", "root://door:1094", "stat"] for command in commands)
+
+
+@pytest.mark.parametrize("mode", ["preceding_outputs", "raw_groups"])
+def test_explicit_merge_modes_reject_symlinked_duplicates(tmp_path, mode):
+  original = tmp_path / "a.root"
+  original.write_text("a")
+  alias = tmp_path / "alias.root"
+  alias.symlink_to(original)
+  with pytest.raises(ValueError, match="Duplicate"):
+    if mode == "preceding_outputs":
+      merge.collect_explicit_jobs([("raw_a", None, str(original)), ("raw_b", None, str(alias))])
+    else:
+      merge.collect_input_group_jobs({str(tmp_path / "out"): [str(original), str(alias)]})
+
+
+def test_input_groups_batch_exact_paths_with_provenance_and_remote_key_checks(monkeypatch):
+  inspected = []
+  paths = ["/store/user/u/c.root", "/store/user/u/a.root", "/store/user/u/b.root"]
+  monkeypatch.setattr(
+    merge, "skip_files_without_keys", lambda files, redirector: inspected.append((files, redirector)) or files
+  )
+  jobs = merge.collect_input_group_jobs(
+    {"/store/user/u/merged": paths}, chunk_size=2, provenance_tag="abc123", skip_no_keys=True, redirector="door:1094"
+  )
+  assert [job[5] for job in jobs] == [
+    "/store/user/u/merged/ntuple_0_abc123.root",
+    "/store/user/u/merged/ntuple_1_abc123.root",
+  ]
+  assert [job[-1] for job in jobs] == [sorted(paths)[:2], sorted(paths)[2:]]
+  assert inspected == [(sorted(paths), "door:1094")]
+
+
+def test_condor_merge_failure_does_not_publish(monkeypatch):
+  job = dict(
+    output_file="/store/user/u/merged/a.root",
+    input_files=["/store/user/u/input/a.root"],
+    preserve_input_compression=False,
+    hadd_files_per_pass=None,
+    hadd_workers=1,
+    redirector="door:1094",
+  )
+  monkeypatch.setattr(merge, "ensure_root_compiler_environment", lambda: None)
+  monkeypatch.setattr(merge, "validate_root_file", lambda path: None)
+  monkeypatch.setattr(merge, "stage_output", lambda *args: pytest.fail("failed merge must not publish"))
+
+  def fail_hadd(command):
+    raise RuntimeError("hadd failed")
+
+  monkeypatch.setattr(merge, "run_command", fail_hadd)
+  with pytest.raises(RuntimeError, match="hadd failed"):
+    merge.run_condor_merge(job)

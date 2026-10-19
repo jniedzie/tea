@@ -14,6 +14,25 @@ so another process never observes a partially published environment. Temporary
 installation data is removed afterward. Normal activation still honors user
 settings.
 
+On macOS, the compiler and linker are included in the explicit dependency
+locks. An Apple macOS SDK is still required: its license prevents bundling it
+in a Conda package ([Conda documentation](https://docs.conda.io/projects/conda-build/en/stable/resources/compiler-tools.html#macos-sdk)).
+Full Xcode is optional. Install the standalone Command Line Tools with
+`xcode-select --install`, or point `SDKROOT` (or `CONDA_BUILD_SYSROOT`) at an
+existing SDK directory before building.
+
+`build.sh` checks that the pinned tools can compile and link C and C++20 code
+with the selected SDK. Without an explicit SDK override, it tries the active
+SDK and installed Command Line Tools SDKs. It prefers the pinned tools and
+only falls back to Apple's compiler and linker if none of those SDKs works
+with them. This handles newer SDK `.tbd` formats without requiring full
+Xcode. Explicit SDK overrides are honored rather than replaced with another
+SDK. SDK paths in inherited compiler flags and include paths are adjusted to
+match the selected SDK inside the build subprocess. Failures include an
+actionable message and logs under `build/.macos-toolchain-check`. The build
+environment stamp includes compiler and SDK paths so a change clears stale
+CMake configuration automatically.
+
 To intentionally update the dependency set, install `conda-lock`, edit
 `environment.yml`, and regenerate every supported platform from this directory:
 
