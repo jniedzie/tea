@@ -169,6 +169,9 @@ plotting_options = {
   SampleType.data: "nostack pe",
 }
 
+# Draw statistical error bars on signal curves; automatic ranges include them.
+show_signal_stat_uncertainty = False
+
 output_formats = ["pdf", ".png"]
 
 canvas_size = (800, 600)

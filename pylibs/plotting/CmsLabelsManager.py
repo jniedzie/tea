@@ -89,7 +89,7 @@ class CmsLabelsManager:
 
     self.drawLogo = False
 
-  def drawLabels(self, pad):
+  def drawLabels(self, pad, update=True):
     if not self.show_labels:
       return
 
@@ -105,7 +105,8 @@ class CmsLabelsManager:
       self.__drawExtraCmsText()
 
     pad.cd()
-    pad.Update()
+    if update:
+      pad.Update()
 
   def __setVariables(self, pad):
     self.height = pad.GetWh() * pad.GetHNDC()
