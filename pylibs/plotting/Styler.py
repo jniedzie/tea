@@ -96,14 +96,16 @@ class Styler:
     pad.SetBottomMargin(bottom_margin)
     pad.SetTopMargin(top_margin)
 
-  def setup_2d_pad(self, pad: Any, square_frame: bool = False) -> None:
+  def setup_2d_pad(self, pad: Any, square_frame: bool = False, with_colorbar: bool = True) -> None:
     margins = self.plotMargins or {}
     left_margin = margins.get("left", self.leftMargin)
     bottom_margin = margins.get("bottom", self.bottomMargin)
     top_margin = margins.get("top", self.topMargin)
-    minimum_margin = self.minimum2DRightMargin
-    if pad.GetWw() > 0:
-      minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / float(pad.GetWw()))
+    pad_width = pad.GetWw() * pad.GetAbsWNDC()
+    pad_height = pad.GetWh() * pad.GetAbsHNDC()
+    minimum_margin = self.minimum2DRightMargin if with_colorbar else 0.0
+    if with_colorbar and pad_width > 0:
+      minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / pad_width)
     right_margin = max(margins.get("right", self.rightMargin), minimum_margin)
 
     if left_margin + right_margin >= 1 or top_margin + bottom_margin >= 1:
@@ -114,15 +116,15 @@ class Styler:
     pad.SetTopMargin(top_margin)
     pad.SetRightMargin(right_margin)
 
-    if not square_frame or pad.GetWw() <= 0 or pad.GetWh() <= 0:
+    if not square_frame or pad_width <= 0 or pad_height <= 0:
       return
 
-    frame_width = pad.GetWw() * (1.0 - pad.GetLeftMargin() - pad.GetRightMargin())
-    frame_height = pad.GetWh() * (1.0 - pad.GetTopMargin() - pad.GetBottomMargin())
+    frame_width = pad_width * (1.0 - pad.GetLeftMargin() - pad.GetRightMargin())
+    frame_height = pad_height * (1.0 - pad.GetTopMargin() - pad.GetBottomMargin())
     if frame_width > frame_height:
-      pad.SetRightMargin(pad.GetRightMargin() + (frame_width - frame_height) / pad.GetWw())
+      pad.SetRightMargin(pad.GetRightMargin() + (frame_width - frame_height) / pad_width)
     elif frame_height > frame_width:
-      pad.SetTopMargin(pad.GetTopMargin() + (frame_height - frame_width) / pad.GetWh())
+      pad.SetTopMargin(pad.GetTopMargin() + (frame_height - frame_width) / pad_height)
 
     if pad.GetLeftMargin() + pad.GetRightMargin() >= 1 or pad.GetTopMargin() + pad.GetBottomMargin() >= 1:
       raise ValueError("2D plot margins leave no drawable frame")
