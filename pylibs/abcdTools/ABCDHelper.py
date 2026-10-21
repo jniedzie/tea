@@ -246,11 +246,8 @@ class ABCDHelper:
 
     for i in range(1, significance_hist.GetNbinsX() + 1):
       for j in range(1, significance_hist.GetNbinsY() + 1):
-        x_pre_bin = i
-        y_post_bin = j + 1
-
-        n_signal = signal_hist.Integral(x_min_bin, x_pre_bin, y_post_bin, y_max_bin)
-        n_background = background_hist.Integral(x_min_bin, x_pre_bin, y_post_bin, y_max_bin)
+        n_signal = self.get_abcd(signal_hist, (i, j))[0]
+        n_background = self.get_abcd(background_hist, (i, j))[0]
 
         significance_hist.SetBinContent(i, j, self.__get_significance(n_signal, n_background))
 
@@ -273,15 +270,7 @@ class ABCDHelper:
 
     for i in range(1, signal_contamination_hist.GetNbinsX() + 1):
       for j in range(1, signal_contamination_hist.GetNbinsY() + 1):
-        x_pre_bin = i
-        x_post_bin = i + 1
-        y_pre_bin = j
-        y_post_bin = j + 1
-
-        n_signal_b = signal_hist.Integral(x_min_bin, x_pre_bin, y_min_bin, y_pre_bin)
-        n_signal_c = signal_hist.Integral(x_post_bin, x_max_bin, y_post_bin, y_max_bin)
-        n_signal_d = signal_hist.Integral(x_post_bin, x_max_bin, y_min_bin, y_pre_bin)
-
+        _, n_signal_b, n_signal_c, n_signal_d, *_ = self.get_abcd(signal_hist, (i, j))
         n_signal = max(n_signal_b, n_signal_c, n_signal_d)
         signal_contamination_hist.SetBinContent(i, j, n_signal / total_signal if total_signal > 0 else 0)
 
@@ -348,6 +337,7 @@ class ABCDHelper:
           continue
 
         total_significance = 0
+        all_signals_pass = True
 
         for hist_name, significance_hist in significance_hists.items():
           signal_contamination_hist = signal_contamination_hists[hist_name]
@@ -362,11 +352,12 @@ class ABCDHelper:
 
           if signal_contamination < 0 or signal_contamination > self.args.max_signal_contamination:
             warn("ABCDHelper.get_optimal_point_for_significance: signal contamination is too high")
-            continue
+            all_signals_pass = False
+            break
 
           total_significance += significance
 
-        if total_significance > max_significance:
+        if all_signals_pass and total_significance > max_significance:
           max_significance = total_significance
           best_point = (i, j)
 
@@ -383,15 +374,15 @@ class ABCDHelper:
 
     values = {name: hist.GetBinContent(*point) for name, hist in optimization_hists.items()}
 
-    if "error" in values and values["error"] > self.args.max_error:
+    if "error" in values and (values["error"] < 0 or values["error"] > self.args.max_error):
       warn("ABCDHelper.is_point_good_for_signal: error is too high")
       return False
 
-    if "closure" in values and values["closure"] > self.args.max_closure:
+    if "closure" in values and (values["closure"] < 0 or values["closure"] > self.args.max_closure):
       warn("ABCDHelper.is_point_good_for_signal: closure is too high")
       return False
 
-    if "min_n_events" in values and values["min_n_events"] < self.args.min_n_events:
+    if "min_n_events" in values and (values["min_n_events"] < 0 or values["min_n_events"] < self.args.min_n_events):
       warn("ABCDHelper.is_point_good_for_signal: min_n_events is too low")
       return False
 
@@ -448,27 +439,39 @@ class ABCDHelper:
   def get_nice_name(self, name):
     return self.config.nice_names[name] if name in self.config.nice_names else name
 
-  def get_projection_true(self, hist, x_max):
-    if hist is None or type(hist) is not ROOT.TH2:
+  def get_projection_true(self, hist, x_max=None):
+    if hist is None or not isinstance(hist, ROOT.TH2):
       return None
+    i, j = self.config.abcd_point
+    projection = hist.ProjectionY(hist.GetName() + "_projection_true", 1, i - 1, "e")
+    projection.SetDirectory(0)
+    for k in range(0, j):
+      projection.SetBinContent(k, 0)
+      projection.SetBinError(k, 0)
+    projection.SetBinContent(hist.GetNbinsY() + 1, 0)
+    projection.SetBinError(hist.GetNbinsY() + 1, 0)
+    return projection
 
-    hist_clone = hist.Clone()
-    hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], x_max)
-
-    hist_true = hist_clone.ProjectionY(hist.GetName() + "_projection_true", 1, self.config.abcd_point[0])
-    return hist_true
-
-  def get_projection_prediction(self, hist, x_max):
-    hist_clone = hist.Clone()
-    hist_clone.GetYaxis().SetRangeUser(self.config.abcd_point[1], x_max)
-
-    hist_prediction = hist_clone.ProjectionY("projection_c", self.config.abcd_point[0], hist_clone.GetNbinsX())
-
-    _, b, _, d, _, _, _, _ = self.get_abcd(hist, self.config.abcd_point)
-    abcd_ratio = b / d if d > 0 else 1
-    hist_prediction.Scale(abcd_ratio)
-
-    return hist_prediction
+  def get_projection_prediction(self, hist, x_max=None):
+    if hist is None or not isinstance(hist, ROOT.TH2):
+      return None
+    i, j = self.config.abcd_point
+    projection = hist.ProjectionY(hist.GetName() + "_projection_prediction", i, hist.GetNbinsX(), "e")
+    projection.SetDirectory(0)
+    _, b, _, d, _, b_err, _, d_err = self.get_abcd(hist, (i, j))
+    if b <= 0 or d <= 0:
+      return None
+    ratio = b / d
+    ratio_variance = ratio**2 * ((b_err / b) ** 2 + (d_err / d) ** 2)
+    for k in range(0, hist.GetNbinsY() + 2):
+      content, error = projection.GetBinContent(k), projection.GetBinError(k)
+      if k < j or k > hist.GetNbinsY():
+        projection.SetBinContent(k, 0)
+        projection.SetBinError(k, 0)
+      else:
+        projection.SetBinContent(k, content * ratio)
+        projection.SetBinError(k, math.sqrt(ratio**2 * error**2 + content**2 * ratio_variance))
+    return projection
 
   def get_closure(self, true, pred):
     closure = -1
@@ -480,7 +483,7 @@ class ABCDHelper:
   def get_error(self, a, a_err, prediction, prediction_err):
     error = -1
 
-    if prediction_err != 0 and a_err != 0:
+    if math.hypot(prediction_err, a_err) > 0:
       error = abs(a - prediction)
       error /= (prediction_err**2 + a_err**2) ** 0.5
 
@@ -509,11 +512,7 @@ class ABCDHelper:
     for i in range(1, optimization_hist.GetNbinsX() + 1):
       for j in range(1, optimization_hist.GetNbinsY() + 1):
         values = self.get_abcd(background_hist, (i, j))
-        a, b, c, d, _, _, _, _ = values
-        a_err = a**0.5
-        b_err = b**0.5
-        c_err = c**0.5
-        d_err = d**0.5
+        a, b, c, d, a_err, b_err, c_err, d_err = values
 
         closure = -1
         error = -1
