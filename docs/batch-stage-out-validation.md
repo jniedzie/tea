@@ -176,9 +176,17 @@ python3 ecp_batch.py hist --group bkg --year 2024 --condor --devel --save_logs
 Checks:
 
 - The `.out` shows the pre-flight line and scratch paths, as in step 3.
-- `should_transfer_files`/`when_to_transfer_output`/`transfer_output_files` still behave:
-  the submission goes out with `condor_submit -spool`, and `condor_dummy.out` still comes
-  back. A job held on output transfer points at the template, not at the staging code.
+- CERN submissions use `condor_submit -spool` automatically when the analysis working
+  directory, Python interpreter, or `TEA_CONDOR_DIR` resolves to EOS. An EOS runtime is
+  accepted. The wrapper, input manifest, and valid VOMS proxy are transferred as before.
+  Spooling does not copy the Python environment or the analysis directory; workers use
+  the runtime paths recorded in the wrapper.
+- Spooled submissions omit `max_materialize` and `max_idle`, because HTCondor input
+  spooling is incompatible with late materialization. `--max_materialize` applies to
+  submissions without spooling. The command and generated submit file must agree.
+- `transfer_output_files` is empty: analysis results are published by the runner. With
+  `--save_logs`, retrieve spooled stdout, stderr, and event logs using
+  `condor_transfer_data <ClusterId>` after completion; they are not written back live.
 - If the destination is **not** under `/eos/user` or `/eos/home-*` (say an AFS work area),
   the log will say the path does not resolve to an EOS URL and the copy is a plain
   filesystem copy into the staging name. That is correct behaviour, not a fallback bug —
