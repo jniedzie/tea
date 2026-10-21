@@ -50,7 +50,8 @@ def get_args():
     type=int,
     default=None,
     help=(
-      "Maximum number of jobs materialized in the condor_schedd at once. Defaults to 500 on lxplus and 5000 elsewhere."
+      "Maximum number of jobs materialized in the condor_schedd at once. Defaults to 500 on lxplus and 5000 elsewhere. "
+      "Does not apply to CERN EOS submissions, which use -spool instead of factory materialization."
     ),
   )
 
