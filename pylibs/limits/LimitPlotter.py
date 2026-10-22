@@ -126,8 +126,8 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
   handles = {}
   for segment in segments:
     for lower, upper, color, title in (
-      (0.025, 0.975, ROOT.kYellow, "Expected #pm 2 #sigma"),
-      (0.16, 0.84, ROOT.kGreen + 1, "Expected #pm 1 #sigma"),
+      (0.025, 0.975, ROOT.TColor.GetColor("#ffcc00"), "Expected #pm 2 #sigma"),
+      (0.16, 0.84, ROOT.TColor.GetColor("#228b22"), "Expected #pm 1 #sigma"),
     ):
       graph = ROOT.TGraphAsymmErrors()
       graph.SetFillColor(color)
