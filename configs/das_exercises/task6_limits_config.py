@@ -77,3 +77,19 @@ y_max = 1e-1
 
 x_title = "m_{a} [GeV]"
 y_title = "#sigma(pp #rightarrow t#bar{t}a) #times B(a #rightarrow #mu#mu) [pb]"
+
+
+# Explicit adapter for the legacy ALP text format; retain the lifetime in every identity.
+def point_adapter(name: str) -> dict:
+  import re
+
+  match = re.fullmatch(r"alp_([0-9p.]+)_(\S+)", name)
+  if not match:
+    raise ValueError(f"Unrecognized ALP point {name}")
+  mass, ctau = (float(value.replace("p", ".")) for value in match.groups())
+  return {
+    "id": name,
+    "x": mass,
+    "parameters": {"mass": mass, "ctau": ctau},
+    "nominal_cross_section": reference_cross_section,
+  }

@@ -52,7 +52,6 @@ class HistogramsManager:
       self.stacks[sample.type][hist.getName()].Add(hist.hist)
 
   def saveDatacards(self):
-
     # turn histosamples (tuple) into a dictionary (hist_name, sample_name -> hist, sample)
     obs_histosample = None
     signal_histosample = None
@@ -71,11 +70,11 @@ class HistogramsManager:
         signal_histosample = (hist, sample)
       elif sample.type == SampleType.background:
         n_entries = hist.hist.GetEntries()
-        if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
+        if n_entries < getattr(self.config, "exclude_backgrounds_for_years", {}).get(sample.year, 0):
           warn(
             (
               f"Histogram {sample.name} has less than "
-              f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded."
+              f"{getattr(self.config, 'exclude_backgrounds_for_years', {}).get(sample.year, 0)} entries and will be excluded."
             )
           )
           continue
@@ -86,14 +85,14 @@ class HistogramsManager:
     if obs_histosample is None:
       obs_histosample = self.__get_backgrounds_sum_hist(background_histosamples)
 
-    self.datacardsProcessor.create_new_datacard(
+    return self.datacardsProcessor.create_new_datacard(
       hist_name,
       obs_histosample,
       background_histosamples,
       signal_histosample,
       self.config.nuisances,
       self.input_files,
-      self.config.add_uncertainties_on_zero,
+      getattr(self.config, "add_uncertainties_on_zero", False),
     )
 
   def __get_backgrounds_sum_hist(self, hists):
@@ -104,7 +103,7 @@ class HistogramsManager:
       else:
         backgrounds_sum_hist.Add(hist.hist)
 
-    if backgrounds_sum_hist is None and self.config.do_abcd:
+    if backgrounds_sum_hist is None and getattr(self.config, "do_abcd", False):
       warn("No background histograms found, creating a dummy histogram for ABCD method")
       backgrounds_sum_hist = ROOT.TH2D()
       backgrounds_sum_hist.Fill(0.0, 1e-99)
