@@ -126,8 +126,8 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
   handles = {}
   for segment in segments:
     for lower, upper, color, title in (
-      (0.025, 0.975, ROOT.TColor.GetColor("#ffcc00"), "Expected #pm 2 #sigma"),
-      (0.16, 0.84, ROOT.TColor.GetColor("#228b22"), "Expected #pm 1 #sigma"),
+      (0.025, 0.975, ROOT.TColor.GetColor("#ffcc00"), "95% expected"),
+      (0.16, 0.84, ROOT.TColor.GetColor("#228b22"), "68% expected"),
     ):
       graph = ROOT.TGraphAsymmErrors()
       graph.SetFillColor(color)
@@ -163,8 +163,8 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
         graph.SetMarkerStyle(20)
         for i, point in enumerate(group):
           graph.SetPoint(i, point.x, point.observed if observed else point.expected[0.5])
-        graphs.append((graph, "LP" if len(group) == 1 else "L"))
-        handles["Observed" if observed else "Expected"] = graph
+        graphs.append((graph, "LP" if observed or len(group) == 1 else "L"))
+        handles["Observed" if observed else "Median expected"] = graph
     if references:
       graph = ROOT.TGraph()
       graph.SetLineColor(ROOT.kRed + 1)
@@ -173,14 +173,15 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
       for i, point in enumerate(segment):
         graph.SetPoint(i, point.x, references[point.id])
       graphs.append((graph, "P" if len(segment) == 1 else "L"))
-      handles[
-        "r = 1"
-        if options.reference == "r1"
-        else ("Nominal cross section" if options.quantity == "cross_section" else "Nominal (r = 1)")
-      ] = graph
-  order = ("Observed", "Expected", "Expected #pm 1 #sigma", "Expected #pm 2 #sigma")
-  titles = [title for title in order if title in handles] + [title for title in handles if title not in order]
-  entries = [(handles[title], title, "F" if "sigma" in title else "L") for title in titles]
+      handles["r = 1" if options.reference == "r1" else "Theory"] = graph
+  entries = []
+  reference_title = "r = 1" if options.reference == "r1" else "Theory"
+  if reference_title in handles:
+    entries.extend([(handles[reference_title], reference_title, "L"), (None, "", "")])
+  entries.append((None, "95% CL upper limits", ""))
+  for title, style in (("Observed", "LP"), ("Median expected", "L"), ("68% expected", "F"), ("95% expected", "F")):
+    if title in handles:
+      entries.append((handles[title], title, style))
   canvas = draw_graphs(graphs, definition, config, entries)
   canvas._limit_objects = canvas._plot_objects
   canvas._limit_segments = segments

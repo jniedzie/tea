@@ -30,7 +30,7 @@ def draw_graphs(
   for annotation in getattr(config, "annotations", ()):
     legend.AddEntry(ROOT.nullptr, str(annotation), "")
   for graph, label, option in legend_entries:
-    legend.AddEntry(graph, label, option)
+    legend.AddEntry(graph if graph is not None else ROOT.nullptr, label, option)
   styler.preparePlotLayout(definition, sources, canvas, legends=[legend])
   canvas.Divide(1, 1)
   pad = canvas.cd(1)

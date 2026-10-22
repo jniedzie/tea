@@ -70,6 +70,10 @@ presentation config directly: `canvas_size`, `plot_margins`, `show_cms_labels`,
 and a `Legend` instance in `legend`. These override standalone defaults. Graph
 configs may also supply `annotations`.
 Annotations are text rows in the shared legend so clearance accounts for them.
+The limit plotter supplies the limit-specific legend: Theory (for a nominal
+reference), a separator, “95% CL upper limits”, Observed when available,
+Median expected, 68% expected (green), and 95% expected (yellow). An r=1
+reference keeps its explicit “r = 1” label. The backend only lays out these entries.
 Ratio plots are disabled for limits. The normal Styler calculates automatic
 ranges and measured margins, including uncertainty envelopes and legend
 clearance. Explicit ranges are respected; log ranges require positive bounds.

@@ -34,7 +34,7 @@ cms_label = CmsLabel.pas
 label_outside_axes = True
 lumi_label_value = 59700.0  # pb^-1, following regular plotting conventions.
 beam_label = "13 TeV"
-legend = Legend(0.16, 0.64, 0.52, 0.90)
+legend = Legend(0.16, 0.52, 0.58, 0.90)
 annotations = ("m = 100 GeV", "Illustrative expected limits")
 
 limits_plot_output = "../outputs/figures/charge-limits-example/pdf/limits.pdf"

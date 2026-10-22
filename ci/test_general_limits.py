@@ -140,9 +140,9 @@ assert 'Sample' not in sys.modules
       output = self.path / ("charge." + suffix)
       save_canvas(canvas, output)
       self.assertGreater(output.stat().st_size, 1000)
-    points = [self.point(), LimitPoint(id="failed", x=2, status="failed")]
+    points = [self.point(observed=4), LimitPoint(id="failed", x=2, status="failed")]
     with self.assertWarns(RuntimeWarning):
-      isolated = plot_limits(points, PlotOptions(reference="r1"))
+      isolated = plot_limits(points, PlotOptions(reference="r1", show_observed=True))
     self.addCleanup(isolated.Close)
     bands = [obj for obj in isolated._limit_objects if isinstance(obj, ROOT.TGraphAsymmErrors)]
     self.assertEqual(len(bands), 2)
@@ -151,6 +151,13 @@ assert 'Sample' not in sys.modules
     self.assertEqual(bands[1].GetErrorYlow(0), 1)
     self.assertEqual(bands[1].GetErrorYhigh(0), 2)
     self.assertEqual(bands[0].GetN(), 1)
+    legend = next(obj for obj in isolated._limit_objects if isinstance(obj, ROOT.TLegend))
+    entries = list(legend.GetListOfPrimitives())
+    self.assertEqual(
+      [entry.GetLabel() for entry in entries],
+      ["r = 1", "", "95% CL upper limits", "Observed", "Median expected", "68% expected", "95% expected"],
+    )
+    self.assertEqual(entries[3].GetOption().lower(), "lp")
     isolated.SaveAs(str(self.path / "single.pdf"))
 
   def test_regular_plot_presentation_settings(self):
