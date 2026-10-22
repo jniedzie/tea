@@ -1,8 +1,8 @@
 # Reusable limits
 
 `pylibs/limits/LimitPoint.py`, `LimitPlotter.py`, and `LimitProducer.py` provide the
-reusable interface. Importing them does not parse arguments, load a config, read data, or import ROOT. ROOT is needed when drawing
-or making histogram datacards. TEA's normal build exposes these modules in `bin/`.
+reusable interface. Importing them does not parse arguments, load a config, read
+data, or import ROOT. ROOT is needed when drawing or making histogram datacards. TEA's normal build exposes these modules in `bin/`.
 Use the Python interfaces directly; the former `limits_plotter.py` and
 `limits_producer.py` CLI wrappers have been removed. `LimitConfig.load_config`
 explicitly loads a config by module basename or Python file path when needed.
@@ -12,6 +12,7 @@ explicitly loads a config by module basename or Python file path when needed.
 ```python
 from LimitPoint import LimitPoint
 from LimitPlotter import PlotOptions, plot_limits
+from PlotCanvas import save_canvas
 
 points = [LimitPoint(
   id="M100_Q0.3", x=0.3, parameters={"mass": 100, "charge": 0.3},
@@ -23,7 +24,8 @@ canvas = plot_limits(points, PlotOptions(
   quantity="cross_section", reference="nominal", log_y=True,
   annotations=("m = 100 GeV",), luminosity=59.7, collision_energy="13 TeV",
 ))
-# Save PDF and PNG in separate figure directories chosen by the caller.
+save_canvas(canvas, "outputs/figures/example/pdf/limits.pdf")
+save_canvas(canvas, "outputs/figures/example/png/limits.png")
 ```
 
 `LimitPoint` stores a unique complete `id`, finite numeric `x`, arbitrary
@@ -47,12 +49,31 @@ error naming that point, without looking at neighboring points.
 point's nominal cross section (or 1 in r units). The nominal reference requires
 explicit nominal metadata even if a constant conversion override is supplied.
 
+The limit layer builds only bands, expected/observed curves, references and gap
+segments. `GraphPlotter.draw_graphs` delegates presentation to the regular
+plotter's `Styler`, `Legend` and `CmsLabelsManager`. Histogram and graph plots
+also share `PlotCanvas.save_canvas`, including aspect-correct PDF export.
+There is no separate limit font, margin, label-position or legend-clearance
+implementation.
+
 `PlotOptions` controls titles/units, `x_range`/`y_range`, `log_x`/`log_y`, numeric
-`tick_labels` (x), `y_tick_labels`, `legend_bounds`, luminosity in fb⁻¹, collision-energy text, experiment label,
-annotations, observed visibility, conversion and reference. Automatic ranges
-include visible uncertainties and references, with headroom for the legend. Logarithmic ranges require positive
-bounds. Returned canvases retain graph ownership; callers may inspect
-`canvas._limit_segments` and `canvas._limit_objects` during validation.
+`tick_labels` (x), `y_tick_labels`, observed visibility, conversion and reference.
+Standalone calls can set `canvas_size`, `plot_margins`, `legend_bounds`,
+`cms_label` (a CmsLabel member name or enum), `label_outside_axes`, luminosity in
+fb⁻¹ and collision-energy text. Free-form `experiment_label` has been replaced
+by the same `CmsLabel` enum used for regular plots.
+
+Pass `plot_limits(points, options, plot_config=config)` to reuse a regular
+presentation config directly: `canvas_size`, `plot_margins`, `show_cms_labels`,
+`cms_label`, `label_outside_axes`, `lumi_label_value` in **pb⁻¹**, `beam_label`,
+and a `Legend` instance in `legend`. These override standalone defaults. Graph
+configs may also supply `x_tick_labels`, `y_tick_labels`, and `annotations`.
+Annotations are text rows in the shared legend so clearance accounts for them.
+Ratio plots are disabled for limits. The normal Styler calculates automatic
+ranges and measured margins, including uncertainty envelopes and legend
+clearance. Explicit ranges are respected; log ranges require positive bounds.
+Returned canvases retain their graphs; `canvas._limit_segments` and
+`canvas._limit_objects` remain available for validation.
 
 Points are sorted numerically. IDs must be unique. Distinct points with the same
 x are preserved by the record format and **rejected for one curve**: select a
@@ -96,14 +117,13 @@ charge scan at fixed mass with point-specific illustrative cross sections:
 ```python
 import ROOT
 import charge_limits_config as config
-from pathlib import Path
 from LimitPlotter import plot_limits
+from PlotCanvas import save_canvas
 
 ROOT.gROOT.SetBatch(True)
-canvas = plot_limits(config.limit_points, config.plot_options)
+canvas = plot_limits(config.limit_points, config.plot_options, plot_config=config)
 for path in (config.limits_plot_output, config.limits_png_output):
-  Path(path).parent.mkdir(parents=True, exist_ok=True)
-  canvas.SaveAs(path)
+  save_canvas(canvas, path)
 ```
 
 A config can provide `limit_points` directly, or callers can load `limits_input`

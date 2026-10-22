@@ -31,6 +31,7 @@ plot_options = PlotOptions(
   y_title="#sigma(pp #rightarrow t#bar{t}a) #times B(a #rightarrow #mu#mu) [pb]",
   x_range=(1, 60),
   y_range=(1e-6, 1e-1),
+  legend_bounds=(0.60, 0.72, 0.94, 0.90),
   log_x=True,
   log_y=True,
   luminosity=63.67,

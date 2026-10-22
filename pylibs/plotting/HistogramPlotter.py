@@ -10,6 +10,7 @@ from Sample import SampleType
 from Styler import Styler
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from CmsLabelsManager import CmsLabelsManager
+from PlotCanvas import save_canvas
 from Logger import info, warn, error, fatal, install_root_warning_collector, ProgressBar
 
 
@@ -64,33 +65,6 @@ class HistogramPlotter:
 
     if not os.path.exists(self.config.output_path):
       os.makedirs(self.config.output_path)
-
-  def __save_canvas(self, canvas, path):
-    output_directory = os.path.dirname(path)
-    if output_directory:
-      os.makedirs(output_directory, exist_ok=True)
-    # Batch exports can retain a cached frame after late legends/labels.
-    # Repaint the pads as well as the canvas before writing the final figure.
-    for primitive in canvas.GetListOfPrimitives():
-      if primitive.InheritsFrom("TPad"):
-        primitive.Modified()
-    canvas.Modified()
-    canvas.Update()
-    original_paper_width, original_paper_height = array("f", [0.0]), array("f", [0.0])
-    gStyle.GetPaperSize(original_paper_width, original_paper_height)
-    if os.path.splitext(path)[1].lower() == ".pdf":
-      # Fit the drawable canvas onto ROOT's A4 page without changing its aspect.
-      width, height = canvas.GetWw(), canvas.GetWh()
-      paper_width, paper_height = (28.0, 20.0) if width >= height else (20.0, 28.0)
-      scale = min(paper_width / width, paper_height / height)
-      gStyle.SetPaperSize(width * scale, height * scale)
-    original_error_level = ROOT.gErrorIgnoreLevel
-    ROOT.gErrorIgnoreLevel = ROOT.kError
-    try:
-      canvas.SaveAs(path)
-    finally:
-      ROOT.gErrorIgnoreLevel = original_error_level
-      gStyle.SetPaperSize(original_paper_width[0], original_paper_height[0])
 
   def __histosampleExists(self, hist, sample):
     return (hist.getName(), sample.name) in self.histosample_keys
@@ -443,7 +417,6 @@ class HistogramPlotter:
       self.signal_uncertainties[hist.getName()].append(graph)
 
   def _hist_to_graph(self, hist, horizontal_errors=True):
-
     n = hist.GetNbinsX()
     x = []
     y = []
@@ -681,7 +654,7 @@ class HistogramPlotter:
         pad.RedrawAxis()
       for output_format in self.output_formats:
         path = self.config.output_path + "/" + hist.getName() + "." + output_format
-        self.__save_canvas(canvas, path)
+        save_canvas(canvas, path)
 
   def __drawObjects2D(self, objects: list[tuple[Any, Any]], object_label: str, normalize: bool) -> None:
     canvas_size = getattr(self.config, "canvas_size_2Dhists", self.config.canvas_size)
@@ -719,7 +692,7 @@ class HistogramPlotter:
       canvas.Update()
       for output_format in self.output_formats:
         extension = output_format.lstrip(".")
-        self.__save_canvas(canvas, self.config.output_path + "/" + title + "." + extension)
+        save_canvas(canvas, self.config.output_path + "/" + title + "." + extension)
 
   def drawHists2D(self):
     if hasattr(self.config, "histograms2D"):
@@ -744,7 +717,7 @@ class HistogramPlotter:
       self.cmsLabelsManager.drawLabels(canvas.GetPad(1), update=False)
 
       path = self.config.output_path + "/" + hist_nom.getName() + ".pdf"
-      self.__save_canvas(canvas, path)
+      save_canvas(canvas, path)
 
   def __get_hists_sum(self, hist, doRatio=False):
     base_sample_type = SampleType.data if doRatio else SampleType.background

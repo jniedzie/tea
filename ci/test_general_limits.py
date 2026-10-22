@@ -132,11 +132,13 @@ assert 'Sample' not in sys.modules
 
     ROOT.gROOT.SetBatch(True)
     config = load_config(str(REPO / "configs/examples/charge_limits_config.py"))
-    canvas = plot_limits(config.limit_points, config.plot_options)
+    canvas = plot_limits(config.limit_points, config.plot_options, plot_config=config)
     self.addCleanup(canvas.Close)
+    from PlotCanvas import save_canvas
+
     for suffix in ("pdf", "png"):
       output = self.path / ("charge." + suffix)
-      canvas.SaveAs(str(output))
+      save_canvas(canvas, output)
       self.assertGreater(output.stat().st_size, 1000)
     points = [self.point(), LimitPoint(id="failed", x=2, status="failed")]
     with self.assertWarns(RuntimeWarning):
@@ -150,6 +152,40 @@ assert 'Sample' not in sys.modules
     self.assertEqual(bands[1].GetErrorYhigh(0), 2)
     self.assertEqual(bands[0].GetN(), 1)
     isolated.SaveAs(str(self.path / "single.pdf"))
+
+  def test_regular_plot_presentation_settings(self):
+    import ROOT
+    from CmsLabelsManager import CmsLabel
+    from Legend import Legend
+
+    ROOT.gROOT.SetBatch(True)
+    config = SimpleNamespace(
+      canvas_size=(900, 700),
+      plot_margins={"left": 0.16, "bottom": 0.18, "top": 0.10, "right": 0.04},
+      cms_label=CmsLabel.thesis,
+      lumi_label_value=41900,
+      beam_label="13.6 TeV",
+      legend=Legend(0.60, 0.65, 0.94, 0.88, text_size=20),
+    )
+    canvas = plot_limits([self.point()], PlotOptions(x_range=(0.5, 1.5), y_range=(-1, 12)), plot_config=config)
+    self.addCleanup(canvas.Close)
+    pad = canvas.GetPad(1)
+    self.assertAlmostEqual(pad.GetLeftMargin(), 0.16)
+    self.assertAlmostEqual(pad.GetBottomMargin(), 0.18)
+    plot = next(obj for obj in canvas._limit_objects if isinstance(obj, ROOT.TMultiGraph))
+    self.assertEqual(plot.GetXaxis().GetTitleFont(), 43)
+    self.assertEqual(plot.GetYaxis().GetLabelSize(), 26)
+    self.assertEqual(plot.GetXaxis().GetXmin(), 0.5)
+    self.assertEqual(plot.GetXaxis().GetXmax(), 1.5)
+    self.assertEqual(plot.GetHistogram().GetMinimum(), -1)
+    self.assertEqual(plot.GetHistogram().GetMaximum(), 12)
+    legend = next(obj for obj in canvas._limit_objects if isinstance(obj, ROOT.TLegend))
+    self.assertEqual(legend.GetTextFont(), 43)
+    self.assertEqual(legend.GetTextSize(), 20)
+    labels = [obj.GetTitle() for obj in pad.GetListOfPrimitives() if isinstance(obj, ROOT.TLatex)]
+    self.assertIn("CMS", labels)
+    self.assertIn("Work in progress", labels)
+    self.assertIn("41.9 fb^{-1} (13.6 TeV)", labels)
 
   def test_producer_with_arbitrary_signal_names_and_real_datacards(self):
     import ROOT
