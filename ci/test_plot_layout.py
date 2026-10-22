@@ -24,6 +24,7 @@ else:
   from Histogram import Histogram
   from HistogramNormalizer import NormalizationType
   from HistogramPlotter import HistogramPlotter
+  from PlotCanvas import save_canvas
   from CmsLabelsManager import CmsLabel
   from Legend import Legend
   from Sample import Sample, SampleType
@@ -592,8 +593,6 @@ class PlotLayoutTest(unittest.TestCase):
     except ImportError:
       self.skipTest("Pillow is required for rendered-PDF verification")
     with tempfile.TemporaryDirectory() as directory:
-      config = SimpleNamespace(histograms=[], samples=[], output_path=directory, show_ratio_plots=False)
-      plotter = HistogramPlotter(config)
       previous_width, previous_height = array("f", [0.0]), array("f", [0.0])
       ROOT.gStyle.GetPaperSize(previous_width, previous_height)
       self.addCleanup(ROOT.gStyle.SetPaperSize, previous_width[0], previous_height[0])
@@ -605,7 +604,7 @@ class PlotLayoutTest(unittest.TestCase):
           self.canvases.append(canvas)
           canvas.SetFillColor(ROOT.kRed)
           path = Path(directory) / ("page_%d_%d.pdf" % dimensions)
-          plotter._HistogramPlotter__save_canvas(canvas, str(path))
+          save_canvas(canvas, str(path))
           paper_width, paper_height = array("f", [0.0]), array("f", [0.0])
           ROOT.gStyle.GetPaperSize(paper_width, paper_height)
           self.assertEqual((paper_width[0], paper_height[0]), (13.0, 17.0))
