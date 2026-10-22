@@ -133,7 +133,7 @@ assert 'Sample' not in sys.modules
     import ROOT
 
     ROOT.gROOT.SetBatch(True)
-    config = load_config(str(REPO / "configs/examples/charge_limits_config.py"))
+    config = load_config(str(REPO / "configs/examples/mass_limits_config.py"))
     canvas = plot_limits(config.limit_points, config.plot_options, plot_config=config)
     self.addCleanup(canvas.Close)
     legend = next(obj for obj in canvas._limit_objects if isinstance(obj, ROOT.TLegend))

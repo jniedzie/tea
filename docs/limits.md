@@ -15,14 +15,14 @@ from LimitPlotter import PlotOptions, plot_limits
 from PlotCanvas import save_canvas
 
 points = [LimitPoint(
-  id="M100_Q0.3", x=0.3, parameters={"mass": 100, "charge": 0.3},
+  id="mass_100", x=100, parameters={"mass": 100},
   metadata={"selection": "example"}, nominal_cross_section=0.09,
   expected={0.025: 0.4, 0.16: 0.7, 0.5: 1.0, 0.84: 1.6, 0.975: 2.4},
 )]
 canvas = plot_limits(points, PlotOptions(
-  x_title="|q| / e", y_title="95% CL upper limit on #sigma", y_unit="pb",
+  x_title="Mass (GeV)", y_title="95% CL upper limit on #sigma", y_unit="pb",
   quantity="cross_section", reference="nominal", log_y=True,
-  annotations=("m = 100 GeV",), luminosity=59.7, collision_energy="13 TeV",
+  luminosity=59.7, collision_energy="13 TeV",
 ))
 save_canvas(canvas, "outputs/figures/example/pdf/limits.pdf")
 save_canvas(canvas, "outputs/figures/example/png/limits.png")
@@ -96,7 +96,7 @@ infer missing scan points omitted entirely from the input.
 
 ```json
 {"schema_version": 1, "points": [
-  {"id": "M100_Q0.3", "x": 0.3, "parameters": {"mass": 100, "charge": 0.3},
+  {"id": "mass_100", "x": 100, "parameters": {"mass": 100},
    "nominal_cross_section": 0.09,
    "expected": {"0.025": 0.4, "0.16": 0.7, "0.5": 1, "0.84": 1.6, "0.975": 2.4}}
 ]}
@@ -116,12 +116,12 @@ name patterns, retains lifetime, and reproduces the old log axes, titles,
 luminosity and constant scale. `configs/das_exercises/task6_limits_config.py`
 now supplies its explicit ALP adapter. No ALP patterns remain in reusable code.
 
-`configs/examples/charge_limits_config.py` is a minimal, self-contained blind
-charge scan at fixed mass with point-specific illustrative cross sections:
+`configs/examples/mass_limits_config.py` is a minimal, self-contained blind
+mass scan with point-specific illustrative cross sections:
 
 ```python
 import ROOT
-import charge_limits_config as config
+import mass_limits_config as config
 from LimitPlotter import plot_limits
 from PlotCanvas import save_canvas
 
