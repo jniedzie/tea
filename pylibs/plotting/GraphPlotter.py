@@ -46,8 +46,6 @@ def draw_graphs(
   legend.Draw()
   styler.adjustAxesForLegend(plot, definition, sources, [legend], pad)
   pad.Update()
-  _draw_tick_labels(plot, pad, getattr(config, "x_tick_labels", {}), "x", styler.labelFontSize)
-  _draw_tick_labels(plot, pad, getattr(config, "y_tick_labels", {}), "y", styler.labelFontSize)
   labels.drawLabels(pad, update=False)
   frame = pad.GetFrame()
   frame.SetLineWidth(1)
@@ -62,40 +60,3 @@ def draw_graphs(
   canvas._plot_pad = pad
   canvas._plot_objects = [plot, legend, styler, labels, *sources]
   return canvas
-
-
-def _draw_tick_labels(plot: Any, pad: Any, labels: Any, axis_name: str, font_size: int) -> None:
-  if not labels:
-    return
-  import math
-  import ROOT
-
-  axis = plot.GetXaxis() if axis_name == "x" else plot.GetYaxis()
-  axis.SetLabelSize(0)
-  logarithmic = pad.GetLogx() if axis_name == "x" else pad.GetLogy()
-  if axis_name == "x":
-    minimum, maximum = axis.GetXmin(), axis.GetXmax()
-    start, stop = pad.GetLeftMargin(), 1 - pad.GetRightMargin()
-  else:
-    minimum, maximum = pad.GetUymin(), pad.GetUymax()
-    if logarithmic:
-      minimum, maximum = 10**minimum, 10**maximum
-    start, stop = pad.GetBottomMargin(), 1 - pad.GetTopMargin()
-  transform = math.log10 if logarithmic else lambda x: x
-  low, high = transform(minimum), transform(maximum)
-  retained = getattr(pad, "_graph_tick_labels", [])
-  for value, label in labels.items():
-    if not minimum <= value <= maximum:
-      continue
-    position = start + (transform(value) - low) / (high - low) * (stop - start)
-    text = ROOT.TLatex()
-    text.SetNDC()
-    text.SetTextFont(43)
-    text.SetTextSize(font_size)
-    if axis_name == "x":
-      text.SetTextAlign(23)
-      retained.append(text.DrawLatex(position, pad.GetBottomMargin() - 10 / pad.GetWh(), str(label)))
-    else:
-      text.SetTextAlign(32)
-      retained.append(text.DrawLatex(pad.GetLeftMargin() - 10 / pad.GetWw(), position, str(label)))
-  pad._graph_tick_labels = retained

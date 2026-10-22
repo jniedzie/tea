@@ -35,7 +35,7 @@ plot_options = PlotOptions(
   log_x=True,
   log_y=True,
   luminosity=63.67,
-  collision_energy="pp, #sqrt{s} = 13 TeV",
+  collision_energy="13 TeV",
   quantity="cross_section",
   constant_scale=reference_cross_section,
   show_observed=False,

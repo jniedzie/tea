@@ -36,7 +36,6 @@ lumi_label_value = 59700.0  # pb^-1, following regular plotting conventions.
 beam_label = "13 TeV"
 legend = Legend(0.16, 0.64, 0.52, 0.90)
 annotations = ("m = 100 GeV", "Illustrative expected limits")
-x_tick_labels = {1 / 3: "1/3", 2 / 3: "2/3", 1: "1"}
 
 limits_plot_output = "../outputs/figures/charge-limits-example/pdf/limits.pdf"
 limits_png_output = "../outputs/figures/charge-limits-example/png/limits.png"

@@ -1,6 +1,6 @@
 """Reusable ROOT Brazil plots. Imports neither ROOT nor analysis configuration until requested."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple
 from types import SimpleNamespace
 import warnings
@@ -18,8 +18,6 @@ class PlotOptions:
   y_range: Optional[Tuple[float, float]] = None
   log_x: bool = False
   log_y: bool = False
-  tick_labels: Mapping[float, str] = field(default_factory=dict)
-  y_tick_labels: Mapping[float, str] = field(default_factory=dict)
   legend_bounds: Optional[Tuple[float, float, float, float]] = None
   canvas_size: Tuple[int, int] = (800, 600)
   plot_margins: Optional[Mapping[str, float]] = None
@@ -116,8 +114,6 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
     beam_label=options.collision_energy,
     auto_adjust_axes_for_legend=True,
     annotations=options.annotations,
-    x_tick_labels=options.tick_labels,
-    y_tick_labels=options.y_tick_labels,
   )
   if options.luminosity is not None:
     config.lumi_label_value = options.luminosity * 1000

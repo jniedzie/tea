@@ -56,8 +56,9 @@ also share `PlotCanvas.save_canvas`, including aspect-correct PDF export.
 There is no separate limit font, margin, label-position or legend-clearance
 implementation.
 
-`PlotOptions` controls titles/units, `x_range`/`y_range`, `log_x`/`log_y`, numeric
-`tick_labels` (x), `y_tick_labels`, observed visibility, conversion and reference.
+`PlotOptions` controls titles/units, `x_range`/`y_range`, `log_x`/`log_y`,
+observed visibility, conversion and reference. Axes use the standard numeric
+ticks and labels; custom tick-label overlays have been removed.
 Standalone calls can set `canvas_size`, `plot_margins`, `legend_bounds`,
 `cms_label` (a CmsLabel member name or enum), `label_outside_axes`, luminosity in
 fb⁻¹ and collision-energy text. Free-form `experiment_label` has been replaced
@@ -67,7 +68,7 @@ Pass `plot_limits(points, options, plot_config=config)` to reuse a regular
 presentation config directly: `canvas_size`, `plot_margins`, `show_cms_labels`,
 `cms_label`, `label_outside_axes`, `lumi_label_value` in **pb⁻¹**, `beam_label`,
 and a `Legend` instance in `legend`. These override standalone defaults. Graph
-configs may also supply `x_tick_labels`, `y_tick_labels`, and `annotations`.
+configs may also supply `annotations`.
 Annotations are text rows in the shared legend so clearance accounts for them.
 Ratio plots are disabled for limits. The normal Styler calculates automatic
 ranges and measured margins, including uncertainty envelopes and legend
