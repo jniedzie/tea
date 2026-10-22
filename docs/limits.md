@@ -216,3 +216,22 @@ uncertainties, malformed quantiles, labeled Combine logs, failed exits/stale log
 and real ROOT datacards with arbitrary signal/background names, empty and missing
 signals. PDF/PNG rendering is exercised in temporary directories. Combine is
 stubbed; real installation and batch integration require the user's environment.
+
+## Example figures
+
+These are synthetic demonstration data, not physics results. The generic mass
+scan uses `configs/examples/mass_limits_config.py`; the observed example adds
+observed values equal to 1.15 times the median expected r. Gap and single-point
+examples retain respectively the endpoints or the middle point. The ALP
+compatibility example uses masses 2, 5, 10, 20, 50 GeV at lifetime 100 mm, median
+r values 1, 0.2, 0.1, 0.3, 2, and relative expected quantiles
+0.4, 0.7, 1, 1.6, 2.4, with the config's constant 10⁻⁴ pb normalization.
+All examples share the standard legend; blind examples omit Observed.
+
+| Example | PNG | PDF |
+| --- | --- | --- |
+| Mass scan (expected only) | [PNG](../outputs/figures/limits-examples/png/mass.png) | [PDF](../outputs/figures/limits-examples/pdf/mass.pdf) |
+| Mass scan with synthetic observed limits | [PNG](../outputs/figures/limits-examples/png/observed.png) | [PDF](../outputs/figures/limits-examples/pdf/observed.pdf) |
+| Missing scan point | [PNG](../outputs/figures/limits-examples/png/gap.png) | [PDF](../outputs/figures/limits-examples/pdf/gap.pdf) |
+| Single valid point | [PNG](../outputs/figures/limits-examples/png/single.png) | [PDF](../outputs/figures/limits-examples/pdf/single.pdf) |
+| ALP compatibility | [PNG](../outputs/figures/limits-examples/png/alp.png) | [PDF](../outputs/figures/limits-examples/pdf/alp.pdf) |
