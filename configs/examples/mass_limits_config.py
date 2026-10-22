@@ -36,8 +36,8 @@ lumi_label_value = 59700.0  # pb^-1, following regular plotting conventions.
 beam_label = "13 TeV"
 legend = Legend(0.16, 0.60, 0.58, 0.90)
 
-limits_plot_output = "../outputs/figures/mass-limits-example/pdf/limits.pdf"
-limits_png_output = "../outputs/figures/mass-limits-example/png/limits.png"
+output_path = "../plots/mass-limits-example"
+output_formats = ["pdf"]
 
 # For production with Sample objects, provide signal_points keyed by the exact sample name,
 # or point_for_sample(sample). Keep x and normalization explicit, as for limit_points above.

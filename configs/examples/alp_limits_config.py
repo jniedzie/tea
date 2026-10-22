@@ -5,8 +5,8 @@ from LimitPlotter import PlotOptions
 
 results_output_path = "../limits/results"
 limits_input = f"{results_output_path}/limits_Muon_pt.txt"
-limits_plot_output = "../outputs/figures/alp-limits-example/pdf/limits.pdf"
-limits_png_output = "../outputs/figures/alp-limits-example/png/limits.png"
+output_path = "../plots/alp-limits-example"
+output_formats = ["pdf"]
 reference_cross_section = 1e-4
 category = ""  # Set the original category suffix for combined cards.
 

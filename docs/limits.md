@@ -24,8 +24,7 @@ canvas = plot_limits(points, PlotOptions(
   quantity="cross_section", reference="nominal", log_y=True,
   luminosity=59.7, collision_energy="13 TeV",
 ))
-save_canvas(canvas, "outputs/figures/example/pdf/limits.pdf")
-save_canvas(canvas, "outputs/figures/example/png/limits.png")
+save_canvas(canvas, "plots/limits.pdf")
 ```
 
 `LimitPoint` stores a unique complete `id`, finite numeric `x`, arbitrary
@@ -127,15 +126,22 @@ from PlotCanvas import save_canvas
 
 ROOT.gROOT.SetBatch(True)
 canvas = plot_limits(config.limit_points, config.plot_options, plot_config=config)
-for path in (config.limits_plot_output, config.limits_png_output):
-  save_canvas(canvas, path)
+from pathlib import Path
+
+for output_format in getattr(config, "output_formats", ["pdf"]):
+  extension = output_format.lstrip(".")
+  save_canvas(canvas, Path(config.output_path) / f"limits.{extension}")
 ```
 
 A config can provide `limit_points` directly, or callers can load `limits_input`
 using `read_points(config.limits_input, config.point_adapter)` for legacy text.
 `plot_options` is preferred; `LimitConfig.plot_options(config)` translates legacy
 flat presentation fields. The caller selects input files and output destinations;
-`limits_plot_output` and `limits_png_output` are example config conventions.
+As in the regular `plotter.py` example, `output_path` is the destination
+directory and optional `output_formats` selects extensions (default `["pdf"]`).
+For example, `["pdf", "png"]` opts into both formats in that directory; neither
+a PNG copy nor separate format subdirectories are required. The former example
+settings `limits_plot_output` and `limits_png_output` have been removed.
 
 ## Producing limits
 
