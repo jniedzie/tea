@@ -21,7 +21,12 @@ def point_adapter(name: str) -> dict:
     match = re.fullmatch(pattern, name)
     if match:
       mass, ctau = (float(value.replace("p", ".").replace("P", ".")) for value in match.groups())
-      return {"id": name, "x": mass, "parameters": {"mass": mass, "ctau": ctau}}
+      return {
+        "id": name,
+        "x": mass,
+        "parameters": {"mass": mass, "ctau": ctau},
+        "nominal_cross_section": reference_cross_section,
+      }
   raise ValueError(f"Unrecognized ALP point: {name}")
 
 
@@ -31,13 +36,14 @@ plot_options = PlotOptions(
   y_title="#sigma(pp #rightarrow t#bar{t}a) #times B(a #rightarrow #mu#mu) [pb]",
   x_range=(1, 60),
   y_range=(1e-6, 1e-1),
-  legend_bounds=(0.60, 0.64, 0.94, 0.90),
+  legend_bounds=(0.60, 0.58, 0.94, 0.90),
   log_x=True,
   log_y=True,
   luminosity=63.67,
   collision_energy="13 TeV",
   quantity="cross_section",
   constant_scale=reference_cross_section,
+  reference="nominal",
   show_observed=False,
 )
 

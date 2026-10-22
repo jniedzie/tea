@@ -57,6 +57,8 @@ assert 'Sample' not in sys.modules
     points = read_points(path, config.point_adapter)
     self.assertEqual(points[0].parameters, {"mass": 12, "ctau": 100})
     self.assertIsNone(points[1].observed)
+    self.assertEqual(config.plot_options.reference, "nominal")
+    self.assertEqual(points[0].nominal_cross_section, config.reference_cross_section)
     scaled = prepare_segments(points, config.plot_options)[0]
     self.assertEqual([p.x for p in scaled], [2.5, 12])
     self.assertAlmostEqual(scaled[0].expected[0.84], 5e-4)
@@ -134,6 +136,11 @@ assert 'Sample' not in sys.modules
     config = load_config(str(REPO / "configs/examples/charge_limits_config.py"))
     canvas = plot_limits(config.limit_points, config.plot_options, plot_config=config)
     self.addCleanup(canvas.Close)
+    legend = next(obj for obj in canvas._limit_objects if isinstance(obj, ROOT.TLegend))
+    self.assertEqual(
+      [entry.GetLabel() for entry in legend.GetListOfPrimitives()],
+      ["Theory", "", "95% CL upper limits", "Median expected", "68% expected", "95% expected"],
+    )
     from PlotCanvas import save_canvas
 
     for suffix in ("pdf", "png"):
