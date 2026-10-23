@@ -8,9 +8,10 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from ci.test_general_limits import REPO, LOG
-from LimitConfig import output_paths, output_stem, plot_inputs, plot_paths
-from LimitPoint import read_points
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from ci.test_general_limits import REPO, LOG  # noqa: E402
+from LimitConfig import output_paths, output_stem, plot_inputs, plot_paths  # noqa: E402
+from LimitPoint import read_points  # noqa: E402
 
 
 class LimitsEntrypointsTest(unittest.TestCase):
