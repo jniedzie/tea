@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 from typing import Mapping, Optional
 import re
 import copy
@@ -222,7 +223,7 @@ def produce_limits(config, method: str = "AsymptoticLimits", condor: bool = Fals
       if sample.name in statuses:
         continue
       try:
-        point_config = copy.copy(config)
+        point_config = SimpleNamespace(**vars(config)) if isinstance(config, ModuleType) else copy.copy(config)
         point_config.samples = [sample, *others]
         manager = HistogramsManager(point_config, input_files, name)
         for item in (sample, *others):

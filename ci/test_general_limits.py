@@ -250,19 +250,27 @@ assert 'Sample' not in sys.modules
         (config.datacards_output_path / (name + ".log")).write_text(LOG)
       return {name: 0 for name in names}
 
-    with patch("LimitProducer.run_combine", side_effect=fake_combine), warnings.catch_warnings():
-      warnings.simplefilter("ignore", RuntimeWarning)
-      points = produce_limits(config)
-    self.assertEqual([point.status for point in points], ["ok", "no_sensitivity", "unavailable"])
-    card = config.datacards_output_path / "datacard_observable_charged_A.txt"
-    text = card.read_text()
-    self.assertIn("process signal not_a_signal_background", text)
-    self.assertIn("model lnN 1.1 -", text)
-    self.assertIn("rate 2.0 10.0", text)
-    self.assertTrue(card.with_suffix(".root").exists())
-    self.assertFalse((config.datacards_output_path / "datacard_observable_charged_B.txt").exists())
-    reread = read_points(config.results_output_path / "limits_observable.json")
-    self.assertEqual(reread, points)
+    config_path = self.path / "limits_config.py"
+    config_path.write_text("# Settings are populated from the ROOT fixture.\n")
+    file_config = load_config(str(config_path))
+    vars(file_config).update(vars(config))
+    for producer_config in (config, file_config):
+      with self.subTest(config_type=type(producer_config).__name__):
+        original_samples = producer_config.samples
+        with patch("LimitProducer.run_combine", side_effect=fake_combine), warnings.catch_warnings():
+          warnings.simplefilter("ignore", RuntimeWarning)
+          points = produce_limits(producer_config)
+        self.assertIs(producer_config.samples, original_samples)
+        self.assertEqual([point.status for point in points], ["ok", "no_sensitivity", "unavailable"])
+        card = producer_config.datacards_output_path / "datacard_observable_charged_A.txt"
+        text = card.read_text()
+        self.assertIn("process signal not_a_signal_background", text)
+        self.assertIn("model lnN 1.1 -", text)
+        self.assertIn("rate 2.0 10.0", text)
+        self.assertTrue(card.with_suffix(".root").exists())
+        self.assertFalse((producer_config.datacards_output_path / "datacard_observable_charged_B.txt").exists())
+        reread = read_points(producer_config.results_output_path / "limits_observable.json")
+        self.assertEqual(reread, points)
 
   def test_significance_collect_only_never_launches(self):
     (self.path / "card.txt").write_text("existing card")
