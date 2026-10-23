@@ -1,16 +1,25 @@
 import ROOT
 from ctypes import c_double
 from copy import deepcopy
+from pathlib import Path
+import math
 
 from Logger import error, warn, info
 from ABCDHelper import ABCDHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
+from Sample import Sample, SampleType
+from LimitConfig import output_paths
+
+
+class NoSensitivityError(ValueError):
+  """No positive signal yield exists in the fitted region."""
 
 
 class DatacardsProcessor:
   def __init__(self, config, datacard_file_name):
     self.config = config
+    self.paths = output_paths(config)
     self.datacard_file_name = datacard_file_name
 
     self.datacard = None
@@ -32,18 +41,20 @@ class DatacardsProcessor:
     add_uncertainties_on_zero=False,
   ):
     self.datacard = ""
-
-    if type(obs_histosample[0]) == ROOT.TObject or obs_histosample is None:
-      error("DatacardsProcessor::create_new_datacard: obs_histosample is not a histogram.")
-      return
-
+    self.histosamples = {}
     if signal_histosample is None:
-      error("DatacardsProcessor::create_new_datacard: signal_histosample is None.")
-      return
-
-    if type(signal_histosample[0]) == ROOT.TObject or signal_histosample is None:
-      error("DatacardsProcessor::create_new_datacard: signal_histosample is not a histogram.")
-      return
+      raise NoSensitivityError("Signal histogram is absent or empty")
+    if obs_histosample is None or type(obs_histosample[0]) is ROOT.TObject:
+      raise ValueError("Observation histogram is absent")
+    if type(signal_histosample[0]) is ROOT.TObject:
+      raise ValueError("Signal is not a histogram")
+    signal_yield = signal_histosample[0].hist.Integral()
+    if not math.isfinite(signal_yield) or signal_yield < 0:
+      raise ValueError("Signal yield must be finite and nonnegative")
+    if signal_yield == 0:
+      raise NoSensitivityError("Signal yield is zero")
+    if any(name in ("signal", "data_obs") for name in bkg_histosamples):
+      raise ValueError("Background names cannot use reserved names signal/data_obs")
 
     self.histosamples["data_obs"] = obs_histosample
     self.histosamples["signal"] = signal_histosample
@@ -53,14 +64,24 @@ class DatacardsProcessor:
 
     n_backgrounds = len(bkg_histosamples)
     n_backgrounds = self.__remove_empty_histograms(n_backgrounds)
+    self.background_names = [
+      name for name, (_, sample) in self.histosamples.items() if sample.type == SampleType.background
+    ]
     if n_backgrounds == 0:
       self.histosamples["background_dummy"] = self.__get_dummy_histogram()
       n_backgrounds = 1
+      self.background_names = ["background_dummy"]
 
-    # sort self.histosamples such that entries starting with "signal_" go first:
-    self.histosamples = dict(sorted(self.histosamples.items(), key=lambda x: not x[0].startswith("signal")))
+    # Combine assigns the first process index 0 to the canonical signal.
+    self.histosamples = dict(sorted(self.histosamples.items(), key=lambda item: item[1][1].type != SampleType.signal))
 
     nuisances_for_sample = deepcopy(nuisances)
+    signal_name = signal_histosample[1].name
+    for values in nuisances_for_sample.values():
+      if isinstance(values, dict) and signal_name in values:
+        if "signal" in values and values["signal"] != values[signal_name]:
+          raise ValueError(f"Conflicting nuisances for {signal_name} and signal")
+        values["signal"] = values.pop(signal_name)
     nuisances_updated = {}
     for k, v in nuisances_for_sample.items():
       if isinstance(v, dict):
@@ -68,7 +89,11 @@ class DatacardsProcessor:
 
     if self.do_abcd:
       self.__flip_signal_to_region_a()
-
+      signal_rate = self.abcd_helper.get_abcd(self.histosamples["signal"][0].hist, self.config.abcd_point)[0]
+      if not math.isfinite(signal_rate) or signal_rate < 0:
+        raise ValueError("Invalid signal yield in ABCD signal region")
+      if signal_rate == 0:
+        raise NoSensitivityError("Signal yield is zero in ABCD signal region")
       self.__insert_background_sum_hist()
       nuisances_varations = self.__fill_in_variation_nuisances(
         hist_name, self.histosamples["signal"][1].name, nuisances_for_sample, input_files
@@ -91,13 +116,15 @@ class DatacardsProcessor:
     self.__add_rates()
     self.__add_nuisances(nuisances_updated)
 
-    datacards_path = self.config.datacards_output_path + self.datacard_file_name + ".txt"
+    datacards_path = str(self.paths.datacards / (self.datacard_file_name + ".txt"))
     info(f"Storing datacard in {datacards_path}")
-    outfile = open(datacards_path, "w")
-    outfile.write(self.datacard)
+    Path(datacards_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(datacards_path, "w") as outfile:
+      outfile.write(self.datacard)
 
     info(f"Storing histograms in {datacards_path.replace('.txt', '.root')}")
     self.__save_histograms(add_uncertainties_on_zero)
+    return Path(datacards_path)
 
   def __flip_signal_to_region_a(self):
     histograms = {key: hist.hist for key, (hist, sample) in self.histosamples.items()}
@@ -108,11 +135,13 @@ class DatacardsProcessor:
 
   def __remove_empty_histograms(self, n_backgrounds):
     to_remove = []
-    for name, (hist, _) in self.histosamples.items():
-      if hist.hist.Integral() < 1e-90 and "data_obs" not in name:
+    for name, (hist, sample) in self.histosamples.items():
+      rate = hist.hist.Integral()
+      if not math.isfinite(rate) or rate < 0:
+        raise ValueError(f"{name}: invalid histogram yield {rate}")
+      if rate == 0 and sample.type == SampleType.background:
         to_remove.append(name)
-        if "signal" not in name:
-          n_backgrounds -= 1
+        n_backgrounds -= 1
 
     for name in to_remove:
       del self.histosamples[name]
@@ -157,7 +186,7 @@ class DatacardsProcessor:
 
       if n_base != 0:
         variation = n_variation / n_base
-        for symmetric_variation in self.config.symmetric_variations:
+        for symmetric_variation in getattr(self.config, "symmetric_variations", ()):
           if symmetric_variation in cms_variation_name:
             variation = abs(variation - 1) + 1
       else:
@@ -190,7 +219,7 @@ class DatacardsProcessor:
     prediction = self.abcd_helper.get_prediction(b, c, d, 0, 0, 0)[0]
     closure = -1
     if a == 0:
-      warn(f"region a is equal to 0! TODO: fix!")
+      warn("region a is equal to 0! TODO: fix!")
     else:
       closure = abs(prediction - a) / a
 
@@ -205,7 +234,7 @@ class DatacardsProcessor:
     nuisances_updated = {}
 
     if "abcd_unc" not in nuisances:
-      info(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
+      info("abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
       return nuisances_updated
 
     max_rel_unc = -1
@@ -269,9 +298,7 @@ class DatacardsProcessor:
     hist_sum = None
 
     for name, (hist, sample) in self.histosamples.items():
-      if name == "data_obs" or "signal" in name:
-        continue
-      if name.startswith("bkg"):
+      if name not in self.background_names:
         continue
 
       abcd_values = self.abcd_helper.get_abcd(hist.hist, abcd_point)
@@ -330,7 +357,7 @@ class DatacardsProcessor:
       y_rebin=self.config.rebin_2D,
     )
     histogram.set_hist(hist)
-    self.histosamples[histosample_name] = (histogram, sample)
+    self.histosamples[histosample_name] = (histogram, Sample(name=histosample_name, type=SampleType.background))
 
   def __insert_background_sum_hist_for_shifted_points(self):
     abcd_point_xup = (self.config.abcd_point[0] + 1, self.config.abcd_point[1])
@@ -343,13 +370,12 @@ class DatacardsProcessor:
     self.__insert_background_sum_hist(abcd_point_ydown, "bkg_ydown")
 
   def __get_dummy_histogram(self):
-    hist = list(self.histosamples.values())[0].Clone()
+    hist = deepcopy(next(hist for hist, sample in self.histosamples.values() if sample.type == SampleType.signal))
+    sample = Sample(name="background_dummy", type=SampleType.background)
     hist.hist.Reset()
-
-    for i in range(1, hist.GetNbinsX()):
+    for i in range(1, hist.hist.GetNcells()):
       hist.hist.SetBinContent(i, 1e-99)
-
-    return hist
+    return hist, sample
 
   def __add_header(self, n_backgrounds):
     # define number of parameters
@@ -386,6 +412,8 @@ class DatacardsProcessor:
         obs_rate = self.histosamples["bkg"][0].hist.GetBinContent(1, 2)
     else:
       obs_rate = self.histosamples["data_obs"][0].hist.Integral()
+    if not math.isfinite(obs_rate) or obs_rate < 0:
+      raise ValueError("Observation yield must be finite and nonnegative")
     self.datacard += "bin bin1\n"
     self.datacard += f"observation {round(obs_rate)}\n"
 
@@ -395,8 +423,8 @@ class DatacardsProcessor:
     if self.do_abcd:
       self.datacard += " bin1  bin1"
     else:
-      for name in self.histosamples:
-        if name == "data_obs":
+      for name, (_, sample) in self.histosamples.items():
+        if sample.type == SampleType.data:
           continue
         self.datacard += " bin1"
     self.datacard += "\n"
@@ -405,8 +433,8 @@ class DatacardsProcessor:
     if self.do_abcd:
       self.datacard += " signal bkg"
     else:
-      for name in self.histosamples:
-        if name == "data_obs":
+      for name, (_, sample) in self.histosamples.items():
+        if sample.type == SampleType.data:
           continue
         self.datacard += f" {name}"
     self.datacard += "\n"
@@ -415,12 +443,14 @@ class DatacardsProcessor:
     if self.do_abcd:
       self.datacard += " 0 1"
     else:
-      index = 0
-      for name in self.histosamples:
-        if name == "data_obs":
+      background_index = 1
+      for _, (_, sample) in self.histosamples.items():
+        if sample.type == SampleType.data:
           continue
+        index = 0 if sample.type == SampleType.signal else background_index
         self.datacard += f" {index}"
-        index += 1
+        if sample.type == SampleType.background:
+          background_index += 1
     self.datacard += "\n"
 
   def __add_rates(self):
@@ -430,7 +460,7 @@ class DatacardsProcessor:
 
     if self.do_abcd:
       for name, (hist, sample) in self.histosamples.items():
-        if "signal" in name:
+        if sample.type == SampleType.signal:
           abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=False)
           signal_rate, _, _, _, signal_rate_err, _, _, _ = abcd_values
           break
@@ -446,10 +476,13 @@ class DatacardsProcessor:
       else:
         rate, rate_err = a, a**0.5
 
+      if not math.isfinite(rate) or rate < 0 or not math.isfinite(rate_err):
+        raise ValueError("Invalid ABCD background rate or uncertainty")
       rate = rate if rate > 0 else 1e-99
       rate_err = 1 + rate_err / rate if rate > 0 else 1.0
 
-      signal_rate = signal_rate if signal_rate > 0 else 1e-99
+      if not math.isfinite(signal_rate_err) or signal_rate_err < 0:
+        raise ValueError("Invalid signal uncertainty in ABCD signal region")
       signal_rate_err = 1 + signal_rate_err / signal_rate if signal_rate > 0 else 1.0
 
       self.datacard += f" {signal_rate} {rate}"
@@ -457,13 +490,14 @@ class DatacardsProcessor:
       statistical_errors["bck"] = rate_err
     else:
       for name, (hist, sample) in self.histosamples.items():
-        if name == "data_obs":
-          statistical_errors[name] = None
+        if sample.type == SampleType.data:
           continue
 
         rate_err = c_double(0)
         rate = hist.hist.IntegralAndError(1, hist.hist.GetNbinsX(), rate_err)
 
+        if not math.isfinite(rate) or rate <= 0 or not math.isfinite(rate_err.value):
+          raise ValueError(f"{name}: invalid rate or uncertainty")
         self.datacard += f" {rate}"
         statistical_errors[name] = 1 + rate_err.value / rate
 
@@ -473,8 +507,6 @@ class DatacardsProcessor:
     for name, stat_error in statistical_errors.items():
       self.datacard += f"stat_err_{name} lnN\t"
       for name_, stat_error_ in statistical_errors.items():
-        if name_ == "data_obs":
-          continue
         if name_ == name:
           self.datacard += f" {stat_error_}"
         else:
@@ -484,23 +516,19 @@ class DatacardsProcessor:
   def __get_first_background_name(self):
     first_background_name = None
 
-    for name in self.histosamples:
-      if name == "data_obs":
-        continue
-
-      if "signal" not in name:
+    for name, (_, sample) in self.histosamples.items():
+      if sample.type == SampleType.background:
         first_background_name = name
         break
 
     return first_background_name
 
   def __add_nuisances(self, nuisances):
-
     first_background_name = self.__get_first_background_name()
 
     for param_name, values in nuisances.items():
       get_max_variation = False
-      for symmetric_variation in self.config.symmetric_variations:
+      for symmetric_variation in getattr(self.config, "symmetric_variations", ()):
         if symmetric_variation in param_name:
           get_max_variation = True
 
@@ -525,13 +553,13 @@ class DatacardsProcessor:
         self.datacard += f" {signal_unc} {bkg_unc}"
 
       else:
-        for name in self.histosamples:
-          if name == "data_obs":
+        for name, (_, sample) in self.histosamples.items():
+          if sample.type == SampleType.data:
             continue
 
           if name in values:
             self.datacard += f" {values[name]}"
-          elif "signal" in values and "signal" in name:
+          elif "signal" in values and sample.type == SampleType.signal:
             self.datacard += f" {values['signal']}"
           else:
             self.datacard += " -"
@@ -554,7 +582,7 @@ class DatacardsProcessor:
     return unc
 
   def __add_uncertainties_on_zero(self, hist):
-    for i in range(1, hist.GetNbinsX()):
+    for i in range(1, hist.GetNbinsX() + 1):
       if hist.GetBinContent(i) != 0:
         continue
       hist.SetBinError(i, 1.84)
@@ -563,18 +591,17 @@ class DatacardsProcessor:
 
   def __get_signal_hist(self):
     for name, (hist, sample) in self.histosamples.items():
-      if "signal" in name:
+      if sample.type == SampleType.signal:
         return hist.hist
 
     return None
 
   def __save_histograms(self, add_uncertainties_on_zero=False):
-
-    output_path = self.config.datacards_output_path + self.datacard_file_name
+    output_path = str(self.paths.datacards / self.datacard_file_name)
     output_file = ROOT.TFile(f"{output_path}.root", "recreate")
 
     for name, (hist, sample) in self.histosamples.items():
-      if add_uncertainties_on_zero and name == "data_obs":
+      if add_uncertainties_on_zero and sample.type == SampleType.data:
         hist.set_hist(self.__add_uncertainties_on_zero(hist.hist))
       hist.set_hist_name(name)
       hist.hist.Write()
@@ -583,7 +610,7 @@ class DatacardsProcessor:
     data_obs = self.histosamples["data_obs"][0].hist.Clone()
     signal_hist = self.__get_signal_hist()
 
-    if data_obs is not None and signal_hist is not None:
+    if self.do_abcd and data_obs is not None and signal_hist is not None:
       canvas = ROOT.TCanvas("canvas", "canvas", 200, 200)
 
       data_obs.SetLineColor(ROOT.kBlack)
@@ -598,12 +625,16 @@ class DatacardsProcessor:
       signal_hist.SetMarkerSize(0.2)
       signal_hist.SetMarkerColor(ROOT.kRed)
 
-      data_obs.DrawNormalized("BOX")
+      if data_obs.Integral() > 0:
+        data_obs.DrawNormalized("BOX")
+      else:
+        data_obs.Draw("BOX")
       signal_hist.DrawNormalized("SAME BOX")
 
       canvas.Update()
       canvas.Write()
-      plots_path = self.config.plots_output_path + self.datacard_file_name
+      plots_path = str(self.paths.diagnostics / self.datacard_file_name)
       canvas.SaveAs(f"{plots_path}.pdf")
+      canvas.Close()
 
     output_file.Close()

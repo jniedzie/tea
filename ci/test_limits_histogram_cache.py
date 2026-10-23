@@ -69,8 +69,7 @@ class LimitsHistogramCacheTest(unittest.TestCase):
     config = SimpleNamespace(
       histogram=histogram,
       samples=self.samples,
-      datacards_output_path=str(self.directory / "datacards"),
-      plots_output_path=str(self.directory / "plots"),
+      limits_output_path=self.directory,
     )
     managers = []
     for signal in self.samples[:2]:
