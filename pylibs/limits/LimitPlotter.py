@@ -54,13 +54,7 @@ def prepare_segments(points: Sequence[LimitPoint], options: PlotOptions) -> list
   return segments
 
 
-def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = None, plot_config: Any = None):
-  """Add limit content to TEA's shared graph presentation; return its ROOT canvas.
-
-  ``plot_config`` optionally supplies the same style/Legend/CmsLabel settings as
-  the normal histogram plotter. Importing this module still has no ROOT or I/O effects.
-  """
-  options = options or PlotOptions()
+def _validate_and_reference_values(points: Sequence[LimitPoint], options: PlotOptions) -> tuple:
   if options.reference not in (None, "r1", "nominal"):
     raise ValueError("reference must be None, 'r1', or 'nominal'")
   segments = prepare_segments(points, options)
@@ -86,8 +80,10 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
       low, high = (finite_number(value, "axis range") for value in bounds)
       if low >= high or (logarithmic and low <= 0):
         raise ValueError("Axis bounds must be increasing and positive for a logarithmic scale")
-  import ROOT
-  from GraphPlotter import draw_graphs
+  return segments, references
+
+
+def _presentation(points: Sequence[LimitPoint], options: PlotOptions, plot_config: Any) -> tuple:
   from Histogram import Histogram
   from CmsLabelsManager import CmsLabel
   from Legend import Legend
@@ -122,58 +118,75 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
   if plot_config is not None:
     vars(config).update(vars(plot_config))
     config.show_ratio_plots = False
-  graphs = []
-  handles = {}
-  for segment in segments:
-    for lower, upper, color, title in (
-      (0.025, 0.975, ROOT.TColor.GetColor("#ffcc00"), "95% expected"),
-      (0.16, 0.84, ROOT.TColor.GetColor("#228b22"), "68% expected"),
-    ):
-      graph = ROOT.TGraphAsymmErrors()
-      graph.SetFillColor(color)
-      graph.SetLineColor(color)
-      graph.SetLineWidth(6 if lower == 0.025 else 3)
-      graph.SetMarkerStyle(20)
-      for i, point in enumerate(segment):
-        median = point.expected[0.5]
-        graph.SetPoint(i, point.x, median)
-        graph.SetPointError(i, 0, 0, median - point.expected[lower], point.expected[upper] - median)
-      # Vertical asymmetric bars remain visible for isolated points, whose band has zero width.
-      graphs.append((graph, "Z" if len(segment) == 1 else "3"))
-      handles[title] = graph
-    for observed in (False, True):
-      if observed and not options.show_observed:
-        continue
-      # Missing observed values also break the observed curve.
-      groups, group = [], []
-      for point in segment:
-        if observed and point.observed is None:
-          if group:
-            groups.append(group)
-            group = []
-        else:
-          group.append(point)
-      if group:
-        groups.append(group)
-      for group in groups:
-        graph = ROOT.TGraph()
-        graph.SetLineColor(ROOT.kBlack)
-        graph.SetLineWidth(2)
-        graph.SetLineStyle(1 if observed else 2)
-        graph.SetMarkerStyle(20)
-        for i, point in enumerate(group):
-          graph.SetPoint(i, point.x, point.observed if observed else point.expected[0.5])
-        graphs.append((graph, "LP" if observed or len(group) == 1 else "L"))
-        handles["Observed" if observed else "Median expected"] = graph
-    if references:
+  return definition, config
+
+
+def _expected_bands(segment: Sequence[LimitPoint], graphs: list, handles: dict) -> None:
+  import ROOT
+
+  for lower, upper, color, title in (
+    (0.025, 0.975, ROOT.TColor.GetColor("#ffcc00"), "95% expected"),
+    (0.16, 0.84, ROOT.TColor.GetColor("#228b22"), "68% expected"),
+  ):
+    graph = ROOT.TGraphAsymmErrors()
+    graph.SetFillColor(color)
+    graph.SetLineColor(color)
+    graph.SetLineWidth(6 if lower == 0.025 else 3)
+    graph.SetMarkerStyle(20)
+    for i, point in enumerate(segment):
+      median = point.expected[0.5]
+      graph.SetPoint(i, point.x, median)
+      graph.SetPointError(i, 0, 0, median - point.expected[lower], point.expected[upper] - median)
+    # Vertical asymmetric bars remain visible for isolated points, whose band has zero width.
+    graphs.append((graph, "Z" if len(segment) == 1 else "3"))
+    handles[title] = graph
+
+
+def _limit_curves(segment: Sequence[LimitPoint], options: PlotOptions, graphs: list, handles: dict) -> None:
+  import ROOT
+
+  for observed in (False, True):
+    if observed and not options.show_observed:
+      continue
+    # Missing observed values also break the observed curve.
+    groups, group = [], []
+    for point in segment:
+      if observed and point.observed is None:
+        if group:
+          groups.append(group)
+          group = []
+      else:
+        group.append(point)
+    if group:
+      groups.append(group)
+    for group in groups:
       graph = ROOT.TGraph()
-      graph.SetLineColor(ROOT.kRed + 1)
+      graph.SetLineColor(ROOT.kBlack)
       graph.SetLineWidth(2)
-      graph.SetMarkerStyle(24)
-      for i, point in enumerate(segment):
-        graph.SetPoint(i, point.x, references[point.id])
-      graphs.append((graph, "P" if len(segment) == 1 else "L"))
-      handles["r = 1" if options.reference == "r1" else "Theory"] = graph
+      graph.SetLineStyle(1 if observed else 2)
+      graph.SetMarkerStyle(20)
+      for i, point in enumerate(group):
+        graph.SetPoint(i, point.x, point.observed if observed else point.expected[0.5])
+      graphs.append((graph, "LP" if observed or len(group) == 1 else "L"))
+      handles["Observed" if observed else "Median expected"] = graph
+
+
+def _reference_curve(
+  segment: Sequence[LimitPoint], references: Mapping[str, float], options: PlotOptions, graphs: list, handles: dict
+) -> None:
+  import ROOT
+
+  graph = ROOT.TGraph()
+  graph.SetLineColor(ROOT.kRed + 1)
+  graph.SetLineWidth(2)
+  graph.SetMarkerStyle(24)
+  for i, point in enumerate(segment):
+    graph.SetPoint(i, point.x, references[point.id])
+  graphs.append((graph, "P" if len(segment) == 1 else "L"))
+  handles["r = 1" if options.reference == "r1" else "Theory"] = graph
+
+
+def _legend_entries(handles: Mapping[str, Any], options: PlotOptions) -> list:
   entries = []
   reference_title = "r = 1" if options.reference == "r1" else "Theory"
   if reference_title in handles:
@@ -182,7 +195,28 @@ def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = N
   for title, style in (("Observed", "LP"), ("Median expected", "L"), ("68% expected", "F"), ("95% expected", "F")):
     if title in handles:
       entries.append((handles[title], title, style))
-  canvas = draw_graphs(graphs, definition, config, entries)
+  return entries
+
+
+def plot_limits(points: Sequence[LimitPoint], options: Optional[PlotOptions] = None, plot_config: Any = None):
+  """Add limit content to TEA's shared graph presentation; return its ROOT canvas.
+
+  ``plot_config`` optionally supplies the same style/Legend/CmsLabel settings as
+  the normal histogram plotter. Importing this module still has no ROOT or I/O effects.
+  """
+  options = options or PlotOptions()
+  segments, references = _validate_and_reference_values(points, options)
+  definition, config = _presentation(points, options, plot_config)
+  graphs, handles = [], {}
+  for segment in segments:
+    _expected_bands(segment, graphs, handles)
+    _limit_curves(segment, options, graphs, handles)
+    if references:
+      _reference_curve(segment, references, options, graphs, handles)
+
+  from GraphPlotter import draw_graphs
+
+  canvas = draw_graphs(graphs, definition, config, _legend_entries(handles, options))
   canvas._limit_objects = canvas._plot_objects
   canvas._limit_segments = segments
   return canvas

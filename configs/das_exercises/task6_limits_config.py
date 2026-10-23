@@ -1,6 +1,7 @@
 from Sample import Sample, SampleType
 from Histogram import Histogram
 from HistogramNormalizer import NormalizationType
+from LimitPlotter import PlotOptions
 
 # No need to change this path, you can use the pre-existing combine installation.
 combine_path = "/afs/cern.ch/work/j/jniedzie/public/combine/CMSSW_14_1_0_pre4/src/HiggsAnalysis/CombinedLimit/"
@@ -10,9 +11,7 @@ skip_combine = False
 
 # Definition of the input and output files and directories.
 file_name = "after_selections.root"
-datacards_output_path = "../limits/datacards/"
-plots_output_path = "../limits/plots/"
-results_output_path = "../limits/results/"
+limits_output_path = "../limits"
 
 # If True, poisson error on empty bins (1.84) will be added to data histograms. We can leave it False here.
 add_uncertainties_on_zero = False
@@ -29,16 +28,26 @@ include_shapes = True
 # (0.01 or 100 is still fine, but 1e-10 or 1e6 may cause problems).
 reference_cross_section = 1e-4
 
+# Define the complete point metadata alongside the scan parameters.
+signal_points = {
+  f"alp_{mass}_1e2": {
+    "id": f"alp_{mass}_1e2",
+    "x": mass,
+    "parameters": {"mass": mass, "ctau": 100.0},
+    "nominal_cross_section": reference_cross_section,
+  }
+  for mass in (1, 2, 12, 30, 60)
+}
+
 # Definition of signal and background samples.
 signal_samples = [
   Sample(
-    name=f"alp_{mass}_1e2",
-    file_path=f"../histograms/tta_mAlp-{mass}GeV_ctau-1e2mm/{file_name}",
+    name=name,
+    file_path=f"../histograms/tta_mAlp-{point['parameters']['mass']}GeV_ctau-1e2mm/{file_name}",
     type=SampleType.signal,
-    cross_section=reference_cross_section,
+    cross_section=point["nominal_cross_section"],
   )
-  # Here we define for which ALP masses we want to calculate limits.
-  for mass in [1, 2, 12, 30, 60]
+  for name, point in signal_points.items()
 ]
 
 background_samples = [
@@ -68,28 +77,15 @@ nuisances = {
   }
 }
 
-# Plotting parameters for the limit plot (brazil plot).
-x_min = 1.0
-x_max = 60.0
-
-y_min = 1e-6
-y_max = 1e-1
-
-x_title = "m_{a} [GeV]"
-y_title = "#sigma(pp #rightarrow t#bar{t}a) #times B(a #rightarrow #mu#mu) [pb]"
-
-
-# Explicit adapter for the legacy ALP text format; retain the lifetime in every identity.
-def point_adapter(name: str) -> dict:
-  import re
-
-  match = re.fullmatch(r"alp_([0-9p.]+)_(\S+)", name)
-  if not match:
-    raise ValueError(f"Unrecognized ALP point {name}")
-  mass, ctau = (float(value.replace("p", ".")) for value in match.groups())
-  return {
-    "id": name,
-    "x": mass,
-    "parameters": {"mass": mass, "ctau": ctau},
-    "nominal_cross_section": reference_cross_section,
-  }
+# Plotting parameters for the limit plot (Brazil plot).
+plot_options = PlotOptions(
+  x_title="m_{a} [GeV]",
+  y_title="#sigma(pp #rightarrow t#bar{t}a) #times B(a #rightarrow #mu#mu) [pb]",
+  x_range=(1.0, 60.0),
+  y_range=(1e-6, 1e-1),
+  log_x=True,
+  log_y=True,
+  quantity="cross_section",
+  reference="nominal",
+  luminosity=luminosity / 1000,
+)

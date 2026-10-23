@@ -1,4 +1,4 @@
-from Logger import warn, info, fatal
+from Logger import warn, fatal
 from Sample import Sample, SampleType
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from DatacardsProcessor import DatacardsProcessor
@@ -8,7 +8,6 @@ from ABCDHelper import ABCDHelper
 import ROOT
 
 import copy
-import os
 
 
 class HistogramsManager:
@@ -28,9 +27,6 @@ class HistogramsManager:
     self.backgrounds_included = any(sample.type == SampleType.background for sample in self.config.samples)
 
     self.histosamples = []
-
-    os.makedirs(self.config.datacards_output_path, exist_ok=True)
-    os.makedirs(self.config.plots_output_path, exist_ok=True)
 
   def addHistosample(self, hist, sample):
     file = self.__get_file(sample)
@@ -126,7 +122,7 @@ class HistogramsManager:
         rebin=self.config.rebin if hasattr(self.config, "rebin") else 1,
       )
 
-    sample = Sample(name="bkg", type=SampleType.background)
+    sample = Sample(name="data_obs", type=SampleType.data)
 
     hist.set_hist(backgrounds_sum_hist)
     # hist.setup(sample)

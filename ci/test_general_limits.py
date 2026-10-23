@@ -24,7 +24,7 @@ from LimitProducer import (  # noqa: E402
   save_limits,
   produce_significance,
 )
-from LimitConfig import load_config  # noqa: E402
+from LimitConfig import load_config, output_paths, result_path  # noqa: E402
 
 EXPECTED = dict(zip(QUANTILES, (1, 2, 3, 5, 8)))
 LOG = "\n".join(f"Expected {100 * q:5.1f}%: r < {v}" for q, v in EXPECTED.items())
@@ -50,21 +50,16 @@ assert 'Sample' not in sys.modules
 """
     subprocess.run([sys.executable, "-c", script], check=True)
 
-  def test_alp_legacy_and_expected_only(self):
-    config = load_config(str(REPO / "configs/examples/alp_limits_config.py"))
-    path = self.path / "alp.txt"
-    path.write_text("alp_12_1e2: ['9', '1', '2', '3', '5', '8']\nsignal_tta_mAlp-2p5GeV_ctau-1e2mm: [1, 2, 3, 5, 8]\n")
-    points = read_points(path, config.point_adapter)
-    self.assertEqual(points[0].parameters, {"mass": 12, "ctau": 100})
-    self.assertIsNone(points[1].observed)
-    self.assertEqual(config.plot_options.reference, "nominal")
-    self.assertEqual(points[0].nominal_cross_section, config.reference_cross_section)
-    scaled = prepare_segments(points, config.plot_options)[0]
-    self.assertEqual([p.x for p in scaled], [2.5, 12])
-    self.assertAlmostEqual(scaled[0].expected[0.84], 5e-4)
-    self.assertAlmostEqual(scaled[1].observed, 9e-4)
-    write_points(self.path / "points.json", points)
-    self.assertEqual(read_points(self.path / "points.json"), points)
+  def test_json_round_trip_and_legacy_rejection(self):
+    points = [
+      self.point(parameters={"mass": 12, "ctau": 100}, nominal_cross_section=1e-4),
+      LimitPoint(id="missing", x=2, status="unavailable"),
+    ]
+    path = self.path / "points.json"
+    write_points(path, points)
+    self.assertEqual(read_points(path), points)
+    path = self.path / "old.txt"
+    path.write_text("alp_12_100: [1, 2, 3, 5, 8]\n")
     with self.assertRaises(ValueError):
       read_points(path)
 
@@ -116,16 +111,15 @@ assert 'Sample' not in sys.modules
       signal_samples=[sample],
       signal_points={sample.name: identity},
       datacard_name=lambda sample: "explicit-card",
-      datacards_output_path=self.path,
+      limits_output_path=self.path,
     )
     with self.assertWarns(RuntimeWarning):
       self.assertEqual(get_limits(config)[0].status, "unavailable")
-    (self.path / "explicit-card.log").write_text(LOG)
+    (output_paths(config).datacards / "explicit-card.log").write_text(LOG)
     with self.assertWarns(RuntimeWarning):
       self.assertEqual(get_limits(config, {"explicit-card": 7})[0].status, "failed")
-    config.limits_output = self.path / "explicit.json"
     save_limits(config, [point])
-    self.assertTrue(config.limits_output.exists())
+    self.assertTrue(result_path(config).exists())
     with self.assertRaises(ValueError):
       get_datacard_file_name(SimpleNamespace(use_combined_limits=True), sample)
 
@@ -235,9 +229,7 @@ assert 'Sample' not in sys.modules
         sample.name: {"id": sample.name, "x": i, "parameters": {"mass": 100, "charge": i}}
         for i, sample in enumerate(samples[:2] + [missing], 1)
       },
-      datacards_output_path=self.path / "cards",
-      plots_output_path=self.path / "plots",
-      results_output_path=self.path / "results",
+      limits_output_path=self.path,
       include_shapes=True,
       luminosity=10,
       skip_combine=False,
@@ -247,7 +239,7 @@ assert 'Sample' not in sys.modules
 
     def fake_combine(config, names, *args):
       for name in names:
-        (config.datacards_output_path / (name + ".log")).write_text(LOG)
+        (output_paths(config).datacards / (name + ".log")).write_text(LOG)
       return {name: 0 for name in names}
 
     config_path = self.path / "limits_config.py"
@@ -262,23 +254,24 @@ assert 'Sample' not in sys.modules
           points = produce_limits(producer_config)
         self.assertIs(producer_config.samples, original_samples)
         self.assertEqual([point.status for point in points], ["ok", "no_sensitivity", "unavailable"])
-        card = producer_config.datacards_output_path / "datacard_observable_charged_A.txt"
+        card = output_paths(producer_config).datacards / "datacard_observable_charged_A.txt"
         text = card.read_text()
         self.assertIn("process signal not_a_signal_background", text)
         self.assertIn("model lnN 1.1 -", text)
         self.assertIn("rate 2.0 10.0", text)
         self.assertTrue(card.with_suffix(".root").exists())
-        self.assertFalse((producer_config.datacards_output_path / "datacard_observable_charged_B.txt").exists())
-        reread = read_points(producer_config.results_output_path / "limits_observable.json")
+        self.assertFalse((output_paths(producer_config).datacards / "datacard_observable_charged_B.txt").exists())
+        reread = read_points(result_path(producer_config))
         self.assertEqual(reread, points)
 
   def test_significance_collect_only_never_launches(self):
-    (self.path / "card.txt").write_text("existing card")
-    (self.path / "card.log").write_text("Significance: 2.75\n")
+    (self.path / "datacards").mkdir()
+    (self.path / "datacards/card.txt").write_text("existing card")
+    (self.path / "datacards/card.log").write_text("Significance: 2.75\n")
     config = SimpleNamespace(
       data_samples=[SimpleNamespace(name="observation")],
       datacard_name=lambda sample: "card",
-      datacards_output_path=self.path,
+      limits_output_path=self.path,
       skip_combine=False,
     )
     with patch("LimitProducer.run_combine") as run:
@@ -286,10 +279,12 @@ assert 'Sample' not in sys.modules
       run.assert_not_called()
 
   def test_command_failure_isolated_outputs_and_stale_logs(self):
+    self.path = self.path / "datacards"
+    self.path.mkdir()
     for name in ("one", "two"):
       (self.path / (name + ".txt")).write_text("fake card")
       (self.path / (name + ".log")).write_text(LOG)
-    config = SimpleNamespace(datacards_output_path=self.path, combine_setup="true", blind=True)
+    config = SimpleNamespace(limits_output_path=self.path.parent, combine_setup="true", blind=True)
     with patch("LimitProducer.subprocess.run", return_value=SimpleNamespace(returncode=9)) as run:
       codes = run_combine(config, ["one", "two"])
     self.assertEqual(codes, {"one": 9, "two": 9})

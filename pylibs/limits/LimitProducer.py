@@ -11,15 +11,13 @@ import subprocess
 import warnings
 
 from LimitPoint import LimitPoint, validate_collection, write_points
-from LimitConfig import output_stem
+from LimitConfig import output_paths, result_path
 
 
 def point_for_sample(config, sample) -> Mapping:
   """The config owns coordinates and normalization; never infer either from a sample name."""
   if hasattr(config, "point_for_sample"):
     fields = dict(config.point_for_sample(sample))
-  elif hasattr(config, "point_adapter"):
-    fields = dict(config.point_adapter(sample.name))
   else:
     fields = dict(config.signal_points[sample.name])
   fields.setdefault("id", sample.name)
@@ -88,7 +86,7 @@ def run_combine(config, names: list, method: str = "AsymptoticLimits", condor: b
   """Run isolated per-card commands, returning exit codes. Failed attempts never expose old logs."""
   if not re.fullmatch(r"[A-Za-z0-9_]+", method):
     raise ValueError("Invalid Combine method")
-  directory = Path(config.datacards_output_path).resolve()
+  directory = output_paths(config).datacards
   setup = find_combine(config)
   commands = []
   for name in names:
@@ -168,7 +166,7 @@ def get_limits(config, return_codes: Optional[Mapping] = None, statuses: Optiona
       point = LimitPoint(**identity, status="failed", message=f"Combine exit code {return_codes.get(name, 'unknown')}")
     else:
       try:
-        text = (Path(config.datacards_output_path) / f"{name}.log").read_text()
+        text = (output_paths(config).datacards / f"{name}.log").read_text()
         point = parse_combine_output(text, identity, getattr(config, "blind", False))
       except FileNotFoundError:
         point = LimitPoint(**identity, status="unavailable", message="Combine log not found")
@@ -181,11 +179,7 @@ def get_limits(config, return_codes: Optional[Mapping] = None, statuses: Optiona
 
 
 def save_limits(config, points=None) -> Path:
-  path = (
-    Path(config.limits_output)
-    if hasattr(config, "limits_output")
-    else (Path(config.results_output_path) / (output_stem(config) + ".json"))
-  )
+  path = result_path(config)
   write_points(path, get_limits(config) if points is None else points)
   return path
 
@@ -253,7 +247,7 @@ def produce_significance(config, condor: bool = False, collect_only: bool = Fals
   names = [get_datacard_file_name(config, sample) for sample in samples]
   if len(names) != len(set(names)):
     raise ValueError("Significance card names collide")
-  missing = [name for name in names if not (Path(config.datacards_output_path) / (name + ".txt")).exists()]
+  missing = [name for name in names if not (output_paths(config).datacards / (name + ".txt")).exists()]
   if missing:
     raise ValueError(f"Significance requires existing datacards: {missing}")
   codes = (
@@ -265,7 +259,7 @@ def produce_significance(config, condor: bool = False, collect_only: bool = Fals
   for sample, name in zip(samples, names):
     if codes is not None and codes[name] != 0:
       raise RuntimeError(f"Significance failed for {sample.name}: exit {codes[name]}")
-    text = (Path(config.datacards_output_path) / (name + ".log")).read_text()
+    text = (output_paths(config).datacards / (name + ".log")).read_text()
     match = re.search(r"Significance:\s*(\S+)", text)
     if not match:
       raise ValueError(f"No significance found for {sample.name}")

@@ -1,11 +1,11 @@
-"""Explicit configuration loading and presentation compatibility helpers."""
+"""Shared configuration loading, input selection and limits output paths."""
 
+from dataclasses import dataclass
 import importlib
 import importlib.util
 from pathlib import Path
 from types import ModuleType
 from typing import Any
-from LimitPlotter import PlotOptions
 
 
 def load_config(name: str) -> ModuleType:
@@ -18,26 +18,53 @@ def load_config(name: str) -> ModuleType:
   return importlib.import_module(name)
 
 
+@dataclass(frozen=True)
+class OutputPaths:
+  root: Path
+  datacards: Path
+  results: Path
+  diagnostics: Path
+  plots: Path
+
+
+def output_paths(config: Any) -> OutputPaths:
+  root = getattr(config, "limits_output_path", None)
+  if root is None or not str(root).strip():
+    raise ValueError("Set limits_output_path explicitly in the limits configuration")
+  root = Path(root).expanduser().resolve()
+  paths = OutputPaths(root, root / "datacards", root / "limit_results", root / "diagnostic_plots", root / "limit_plots")
+  for directory in (paths.datacards, paths.results, paths.diagnostics, paths.plots):
+    directory.mkdir(parents=True, exist_ok=True)
+  return paths
+
+
 def output_stem(config: Any) -> str:
-  stem = "limits_" + config.histogram.getName()
-  if getattr(config, "do_abcd", False):
-    stem += "_ABCD" + ("pred" if config.use_abcd_prediction else "real")
-  return stem
+  if hasattr(config, "histogram"):
+    stem = "limits_" + config.histogram.getName()
+    if getattr(config, "do_abcd", False):
+      stem += "_ABCD" + ("pred" if config.use_abcd_prediction else "real")
+    return stem
+  if getattr(config, "limits_input", None) is not None:
+    return Path(config.limits_input).stem
+  return "limits"
 
 
-def plot_options(config: Any) -> PlotOptions:
-  if hasattr(config, "plot_options"):
-    return config.plot_options
-  # Compatibility for old flat ALP presentation configs; names/coordinates still require an adapter.
-  return PlotOptions(
-    x_title=getattr(config, "x_title", "x"),
-    y_title=getattr(config, "y_title", "95% CL upper limit on r"),
-    x_range=(config.x_min, config.x_max) if hasattr(config, "x_min") else None,
-    y_range=(config.y_min, config.y_max) if hasattr(config, "y_min") else None,
-    log_x=getattr(config, "log_x", True),
-    log_y=getattr(config, "log_y", True),
-    luminosity=config.luminosity / 1000 if hasattr(config, "luminosity") else None,
-    quantity="cross_section" if hasattr(config, "reference_cross_section") else "r",
-    constant_scale=getattr(config, "reference_cross_section", None),
-    show_observed=getattr(config, "show_observed", False),
-  )
+def result_path(config: Any) -> Path:
+  return output_paths(config).results / (output_stem(config) + ".json")
+
+
+def plot_inputs(config: Any) -> list:
+  from LimitPoint import read_points, validate_collection
+
+  inline = getattr(config, "limit_points", None)
+  path = getattr(config, "limits_input", None)
+  if inline is not None and path is not None:
+    raise ValueError("Specify either limit_points or limits_input, not both")
+  if inline is not None:
+    return validate_collection(inline)
+  return read_points(path if path is not None else result_path(config))
+
+
+def plot_paths(config: Any) -> list[Path]:
+  formats = getattr(config, "output_formats", ("pdf",))
+  return [output_paths(config).plots / f"{output_stem(config)}.{extension.lstrip('.')}" for extension in formats]

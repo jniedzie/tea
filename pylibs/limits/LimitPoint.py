@@ -1,11 +1,10 @@
 """Validated, analysis-independent limit records and explicit input adapters."""
 
 from dataclasses import dataclass, field, replace, asdict
-import ast
 import json
 import math
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional
 
 QUANTILES = (0.025, 0.16, 0.5, 0.84, 0.975)
 STATUSES = {"ok", "unavailable", "failed", "no_sensitivity"}
@@ -90,36 +89,11 @@ def scale_point(point: LimitPoint, quantity: str = "r", constant_scale: Optional
   )
 
 
-def read_points(path: Path, point_adapter: Optional[Callable] = None) -> list:
-  """Read JSON records, or old ``name: [obs, five expected]`` text with an explicit adapter.
-
-  The adapter receives the complete legacy name and returns id/x/parameters/metadata/nominal fields.
-  Five positional values mean expected-only; six mean observed then expected. New JSON is always labeled.
-  """
-  path = Path(path)
-  if path.suffix == ".json":
-    document = json.loads(path.read_text())
-    records = document["points"] if isinstance(document, dict) else document
-    return validate_collection(LimitPoint(**record) for record in records)
-  if point_adapter is None:
-    raise ValueError("Legacy text requires config.point_adapter(name); no signal-name inference is performed")
-  points = []
-  for number, line in enumerate(path.read_text().splitlines(), 1):
-    if not line.strip():
-      continue
-    name, separator, raw = line.partition(":")
-    if not separator:
-      raise ValueError(f"{path}:{number}: missing ':'")
-    values = ast.literal_eval(raw.strip())
-    if not isinstance(values, (list, tuple)) or len(values) not in (5, 6):
-      raise ValueError(f"{path}:{number}: expected five quantiles, optionally preceded by observed")
-    identity = {"id": name.strip(), **point_adapter(name.strip())}
-    points.append(
-      LimitPoint(
-        **identity, expected=dict(zip(QUANTILES, values[-5:])), observed=values[0] if len(values) == 6 else None
-      )
-    )
-  return validate_collection(points)
+def read_points(path: Path) -> list:
+  """Read labeled JSON records; positional text inputs are not supported."""
+  document = json.loads(Path(path).read_text())
+  records = document["points"] if isinstance(document, dict) else document
+  return validate_collection(LimitPoint(**record) for record in records)
 
 
 def write_points(path: Path, points: Iterable[LimitPoint]) -> None:

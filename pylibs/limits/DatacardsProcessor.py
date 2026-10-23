@@ -8,6 +8,8 @@ from Logger import error, warn, info
 from ABCDHelper import ABCDHelper
 from HistogramNormalizer import HistogramNormalizer, NormalizationType
 from Histogram import Histogram2D
+from Sample import Sample, SampleType
+from LimitConfig import output_paths
 
 
 class NoSensitivityError(ValueError):
@@ -17,6 +19,7 @@ class NoSensitivityError(ValueError):
 class DatacardsProcessor:
   def __init__(self, config, datacard_file_name):
     self.config = config
+    self.paths = output_paths(config)
     self.datacard_file_name = datacard_file_name
 
     self.datacard = None
@@ -41,9 +44,9 @@ class DatacardsProcessor:
     self.histosamples = {}
     if signal_histosample is None:
       raise NoSensitivityError("Signal histogram is absent or empty")
-    if obs_histosample is None or type(obs_histosample[0]) == ROOT.TObject:
+    if obs_histosample is None or type(obs_histosample[0]) is ROOT.TObject:
       raise ValueError("Observation histogram is absent")
-    if type(signal_histosample[0]) == ROOT.TObject:
+    if type(signal_histosample[0]) is ROOT.TObject:
       raise ValueError("Signal is not a histogram")
     signal_yield = signal_histosample[0].hist.Integral()
     if not math.isfinite(signal_yield) or signal_yield < 0:
@@ -61,14 +64,16 @@ class DatacardsProcessor:
 
     n_backgrounds = len(bkg_histosamples)
     n_backgrounds = self.__remove_empty_histograms(n_backgrounds)
-    self.background_names = [name for name in self.histosamples if name not in ("signal", "data_obs")]
+    self.background_names = [
+      name for name, (_, sample) in self.histosamples.items() if sample.type == SampleType.background
+    ]
     if n_backgrounds == 0:
       self.histosamples["background_dummy"] = self.__get_dummy_histogram()
       n_backgrounds = 1
       self.background_names = ["background_dummy"]
 
     # Combine assigns the first process index 0 to the canonical signal.
-    self.histosamples = dict(sorted(self.histosamples.items(), key=lambda x: x[0] != "signal"))
+    self.histosamples = dict(sorted(self.histosamples.items(), key=lambda item: item[1][1].type != SampleType.signal))
 
     nuisances_for_sample = deepcopy(nuisances)
     signal_name = signal_histosample[1].name
@@ -111,7 +116,7 @@ class DatacardsProcessor:
     self.__add_rates()
     self.__add_nuisances(nuisances_updated)
 
-    datacards_path = str(Path(self.config.datacards_output_path) / (self.datacard_file_name + ".txt"))
+    datacards_path = str(self.paths.datacards / (self.datacard_file_name + ".txt"))
     info(f"Storing datacard in {datacards_path}")
     Path(datacards_path).parent.mkdir(parents=True, exist_ok=True)
     with open(datacards_path, "w") as outfile:
@@ -130,14 +135,13 @@ class DatacardsProcessor:
 
   def __remove_empty_histograms(self, n_backgrounds):
     to_remove = []
-    for name, (hist, _) in self.histosamples.items():
+    for name, (hist, sample) in self.histosamples.items():
       rate = hist.hist.Integral()
       if not math.isfinite(rate) or rate < 0:
         raise ValueError(f"{name}: invalid histogram yield {rate}")
-      if rate == 0 and name not in ("data_obs", "signal"):
+      if rate == 0 and sample.type == SampleType.background:
         to_remove.append(name)
-        if name != "signal":
-          n_backgrounds -= 1
+        n_backgrounds -= 1
 
     for name in to_remove:
       del self.histosamples[name]
@@ -215,7 +219,7 @@ class DatacardsProcessor:
     prediction = self.abcd_helper.get_prediction(b, c, d, 0, 0, 0)[0]
     closure = -1
     if a == 0:
-      warn(f"region a is equal to 0! TODO: fix!")
+      warn("region a is equal to 0! TODO: fix!")
     else:
       closure = abs(prediction - a) / a
 
@@ -230,7 +234,7 @@ class DatacardsProcessor:
     nuisances_updated = {}
 
     if "abcd_unc" not in nuisances:
-      info(f"abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
+      info("abcd_unc not in list of nuisances - will not add any ABCD uncertainty")
       return nuisances_updated
 
     max_rel_unc = -1
@@ -353,7 +357,7 @@ class DatacardsProcessor:
       y_rebin=self.config.rebin_2D,
     )
     histogram.set_hist(hist)
-    self.histosamples[histosample_name] = (histogram, sample)
+    self.histosamples[histosample_name] = (histogram, Sample(name=histosample_name, type=SampleType.background))
 
   def __insert_background_sum_hist_for_shifted_points(self):
     abcd_point_xup = (self.config.abcd_point[0] + 1, self.config.abcd_point[1])
@@ -366,7 +370,8 @@ class DatacardsProcessor:
     self.__insert_background_sum_hist(abcd_point_ydown, "bkg_ydown")
 
   def __get_dummy_histogram(self):
-    hist, sample = deepcopy(self.histosamples["signal"])
+    hist = deepcopy(next(hist for hist, sample in self.histosamples.values() if sample.type == SampleType.signal))
+    sample = Sample(name="background_dummy", type=SampleType.background)
     hist.hist.Reset()
     for i in range(1, hist.hist.GetNcells()):
       hist.hist.SetBinContent(i, 1e-99)
@@ -418,8 +423,8 @@ class DatacardsProcessor:
     if self.do_abcd:
       self.datacard += " bin1  bin1"
     else:
-      for name in self.histosamples:
-        if name == "data_obs":
+      for name, (_, sample) in self.histosamples.items():
+        if sample.type == SampleType.data:
           continue
         self.datacard += " bin1"
     self.datacard += "\n"
@@ -428,8 +433,8 @@ class DatacardsProcessor:
     if self.do_abcd:
       self.datacard += " signal bkg"
     else:
-      for name in self.histosamples:
-        if name == "data_obs":
+      for name, (_, sample) in self.histosamples.items():
+        if sample.type == SampleType.data:
           continue
         self.datacard += f" {name}"
     self.datacard += "\n"
@@ -438,12 +443,14 @@ class DatacardsProcessor:
     if self.do_abcd:
       self.datacard += " 0 1"
     else:
-      index = 0
-      for name in self.histosamples:
-        if name == "data_obs":
+      background_index = 1
+      for _, (_, sample) in self.histosamples.items():
+        if sample.type == SampleType.data:
           continue
+        index = 0 if sample.type == SampleType.signal else background_index
         self.datacard += f" {index}"
-        index += 1
+        if sample.type == SampleType.background:
+          background_index += 1
     self.datacard += "\n"
 
   def __add_rates(self):
@@ -453,7 +460,7 @@ class DatacardsProcessor:
 
     if self.do_abcd:
       for name, (hist, sample) in self.histosamples.items():
-        if name == "signal":
+        if sample.type == SampleType.signal:
           abcd_values = self.abcd_helper.get_abcd(hist.hist, self.config.abcd_point, raw_errors=False)
           signal_rate, _, _, _, signal_rate_err, _, _, _ = abcd_values
           break
@@ -483,8 +490,7 @@ class DatacardsProcessor:
       statistical_errors["bck"] = rate_err
     else:
       for name, (hist, sample) in self.histosamples.items():
-        if name == "data_obs":
-          statistical_errors[name] = None
+        if sample.type == SampleType.data:
           continue
 
         rate_err = c_double(0)
@@ -499,12 +505,8 @@ class DatacardsProcessor:
 
     # add a row with statistical errors
     for name, stat_error in statistical_errors.items():
-      if name == "data_obs":
-        continue
       self.datacard += f"stat_err_{name} lnN\t"
       for name_, stat_error_ in statistical_errors.items():
-        if name_ == "data_obs":
-          continue
         if name_ == name:
           self.datacard += f" {stat_error_}"
         else:
@@ -514,11 +516,8 @@ class DatacardsProcessor:
   def __get_first_background_name(self):
     first_background_name = None
 
-    for name in self.histosamples:
-      if name == "data_obs":
-        continue
-
-      if name != "signal":
+    for name, (_, sample) in self.histosamples.items():
+      if sample.type == SampleType.background:
         first_background_name = name
         break
 
@@ -554,13 +553,13 @@ class DatacardsProcessor:
         self.datacard += f" {signal_unc} {bkg_unc}"
 
       else:
-        for name in self.histosamples:
-          if name == "data_obs":
+        for name, (_, sample) in self.histosamples.items():
+          if sample.type == SampleType.data:
             continue
 
           if name in values:
             self.datacard += f" {values[name]}"
-          elif "signal" in values and name == "signal":
+          elif "signal" in values and sample.type == SampleType.signal:
             self.datacard += f" {values['signal']}"
           else:
             self.datacard += " -"
@@ -592,17 +591,17 @@ class DatacardsProcessor:
 
   def __get_signal_hist(self):
     for name, (hist, sample) in self.histosamples.items():
-      if name == "signal":
+      if sample.type == SampleType.signal:
         return hist.hist
 
     return None
 
   def __save_histograms(self, add_uncertainties_on_zero=False):
-    output_path = str(Path(self.config.datacards_output_path) / self.datacard_file_name)
+    output_path = str(self.paths.datacards / self.datacard_file_name)
     output_file = ROOT.TFile(f"{output_path}.root", "recreate")
 
     for name, (hist, sample) in self.histosamples.items():
-      if add_uncertainties_on_zero and name == "data_obs":
+      if add_uncertainties_on_zero and sample.type == SampleType.data:
         hist.set_hist(self.__add_uncertainties_on_zero(hist.hist))
       hist.set_hist_name(name)
       hist.hist.Write()
@@ -626,12 +625,16 @@ class DatacardsProcessor:
       signal_hist.SetMarkerSize(0.2)
       signal_hist.SetMarkerColor(ROOT.kRed)
 
-      data_obs.DrawNormalized("BOX")
+      if data_obs.Integral() > 0:
+        data_obs.DrawNormalized("BOX")
+      else:
+        data_obs.Draw("BOX")
       signal_hist.DrawNormalized("SAME BOX")
 
       canvas.Update()
       canvas.Write()
-      plots_path = str(Path(self.config.plots_output_path) / self.datacard_file_name)
+      plots_path = str(self.paths.diagnostics / self.datacard_file_name)
       canvas.SaveAs(f"{plots_path}.pdf")
+      canvas.Close()
 
     output_file.Close()
