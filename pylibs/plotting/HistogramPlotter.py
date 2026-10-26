@@ -664,6 +664,7 @@ class HistogramPlotter:
         frame.SetFillColor(0)
         frame.SetFillStyle(0)
         pad.RedrawAxis()
+        self.styler.drawDeLoggifiedXAxis(hist, pad, show_labels=pad_index == pad_count)
       for output_format in self.output_formats:
         path = self.config.output_path + "/" + hist.getName() + "." + output_format
         save_canvas(canvas, path)
@@ -728,6 +729,7 @@ class HistogramPlotter:
       self.__drawLegends(canvas, hist_nom)
       self.cmsLabelsManager.drawLabels(canvas.GetPad(1), update=False)
 
+      self.styler.drawDeLoggifiedXAxis(hist_nom, canvas.GetPad(1))
       path = self.config.output_path + "/" + hist_nom.getName() + ".pdf"
       save_canvas(canvas, path)
 

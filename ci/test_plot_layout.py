@@ -454,7 +454,7 @@ class PlotLayoutTest(unittest.TestCase):
 
   def test_tall_mass_legend_extends_x_without_extreme_log_y(self):
     source = self.source([0, 1, 2, 4, 6, 8, 10], [1e8, 3e8, 1e9, 4e8, 2e8, 1e8])
-    spec = Histogram("mass", log_y=True, x_max=10, allow_legend_x_extension=True, x_label="m_{#mu#mu} [GeV]")
+    spec = Histogram("mass", log_y=True, x_label="m_{#mu#mu} [GeV]")
     _, pad, stack, legend = self.draw(source, spec, with_legend=True, legend_box=(0.58, 0.20, 0.90, 0.90))
     self.assertGreater(pad.GetUxmax(), 15)
     self.assertLess(pad.GetUymax() - pad.GetUymin(), 5)
@@ -466,6 +466,31 @@ class PlotLayoutTest(unittest.TestCase):
     pad.Update()
     for actual, expected in zip((pad.GetUxmin(), pad.GetUxmax(), pad.GetUymin(), pad.GetUymax()), ranges):
       self.assertAlmostEqual(actual, expected, places=6)
+
+  def test_explicit_x_bounds_stay_fixed_with_legend_extension_enabled(self):
+    for x_min, x_max in ((None, 200), (0, None), (0, 200)):
+      for log_y in (False, True):
+        for with_legend in (False, True):
+          with self.subTest(x_min=x_min, x_max=x_max, log_y=log_y, with_legend=with_legend):
+            source = self.source([0, 40, 80, 120, 160, 200], [1e8, 3e8, 1e9, 4e8, 2e8])
+            spec = Histogram(
+              "fixed_mass", log_y=log_y, x_min=x_min, x_max=x_max, allow_legend_x_extension=True
+            )
+            legend_box = (0.58, 0.60, 0.90, 0.90) if x_max is not None else (0.16, 0.60, 0.48, 0.90)
+            _, pad, stack, legend = self.draw(source, spec, with_legend=with_legend, legend_box=legend_box)
+            # Repeated layout passes must also preserve each explicit endpoint.
+            for attempt in range(2):
+              if x_min is None:
+                self.assertLess(pad.GetUxmin(), 0)
+              else:
+                self.assertAlmostEqual(pad.GetUxmin(), x_min)
+              if x_max is None:
+                self.assertGreater(pad.GetUxmax(), 200)
+              else:
+                self.assertAlmostEqual(pad.GetUxmax(), x_max)
+              if legend:
+                self.assert_legend_clear(pad, source, legend)
+                self.styler.adjustAxesForLegend(stack, spec, [source], [legend], pad)
 
   def test_empty_histogram_loading_does_not_invent_tiny_positive_bins(self):
     source = ROOT.TH1D("empty_source_%d" % next(self.identifiers), "", 10, 0, 10)
@@ -695,6 +720,71 @@ class PlotLayoutTest(unittest.TestCase):
           dark_pixels = lambda region: sum(max(pixel) < 220 for pixel in region.getdata())
           self.assertGreater(dark_pixels(legends), 100, spec.name + " legends")
           self.assertGreater(dark_pixels(header), 100, spec.name + " header")
+
+  def test_de_loggified_axis_exports_without_changing_histograms(self):
+    def snapshot(source):
+      bins = source.GetNbinsX()
+      return (
+        tuple(source.GetBinLowEdge(i) for i in range(1, bins + 2)),
+        tuple((source.GetBinContent(i), source.GetBinError(i)) for i in range(bins + 2)),
+        source.GetEntries(),
+      )
+
+    for enabled, log_y, ratios in ((False, False, False), (True, False, False), (True, True, False), (True, True, True)):
+      with self.subTest(enabled=enabled, log_y=log_y, ratios=ratios), tempfile.TemporaryDirectory() as directory:
+        spec = Histogram(
+          "physical_axis_%d" % next(self.identifiers), norm_type=NormalizationType.none,
+          log_y=log_y, x_min=-0.7, x_max=3.2, x_label="m_{#mu#mu} (GeV)", y_label="dimuons",
+          de_loggify_x_axis=enabled,
+        )
+        samples = [Sample(name="background", type=SampleType.background)]
+        if ratios:
+          samples.append(Sample(name="data", type=SampleType.data))
+        config = SimpleNamespace(
+          histograms=[spec], samples=samples, output_path=directory, canvas_size=(800, 600),
+          show_ratio_plots=ratios, output_formats=["pdf"],
+          plotting_options={SampleType.background: "hist", SampleType.signal: "nostack hist", SampleType.data: "nostack e"},
+        )
+        plotter = HistogramPlotter(config)
+        sources = []
+        for sample in samples:
+          source = self.source([-1, 0, 1, 2, 4], [2, 7, 4, 1])
+          source.SetBinContent(0, 3)
+          source.SetBinContent(5, 6)
+          histogram = Histogram(spec.name, norm_type=NormalizationType.none)
+          histogram.set_hist(source)
+          plotter.histosamples.append((histogram, sample))
+          sources.append(source)
+        plotter.setupLegends()
+        plotter.buildStacks()
+        before = [snapshot(source) for source in sources]
+        plotter.drawStacks()
+        self.assertEqual(before, [snapshot(source) for source in sources])
+        canvas = ROOT.gROOT.FindObject(spec.name)
+        self.canvases.append(canvas)
+        self.objects.append(plotter)
+        for index in range(1, 3 if ratios else 2):
+          pad = canvas.GetPad(index)
+          axes = [item for item in pad.GetListOfPrimitives() if item.InheritsFrom("TGaxis")]
+          self.assertEqual(len(axes), 2 if enabled else 0)
+          for axis in axes:
+            self.assertAlmostEqual(axis.GetX1(), -0.7)
+            self.assertAlmostEqual(axis.GetX2(), 3.2)
+            self.assertAlmostEqual(axis.GetWmin(), 10 ** -0.7)
+            self.assertAlmostEqual(axis.GetWmax(), 10 ** 3.2)
+          if enabled:
+            self.assertAlmostEqual(pad.YtoPad(axes[0].GetY1()), pad.GetUymin())
+            self.assertAlmostEqual(pad.YtoPad(axes[1].GetY1()), pad.GetUymax())
+        if enabled and shutil.which("pdftotext"):
+          text = subprocess.check_output(["pdftotext", str(Path(directory) / (spec.name + ".pdf")), "-"], text=True)
+          for label in ("1", "10", "100", "1000"):
+            self.assertIn(label, text.split())
+
+  def test_de_loggified_axis_rejects_incompatible_coordinates(self):
+    with self.assertRaisesRegex(ValueError, "log_x=False"):
+      Histogram("double_log", log_x=True, de_loggify_x_axis=True)
+    with self.assertRaisesRegex(ValueError, "bin_labels"):
+      Histogram("categories", bin_labels={1: "one"}, de_loggify_x_axis=True)
 
 
 if __name__ == "__main__":

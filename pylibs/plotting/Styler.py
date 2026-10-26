@@ -508,6 +508,28 @@ class Styler:
       maximum = self.__addTopLabelClearance(minimum, maximum)
     return minimum, maximum
 
+  def drawDeLoggifiedXAxis(self, hist, pad, show_labels=True):
+    """Overlay physical-value ticks on a frame whose coordinates are log10(x)."""
+    if not hist.de_loggify_x_axis:
+      return
+    if hist.log_x or pad.GetLogx():
+      raise ValueError("de_loggify_x_axis requires log_x=False")
+    pad.cd()
+    pad.Update()
+    xmin, xmax = pad.GetUxmin(), pad.GetUxmax()
+    # TGaxis takes physical y coordinates even when the pad stores log10(y).
+    for y, options in ((pad.GetUymin(), "G" if show_labels else "GU"), (pad.GetUymax(), "G-U")):
+      y = pad.PadtoY(y)
+      axis = ROOT.TGaxis(xmin, y, xmax, y, 10.0 ** xmin, 10.0 ** xmax, 510, options)
+      axis.SetLabelFont(43)
+      axis.SetLabelSize(self.labelFontSize)
+      axis.SetLabelOffset(0.007)
+      axis.SetNoExponent(True)
+      # The pad owns these axes, including after its Python proxy is released.
+      axis.SetBit(ROOT.TObject.kCanDelete)
+      ROOT.SetOwnership(axis, False)
+      axis.Draw()
+
   def setupFigure(self, plot, hist, is_ratio=False, source_histograms=None, error_histograms=None):
     if plot is None or type(plot) is TObject:
       return
@@ -554,6 +576,9 @@ class Styler:
 
       x_axis.SetTitleSize(self.labelFontSize)
       x_axis.SetLabelSize(self.labelFontSize)
+      if hist.de_loggify_x_axis:
+        x_axis.SetLabelSize(0)
+        x_axis.SetTickLength(0)
       if has_categorical_labels:
         # Draw these at their original data coordinates after range selection.
         x_axis.SetLabelSize(0)
@@ -629,8 +654,7 @@ class Styler:
       return
 
     # Expand toward the legend horizontally, or leave room above the filled
-    # distributions vertically. Fixed endpoints stay fixed unless the
-    # histogram explicitly permits display-only X extension.
+    # distributions vertically. Explicit endpoints always stay fixed.
     legend_x_center = sum((box[0] + box[2]) / 2 for box in legend_boxes) / len(legend_boxes)
     grow_x_upper = legend_x_center >= (left + right) / 2
 
@@ -640,8 +664,6 @@ class Styler:
     # for a legend; a tall legend needs horizontal whitespace instead.
     y_extension_penalty = 1.75 if hist.log_y else 1.25
     x_range_is_fixed = hist.x_max is not None if grow_x_upper else hist.x_min is not None
-    if getattr(hist, "allow_legend_x_extension", False):
-      x_range_is_fixed = False
     x_extensions = (0.0,) if x_range_is_fixed else extensions
     transform_y = math.log10 if hist.log_y else lambda value: value
     low, high = transform_y(y_min), transform_y(y_max)
