@@ -245,9 +245,7 @@ class PlotLayoutTest(unittest.TestCase):
         self.assertGreater(canvas.GetPad(1).GetUxmax(), 6)
 
   def test_ratio_x_range_includes_final_legend_extension(self):
-    spec = Histogram(
-      "ratio_legend_%d" % next(self.identifiers), log_y=True, x_min=0, x_max=10, allow_legend_x_extension=True
-    )
+    spec = Histogram("ratio_legend_%d" % next(self.identifiers), log_y=True, x_min=0)
     background = self.source([0, 2, 4, 6, 8, 10], [1, 4, 10, 100, 1000])
     data = self.source([0, 2, 4, 6, 8, 10], [1, 4, 10, 100, 1000])
     canvas = self.export_ratio_plot(spec, background, data, legend_box=(0.58, 0.20, 0.90, 0.90))
@@ -473,9 +471,7 @@ class PlotLayoutTest(unittest.TestCase):
         for with_legend in (False, True):
           with self.subTest(x_min=x_min, x_max=x_max, log_y=log_y, with_legend=with_legend):
             source = self.source([0, 40, 80, 120, 160, 200], [1e8, 3e8, 1e9, 4e8, 2e8])
-            spec = Histogram(
-              "fixed_mass", log_y=log_y, x_min=x_min, x_max=x_max, allow_legend_x_extension=True
-            )
+            spec = Histogram("fixed_mass", log_y=log_y, x_min=x_min, x_max=x_max, allow_legend_x_extension=True)
             legend_box = (0.58, 0.60, 0.90, 0.90) if x_max is not None else (0.16, 0.60, 0.48, 0.90)
             _, pad, stack, legend = self.draw(source, spec, with_legend=with_legend, legend_box=legend_box)
             # Repeated layout passes must also preserve each explicit endpoint.
@@ -730,20 +726,38 @@ class PlotLayoutTest(unittest.TestCase):
         source.GetEntries(),
       )
 
-    for enabled, log_y, ratios in ((False, False, False), (True, False, False), (True, True, False), (True, True, True)):
+    for enabled, log_y, ratios in (
+      (False, False, False),
+      (True, False, False),
+      (True, True, False),
+      (True, True, True),
+    ):
       with self.subTest(enabled=enabled, log_y=log_y, ratios=ratios), tempfile.TemporaryDirectory() as directory:
         spec = Histogram(
-          "physical_axis_%d" % next(self.identifiers), norm_type=NormalizationType.none,
-          log_y=log_y, x_min=-0.7, x_max=3.2, x_label="m_{#mu#mu} (GeV)", y_label="dimuons",
+          "physical_axis_%d" % next(self.identifiers),
+          norm_type=NormalizationType.none,
+          log_y=log_y,
+          x_min=-0.7,
+          x_max=3.2,
+          x_label="m_{#mu#mu} (GeV)",
+          y_label="dimuons",
           de_loggify_x_axis=enabled,
         )
         samples = [Sample(name="background", type=SampleType.background)]
         if ratios:
           samples.append(Sample(name="data", type=SampleType.data))
         config = SimpleNamespace(
-          histograms=[spec], samples=samples, output_path=directory, canvas_size=(800, 600),
-          show_ratio_plots=ratios, output_formats=["pdf"],
-          plotting_options={SampleType.background: "hist", SampleType.signal: "nostack hist", SampleType.data: "nostack e"},
+          histograms=[spec],
+          samples=samples,
+          output_path=directory,
+          canvas_size=(800, 600),
+          show_ratio_plots=ratios,
+          output_formats=["pdf", "root"],
+          plotting_options={
+            SampleType.background: "hist",
+            SampleType.signal: "nostack hist",
+            SampleType.data: "nostack e",
+          },
         )
         plotter = HistogramPlotter(config)
         sources = []
@@ -760,7 +774,11 @@ class PlotLayoutTest(unittest.TestCase):
         before = [snapshot(source) for source in sources]
         plotter.drawStacks()
         self.assertEqual(before, [snapshot(source) for source in sources])
-        canvas = ROOT.gROOT.FindObject(spec.name)
+        root_file = ROOT.TFile.Open(str(Path(directory) / (spec.getName() + ".root")))
+        self.addCleanup(root_file.Close)
+        canvas = root_file.Get(spec.getName())
+        canvas.Draw()
+        canvas.Update()
         self.canvases.append(canvas)
         self.objects.append(plotter)
         for index in range(1, 3 if ratios else 2):
@@ -770,8 +788,8 @@ class PlotLayoutTest(unittest.TestCase):
           for axis in axes:
             self.assertAlmostEqual(axis.GetX1(), -0.7)
             self.assertAlmostEqual(axis.GetX2(), 3.2)
-            self.assertAlmostEqual(axis.GetWmin(), 10 ** -0.7)
-            self.assertAlmostEqual(axis.GetWmax(), 10 ** 3.2)
+            self.assertAlmostEqual(axis.GetWmin(), 10**-0.7)
+            self.assertAlmostEqual(axis.GetWmax(), 10**3.2)
           if enabled:
             self.assertAlmostEqual(pad.YtoPad(axes[0].GetY1()), pad.GetUymin())
             self.assertAlmostEqual(pad.YtoPad(axes[1].GetY1()), pad.GetUymax())

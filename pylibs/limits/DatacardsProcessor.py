@@ -139,7 +139,11 @@ class DatacardsProcessor:
       rate = hist.hist.Integral()
       if not math.isfinite(rate) or rate < 0:
         raise ValueError(f"{name}: invalid histogram yield {rate}")
-      if rate == 0 and sample.type == SampleType.background and not getattr(self.config, "retain_zero_backgrounds", False):
+      if (
+        rate == 0
+        and sample.type == SampleType.background
+        and not getattr(self.config, "retain_zero_backgrounds", False)
+      ):
         to_remove.append(name)
         n_backgrounds -= 1
 
@@ -568,8 +572,7 @@ class DatacardsProcessor:
             self.datacard += " -"
       self.datacard += "\n"
 
-    if (not self.do_abcd and self.config.include_shapes
-        and getattr(self.config, "include_mc_stat_uncertainties", True)):
+    if not self.do_abcd and self.config.include_shapes and getattr(self.config, "include_mc_stat_uncertainties", True):
       self.datacard += "bin1   autoMCStats  10\n"
 
   def __get_variation_string(self, unc, get_max_variation):

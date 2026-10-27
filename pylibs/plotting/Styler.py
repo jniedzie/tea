@@ -520,7 +520,7 @@ class Styler:
     # TGaxis takes physical y coordinates even when the pad stores log10(y).
     for y, options in ((pad.GetUymin(), "G" if show_labels else "GU"), (pad.GetUymax(), "G-U")):
       y = pad.PadtoY(y)
-      axis = ROOT.TGaxis(xmin, y, xmax, y, 10.0 ** xmin, 10.0 ** xmax, 510, options)
+      axis = ROOT.TGaxis(xmin, y, xmax, y, 10.0**xmin, 10.0**xmax, 510, options)
       axis.SetLabelFont(43)
       axis.SetLabelSize(self.labelFontSize)
       axis.SetLabelOffset(0.007)

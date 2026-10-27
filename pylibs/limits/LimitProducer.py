@@ -98,7 +98,9 @@ def run_combine(config, names: list, method: str = "AsymptoticLimits", condor: b
     for path in (preload_path, loader):
       if not path.is_file():
         raise FileNotFoundError(f"Combine preload library or dynamic loader is missing: {path}")
-    combine_command = shlex.quote(str(loader)) + " --preload " + shlex.quote(str(preload_path)) + ' "$(command -v combine)"'
+    combine_command = (
+      shlex.quote(str(loader)) + " --preload " + shlex.quote(str(preload_path)) + ' "$(command -v combine)"'
+    )
   commands = []
   for name in names:
     log = directory / f"{name}.log"
@@ -137,7 +139,9 @@ def run_combine(config, names: list, method: str = "AsymptoticLimits", condor: b
     name, command = item
     return name, subprocess.run(["bash", "-lc", command]).returncode
 
-  with ThreadPoolExecutor(max_workers=getattr(config, "limit_workers", getattr(config, "combine_max_workers", None))) as executor:
+  with ThreadPoolExecutor(
+    max_workers=getattr(config, "limit_workers", getattr(config, "combine_max_workers", None))
+  ) as executor:
     return dict(executor.map(execute, zip(names, commands)))
 
 
@@ -192,7 +196,11 @@ def read_limit_quantiles(file_path):
       raise ValueError(f"Missing limit tree: {file_path}")
     for entry in tree:
       quantile = float(entry.quantileExpected)
-      key = "observed" if quantile < 0 else next((key for target, key in expected.items() if abs(quantile - target) < 1e-3), None)
+      key = (
+        "observed"
+        if quantile < 0
+        else next((key for target, key in expected.items() if abs(quantile - target) < 1e-3), None)
+      )
       if key is not None:
         if quantiles[key] is not None:
           raise ValueError(f"Duplicate Combine quantile {key}")
