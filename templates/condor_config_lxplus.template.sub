@@ -9,8 +9,7 @@ error                 = <error_path>
 log                   = <log_path>
 request_memory        = <memory_request> GB
 +JobFlavour           = "<job_flavour>"
-max_materialize       = <materialize_max>
-max_idle              = <materialize_max>
+<materialization_options>
 on_exit_hold          = (ExitBySignal =?= True) || (ExitCode =!= 0)
 
 should_transfer_files   = YES
