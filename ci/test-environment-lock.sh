@@ -18,6 +18,9 @@ if [[ "${TEA_TEST_MICROMAMBA:-}" == "1" ]]; then
   printf '%s\n' "${prefix}" > "${TEA_TEST_PREFIX_RECORD}"
   mkdir -p "${prefix}"
   touch "${prefix}/created-by-mock"
+  if [[ "${TEA_TEST_INSTALL_FAIL:-0}" -eq 1 ]]; then
+    exit 43
+  fi
   exit 0
 fi
 
@@ -34,7 +37,7 @@ ready_path="${test_root}/probe.ready"
 tea_env_wait_for_lock "${lock_dir}" "${ready_path}"
 grep -q '^host=.' "${lock_dir}/owner"
 grep -Eq '^pid=[0-9]+$' "${lock_dir}/owner"
-cp "${lock_dir}/owner" "${test_root}/original-owner"
+original_owner="$(cat "${lock_dir}/owner")"
 sleep() { :; }
 lock_status=0
 tea_env_wait_for_lock "${lock_dir}" "${ready_path}" 2> "${test_root}/lock-error" || lock_status=$?
@@ -42,12 +45,20 @@ tea_env_wait_for_lock "${lock_dir}" "${ready_path}" 2> "${test_root}/lock-error"
 grep -q 'waiting for installation lock' "${test_root}/lock-error"
 grep -q '^host=' "${test_root}/lock-error"
 grep -q 'timed out' "${test_root}/lock-error"
-cmp "${lock_dir}/owner" "${test_root}/original-owner"
+[[ "$(cat "${lock_dir}/owner")" == "${original_owner}" ]]
 touch "${ready_path}"
 lock_status=0
 tea_env_wait_for_lock "${lock_dir}" "${ready_path}" || lock_status=$?
 [[ "${lock_status}" -eq 1 ]]
 rm -rf "${lock_dir}" "${ready_path}"
+
+# The owner must be the installer subshell, including on macOS Bash 3.2.
+lock_dir="${test_root}/subshell.installing"
+( tea_env_wait_for_lock "${lock_dir}" "${ready_path}" ) &
+installer_pid=$!
+wait "${installer_pid}"
+grep -qx "pid=${installer_pid}" "${lock_dir}/owner"
+rm -rf "${lock_dir}"
 
 # A mkdir permission failure is not an occupied lock. Mock the failure so the
 # test also works when run by accounts that can write every temporary folder.
@@ -118,7 +129,7 @@ tea_env_ensure
 [[ -f "${test_prefix}/sentinel" ]]
 [[ ! -d "${test_prefix}.installing" ]]
 
-# An interrupted install or a changed lock must preserve the existing runtime.
+# An unknown unmarked prefix or a changed lock must preserve the existing runtime.
 simulate_handoff=0
 rm "${test_prefix}/.tea-environment"
 install_status=0
@@ -155,6 +166,48 @@ tea_env_prepare() {
   TEA_MICROMAMBA="${BASH_SOURCE[0]}"
   export TEA_HOME TEA_ENV_PREFIX TEA_ENV_LOCK_HASH TEA_ENV_PLATFORM TEA_MICROMAMBA
 }
+
+tea_env_should_stage_publish() {
+  return 1
+}
+
+# A failed fresh local install owns its partial prefix and must allow a retry.
+# Exercise both errexit and guarded calls, as activation guards this function.
+TEA_TEST_INSTALL_FAIL=1
+export TEA_TEST_INSTALL_FAIL
+for invocation in direct guarded; do
+  install_status=0
+  if [[ "${invocation}" == direct ]]; then
+    set +e
+    tea_env_ensure > "${test_root}/install-error" 2>&1
+    install_status=$?
+    set -e
+  else
+    tea_env_ensure > "${test_root}/install-error" 2>&1 || install_status=$?
+  fi
+  [[ "${install_status}" -eq 43 ]]
+  [[ ! -e "${test_prefix}" ]]
+  [[ ! -d "${test_prefix}.installing" ]]
+  package_cache="$(cat "${TEA_TEST_CACHE_RECORD}")"
+  [[ ! -e "${package_cache}" ]]
+done
+unset TEA_TEST_INSTALL_FAIL
+
+# Once a completion marker is written, cleanup must preserve the published
+# environment even if the shell fails before it can clear its cleanup flag.
+printf() {
+  builtin printf "$@"
+  if [[ "$#" -eq 2 && "$2" == "${test_hash}" ]]; then
+    return 44
+  fi
+}
+install_status=0
+tea_env_ensure > "${test_root}/completed-install-error" 2>&1 || install_status=$?
+unset -f printf
+[[ "${install_status}" -eq 44 ]]
+[[ -f "${test_prefix}/created-by-mock" ]]
+[[ "$(cat "${test_prefix}/.tea-environment")" == "${test_hash}" ]]
+[[ ! -d "${test_prefix}.installing" ]]
 
 tea_env_ensure
 
