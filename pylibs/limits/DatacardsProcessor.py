@@ -139,7 +139,11 @@ class DatacardsProcessor:
       rate = hist.hist.Integral()
       if not math.isfinite(rate) or rate < 0:
         raise ValueError(f"{name}: invalid histogram yield {rate}")
-      if rate == 0 and sample.type == SampleType.background:
+      if (
+        rate == 0
+        and sample.type == SampleType.background
+        and not getattr(self.config, "retain_zero_backgrounds", False)
+      ):
         to_remove.append(name)
         n_backgrounds -= 1
 
@@ -415,7 +419,8 @@ class DatacardsProcessor:
     if not math.isfinite(obs_rate) or obs_rate < 0:
       raise ValueError("Observation yield must be finite and nonnegative")
     self.datacard += "bin bin1\n"
-    self.datacard += f"observation {round(obs_rate)}\n"
+    observation = obs_rate if getattr(self.config, "asimov_observation", False) else round(obs_rate)
+    self.datacard += f"observation {observation}\n"
 
     # prepare lines for MC processes
     self.datacard += "bin"
@@ -496,14 +501,16 @@ class DatacardsProcessor:
         rate_err = c_double(0)
         rate = hist.hist.IntegralAndError(1, hist.hist.GetNbinsX(), rate_err)
 
-        if not math.isfinite(rate) or rate <= 0 or not math.isfinite(rate_err.value):
+        if not math.isfinite(rate) or rate < 0 or not math.isfinite(rate_err.value):
           raise ValueError(f"{name}: invalid rate or uncertainty")
         self.datacard += f" {rate}"
-        statistical_errors[name] = 1 + rate_err.value / rate
+        statistical_errors[name] = 1 + rate_err.value / rate if rate > 0 else 1.0
 
     self.datacard += "\n"
 
     # add a row with statistical errors
+    if not getattr(self.config, "include_mc_stat_uncertainties", True):
+      return
     for name, stat_error in statistical_errors.items():
       self.datacard += f"stat_err_{name} lnN\t"
       for name_, stat_error_ in statistical_errors.items():
@@ -565,7 +572,7 @@ class DatacardsProcessor:
             self.datacard += " -"
       self.datacard += "\n"
 
-    if not self.do_abcd:
+    if not self.do_abcd and self.config.include_shapes and getattr(self.config, "include_mc_stat_uncertainties", True):
       self.datacard += "bin1   autoMCStats  10\n"
 
   def __get_variation_string(self, unc, get_max_variation):
