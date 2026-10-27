@@ -9,6 +9,7 @@ import copy
 import shlex
 import subprocess
 import warnings
+import math
 
 from LimitPoint import LimitPoint, validate_collection, write_points
 from LimitConfig import output_paths, result_path
@@ -65,6 +66,7 @@ def find_combine(config) -> str:
     return config.combine_setup
   path = shlex.quote(str(Path(config.combine_path).resolve()))
   for setup in (
+    f'source /cvmfs/cms.cern.ch/cmsset_default.sh && cd {path} && eval "$(scram runtime -sh)"',
     f"cd {path} && cmsenv",
     f"cd {path} && source env_lcg.sh",
     f"cd {path} && cmssw-el9 --no-home --command-to-run cmsenv",
@@ -88,6 +90,17 @@ def run_combine(config, names: list, method: str = "AsymptoticLimits", condor: b
     raise ValueError("Invalid Combine method")
   directory = output_paths(config).datacards
   setup = find_combine(config)
+  combine_command = "combine"
+  preload = getattr(config, "combine_preload_path", None)
+  if preload:
+    preload_path = Path(preload).resolve()
+    loader = Path(getattr(config, "combine_loader_path", "/lib64/ld-linux-x86-64.so.2"))
+    for path in (preload_path, loader):
+      if not path.is_file():
+        raise FileNotFoundError(f"Combine preload library or dynamic loader is missing: {path}")
+    combine_command = (
+      shlex.quote(str(loader)) + " --preload " + shlex.quote(str(preload_path)) + ' "$(command -v combine)"'
+    )
   commands = []
   for name in names:
     log = directory / f"{name}.log"
@@ -99,11 +112,23 @@ def run_combine(config, names: list, method: str = "AsymptoticLimits", condor: b
       log.rename(log.with_suffix(f".log.previous-{attempt}"))
     job_dir = directory / name
     job_dir.mkdir(exist_ok=True)
+    root_output = job_dir / f"higgsCombine.{name}.{method}.mH120.root"
+    if root_output.exists():
+      attempt = 1
+      while root_output.with_suffix(f".root.previous-{attempt}").exists():
+        attempt += 1
+      root_output.rename(root_output.with_suffix(f".root.previous-{attempt}"))
     blind = " --run blind" if getattr(config, "blind", False) and method == "AsymptoticLimits" else ""
-    extra = " ".join(shlex.quote(str(arg)) for arg in getattr(config, "combine_arguments", ()))
+    arguments = (
+      *getattr(config, "combine_arguments", ()),
+      *getattr(config, "combine_options", ()),
+      *getattr(config, "combine_options_by_datacard", {}).get(name, ()),
+    )
+    extra = shlex.join(str(arg) for arg in arguments)
     command = (
       f"set -e -o pipefail; {setup}; cd {shlex.quote(str(job_dir))}; "
-      f"combine -M {method} {shlex.quote(str(directory / (name + '.txt')))}{blind} {extra} "
+      f"{combine_command} -M {method} {shlex.quote(str(directory / (name + '.txt')))}"
+      f" -n {shlex.quote('.' + name)}{blind} {extra} "
       f"> {shlex.quote(str(log))} 2>&1"
     )
     commands.append(command)
@@ -114,7 +139,9 @@ def run_combine(config, names: list, method: str = "AsymptoticLimits", condor: b
     name, command = item
     return name, subprocess.run(["bash", "-lc", command]).returncode
 
-  with ThreadPoolExecutor(max_workers=getattr(config, "limit_workers", None)) as executor:
+  with ThreadPoolExecutor(
+    max_workers=getattr(config, "limit_workers", getattr(config, "combine_max_workers", None))
+  ) as executor:
     return dict(executor.map(execute, zip(names, commands)))
 
 
@@ -154,6 +181,38 @@ def _run_condor(directory: Path, names: list, commands: list) -> dict:
   return {name: codes.get(i, 1) for i, name in enumerate(names)}
 
 
+def read_limit_quantiles(file_path):
+  """Read labeled quantiles from Combine's ROOT output, independent of entry order."""
+  import ROOT
+
+  quantiles = dict.fromkeys(("observed", "minus2", "minus1", "median", "plus1", "plus2"))
+  expected = {0.025: "minus2", 0.16: "minus1", 0.5: "median", 0.84: "plus1", 0.975: "plus2"}
+  root_file = ROOT.TFile.Open(str(file_path), "READ")
+  if not root_file or root_file.IsZombie():
+    raise ValueError(f"Unreadable Combine output: {file_path}")
+  try:
+    tree = root_file.Get("limit")
+    if not tree:
+      raise ValueError(f"Missing limit tree: {file_path}")
+    for entry in tree:
+      quantile = float(entry.quantileExpected)
+      key = (
+        "observed"
+        if quantile < 0
+        else next((key for target, key in expected.items() if abs(quantile - target) < 1e-3), None)
+      )
+      if key is not None:
+        if quantiles[key] is not None:
+          raise ValueError(f"Duplicate Combine quantile {key}")
+        quantiles[key] = float(entry.limit)
+  finally:
+    root_file.Close()
+  values = [quantiles[key] for key in expected.values()]
+  if any(value is None or not math.isfinite(value) or value <= 0 for value in values) or values != sorted(values):
+    raise ValueError(f"Invalid or incomplete expected quantiles in {file_path}: {quantiles}")
+  return quantiles
+
+
 def get_limits(config, return_codes: Optional[Mapping] = None, statuses: Optional[Mapping] = None) -> list:
   points = []
   for sample in config.signal_samples:
@@ -166,8 +225,18 @@ def get_limits(config, return_codes: Optional[Mapping] = None, statuses: Optiona
       point = LimitPoint(**identity, status="failed", message=f"Combine exit code {return_codes.get(name, 'unknown')}")
     else:
       try:
-        text = (output_paths(config).datacards / f"{name}.log").read_text()
-        point = parse_combine_output(text, identity, getattr(config, "blind", False))
+        directory = output_paths(config).datacards
+        root_output = directory / name / f"higgsCombine.{name}.AsymptoticLimits.mH120.root"
+        if root_output.exists():
+          quantiles = read_limit_quantiles(root_output)
+          point = LimitPoint(
+            **identity,
+            expected=dict(zip((0.025, 0.16, 0.5, 0.84, 0.975), list(quantiles.values())[1:])),
+            observed=None if getattr(config, "blind", False) else quantiles["observed"],
+          )
+        else:
+          text = (directory / f"{name}.log").read_text()
+          point = parse_combine_output(text, identity, getattr(config, "blind", False))
       except FileNotFoundError:
         point = LimitPoint(**identity, status="unavailable", message="Combine log not found")
       except ValueError as exc:
