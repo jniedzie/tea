@@ -150,14 +150,31 @@ tea_env_download() {
 }
 
 tea_env_wait_for_lock() {
-  local lock_dir ready_path attempts
+  local lock_dir ready_path attempts mkdir_error
   lock_dir="$1"
   ready_path="$2"
   attempts=0
 
-  while ! mkdir "${lock_dir}" 2>/dev/null; do
+  while ! mkdir_error="$(mkdir "${lock_dir}" 2>&1)"; do
+    # The owner can release its lock between mkdir failing and this check.
+    if [[ ! -e "${lock_dir}" && ! -L "${lock_dir}" ]]; then
+      if mkdir_error="$(mkdir "${lock_dir}" 2>&1)"; then
+        break
+      fi
+    fi
+    if [[ ! -d "${lock_dir}" || -L "${lock_dir}" ]]; then
+      echo "tea: unable to create installation lock ${lock_dir}: ${mkdir_error}" >&2
+      return 2
+    fi
     if [[ -e "${ready_path}" ]]; then
       return 1
+    fi
+    if [[ "${attempts}" -eq 0 ]]; then
+      echo "tea: waiting for installation lock ${lock_dir}" >&2
+      if [[ -r "${lock_dir}/owner" ]]; then
+        cat "${lock_dir}/owner" >&2
+      fi
+      echo "tea: check the installer on its host before removing an abandoned lock" >&2
     fi
     attempts=$((attempts + 1))
     if [[ "${attempts}" -ge 300 ]]; then
@@ -166,6 +183,12 @@ tea_env_wait_for_lock() {
     fi
     sleep 1
   done
+  if ! printf 'host=%s\npid=%s\n' "${HOSTNAME:-$(hostname)}" "${BASHPID:-$$}" > "${lock_dir}/owner"; then
+    echo "tea: unable to record installation lock owner in ${lock_dir}" >&2
+    rm -f "${lock_dir}/owner"
+    rmdir "${lock_dir}" 2>/dev/null || true
+    return 2
+  fi
   return 0
 }
 
@@ -226,7 +249,7 @@ tea_env_ensure_micromamba() (
     exit "${lock_status}"
   fi
 
-  trap 'rm -f "${temporary:-}"; rmdir "${lock_dir}" 2>/dev/null || true' EXIT
+  trap 'rm -f "${temporary:-}" "${lock_dir}/owner"; rmdir "${lock_dir}" 2>/dev/null || true' EXIT
   temporary="${tool_path}.download.$$"
   url="https://github.com/mamba-org/micromamba-releases/releases/download/${release_tag}/micromamba-${platform}"
   echo "tea: downloading pinned micromamba ${version} for ${platform}..." >&2
@@ -255,7 +278,7 @@ tea_env_prepare() {
 
   lock_hash="$(tea_env_sha256 "${lock_file}")" || return 1
   # Keep the prefix stable and human-readable. The lock hash belongs in the
-  # marker, where it can trigger replacement without leaking into editor paths.
+  # marker, where it can identify changes without leaking into editor paths.
   env_prefix="${TEA_HOME}/environments/tea"
   marker="${env_prefix}/.tea-environment"
 
@@ -309,8 +332,12 @@ tea_env_ensure() (
   tea_env_wait_for_lock "${lock_dir}" "${TEA_ENV_MARKER}" || lock_status=$?
   if [[ "${lock_status}" -eq 1 ]]; then
     IFS= read -r marker_hash < "${TEA_ENV_MARKER}"
-    [[ "${marker_hash}" == "${TEA_ENV_LOCK_HASH}" ]]
-    exit $?
+    if [[ "${marker_hash}" == "${TEA_ENV_LOCK_HASH}" ]]; then
+      exit 0
+    fi
+    echo "tea: existing environment has a different dependency lock: ${TEA_ENV_PREFIX}" >&2
+    echo "tea: choose a separate TEA_HOME or migrate only after its users have stopped" >&2
+    exit 1
   elif [[ "${lock_status}" -ne 0 ]]; then
     exit "${lock_status}"
   fi
@@ -324,6 +351,7 @@ tea_env_ensure() (
     if [[ -n "${publish_prefix}" ]] && [[ -e "${publish_prefix}" ]]; then
       rm -rf "${publish_prefix}"
     fi
+    rm -f "${lock_dir}/owner"
     rmdir "${lock_dir}" 2>/dev/null || true
   }
   trap tea_env_install_cleanup EXIT
@@ -338,6 +366,13 @@ tea_env_ensure() (
     fi
   fi
 
+  if [[ -e "${TEA_ENV_PREFIX}" || -L "${TEA_ENV_PREFIX}" ]]; then
+    echo "tea: refusing to replace an existing environment: ${TEA_ENV_PREFIX}" >&2
+    echo "tea: its completion marker is missing or has a different dependency lock" >&2
+    echo "tea: choose a separate TEA_HOME or migrate only after its users have stopped" >&2
+    exit 1
+  fi
+
   temp_root="${TMPDIR:-/tmp}"
   work_dir="$(mktemp -d "${temp_root%/}/tea-environment-install.XXXXXX")" || {
     echo "tea: unable to create temporary installation storage under ${temp_root}" >&2
@@ -345,18 +380,6 @@ tea_env_ensure() (
   }
   package_cache="${work_dir}/packages"
   mkdir -p "${package_cache}"
-
-  if [[ -e "${TEA_ENV_PREFIX}" ]]; then
-    case "${TEA_ENV_PREFIX}" in
-      "${TEA_HOME}"/environments/tea)
-        rm -rf "${TEA_ENV_PREFIX}"
-        ;;
-      *)
-        echo "tea: refusing to replace unexpected path ${TEA_ENV_PREFIX}" >&2
-        exit 1
-        ;;
-    esac
-  fi
 
   echo "tea: creating shared ${TEA_ENV_PLATFORM} environment at ${TEA_ENV_PREFIX}" >&2
   echo "tea: unpacking packages in temporary cache ${package_cache}" >&2
@@ -444,10 +467,6 @@ tea_env_activate() {
     PATH="${PATH:+${PATH}:}/usr/bin"
     export PATH
   fi
-
-  # Old releases used one directory per lock hash. Remove only directories
-  # whose 64-character name agrees with Tea's marker file.
-  tea_env_cleanup_legacy || return 1
 
   TEA_ENV_NAME="tea"
   CONDA_DEFAULT_ENV="${TEA_ENV_NAME}"

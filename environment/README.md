@@ -49,9 +49,12 @@ conda-lock lock \
 `virtual-packages.yml` fixes the assumed glibc and macOS compatibility floors.
 Review all three lock diffs and let CI install them without an existing cache.
 `tea` installs the active lock at the stable, editor-friendly prefix
-`${TEA_HOME:-~/.tea}/environments/tea`. Changing a lock replaces that
-environment, and activation removes obsolete hash-named environments created by
-older `tea` versions. Never edit an explicit lock by hand. If the same home
+`${TEA_HOME:-~/.tea}/environments/tea`. Activation preserves existing environments,
+including older hash-named prefixes. If the completion marker is missing or the
+lock changes, choose a separate `TEA_HOME`, or migrate the existing environment
+after checking that no jobs or shells still use it. Installation lock waits print
+their path and recorded host/PID; an abandoned lock requires checking its installer
+before removal. Never edit an explicit lock by hand. If the same home
 directory is shared concurrently across different operating systems, configure
 a separate `TEA_HOME` for each system.
 
