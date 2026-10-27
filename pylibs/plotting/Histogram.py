@@ -34,7 +34,7 @@ class Histogram:
   entries: int = 0
   scale_bin: bool = False
   scale_by_bin_width: bool = False
-  # Keep the configured data crop, but permit display whitespace for a legend.
+  # Legacy option kept for config compatibility; explicit X bounds stay fixed.
   allow_legend_x_extension: bool = False
   # Keys are stored category/status values, including negative failure codes.
   bin_labels: Optional[dict[int, str]] = None
@@ -43,8 +43,14 @@ class Histogram:
   show_full_x_range: bool = False
   # Short selection label appended to the sample legend header.
   legend_label: str = ""
+  # Diagnostic views may show a booked empty distribution without inventing entries.
+  allow_empty: bool = False
+  # Relabel stored log10(x) coordinates as x; bins and limits stay in log10(x).
+  de_loggify_x_axis: bool = False
 
   def __post_init__(self):
+    if self.de_loggify_x_axis and (self.log_x or self.bin_labels):
+      raise ValueError("de_loggify_x_axis requires log10(x) coordinates, log_x=False and no bin_labels")
     self.hist = None
 
   def set_hist(self, hist):
@@ -110,7 +116,7 @@ class Histogram:
   def isGood(self):
     if not self.hist or type(self.hist) is ROOT.TObject:
       return False
-    if self.hist.GetEntries() == 0:
+    if self.hist.GetEntries() == 0 and not self.allow_empty:
       return False
 
     return True
