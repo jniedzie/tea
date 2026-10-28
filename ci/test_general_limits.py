@@ -161,6 +161,88 @@ assert 'Sample' not in sys.modules
     self.assertEqual(entries[3].GetOption().lower(), "lp")
     isolated.SaveAs(str(self.path / "single.pdf"))
 
+  def test_branch_combine_options_and_stale_root_output(self):
+    config = SimpleNamespace(
+      limits_output_path=self.path,
+      combine_setup="true",
+      combine_max_workers=1,
+      combine_arguments=["--rMax", "10"],
+      combine_options=["--run", "blind"],
+      combine_options_by_datacard={"card": ["--setParameters", "label=a b"]},
+    )
+    directory = output_paths(config).datacards
+    job = directory / "card"
+    job.mkdir()
+    stale = job / "higgsCombine.card.AsymptoticLimits.mH120.root"
+    stale.write_text("old result")
+    with patch("LimitProducer.subprocess.run", return_value=SimpleNamespace(returncode=7)) as run:
+      self.assertEqual(run_combine(config, ["card"]), {"card": 7})
+    command = run.call_args.args[0][-1]
+    for argument in ("--rMax 10", "--run blind", "'label=a b'", "-n .card"):
+      self.assertIn(argument, command)
+    self.assertFalse(stale.exists())
+    self.assertEqual(stale.with_suffix(".root.previous-1").read_text(), "old result")
+
+  def test_root_quantiles_collection_preserves_identity_blinding_and_failures(self):
+    import ROOT
+    from array import array
+
+    sample = SimpleNamespace(name="arbitrary", cross_section=-1)
+    config = SimpleNamespace(
+      limits_output_path=self.path,
+      signal_samples=[sample],
+      blind=True,
+      signal_points={"arbitrary": {"id": "point", "x": 2, "parameters": {"mass": 100}}},
+      datacard_name=lambda sample: "card",
+    )
+    job = output_paths(config).datacards / "card"
+    job.mkdir()
+    path = job / "higgsCombine.card.AsymptoticLimits.mH120.root"
+    with ROOT.TFile(str(path), "RECREATE"):
+      tree = ROOT.TTree("limit", "limit")
+      q, value = array("f", [0]), array("d", [0])
+      tree.Branch("quantileExpected", q, "quantileExpected/F")
+      tree.Branch("limit", value, "limit/D")
+      for quantile, limit in reversed([*EXPECTED.items(), (-1, 10)]):
+        q[0], value[0] = quantile, limit
+        tree.Fill()
+      tree.Write()
+    valid_output = path.read_bytes()
+    point = get_limits(config, {"card": 0})[0]
+    self.assertEqual(point.expected, EXPECTED)
+    self.assertEqual(point.parameters, {"mass": 100})
+    self.assertIsNone(point.observed)
+    config.blind = False
+    self.assertEqual(get_limits(config)[0].observed, 10)
+    with self.assertWarns(RuntimeWarning):
+      self.assertEqual(get_limits(config, {"card": 7})[0].status, "failed")
+    with ROOT.TFile(str(path), "RECREATE"):
+      tree = ROOT.TTree("limit", "limit")
+      tree.Branch("quantileExpected", q, "quantileExpected/F")
+      tree.Branch("limit", value, "limit/D")
+      q[0], value[0] = 0.5, 3
+      tree.Fill()
+      tree.Write()
+    with self.assertWarnsRegex(RuntimeWarning, "incomplete expected quantiles"):
+      self.assertEqual(get_limits(config)[0].status, "failed")
+
+    # A corrupt result must not prevent collecting and saving the healthy points.
+    path.write_bytes(b"truncated")
+    healthy = SimpleNamespace(name="healthy", cross_section=-1)
+    config.signal_samples.append(healthy)
+    config.signal_points[healthy.name] = {"id": "healthy_point", "x": 3}
+    config.datacard_name = lambda sample: "card" if sample.name == "arbitrary" else sample.name
+    healthy_job = output_paths(config).datacards / healthy.name
+    healthy_job.mkdir()
+    (healthy_job / "higgsCombine.healthy.AsymptoticLimits.mH120.root").write_bytes(valid_output)
+    with self.assertWarnsRegex(RuntimeWarning, "Unreadable Combine output"):
+      points = get_limits(config)
+    self.assertEqual([point.status for point in points], ["failed", "ok"])
+    self.assertEqual(points[1].expected, EXPECTED)
+    self.assertEqual(points[1].observed, 10)
+    saved = save_limits(config, points)
+    self.assertEqual(read_points(saved), points)
+
   def test_regular_plot_presentation_settings(self):
     import ROOT
     from CmsLabelsManager import CmsLabel
