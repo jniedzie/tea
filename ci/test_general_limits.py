@@ -207,6 +207,7 @@ assert 'Sample' not in sys.modules
         q[0], value[0] = quantile, limit
         tree.Fill()
       tree.Write()
+    valid_output = path.read_bytes()
     point = get_limits(config, {"card": 0})[0]
     self.assertEqual(point.expected, EXPECTED)
     self.assertEqual(point.parameters, {"mass": 100})
@@ -224,6 +225,23 @@ assert 'Sample' not in sys.modules
       tree.Write()
     with self.assertWarnsRegex(RuntimeWarning, "incomplete expected quantiles"):
       self.assertEqual(get_limits(config)[0].status, "failed")
+
+    # A corrupt result must not prevent collecting and saving the healthy points.
+    path.write_bytes(b"truncated")
+    healthy = SimpleNamespace(name="healthy", cross_section=-1)
+    config.signal_samples.append(healthy)
+    config.signal_points[healthy.name] = {"id": "healthy_point", "x": 3}
+    config.datacard_name = lambda sample: "card" if sample.name == "arbitrary" else sample.name
+    healthy_job = output_paths(config).datacards / healthy.name
+    healthy_job.mkdir()
+    (healthy_job / "higgsCombine.healthy.AsymptoticLimits.mH120.root").write_bytes(valid_output)
+    with self.assertWarnsRegex(RuntimeWarning, "Unreadable Combine output"):
+      points = get_limits(config)
+    self.assertEqual([point.status for point in points], ["failed", "ok"])
+    self.assertEqual(points[1].expected, EXPECTED)
+    self.assertEqual(points[1].observed, 10)
+    saved = save_limits(config, points)
+    self.assertEqual(read_points(saved), points)
 
   def test_regular_plot_presentation_settings(self):
     import ROOT

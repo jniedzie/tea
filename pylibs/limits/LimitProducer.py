@@ -187,7 +187,10 @@ def read_limit_quantiles(file_path):
 
   quantiles = dict.fromkeys(("observed", "minus2", "minus1", "median", "plus1", "plus2"))
   expected = {0.025: "minus2", 0.16: "minus1", 0.5: "median", 0.84: "plus1", 0.975: "plus2"}
-  root_file = ROOT.TFile.Open(str(file_path), "READ")
+  try:
+    root_file = ROOT.TFile.Open(str(file_path), "READ")
+  except OSError as exc:
+    raise ValueError(f"Unreadable Combine output: {file_path}") from exc
   if not root_file or root_file.IsZombie():
     raise ValueError(f"Unreadable Combine output: {file_path}")
   try:
