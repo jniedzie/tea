@@ -96,6 +96,7 @@ class SubmissionManager:
     input_files = self.__get_input_file_list()
 
     submitted_jobs = []
+    self.condor_cluster_ids = []
 
     def submit(input_files):
       self.__setup_temp_file_paths()
@@ -110,7 +111,7 @@ class SubmissionManager:
 
       command = ["condor_submit"]
       if self.condor_spool:
-        command.append("-spool")
+        command.extend(["-spool", "-terse"])
       command.append(os.path.abspath(self.condor_config_name))
       info(f"Submitting to condor: {shlex.join(command)}")
 
@@ -119,7 +120,29 @@ class SubmissionManager:
         environment = dict(os.environ)
         for key in ("LD_LIBRARY_PATH", "LD_PRELOAD", "PYTHONPATH", "PYTHONHOME", "ROOTSYS"):
           environment.pop(key, None)
-        subprocess.run(command, cwd=self.condor_stage_dir, env=environment, check=True)
+        if self.condor_spool:
+          result = subprocess.run(
+            command, cwd=self.condor_stage_dir, env=environment, check=True, stdout=subprocess.PIPE, text=True
+          )
+          match = re.fullmatch(r"(\d+)\.\d+(?:\s*-\s*\1\.\d+)?", result.stdout.strip())
+          if match is None:
+            raise RuntimeError(
+              f"Jobs were submitted, but the cluster ID could not be read: {result.stdout!r}. "
+              "Check condor_q before submitting again."
+            )
+          cluster_id = int(match.group(1))
+          self.condor_cluster_ids.append(cluster_id)
+          cluster_path = os.path.join(self.condor_stage_dir, "cluster_id")
+          with open(cluster_path, "w") as cluster_file:
+            cluster_file.write(f"{cluster_id}\n")
+          info(f"Submitted Condor cluster {cluster_id}; ID saved in {cluster_path}")
+          info(f"After jobs finish, retrieve spooled output with: condor_transfer_data {cluster_id}")
+          if self.save_logs:
+            info(
+              "Saved stdout/stderr files appear at the listed paths only after retrieval; keep the staging directory."
+            )
+        else:
+          subprocess.run(command, cwd=self.condor_stage_dir, env=environment, check=True)
 
       return self.condor_run_script_name, effective_n_jobs, self.submission_id
 
@@ -666,6 +689,8 @@ class SubmissionManager:
         output_path = f"output/{self.submission_id}/$(ClusterId).$(ProcId).out"
         error_path = f"error/{self.submission_id}/$(ClusterId).$(ProcId).err"
         log_path = f"log/{self.submission_id}/$(ClusterId).log"
+      if self.condor_spool:
+        info("Job logs are spooled on the scheduler; retrieve them after completion with condor_transfer_data.")
       info(f"Job logs: output={output_path}, error={error_path}, log={log_path}")
     else:
       output_path = "/dev/null"

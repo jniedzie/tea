@@ -27,7 +27,16 @@ def get_args():
     default=None,
     help=("Number of parallel local jobs. Defaults to the CPUs available to this process, capped at 4 on lxplus."),
   )
-  parser.add_argument("--save_logs", action="store_true", default=False, help="Save condor logs.")
+  parser.add_argument(
+    "--save_logs",
+    action="store_true",
+    default=False,
+    help=(
+      "Save condor logs. For spooled EOS submissions, run the printed condor_transfer_data CLUSTER command "
+      "after jobs finish to populate the local stdout/stderr paths. Keep the staging directory; "
+      "its cluster_id file records the cluster to retrieve."
+    ),
+  )
   parser.add_argument(
     "--job_flavour",
     type=str,

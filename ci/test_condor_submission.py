@@ -91,8 +91,8 @@ class CondorSubmissionTest(unittest.TestCase):
     self.assertTrue(manager.condor_run_script_name.startswith("tmp/"))
 
   def test_submit_command_and_factory_options_match_spooling_mode(self):
-    for spool in (False, True):
-      with self.subTest(spool=spool), tempfile.TemporaryDirectory() as temporary:
+    for spool, save_logs, dry in ((False, True, False), (True, True, False), (True, False, False), (True, True, True)):
+      with self.subTest(spool=spool, save_logs=save_logs, dry=dry), tempfile.TemporaryDirectory() as temporary:
         manager = self.manager()
         manager.files_config = SimpleNamespace(input_file_list=["input.root"])
         manager.app_name = "selector"
@@ -104,8 +104,8 @@ class CondorSubmissionTest(unittest.TestCase):
           max_materialize=500,
           resubmit_job=None,
           resubmit_failed=False,
-          save_logs=True,
-          dry=False,
+          save_logs=save_logs,
+          dry=dry,
         )
         work_dir = "/eos/user/t/test/analysis/bin" if spool else "/afs/cern.ch/user/t/test/analysis/bin"
         python = "/eos/home-t/test/env/bin/python" if spool else "/afs/cern.ch/user/t/test/env/bin/python"
@@ -121,16 +121,33 @@ class CondorSubmissionTest(unittest.TestCase):
           patch.object(MODULE.sys, "executable", python),
           patch.object(manager, "_SubmissionManager__copy_templates", side_effect=copy_templates),
           patch.object(manager, "_SubmissionManager__setup_voms_proxy", return_value="unset X509_USER_PROXY"),
-          patch.object(MODULE.subprocess, "run") as submit,
+          patch.object(MODULE, "info") as messages,
+          patch.object(MODULE.subprocess, "run", return_value=SimpleNamespace(stdout="12345.0 - 12345.0\n")) as submit,
         ):
           jobs = manager.run_condor(args)
-        expected = ["condor_submit", "-spool"] if spool else ["condor_submit"]
+        expected = ["condor_submit", "-spool", "-terse"] if spool else ["condor_submit"]
+        if dry:
+          submit.assert_not_called()
+          self.assertEqual(manager.condor_cluster_ids, [])
+          self.assertFalse((Path(manager.condor_stage_dir) / "cluster_id").exists())
+          continue
         submit.assert_called_once()
         self.assertEqual(submit.call_args.args[0], expected + [manager.condor_config_name])
         self.assertEqual(submit.call_args.kwargs["cwd"], manager.condor_stage_dir)
         self.assertNotIn("LD_LIBRARY_PATH", submit.call_args.kwargs["env"])
         self.assertTrue(submit.call_args.kwargs["check"])
         self.assertEqual(jobs, [(manager.condor_run_script_name, 1, manager.submission_id)])
+        if spool:
+          self.assertEqual(manager.condor_cluster_ids, [12345])
+          self.assertEqual((Path(manager.condor_stage_dir) / "cluster_id").read_text(), "12345\n")
+          output = "\n".join(call.args[0] for call in messages.call_args_list)
+          self.assertIn("condor_transfer_data 12345", output)
+          self.assertEqual("only after retrieval" in output, save_logs)
+          self.assertEqual(submit.call_args.kwargs["stdout"], subprocess.PIPE)
+          self.assertTrue(submit.call_args.kwargs["text"])
+        else:
+          self.assertEqual(manager.condor_cluster_ids, [])
+          self.assertFalse((Path(manager.condor_stage_dir) / "cluster_id").exists())
         script = Path(manager.condor_run_script_name).read_text()
         self.assertIn(f"exec {python} condor_runner.py", script)
         subprocess.run(["bash", "-n", manager.condor_run_script_name], check=True)
