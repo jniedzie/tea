@@ -31,6 +31,7 @@ class SubmissionManager:
     self.submission_system = submission_system
     self.condor_stage_dir = None
     self.condor_transfer_files = []
+    self.condor_spool = False
     self.app_name = app_name
     self.config_path = config_path
     self.files_config_path = files_config_path
@@ -95,6 +96,7 @@ class SubmissionManager:
     input_files = self.__get_input_file_list()
 
     submitted_jobs = []
+    self.condor_cluster_ids = []
 
     def submit(input_files):
       self.__setup_temp_file_paths()
@@ -107,7 +109,10 @@ class SubmissionManager:
       self.__set_run_script_variables()
       effective_n_jobs = self.__set_condor_script_variables(n_jobs)
 
-      command = ["condor_submit", os.path.abspath(self.condor_config_name)]
+      command = ["condor_submit"]
+      if self.condor_spool:
+        command.extend(["-spool", "-terse"])
+      command.append(os.path.abspath(self.condor_config_name))
       info(f"Submitting to condor: {shlex.join(command)}")
 
       if not args.dry:
@@ -115,7 +120,29 @@ class SubmissionManager:
         environment = dict(os.environ)
         for key in ("LD_LIBRARY_PATH", "LD_PRELOAD", "PYTHONPATH", "PYTHONHOME", "ROOTSYS"):
           environment.pop(key, None)
-        subprocess.run(command, cwd=self.condor_stage_dir, env=environment, check=True)
+        if self.condor_spool:
+          result = subprocess.run(
+            command, cwd=self.condor_stage_dir, env=environment, check=True, stdout=subprocess.PIPE, text=True
+          )
+          match = re.fullmatch(r"(\d+)\.\d+(?:\s*-\s*\1\.\d+)?", result.stdout.strip())
+          if match is None:
+            raise RuntimeError(
+              f"Jobs were submitted, but the cluster ID could not be read: {result.stdout!r}. "
+              "Check condor_q before submitting again."
+            )
+          cluster_id = int(match.group(1))
+          self.condor_cluster_ids.append(cluster_id)
+          cluster_path = os.path.join(self.condor_stage_dir, "cluster_id")
+          with open(cluster_path, "w") as cluster_file:
+            cluster_file.write(f"{cluster_id}\n")
+          info(f"Submitted Condor cluster {cluster_id}; ID saved in {cluster_path}")
+          info(f"After jobs finish, retrieve spooled output with: condor_transfer_data {cluster_id}")
+          if self.save_logs:
+            info(
+              "Saved stdout/stderr files appear at the listed paths only after retrieval; keep the staging directory."
+            )
+        else:
+          subprocess.run(command, cwd=self.condor_stage_dir, env=environment, check=True)
 
       return self.condor_run_script_name, effective_n_jobs, self.submission_id
 
@@ -439,13 +466,18 @@ class SubmissionManager:
     hash_string = str(uuid.uuid4().hex[:6])
     self.submission_id = hash_string
     directory = "tmp"
+    self.condor_stage_dir = None
     self.condor_transfer_files = []
+    self.condor_spool = False
     if self.submission_system == SubmissionSystem.condor and get_facility() == "lxplus":
-      # Factory jobs must keep their submit-side Iwd and transfer sources on AFS.
-      # -spool does not relocate the Iwd of late-materialized jobs from EOS.
+      # EOS submissions use the schedd's spool instead of requiring an AFS
+      # checkout or runtime. The staging directory may also be on EOS.
       staging_root = os.path.realpath(os.path.expanduser(os.environ.get("TEA_CONDOR_DIR", "~/.local/state/tea/condor")))
-      if not staging_root.startswith("/afs/"):
-        raise RuntimeError("CERN Condor staging must be on AFS; set TEA_CONDOR_DIR to an AFS directory")
+      self.condor_spool = any(
+        os.path.realpath(path).startswith("/eos/") for path in (os.getcwd(), sys.executable, staging_root)
+      )
+      if self.condor_spool:
+        info("EOS submission: using condor_submit -spool; factory materialization limits do not apply")
       os.makedirs(staging_root, mode=0o700, exist_ok=True)
       prefix = datetime.now().strftime("%Y%m%d_%H%M%S_")
       self.condor_stage_dir = tempfile.mkdtemp(prefix=prefix, dir=staging_root)
@@ -567,17 +599,6 @@ class SubmissionManager:
     warn("No valid VOMS proxy found. VOMS authentication will not be available.")
     return "unset X509_USER_PROXY"
 
-  def __set_python_executable(self):
-    if (
-      self.submission_system == SubmissionSystem.condor
-      and get_facility() == "lxplus"
-      and os.path.realpath(sys.executable).startswith("/eos/")
-    ):
-      raise RuntimeError(
-        "CERN worker Python is on EOS. Activate an AFS TEA environment before submitting; EOS runtime reads caused worker I/O errors."
-      )
-    return sys.executable
-
   def __set_run_script_variables(self):
     file_name = (
       f"--file_name {shlex.quote(self.files_config.file_name)}" if hasattr(self.files_config, "file_name") else ""
@@ -604,7 +625,7 @@ class SubmissionManager:
     input_files_path = shlex.quote(self.input_files_list_file_name)
     if self.condor_stage_dir:
       input_files_path = f'"$job_sandbox/{os.path.basename(self.input_files_list_file_name)}"'
-    python_executable = self.__set_python_executable()
+    python_executable = sys.executable
     python_bin = os.path.dirname(python_executable)
     runtime_libraries = os.pathsep.join(
       [
@@ -668,6 +689,8 @@ class SubmissionManager:
         output_path = f"output/{self.submission_id}/$(ClusterId).$(ProcId).out"
         error_path = f"error/{self.submission_id}/$(ClusterId).$(ProcId).err"
         log_path = f"log/{self.submission_id}/$(ClusterId).log"
+      if self.condor_spool:
+        info("Job logs are spooled on the scheduler; retrieve them after completion with condor_transfer_data.")
       info(f"Job logs: output={output_path}, error={error_path}, log={log_path}")
     else:
       output_path = "/dev/null"
@@ -684,6 +707,12 @@ class SubmissionManager:
         "<memory_request>": self.memory_request,
         "<job_flavour>": self.job_flavour,
         "<materialize_max>": self.materialize_max,
+        # Spooling input files is incompatible with late-materialized factories.
+        "<materialization_options>": (
+          ""
+          if self.condor_spool
+          else f"max_materialize       = {self.materialize_max}\nmax_idle              = {self.materialize_max}"
+        ),
         "<output_path>": output_path,
         "<error_path>": error_path,
         "<log_path>": log_path,
