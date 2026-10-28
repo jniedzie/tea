@@ -86,6 +86,24 @@ class SampleClassificationTest(unittest.TestCase):
           self.assertTrue((self.path / "diagnostic_plots/card.pdf").exists())
         self.assertEqual(signal[1].type, SampleType.signal)
 
+  def test_zero_background_and_asimov_controls_keep_yield_validation(self) -> None:
+    config, processor = self.fixture()
+    config.retain_zero_backgrounds = True
+    config.asimov_observation = True
+    config.include_mc_stat_uncertainties = False
+    signal = self.histosample("charged", SampleType.signal, 2)
+    background = self.histosample("empty", SampleType.background, 0)
+    observation = self.histosample("measured", SampleType.data, 2.5)
+    path = processor.create_new_datacard("observable", observation, {"empty": background}, signal, {}, {})
+    text = path.read_text()
+    self.assertIn("observation 2.5", text)
+    self.assertIn("rate 2.0 0.0", text)
+    self.assertNotIn("autoMCStats", text)
+    self.assertNotIn("stat_err", text)
+    background[0].hist.SetBinContent(1, -1)
+    with self.assertRaisesRegex(ValueError, "invalid histogram yield"):
+      processor.create_new_datacard("observable", observation, {"empty": background}, signal, {}, {})
+
   def test_empty_backgrounds_get_background_dummy_and_data_observation(self) -> None:
     for abcd in (False, True):
       with self.subTest(abcd=abcd):
