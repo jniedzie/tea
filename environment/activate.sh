@@ -150,14 +150,31 @@ tea_env_download() {
 }
 
 tea_env_wait_for_lock() {
-  local lock_dir ready_path attempts
+  local lock_dir ready_path attempts mkdir_error
   lock_dir="$1"
   ready_path="$2"
   attempts=0
 
-  while ! mkdir "${lock_dir}" 2>/dev/null; do
+  while ! mkdir_error="$(mkdir "${lock_dir}" 2>&1)"; do
+    # The owner can release its lock between mkdir failing and this check.
+    if [[ ! -e "${lock_dir}" && ! -L "${lock_dir}" ]]; then
+      if mkdir_error="$(mkdir "${lock_dir}" 2>&1)"; then
+        break
+      fi
+    fi
+    if [[ ! -d "${lock_dir}" || -L "${lock_dir}" ]]; then
+      echo "tea: unable to create installation lock ${lock_dir}: ${mkdir_error}" >&2
+      return 2
+    fi
     if [[ -e "${ready_path}" ]]; then
       return 1
+    fi
+    if [[ "${attempts}" -eq 0 ]]; then
+      echo "tea: waiting for installation lock ${lock_dir}" >&2
+      if [[ -r "${lock_dir}/owner" ]]; then
+        cat "${lock_dir}/owner" >&2
+      fi
+      echo "tea: check the installer on its host before removing an abandoned lock" >&2
     fi
     attempts=$((attempts + 1))
     if [[ "${attempts}" -ge 300 ]]; then
@@ -166,6 +183,17 @@ tea_env_wait_for_lock() {
     fi
     sleep 1
   done
+  # $$ names the parent shell inside Bash 3.2 subshells. An external shell's
+  # PPID identifies the actual process holding this lock on Bash and zsh.
+  if ! {
+    printf 'host=%s\n' "${HOSTNAME:-$(hostname)}" &&
+      sh -c 'printf "pid=%s\n" "$PPID"'
+  } > "${lock_dir}/owner"; then
+    echo "tea: unable to record installation lock owner in ${lock_dir}" >&2
+    rm -f "${lock_dir}/owner"
+    rmdir "${lock_dir}" 2>/dev/null || true
+    return 2
+  fi
   return 0
 }
 
@@ -173,7 +201,11 @@ tea_env_ensure_micromamba() (
   set -euo pipefail
 
   local version release_tag platform checksum url tool_dir tool_path available_tool
-  local lock_dir temporary actual_checksum lock_status
+  local actual_checksum lock_status
+  # EXIT traps can run after function locals leave scope; this subshell already
+  # isolates cleanup state from the caller.
+  lock_dir=""
+  temporary=""
   version="2.8.1"
   release_tag="2.8.1-0"
   platform="$1"
@@ -226,7 +258,7 @@ tea_env_ensure_micromamba() (
     exit "${lock_status}"
   fi
 
-  trap 'rm -f "${temporary:-}"; rmdir "${lock_dir}" 2>/dev/null || true' EXIT
+  trap 'rm -f "${temporary:-}" "${lock_dir}/owner"; rmdir "${lock_dir}" 2>/dev/null || true' EXIT
   temporary="${tool_path}.download.$$"
   url="https://github.com/mamba-org/micromamba-releases/releases/download/${release_tag}/micromamba-${platform}"
   echo "tea: downloading pinned micromamba ${version} for ${platform}..." >&2
@@ -255,7 +287,7 @@ tea_env_prepare() {
 
   lock_hash="$(tea_env_sha256 "${lock_file}")" || return 1
   # Keep the prefix stable and human-readable. The lock hash belongs in the
-  # marker, where it can trigger replacement without leaking into editor paths.
+  # marker, where it can identify changes without leaking into editor paths.
   env_prefix="${TEA_HOME}/environments/tea"
   marker="${env_prefix}/.tea-environment"
 
@@ -292,8 +324,13 @@ tea_env_cleanup_legacy() {
 tea_env_ensure() (
   set -euo pipefail
 
-  local lock_dir lock_status marker_hash package_cache temp_root work_dir
-  local install_prefix relocated_prefix publish_prefix staged_publish
+  local lock_status marker_hash package_cache temp_root
+  local install_prefix relocated_prefix staged_publish
+  # Keep EXIT cleanup state in this isolated subshell, including on errexit.
+  lock_dir=""
+  work_dir=""
+  publish_prefix=""
+  cleanup_new_prefix=0
   tea_env_prepare
 
   if [[ -r "${TEA_ENV_MARKER}" ]]; then
@@ -309,21 +346,29 @@ tea_env_ensure() (
   tea_env_wait_for_lock "${lock_dir}" "${TEA_ENV_MARKER}" || lock_status=$?
   if [[ "${lock_status}" -eq 1 ]]; then
     IFS= read -r marker_hash < "${TEA_ENV_MARKER}"
-    [[ "${marker_hash}" == "${TEA_ENV_LOCK_HASH}" ]]
-    exit $?
+    if [[ "${marker_hash}" == "${TEA_ENV_LOCK_HASH}" ]]; then
+      exit 0
+    fi
+    echo "tea: existing environment has a different dependency lock: ${TEA_ENV_PREFIX}" >&2
+    echo "tea: choose a separate TEA_HOME; see environment/README.md for update and recovery steps" >&2
+    exit 1
   elif [[ "${lock_status}" -ne 0 ]]; then
     exit "${lock_status}"
   fi
 
-  work_dir=""
-  publish_prefix=""
   tea_env_install_cleanup() {
+    # Only remove an incomplete prefix created by this locked attempt. Existing
+    # environments never reach the point where this flag is enabled.
+    if [[ "${cleanup_new_prefix}" -eq 1 && ! -e "${TEA_ENV_MARKER}" ]]; then
+      rm -rf "${TEA_ENV_PREFIX}"
+    fi
     if [[ -n "${work_dir}" ]]; then
       rm -rf "${work_dir}"
     fi
     if [[ -n "${publish_prefix}" ]] && [[ -e "${publish_prefix}" ]]; then
       rm -rf "${publish_prefix}"
     fi
+    rm -f "${lock_dir}/owner"
     rmdir "${lock_dir}" 2>/dev/null || true
   }
   trap tea_env_install_cleanup EXIT
@@ -338,6 +383,13 @@ tea_env_ensure() (
     fi
   fi
 
+  if [[ -e "${TEA_ENV_PREFIX}" || -L "${TEA_ENV_PREFIX}" ]]; then
+    echo "tea: refusing to replace an existing environment: ${TEA_ENV_PREFIX}" >&2
+    echo "tea: its completion marker is missing or has a different dependency lock" >&2
+    echo "tea: choose a separate TEA_HOME; see environment/README.md for update and recovery steps" >&2
+    exit 1
+  fi
+
   temp_root="${TMPDIR:-/tmp}"
   work_dir="$(mktemp -d "${temp_root%/}/tea-environment-install.XXXXXX")" || {
     echo "tea: unable to create temporary installation storage under ${temp_root}" >&2
@@ -345,18 +397,6 @@ tea_env_ensure() (
   }
   package_cache="${work_dir}/packages"
   mkdir -p "${package_cache}"
-
-  if [[ -e "${TEA_ENV_PREFIX}" ]]; then
-    case "${TEA_ENV_PREFIX}" in
-      "${TEA_HOME}"/environments/tea)
-        rm -rf "${TEA_ENV_PREFIX}"
-        ;;
-      *)
-        echo "tea: refusing to replace unexpected path ${TEA_ENV_PREFIX}" >&2
-        exit 1
-        ;;
-    esac
-  fi
 
   echo "tea: creating shared ${TEA_ENV_PLATFORM} environment at ${TEA_ENV_PREFIX}" >&2
   echo "tea: unpacking packages in temporary cache ${package_cache}" >&2
@@ -372,21 +412,24 @@ tea_env_ensure() (
       exit 1
     }
     echo "tea: staging environment locally before parallel publication" >&2
+  else
+    cleanup_new_prefix=1
   fi
 
   CONDA_PKGS_DIRS="${package_cache}" \
     MAMBA_ROOT_PREFIX="${TEA_HOME}/micromamba" \
-    "${TEA_MICROMAMBA}" --no-rc create --yes --prefix "${install_prefix}" --file "${TEA_ENV_LOCK_FILE}"
+    "${TEA_MICROMAMBA}" --no-rc create --yes --prefix "${install_prefix}" --file "${TEA_ENV_LOCK_FILE}" || exit $?
 
   if [[ "${staged_publish}" -eq 1 ]]; then
     echo "tea: relocating environment to final prefix ${TEA_ENV_PREFIX}" >&2
-    tea_env_relocate "${install_prefix}" "${relocated_prefix}" "${package_cache}"
-    tea_env_publish "${relocated_prefix}" "${publish_prefix}" "${install_prefix}/bin/python"
-    printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${publish_prefix}/.tea-environment"
-    mv "${publish_prefix}" "${TEA_ENV_PREFIX}"
+    tea_env_relocate "${install_prefix}" "${relocated_prefix}" "${package_cache}" || exit $?
+    tea_env_publish "${relocated_prefix}" "${publish_prefix}" "${install_prefix}/bin/python" || exit $?
+    printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${publish_prefix}/.tea-environment" || exit $?
+    mv "${publish_prefix}" "${TEA_ENV_PREFIX}" || exit $?
     publish_prefix=""
   else
-    printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${TEA_ENV_MARKER}"
+    printf '%s\n' "${TEA_ENV_LOCK_HASH}" > "${TEA_ENV_MARKER}" || exit $?
+    cleanup_new_prefix=0
   fi
 )
 
@@ -444,10 +487,6 @@ tea_env_activate() {
     PATH="${PATH:+${PATH}:}/usr/bin"
     export PATH
   fi
-
-  # Old releases used one directory per lock hash. Remove only directories
-  # whose 64-character name agrees with Tea's marker file.
-  tea_env_cleanup_legacy || return 1
 
   TEA_ENV_NAME="tea"
   CONDA_DEFAULT_ENV="${TEA_ENV_NAME}"
