@@ -289,6 +289,8 @@ class Styler:
     """Read category positions from data bins, never from the display frame."""
     labels = {}
     for source in sources:
+      if not hasattr(source, "GetNbinsX"):
+        continue
       axis = source.GetXaxis()
       if not axis.GetLabels():
         continue
@@ -436,6 +438,38 @@ class Styler:
       primitives.append(text.DrawLatex(right, label_y - (longest + 8) / height, hist.x_label))
     pad._tea_category_primitives = primitives
 
+  @staticmethod
+  def axisSamples(source: Any, include_segments: bool = False) -> list[tuple[float, float, float, float, float]]:
+    """Physical x intervals and central/lower/upper y for histograms or ROOT graphs."""
+    if hasattr(source, "GetNbinsX"):
+      axis = source.GetXaxis()
+      return [
+        (
+          axis.GetBinLowEdge(i),
+          axis.GetBinUpEdge(i),
+          source.GetBinContent(i),
+          source.GetBinContent(i) - source.GetBinErrorLow(i),
+          source.GetBinContent(i) + source.GetBinErrorUp(i),
+        )
+        for i in range(1, source.GetNbinsX() + 1)
+      ]
+    samples = []
+    for i in range(source.GetN()):
+      x, y = float(source.GetPointX(i)), float(source.GetPointY(i))
+      ex_low = max(0.0, source.GetErrorXlow(i))
+      ex_high = max(0.0, source.GetErrorXhigh(i))
+      ey_low = max(0.0, source.GetErrorYlow(i))
+      ey_high = max(0.0, source.GetErrorYhigh(i))
+      samples.append((x - ex_low, x + ex_high, y, y - ey_low, y + ey_high))
+    if include_segments:
+      # A line or band occupies the interval between adjacent graph points.
+      # Different missing-point segments arrive as distinct graphs.
+      samples += [
+        (min(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]), min(a[3], b[3]), max(a[4], b[4]))
+        for a, b in zip(samples, samples[1:])
+      ]
+    return samples
+
   def getYAxisRangeForLayout(self, hist, source_histograms, is_ratio=False, error_histograms=None):
     """Return the final Y range used to size labels before canvases are made."""
     if is_ratio:
@@ -443,17 +477,19 @@ class Styler:
       if ratio_limits is not None:
         return ratio_limits
 
-    values = []
-    for source in source_histograms or []:
-      values.extend(source.GetBinContent(i) for i in range(1, source.GetNbinsX() + 1))
+    values = [sample[2] for source in source_histograms or [] for sample in self.axisSamples(source)]
     if error_histograms is None:
       error_histograms = source_histograms or []
-    upper_values = [
-      source.GetBinContent(i) + source.GetBinErrorUp(i)
+    upper_values = [sample[4] for source in error_histograms for sample in self.axisSamples(source)]
+    # Graphs can carry asymmetric intervals (e.g. confidence bands). Include
+    # their lower envelope on log axes without changing histogram range policy.
+    lower_values = [
+      sample[3]
       for source in error_histograms
-      for i in range(1, source.GetNbinsX() + 1)
+      if not hasattr(source, "GetNbinsX")
+      for sample in self.axisSamples(source)
     ]
-    positive_values = [value for value in values if value > 0]
+    positive_values = [value for value in values + lower_values if value > 0]
     content_maximum = max(positive_values) if positive_values else 1.0
     if hist.log_y and not is_ratio:
       content_minimum = min(positive_values) if positive_values else content_maximum / 1000.0
@@ -474,6 +510,28 @@ class Styler:
       maximum = self.__addTopLabelClearance(minimum, maximum)
     return minimum, maximum
 
+  def drawDeLoggifiedXAxis(self, hist, pad, show_labels=True):
+    """Overlay physical-value ticks on a frame whose coordinates are log10(x)."""
+    if not hist.de_loggify_x_axis:
+      return
+    if hist.log_x or pad.GetLogx():
+      raise ValueError("de_loggify_x_axis requires log_x=False")
+    pad.cd()
+    pad.Update()
+    xmin, xmax = pad.GetUxmin(), pad.GetUxmax()
+    # TGaxis takes physical y coordinates even when the pad stores log10(y).
+    for y, options in ((pad.GetUymin(), "G" if show_labels else "GU"), (pad.GetUymax(), "G-U")):
+      y = pad.PadtoY(y)
+      axis = ROOT.TGaxis(xmin, y, xmax, y, 10.0**xmin, 10.0**xmax, 510, options)
+      axis.SetLabelFont(43)
+      axis.SetLabelSize(self.labelFontSize)
+      axis.SetLabelOffset(0.007)
+      axis.SetNoExponent(True)
+      # The pad owns these axes, including after its Python proxy is released.
+      axis.SetBit(ROOT.TObject.kCanDelete)
+      ROOT.SetOwnership(axis, False)
+      axis.Draw()
+
   def setupFigure(self, plot, hist, is_ratio=False, source_histograms=None, error_histograms=None):
     if plot is None or type(plot) is TObject:
       return
@@ -487,7 +545,7 @@ class Styler:
         plot.SetMaximum(ratio_limits[1])
     else:
       self.__setAutomaticLimits(plot, hist, source_histograms, error_histograms=error_histograms)
-      if hist.y_min is not None and ((hist.y_min > 0) or (not hist.log_y and hist.y_min == 0)):
+      if hist.y_min is not None and (not hist.log_y or hist.y_min > 0):
         plot.SetMinimum(hist.y_min)
       if hist.y_max is not None and hist.y_max > 0:
         plot.SetMaximum(hist.y_max)
@@ -501,6 +559,7 @@ class Styler:
       source_histograms = source_histograms or [plot.GetHistogram()]
       has_categorical_labels = any(
         source
+        and hasattr(source, "GetNbinsX")
         and source.GetXaxis().GetLabels()
         and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
         for source in source_histograms
@@ -519,6 +578,9 @@ class Styler:
 
       x_axis.SetTitleSize(self.labelFontSize)
       x_axis.SetLabelSize(self.labelFontSize)
+      if hist.de_loggify_x_axis:
+        x_axis.SetLabelSize(0)
+        x_axis.SetTickLength(0)
       if has_categorical_labels:
         # Draw these at their original data coordinates after range selection.
         x_axis.SetLabelSize(0)
@@ -594,8 +656,7 @@ class Styler:
       return
 
     # Expand toward the legend horizontally, or leave room above the filled
-    # distributions vertically. Fixed endpoints stay fixed unless the
-    # histogram explicitly permits display-only X extension.
+    # distributions vertically. Explicit endpoints always stay fixed.
     legend_x_center = sum((box[0] + box[2]) / 2 for box in legend_boxes) / len(legend_boxes)
     grow_x_upper = legend_x_center >= (left + right) / 2
 
@@ -605,8 +666,6 @@ class Styler:
     # for a legend; a tall legend needs horizontal whitespace instead.
     y_extension_penalty = 1.75 if hist.log_y else 1.25
     x_range_is_fixed = hist.x_max is not None if grow_x_upper else hist.x_min is not None
-    if getattr(hist, "allow_legend_x_extension", False):
-      x_range_is_fixed = False
     x_extensions = (0.0,) if x_range_is_fixed else extensions
     transform_y = math.log10 if hist.log_y else lambda value: value
     low, high = transform_y(y_min), transform_y(y_max)
@@ -617,13 +676,10 @@ class Styler:
     sources = [(source, error_histograms is None) for source in source_histograms]
     sources.extend((source, True) for source in error_histograms or [])
     for source, has_errors in sources:
-      axis = source.GetXaxis()
-      for index in range(1, source.GetNbinsX() + 1):
-        value = source.GetBinContent(index)
-        if has_errors:
-          value += source.GetBinErrorUp(index)
+      for x_low, x_high, central, _, upper in self.axisSamples(source, include_segments=True):
+        value = upper if has_errors else central
         if math.isfinite(value) and value > y_min:
-          edges = (axis.GetBinLowEdge(index), axis.GetBinUpEdge(index))
+          edges = (x_low, x_high)
           if edges not in bin_envelopes or value > bin_envelopes[edges]:
             bin_envelopes[edges] = value
     bins = [(bin_low, bin_high, transform_y(value)) for (bin_low, bin_high), value in bin_envelopes.items()]
@@ -835,17 +891,14 @@ class Styler:
     sources = [(source, error_histograms is None) for source in source_histograms]
     sources.extend((source, True) for source in error_histograms or [])
     for source, has_errors in sources:
-      axis = source.GetXaxis()
-      for bin_index in range(1, source.GetNbinsX() + 1):
-        if axis.GetBinUpEdge(bin_index) <= x_min or axis.GetBinLowEdge(bin_index) >= x_max:
+      for x_low, x_high, central, _, upper in self.axisSamples(source, include_segments=True):
+        if x_high <= x_min or x_low >= x_max:
           continue
-        value = source.GetBinContent(bin_index)
-        if has_errors:
-          value += source.GetBinErrorUp(bin_index)
+        value = upper if has_errors else central
         if value <= y_min:
           continue
-        x1 = self.__projectToNdc(axis.GetBinLowEdge(bin_index), x_min, x_max, log_x, left, right)
-        x2 = self.__projectToNdc(axis.GetBinUpEdge(bin_index), x_min, x_max, log_x, left, right)
+        x1 = self.__projectToNdc(x_low, x_min, x_max, log_x, left, right)
+        x2 = self.__projectToNdc(x_high, x_min, x_max, log_x, left, right)
         y2 = self.__projectToNdc(value, y_min, y_max, log_y, bottom, top)
         for legend_x1, legend_y1, legend_x2, legend_y2 in legend_boxes:
           if x2 < legend_x1 - clearance or x1 > legend_x2 + clearance:
@@ -866,18 +919,19 @@ class Styler:
 
     occupied_x_ranges = []
     for source in source_histograms:
-      occupied_bins = [
-        bin_index for bin_index in range(1, source.GetNbinsX() + 1) if source.GetBinContent(bin_index) != 0
-      ]
-      if occupied_bins:
-        axis = source.GetXaxis()
-        occupied_x_ranges.append((axis.GetBinLowEdge(occupied_bins[0]), axis.GetBinUpEdge(occupied_bins[-1])))
+      occupied = [sample for sample in self.axisSamples(source) if sample[2] != 0]
+      if occupied:
+        occupied_x_ranges.append((min(sample[0] for sample in occupied), max(sample[1] for sample in occupied)))
+    x_values = getattr(hist, "x_values", ())
+    if x_values:
+      occupied_x_ranges.append((min(x_values), max(x_values)))
 
     # A categorical axis has one immutable physical bin per label. Changing
     # its numeric limits shifts ROOT's labels relative to those bins, so only
     # continuous histograms receive occupied-bin automatic x ranges.
     has_categorical_labels = any(
-      source.GetXaxis().GetLabels()
+      hasattr(source, "GetNbinsX")
+      and source.GetXaxis().GetLabels()
       and any(source.GetXaxis().GetBinLabel(index) for index in range(1, source.GetNbinsX() + 1))
       for source in source_histograms
     )
@@ -892,7 +946,7 @@ class Styler:
       x_max = max(h.GetXaxis().GetXmax() for h in source_histograms)
     if not has_categorical_labels and (hist.x_min is None or hist.x_max is None):
       if x_min <= 0 or x_max <= 0:
-        padding = 0.05 * (x_max - x_min)
+        padding = 0.05 * (x_max - x_min) if x_max != x_min else max(abs(x_min) * 0.1, 0.1)
         automatic_x_min = x_min - padding
         automatic_x_max = x_max + padding
       else:

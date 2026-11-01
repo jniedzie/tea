@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import ROOT
 
@@ -14,6 +15,7 @@ def main() -> None:
   from Histogram import Histogram2D, Profile2D
   from HistogramNormalizer import NormalizationType
   from HistogramPlotter import HistogramPlotter
+  from PlotCanvas import save_canvas
   from Sample import Sample, SampleType
   from Styler import Styler
 
@@ -133,7 +135,6 @@ def main() -> None:
     raise AssertionError("The profile mean changed while loading")
 
   captured_canvases = {}
-  save_canvas = plotter._HistogramPlotter__save_canvas
 
   def capture_canvas(canvas, path: str) -> None:
     canvas.Update()
@@ -150,9 +151,9 @@ def main() -> None:
     }
     save_canvas(canvas, path)
 
-  plotter._HistogramPlotter__save_canvas = capture_canvas
-  plotter.drawHists2D()
-  plotter.drawProfiles2D()
+  with patch("HistogramPlotter.save_canvas", side_effect=capture_canvas):
+    plotter.drawHists2D()
+    plotter.drawProfiles2D()
   if (
     abs(histogram.hist.GetMinimum() - histogram.z_min) > 1e-12
     or abs(histogram.hist.GetMaximum() - histogram.z_max) > 1e-12

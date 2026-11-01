@@ -1,913 +1,564 @@
-import ROOT
-import os
-import math
+"""Config-driven ABCD loading, common cut search, and PDF diagnostics."""
 
+from __future__ import annotations
+
+from array import array
+from ctypes import c_double
+import json
+import hashlib
+import subprocess
+import math
+import re
+from pathlib import Path
+from typing import Any
+from uuid import uuid4
+
+import numpy as np
+import ROOT
+
+from ABCDSearch import DIRECTIONS, IntegralPlane, boundary_indices, metrics, region_table, regions, search
 from ABCDHelper import ABCDHelper
-from ABCDHistogramsHelper import ABCDHistogramsHelper
-from HistogramNormalizer import HistogramNormalizer, NormalizationType
-from Histogram import Histogram2D
-from Logger import fatal, warn, info
-from ttalps_luminosities import get_luminosity
-from ttalps_cross_sections import get_cross_sections, get_theory_cross_section
+from Sample import SampleType
+
+
+DEFAULTS = dict(
+  max_correlation=None,
+  max_overlap=None,
+  max_closure=0.2,
+  max_error=2.0,
+  min_n_events=20.0,
+  max_signal_contamination=0.2,
+  min_signals=1,
+  overlap_metric="cosine",
+)
+
+
+def edges(axis: Any) -> list[float]:
+  return [axis.GetBinLowEdge(i) for i in range(1, axis.GetNbins() + 2)]
+
+
+def evaluate_planes(planes: dict, point: tuple[int, int], quadrant: str) -> dict:
+  helper = ABCDHelper()
+  output = {}
+  for region, histograms in planes.items():
+    b = regions(helper, IntegralPlane(histograms["background"]), point, quadrant)
+    output[region] = {"background": region_table(*b)}
+    for key, h in histograms.items():
+      if key == "background":
+        continue
+      s = regions(helper, IntegralPlane(h), point, quadrant)
+      output[region][key] = {"metrics": metrics(helper, b, s), "regions": region_table(*s)}
+  return output
 
 
 class ABCDPlotter:
-  def __init__(self, config, args):
+  def __init__(self, config: Any, args: Any = None) -> None:
     self.config = config
+    self.settings = {}
+    for key, default in DEFAULTS.items():
+      override = getattr(args, key, None)
+      self.settings[key] = override if override is not None else getattr(config, key, default)
+    for key, value in self.settings.items():
+      if key != "overlap_metric" and value is not None and (not math.isfinite(value) or value < 0):
+        raise ValueError(f"Invalid constraint: {key}")
+    if not hasattr(config, "signal_models"):
+      raise ValueError(
+        "Migrate ABCD config: supply signal_models with label, parameters and Sample objects; "
+        "ttalps path patterns and masses/ctaus are no longer input interfaces"
+      )
+    self.models = config.signal_models
+    if not self.models or any(not re.fullmatch(r"[A-Za-z0-9_.-]+", key) for key in self.models):
+      raise ValueError("Signal model IDs must be nonempty filename-safe strings")
+    self.selected = list(getattr(config, "optimization_signals", self.models))
+    self.normalization = []
+    self.planes = self._load()
+    self.result = None
+    self.maps = None
 
-    self.abcdHelper = ABCDHelper(config, args)
-    self.histogramsHelper = ABCDHistogramsHelper(config)
-    self.normalizer = HistogramNormalizer(config)
+  @classmethod
+  def from_histograms(
+    cls,
+    config: Any,
+    planes: dict,
+    models: dict,
+    selected: list[str],
+    result: dict,
+    maps: dict,
+    normalization: list[dict] | None = None,
+  ) -> ABCDPlotter:
+    """Prepared inputs are already normalized and rebinned; never scale them again."""
+    instance = cls.__new__(cls)
+    if any(not re.fullmatch(r"[A-Za-z0-9_.-]+", key) for key in models):
+      raise ValueError("Signal model IDs must be filename-safe strings")
+    instance.config, instance.planes, instance.models = config, planes, models
+    instance.selected, instance.result, instance.maps = selected, result, maps
+    instance.normalization = normalization or []
+    return instance
 
-    self.signal_hist_name = f"{config.signal_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
-    self.background_hist_name = (
-      f"{config.background_collection}_{config.variable_1}_vs_{config.variable_2}{config.category}"
+  def _load(self) -> dict:
+    config = self.config
+    factor = getattr(config, "rebin_2D", 1)
+    if not isinstance(factor, int) or factor < 1:
+      raise ValueError("rebin_2D must be a positive integer")
+    region = getattr(config, "region", "SR")
+    suffix = getattr(config, "category", "")
+    pair = f"{config.variable_1}_vs_{config.variable_2}"
+    bg_name = getattr(config, "background_hist_name", f"{config.background_collection}_{pair}{suffix}")
+    sig_name = getattr(config, "signal_hist_name", f"{config.signal_collection}_{pair}{suffix}")
+    background_samples = (
+      getattr(config, "data_samples", ()) if getattr(config, "do_data", False) else config.background_samples
     )
+    groups = {"background": (background_samples, bg_name)}
+    groups.update({key: (model["samples"], sig_name) for key, model in self.models.items()})
+    if "background" in self.models:
+      raise ValueError("Signal model ID 'background' is reserved")
+    output, reference_edges, seen = {}, None, set()
+    for key, (samples, name) in groups.items():
+      if not samples:
+        raise ValueError(f"No configured samples for {key}")
+      for sample in samples:
+        identity = (sample.file_path, name)
+        if identity in seen:
+          raise ValueError(f"Duplicate sample input: {identity}")
+        seen.add(identity)
+        file = ROOT.TFile.Open(sample.file_path)
+        if not file or file.IsZombie() or file.TestBit(ROOT.TFile.kRecovered):
+          raise ValueError(f"Unreadable ROOT input: {sample.file_path}")
+        try:
+          original = file.Get(name)
+          if not original or not original.InheritsFrom("TH2"):
+            raise ValueError(f"Missing TH2 {name}: {sample.file_path}")
+          if not original.GetSumw2N():
+            raise ValueError(f"Missing stored squared weights: {sample.file_path}:{name}")
+          current_edges = (edges(original.GetXaxis()), edges(original.GetYaxis()))
+          if reference_edges is not None and current_edges != reference_edges:
+            raise ValueError("Incompatible ABCD histogram axes")
+          reference_edges = current_edges
+          if any(n % factor or n // factor < 2 for n in (original.GetNbinsX(), original.GetNbinsY())):
+            raise ValueError("Rebinning must exactly merge axes and retain interior boundaries")
+          h = original.Clone(uuid4().hex)
+          h.SetDirectory(0)
+          scale, initial, lumi = 1.0, None, None
+          if sample.type != SampleType.data:
+            cutflow = file.Get("cutFlow")
+            if not cutflow:
+              raise ValueError(f"Missing cutFlow: {sample.file_path}")
+            initial = sample.initial_weight_sum if sample.initial_weight_sum > 0 else cutflow.GetBinContent(1)
+            lumi = sample.luminosity if sample.luminosity > 0 else getattr(config, "luminosity", None)
+            if any(v is None or not math.isfinite(v) or v <= 0 for v in (initial, lumi, sample.cross_section)):
+              raise ValueError(f"Invalid normalization: {sample.name}")
+            scale = lumi * sample.cross_section / initial
+            h.Scale(scale)
+          self.normalization.append(
+            dict(
+              model=key,
+              sample=sample.name,
+              path=sample.file_path,
+              luminosity_pb=lumi,
+              cross_section_pb=sample.cross_section,
+              initial_generator_weight_sum=initial,
+              scale=scale,
+            )
+          )
+          h.Rebin2D(factor, factor)
+          if key in output:
+            output[key].Add(h)
+          else:
+            output[key] = h
+        finally:
+          file.Close()
+    return {region: output}
 
-    self.best_points_path = f"{config.output_path}/best_points_{self.config.variable_1}_vs_{self.config.variable_2}.txt"
-    self.background_files = {}
-    self.background_hists = {}
-    self.background_hist = None
-
-    self.data_file = None
-    self.signal_files = {}
-    self.signal_hists = {}
-    self.signal_scales = {}
-    self.canvases = None
-    self.projections_pads = {}
-    self.significance_hists = {}
-    self.contamination_hists = {}
-    self.lines = {}
-    self.projections_legend = ROOT.TLegend(*config.projections_legend_position)
-    self.signal_projections = {}
-    self.ratio_hist = None
-    self.ratio_hist_err = None
-
-    self.variable_1_min = None
-    self.variable_1_max = None
-    self.variable_2_min = None
-    self.variable_2_max = None
-
-    os.makedirs(config.output_path, exist_ok=True)
-
-    self.__setup_canvases()
-    if not config.do_data:
-      self.__load_background_histograms()
-    self.__setup_backgrounds_sum_histogram()
-    self.__load_signal_hists()
-
-    self.__flip_signal_to_region_a()
-
-    self.optimization_hists = self.abcdHelper.get_optimization_hists(self.background_hist)
-
-    self.__setup_signal_hists()
-    self.true_projection_hist = self.abcdHelper.get_projection_true(self.background_hist, self.variable_2_max)
-    self.prediction_projection_hist = self.abcdHelper.get_projection_prediction(
-      self.background_hist, self.variable_2_max
+  def calculate_best_points(self) -> dict:
+    region = getattr(self.config, "region", "SR")
+    histograms = self.planes[region]
+    if getattr(self.config, "optimization_param", "significance") not in (None, "significance"):
+      raise ValueError("Use significance optimization or explicit fixed-point mode")
+    fixed = (
+      getattr(self.config, "abcd_point", None)
+      if getattr(self.config, "optimization_param", "significance") is None
+      else None
     )
-
-    self.true_projection_hist, self.smart_binning = self.histogramsHelper.rebin(self.true_projection_hist)
-    self.prediction_projection_hist, _ = self.histogramsHelper.rebin(
-      self.prediction_projection_hist, self.smart_binning
+    if getattr(self.config, "optimization_param", "significance") is None and not isinstance(fixed, dict):
+      raise ValueError("Fixed-point mode requires physical abcd_point x/y boundaries")
+    order = (self.config.signal_bin,) if fixed else ("A", "B", "C", "D")
+    self.result, self.maps = search(
+      histograms["background"],
+      {key: h for key, h in histograms.items() if key != "background"},
+      self.selected,
+      self.settings,
+      fixed,
+      order,
     )
+    self.selected = self.result["optimization_signals"]
+    self.result.update(
+      settings=self.settings,
+      normalization=self.normalization,
+      region=region,
+      pair=f"{self.config.variable_1}_vs_{self.config.variable_2}",
+      model_metadata={key: {k: v for k, v in model.items() if k != "samples"} for key, model in self.models.items()},
+    )
+    if self.result["status"] == "accepted":
+      self.result["evaluations"] = evaluate_planes(self.planes, tuple(self.result["indices"]), self.result["quadrant"])
+    source = Path(__file__).resolve()
+    framework = source.parents[2]
+    try:
+      revision = subprocess.check_output(["git", "-C", str(framework), "rev-parse", "HEAD"], text=True).strip()
+      dirty = subprocess.check_output(["git", "-C", str(framework), "status", "--short"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+      revision, dirty = None, None
+    self.result["provenance"] = {
+      "tea_commit": revision,
+      "working_tree": dirty,
+      "sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in source.parent.glob("ABCD*.py")},
+    }
+    self.result["counting_convention"] = getattr(
+      self.config, "counting_convention", "Producer-defined entries; inter-entry event covariance is omitted"
+    )
+    return self.result
 
-  def plot_optimization_hists(self):
-    for name, hist in self.optimization_hists.items():
-      hist.GetYaxis().SetTitle(hist.GetYaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_1))
-      hist.GetXaxis().SetTitle(hist.GetXaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_2))
-      hist.GetZaxis().SetTitle(self.config.z_params[name][0])
-      hist.GetZaxis().SetTitleOffset(1.9)
+  def _label(self, key: str) -> str:
+    return self.models.get(key, {}).get("label", key)
 
-      self.canvases[name].cd()
-      hist.Draw("colz")
-      ROOT.gPad.SetLogz(self.config.z_params[name][3])
-      hist.GetZaxis().SetRangeUser(self.config.z_params[name][1], self.config.z_params[name][2])
+  def _canvas(self, columns: int = 1, rows: int = 1) -> Any:
+    size = getattr(self.config, "canvas_size", (900, 750))
+    width, height = (size, size) if isinstance(size, int) else size
+    canvas = ROOT.TCanvas(uuid4().hex, "", min(width * columns, 2400), min(height * rows, 2400))
+    if columns * rows > 1:
+      canvas.Divide(columns, rows)
+    canvas.cd()
+    return canvas
 
-  def __flip_signal_to_region_a(self):
-    histograms = self.signal_hists
-    histograms["background"] = self.background_hist
+  def _style(self) -> None:
+    ROOT.gPad.SetLeftMargin(0.14)
+    ROOT.gPad.SetRightMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.16)
 
-    signal_bin = None
-    if self.config.optimization_param is None:
-      signal_bin = self.config.signal_bin
+  def _axes(self, hist: Any) -> None:
+    labels = getattr(self.config, "nice_names", {})
+    hist.GetXaxis().SetTitle(labels.get(self.config.variable_2, self.config.variable_2))
+    hist.GetYaxis().SetTitle(labels.get(self.config.variable_1, self.config.variable_1))
+    for axis in (hist.GetXaxis(), hist.GetYaxis()):
+      axis.SetTitleSize(0.035)
+      axis.SetTitleOffset(1.35)
 
-    histograms = self.abcdHelper.flip_signal_to_region_a(histograms, signal_bin)
+  def _lines(self, hist: Any) -> list:
+    if self.result["status"] != "accepted":
+      return []
+    point = self.result["physical_boundaries"]
+    lines = [
+      ROOT.TLine(point["x"], hist.GetYaxis().GetXmin(), point["x"], hist.GetYaxis().GetXmax()),
+      ROOT.TLine(hist.GetXaxis().GetXmin(), point["y"], hist.GetXaxis().GetXmax(), point["y"]),
+    ]
+    for line in lines:
+      line.SetLineWidth(2)
+      line.Draw()
+    return lines
 
-    self.background_hist = histograms["background"]
-    del histograms["background"]
-    self.signal_hists = histograms
-
-    if self.variable_1_min is None:
-      self.variable_1_min = self.background_hist.GetXaxis().GetXmin()
-      self.variable_1_max = self.background_hist.GetXaxis().GetXmax()
-      self.variable_2_min = self.background_hist.GetYaxis().GetXmin()
-      self.variable_2_max = self.background_hist.GetYaxis().GetXmax()
-
-  def get_n_signals_with_overlap_with_background_below(self, threshold):
-    n_signals = 0
-    for mass, ctau in self.signal_hists:
-      signal_hist = self.signal_hists[(mass, ctau)]
-      if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-        continue
-
-      coeff = self.abcdHelper.get_overlap_coefficient(self.signal_hists[(mass, ctau)], self.background_hist, mass, ctau)
-      if coeff < threshold:
-        n_signals += 1
-
-    return n_signals
-
-  def plot_per_signal_hists(self):
-    clones = {}
-
-    label = ROOT.TLatex()
-    label.SetTextSize(0.07)
-
-    line = ROOT.TLine()
-    line.SetLineWidth(1)
-    line.SetLineColor(ROOT.kGreen + 2)
-
-    for i_mass, mass in enumerate(self.config.masses):
-      for i_ctau, ctau in enumerate(self.config.ctaus):
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        if self.signal_hists[(mass, ctau)] is None or not isinstance(self.signal_hists[(mass, ctau)], ROOT.TH2):
-          continue
-
-        clones["background"] = self.background_hist.Clone()
-        clones[(mass, ctau)] = self.signal_hists[(mass, ctau)].Clone()
-
-        i_pad = 1 + i_mass * len(self.config.ctaus) + i_ctau
-        mass_label = f"{mass.replace('p', '.')} GeV, {ctau} mm"
-
-        self.canvases["grid"].cd(i_pad)
-        self.set_pad_style()
-        clones["background"].GetYaxis().SetTitle(
-          clones["background"].GetYaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_1)
-        )
-        clones["background"].GetXaxis().SetTitle(
-          clones["background"].GetXaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_2)
-        )
-        clones["background"].GetYaxis().SetTitleOffset(0.9)
-        clones["background"].GetXaxis().SetTitleOffset(0.9)
-        clones["background"].GetXaxis().SetTitleSize(0.05)
-        clones["background"].GetYaxis().SetTitleSize(0.05)
-
-        clones["background"].DrawNormalized("BOX")
-
-        clones[(mass, ctau)].DrawNormalized("BOX SAME")
-        if self.config.grid_line:
-          x_min = self.config.grid_line[0]
-          y_min = self.config.grid_line[2]
-          x_max = self.config.grid_line[1]
-          y_max = self.config.grid_line[3]
-          line.DrawLine(x_min, y_min, x_max, y_max)
-
-        label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
-
-        overlap = self.abcdHelper.get_overlap_coefficient(
-          self.signal_hists[(mass, ctau)], self.background_hist, mass, ctau
-        )
-        label.DrawLatexNDC(0.13, 0.92, f"Overlap: {overlap:.2f}")
-
-        self.canvases["significance"].cd(i_pad)
-        self.set_pad_style()
-        if self.significance_hists[(mass, ctau)] is not None:
-          self.significance_hists[(mass, ctau)].Draw("colz")
-        label.DrawLatexNDC(*self.config.signal_label_position, mass_label)
-
-  def get_background_correlation(self):
-    correlation = self.background_hist.GetCorrelationFactor()
-    return correlation
-
-  def plot_background_hist(self):
-    clone = self.background_hist.Clone()
-    clone.GetYaxis().SetTitle(clone.GetYaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_1))
-    clone.GetXaxis().SetTitle(clone.GetXaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_2))
-    self.canvases["background"].cd()
+  def render(self) -> None:
+    ROOT.gROOT.SetBatch(True)
     ROOT.gStyle.SetOptStat(0)
+    if self.result is None:
+      self.calculate_best_points()
+    output = Path(self.config.output_path)
+    output.mkdir(parents=True, exist_ok=True)
+    if tuple(getattr(self.config, "output_formats", ("pdf",))) != ("pdf",):
+      raise ValueError("ABCD diagnostics support PDF output only")
+    kept = []
+    for region, histograms in self.planes.items():
+      for start in range(0, len(histograms), 12):
+        entries = list(histograms.items())[start : start + 12]
+        columns = min(3, len(entries))
+        canvas = self._canvas(columns, math.ceil(len(entries) / columns))
+        for pad, (key, original) in enumerate(entries, 1):
+          canvas.cd(pad)
+          self._style()
+          h = original.Clone(uuid4().hex)
+          h.SetDirectory(0)
+          h.SetTitle(f"{region}: {self._label(key)}")
+          self._axes(h)
+          h.Draw("COLZ")
+          kept.extend([h, *self._lines(h)])
+        canvas.SaveAs(str(output / f"{region}_planes_{start // 12 + 1}.pdf"))
+        canvas.Close()
+    self._signal_grids(output, kept)
+    for name in ("significance", "closure", "error", "leakage", "min_n_events", "accepted"):
+      self._draw_maps(name, output, kept)
+    for key in self.selected:
+      for name in ("significance", "leakage"):
+        self._draw_maps(f"{name}:{key}", output, kept)
+    if self.result["status"] == "accepted":
+      for region in self.planes:
+        self._projections(region, output, kept)
+      self._summary(output, kept)
 
-    clone.DrawNormalized("BOX")
+  def _signal_grids(self, output: Path, kept: list) -> None:
+    for region, histograms in self.planes.items():
+      models = [(key, histograms[key]) for key in self.models if key in histograms]
+      for start in range(0, len(models), 12):
+        entries = models[start : start + 12]
+        columns = min(3, len(entries))
+        canvas = self._canvas(columns, math.ceil(len(entries) / columns))
+        for pad, (key, original) in enumerate(entries, 1):
+          canvas.cd(pad)
+          self._style()
+          background = histograms["background"].Clone(uuid4().hex)
+          signal = original.Clone(uuid4().hex)
+          for h in (background, signal):
+            h.SetDirectory(0)
+            if h.Integral() > 0:
+              h.Scale(1.0 / h.Integral())
+          background.SetMinimum(0.0)
+          signal.SetMinimum(0.0)
+          background.SetTitle(f"{region}: {self._label(key)} (unit-area shapes)")
+          self._axes(background)
+          background.SetFillColor(ROOT.kGray + 1)
+          background.SetLineColor(ROOT.kGray + 1)
+          signal.SetFillColor(ROOT.kRed)
+          signal.SetLineColor(ROOT.kRed)
+          background.Draw("BOX")
+          signal.Draw("BOX SAME")
+          legend = ROOT.TLegend(0.15, 0.80, 0.75, 0.89)
+          legend.SetTextSize(0.025)
+          legend.AddEntry(background, "Background", "f")
+          legend.AddEntry(signal, "Signal", "f")
+          legend.Draw()
+          kept.extend([background, signal, legend, *self._lines(background)])
+        canvas.SaveAs(str(output / f"{region}_signal_grid_{start // 12 + 1}.pdf"))
+        canvas.Close()
 
-    # print correlation between variables in the plot
-    correlation = clone.GetCorrelationFactor()
+  def _draw_maps(self, name: str, output: Path, kept: list) -> None:
+    background = next(iter(self.planes.values()))["background"]
+    canvas = self._canvas(2, 2)
+    for pad, (quadrant, fields) in enumerate(self.maps.items(), 1):
+      canvas.cd(pad)
+      self._style()
+      x, y = np.array(edges(background.GetXaxis())[1:-1]), np.array(edges(background.GetYaxis())[1:-1])
+
+      def map_edges(values: np.ndarray, axis: Any) -> array:
+        if len(values) == 1:
+          half = axis.GetBinWidth(1) / 2
+          return array("d", [values[0] - half, values[0] + half])
+        middle = (values[:-1] + values[1:]) / 2
+        return array("d", [values[0] - (middle[0] - values[0]), *middle, values[-1] + (values[-1] - middle[-1])])
+
+      h = ROOT.TH2D(
+        uuid4().hex,
+        f"{name}, quadrant {quadrant}",
+        len(x),
+        map_edges(x, background.GetXaxis()),
+        len(y),
+        map_edges(y, background.GetYaxis()),
+      )
+      h.SetDirectory(0)
+      self._axes(h)
+      h.GetXaxis().SetTitle(h.GetXaxis().GetTitle() + " boundary")
+      h.GetYaxis().SetTitle(h.GetYaxis().GetTitle() + " boundary")
+      for (i, j), value in np.ndenumerate(fields[name]):
+        h.SetBinContent(i + 1, j + 1, float(value) if np.isfinite(value) else 0.0)
+      h.Draw("COLZ")
+      params = getattr(self.config, "z_params", {}).get(name.split(":")[0])
+      if params:
+        h.GetZaxis().SetTitle(params[0])
+        h.GetZaxis().SetRangeUser(params[1], params[2])
+        ROOT.gPad.SetLogz(params[3])
+      kept.append(h)
+      note = ROOT.TLatex()
+      note.SetTextSize(0.027)
+      note.DrawLatexNDC(0.15, 0.93, "Undefined bins shown as zero; see numeric maps")
+      kept.extend([note, *self._lines(h)])
+    canvas.SaveAs(str(output / (name.replace(":", "_") + ".pdf")))
+    canvas.Close()
+
+  def projections(self, region: str) -> dict:
+    """Aggregate before propagating the shared control normalization uncertainty."""
+    hist = self.planes[region]["background"]
+    point, q = tuple(self.result["indices"]), self.result["quadrant"]
+    i, j = point
+    nx, ny = hist.GetNbinsX(), hist.GetNbinsY()
+    low_x, high_y = DIRECTIONS[q][0] == "<", DIRECTIONS[q][1] == ">="
+    sx, cx = ((1, i - 1), (i, nx)) if low_x else ((i, nx), (1, i - 1))
+    sy, cy = ((j, ny), (1, j - 1)) if high_y else ((1, j - 1), (j, ny))
+    b, be = regions(ABCDHelper(), hist, point, q)
+    if any(v <= 0 for v in b):
+      return {"available": False, "reason": "Nonpositive background region yield"}
+    ratio = b[1] / b[3]
+    variance = ratio**2 * ((be[1] / b[1]) ** 2 + (be[3] / b[3]) ** 2)
+    base_edges = edges(hist.GetYaxis())[sy[0] - 1 : sy[1] + 1]
+    custom = getattr(self.config, "custom_rebin", False)
+    smart = getattr(self.config, "smart_rebin", False)
+    if custom and smart:
+      raise ValueError("Choose either custom or smart projection rebinning")
+    if custom:
+      boundaries = list(self.config.custom_projections_binning)
+      if boundaries[0] != base_edges[0] or boundaries[-1] != base_edges[-1]:
+        raise ValueError("Custom projection bins must span the selected signal side")
+    elif smart:
+      boundaries, total, squares = [base_edges[0]], 0.0, 0.0
+      for ybin in range(sy[0], sy[1] + 1):
+        err = c_double()
+        total += hist.IntegralAndError(*sx, ybin, ybin, err)
+        squares += err.value**2
+        if total > 0 and math.sqrt(squares) / total <= self.config.smart_rebin_max_error:
+          boundaries.append(hist.GetYaxis().GetBinUpEdge(ybin))
+          total, squares = 0.0, 0.0
+      if boundaries[-1] != base_edges[-1]:
+        if len(boundaries) > 1:
+          boundaries.pop()
+        boundaries.append(base_edges[-1])
+    else:
+      factor = getattr(self.config, "standard_rebin", 1)
+      if not isinstance(factor, int) or factor < 1 or (len(base_edges) - 1) % factor:
+        raise ValueError("Projection rebinning must exactly merge the selected range")
+      boundaries = base_edges[::factor]
+    if any(value not in base_edges for value in boundaries) or any(a >= b for a, b in zip(boundaries, boundaries[1:])):
+      raise ValueError("Projection boundaries must coincide with ordered base edges")
+    true, predicted, controls, signals = [], [], [], {key: [] for key in self.models if key in self.planes[region]}
+    for left, right in zip(boundaries, boundaries[1:]):
+      first = base_edges.index(left) + sy[0]
+      last = base_edges.index(right) + sy[0] - 1
+
+      def integral(h: Any, xbins: tuple[int, int]) -> tuple[float, float]:
+        error = c_double()
+        return h.IntegralAndError(*xbins, first, last, error), error.value**2
+
+      a, va = integral(hist, sx)
+      c, vc = integral(hist, cx)
+      true.append((a, math.sqrt(va)))
+      predicted.append((ratio * c, math.sqrt(ratio**2 * vc + c**2 * variance)))
+      controls.append(c)
+      for key in signals:
+        s, vs = integral(self.planes[region][key], sx)
+        signals[key].append((s, math.sqrt(vs)))
+    covariance = np.outer(controls, controls) * variance
+    for k, (_, error) in enumerate(predicted):
+      covariance[k, k] = error**2
+    return dict(
+      available=True,
+      edges=boundaries,
+      true=true,
+      prediction=predicted,
+      signals=signals,
+      prediction_covariance=covariance.tolist(),
+    )
+
+  def _projections(self, region: str, output: Path, kept: list) -> None:
+    data = self.projections(region)
+    (output / f"{region}_projections.json").write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
+    if not data["available"]:
+      return
+
+    def histogram(label: str, values: list, color: int) -> Any:
+      h = ROOT.TH1D(uuid4().hex, label, len(data["edges"]) - 1, array("d", data["edges"]))
+      h.SetDirectory(0)
+      h.Sumw2()
+      for index, (value, error) in enumerate(values, 1):
+        h.SetBinContent(index, value)
+        h.SetBinError(index, error)
+      h.SetLineColor(color)
+      h.SetMarkerColor(color)
+      kept.append(h)
+      return h
+
+    models = list(data["signals"].items())
+    for page, start in enumerate(range(0, len(models), 8)):
+      entries = models[start : start + 8]
+      canvas = self._canvas()
+      top = ROOT.TPad(uuid4().hex, "", 0.0, 0.30, 1.0, 1.0)
+      bottom = ROOT.TPad(uuid4().hex, "", 0.0, 0.0, 1.0, 0.30)
+      top.Draw()
+      bottom.Draw()
+      top.cd()
+      top.SetLeftMargin(0.14)
+      top.SetRightMargin(0.32)
+      top.SetBottomMargin(0.02)
+      lumi = getattr(self.config, "luminosity", None)
+      title = f"{region}: background prediction and simulation"
+      if lumi is not None:
+        title += f", {lumi / 1000:g} fb^{{-1}}"
+      true = histogram(title, data["true"], ROOT.kBlack)
+      pred = histogram("", data["prediction"], ROOT.kRed + 1)
+      legend = ROOT.TLegend(0.70, 0.50, 0.99, 0.90)
+      legend.SetTextSize(0.028)
+      legend.AddEntry(true, "Background simulation", "lep")
+      legend.AddEntry(pred, "ABCD prediction", "lep")
+      curves = []
+      for index, (key, values) in enumerate(entries):
+        color = self.models[key].get("color", ROOT.kBlue + index % 5)
+        curve = histogram("", values, color)
+        display_scale = getattr(self.config, "signal_display_scale", 1.0)
+        curve.Scale(display_scale)
+        suffix = f" (x{display_scale:g})" if display_scale != 1 else ""
+        legend.AddEntry(curve, self._label(key) + suffix, "l")
+        curves.append(curve)
+      true.SetMaximum(max(h.GetMaximum() for h in [true, pred, *curves]) * 1.35)
+      true.SetMinimum(min(0.0, *(h.GetMinimum() for h in [true, pred, *curves])))
+      true.GetYaxis().SetTitle("Events")
+      true.GetXaxis().SetLabelSize(0.0)
+      true.GetYaxis().SetTitleSize(0.05)
+      true.Draw("E")
+      pred.Draw("E SAME")
+      for curve in curves:
+        curve.Draw("HIST SAME")
+      legend.Draw()
+      bottom.cd()
+      bottom.SetLeftMargin(0.14)
+      bottom.SetRightMargin(0.32)
+      bottom.SetTopMargin(0.03)
+      bottom.SetBottomMargin(0.35)
+      frame = true.Clone(uuid4().hex)
+      frame.Reset()
+      frame.SetTitle("")
+      frame.SetMinimum(0.0)
+      frame.SetMaximum(getattr(self.config, "y_max_ratio", 2.0))
+      frame.GetYaxis().SetTitle("Prediction / simulation")
+      frame.GetYaxis().SetTitleSize(0.08)
+      frame.GetYaxis().SetTitleOffset(0.75)
+      frame.GetYaxis().SetLabelSize(0.08)
+      frame.GetYaxis().SetNdivisions(505)
+      frame.GetXaxis().SetTitle(
+        getattr(self.config, "nice_names", {}).get(self.config.variable_1, self.config.variable_1)
+      )
+      frame.GetXaxis().SetTitleSize(0.10)
+      frame.GetXaxis().SetLabelSize(0.09)
+      frame.Draw("AXIS")
+      graph = ROOT.TGraphErrors()
+      for k, ((p, ep), (a, ea)) in enumerate(zip(data["prediction"], data["true"])):
+        if a <= 0:
+          continue
+        n = graph.GetN()
+        graph.SetPoint(n, (data["edges"][k] + data["edges"][k + 1]) / 2, p / a)
+        graph.SetPointError(n, 0.0, math.hypot(ep / a, p * ea / a**2))
+      graph.SetTitle(
+        f";{getattr(self.config, 'nice_names', {}).get(self.config.variable_1, self.config.variable_1)};Prediction / simulation"
+      )
+      graph.SetMarkerStyle(20)
+      graph.Draw("P SAME")
+      canvas.SaveAs(str(output / f"{region}_projections_ratio_{page + 1}.pdf"))
+      kept.extend([legend, graph, frame, top, bottom])
+      canvas.Close()
+
+  def _summary(self, output: Path, kept: list) -> None:
+    values = self.result.get("individual_significances", {})
+    canvas = self._canvas()
+    h = ROOT.TH1D(uuid4().hex, "", len(self.selected), 0.0, len(self.selected))
+    h.SetDirectory(0)
+    for i, key in enumerate(self.selected, 1):
+      h.SetBinContent(i, values[key])
+      h.GetXaxis().SetBinLabel(i, self._label(key))
+    h.LabelsOption("v")
+    h.GetYaxis().SetTitle("S / sqrt(S + B)")
+    ROOT.gPad.SetBottomMargin(0.35)
+    ROOT.gPad.SetTopMargin(0.15)
+    h.Draw("HIST")
     label = ROOT.TLatex()
     label.SetTextSize(0.03)
-    label.DrawLatexNDC(0.15, 0.85, f"Correlation: {correlation:.2f}")
-
-    return correlation
-
-  def calculate_best_points(self):
-
-    self.best_points = {}
-
-    if self.config.optimization_param == "significance":
-      if self.config.common_signals_optimization:
-        self.best_points["all"] = self.abcdHelper.get_optimal_point_for_significance(
-          self.significance_hists, self.contamination_hists, self.optimization_hists
-        )
-      else:
-        for mass in self.config.masses:
-          for ctau in self.config.ctaus:
-            if (mass, ctau) not in self.signal_hists:
-              continue
-
-            if self.config.optimization_param == "significance":
-              self.best_points[(mass, ctau)] = self.abcdHelper.get_optimal_point_for_significance(
-                {(mass, ctau): self.significance_hists[(mass, ctau)]},
-                {(mass, ctau): self.contamination_hists[(mass, ctau)]},
-                self.optimization_hists,
-              )
-    elif self.config.optimization_param == None:
-      warn("Optimization parameter is not set, using 'all' from abcd_point as default")
-      self.best_points["all"] = self.config.abcd_point
-    else:
-      self.best_points["all"] = self.abcdHelper.get_optimal_point_for_param(
-        self.optimization_hists, self.config.optimization_param
-      )
-
-  def print_params_for_best_point(self):
-
-    if "all" in self.best_points:
-      best_point = self.best_points["all"]
-      if best_point is None:
-        warn("Best point not found")
-        return
-
-      i, j = best_point
-      error = self.optimization_hists["error"].GetBinContent(i, j)
-      closure = self.optimization_hists["closure"].GetBinContent(i, j)
-      min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
-
-      info(f"Best point for all signals: {best_point}")
-      y = self.optimization_hists["closure"].GetYaxis().GetBinCenter(j)
-      x = self.optimization_hists["closure"].GetXaxis().GetBinCenter(i)
-      info(f"x = {x:.2f}, y = {y:.2f}")
-      info(f"Closure: {closure:.4f}, Error: {error:.4f}, Min n events: {min_n_events:.1f}")
-
-    else:
-      for mass in self.config.masses:
-        for ctau in self.config.ctaus:
-          if (mass, ctau) not in self.signal_hists:
-            continue
-
-          best_point = self.best_points[(mass, ctau)]
-          if best_point is None:
-            warn(f"Best point for {mass} GeV, {ctau} mm not found")
-            continue
-
-          error = self.optimization_hists["error"].GetBinContent(i, j)
-          closure = self.optimization_hists["closure"].GetBinContent(i, j)
-          min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
-
-          info(f"Best point for {mass} GeV, {ctau} mm: ")
-          info(f"{self.config.variable_1} = {best_point[0]}, {self.config.variable_2} = {best_point[1]}")
-          info(f"Error: {error:.2f}, Closure: {closure:.2f}, Min n events: {min_n_events:.1f}")
-
-  def get_n_signals_with_good_binning(self):
-    n_points_found = 0
-
-    for mass in self.config.masses:
-      for ctau in self.config.ctaus:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        if self.abcdHelper.is_point_good_for_signal(
-          self.signal_hists[(mass, ctau)],
-          self.background_hist,
-          ctau,
-          mass,
-          self.contamination_hists[(mass, ctau)],
-          self.optimization_hists,
-          self.best_points["all"] if "all" in self.best_points else self.best_points[(mass, ctau)],
-        ):
-          n_points_found += 1
-
-    return n_points_found
-
-  def plot_and_save_best_abcd_points(self):
-
-    with open(self.best_points_path, "w") as f:
-      f.write("mass, ctau, best_x, best_y, closure, error, min_n_events, significance, contamination\n")
-
-      for i_mass, mass in enumerate(self.config.masses):
-        for i_ctau, ctau in enumerate(self.config.ctaus):
-          if (mass, ctau) not in self.signal_hists:
-            continue
-
-          best_point = self.best_points["all"] if "all" in self.best_points else self.best_points[(mass, ctau)]
-
-          if best_point is None:
-            warn(f"Best point for {mass} GeV, {ctau} mm not found")
-            continue
-
-          if not self.abcdHelper.is_point_good_for_signal(
-            self.signal_hists[(mass, ctau)],
-            self.background_hist,
-            ctau,
-            mass,
-            self.contamination_hists[(mass, ctau)],
-            self.optimization_hists,
-            best_point,
-          ):
-            warn(f"Best point for {mass} GeV, {ctau} mm is not good")
-            continue
-
-          significance_hist = self.significance_hists[(mass, ctau)]
-          if significance_hist is None or not isinstance(significance_hist, ROOT.TH2):
-            warn(f"Significance histogram for {mass} GeV, {ctau} mm not found")
-            continue
-
-          i, j = best_point
-          values = {name: hist.GetBinContent(i, j) for name, hist in self.optimization_hists.items()}
-          significance = significance_hist.GetBinContent(i, j)
-          contamination = self.contamination_hists[(mass, ctau)].GetBinContent(i, j)
-
-          f.write(f"{mass}, {ctau}, {best_point[0]:.2f}, {best_point[1]:.2f}, ")
-          f.write(f"{values['closure']:.2f}, {values['error']:.2f}, ")
-          f.write(f"{values['min_n_events']:.1f}, {significance:.3f}, ")
-          f.write(f"{contamination:.2f}\n")
-
-          i_pad = 1 + i_mass * len(self.config.ctaus) + i_ctau
-
-          line_x = self.background_hist.GetXaxis().GetBinLowEdge(i)
-          line_y = self.background_hist.GetYaxis().GetBinLowEdge(j)
-
-          self.lines[i_pad] = (
-            ROOT.TLine(line_x, self.variable_2_min, line_x, self.variable_2_max),
-            ROOT.TLine(self.variable_1_min, line_y, self.variable_1_max, line_y),
-          )
-
-          self.lines[i_pad][0].SetLineColor(self.config.abcd_line_color)
-          self.lines[i_pad][1].SetLineColor(self.config.abcd_line_color)
-
-          self.lines[i_pad][0].SetLineWidth(self.config.abcd_line_width)
-          self.lines[i_pad][1].SetLineWidth(self.config.abcd_line_width)
-
-          self.canvases["grid"].cd(i_pad)
-          ROOT.gStyle.SetOptStat(0)
-          self.lines[i_pad][0].Draw()
-          self.lines[i_pad][1].Draw()
-          self.canvases["grid"].Update()
-
-          self.canvases["significance"].cd(i_pad)
-          ROOT.gStyle.SetOptStat(0)
-          self.lines[i_pad][0].Draw()
-          self.lines[i_pad][1].Draw()
-          self.canvases["significance"].Update()
-
-      f.close()
-      info(f"\nBest points saved to {self.best_points_path}\n")
-
-  def plot_background_projections(self):
-
-    if self.true_projection_hist is None:
-      return
-
-    self.true_projection_hist.SetLineColor(self.config.true_background_color)
-    self.true_projection_hist.SetFillColorAlpha(self.config.true_background_color, 0.5)
-    self.true_projection_hist.SetMarkerStyle(20)
-    self.true_projection_hist.SetMarkerSize(0.2)
-    self.true_projection_hist.SetMarkerColor(self.config.true_background_color)
-
-    self.prediction_projection_hist.SetLineColor(self.config.predicted_background_color)
-    self.prediction_projection_hist.SetMarkerStyle(20)
-    self.prediction_projection_hist.SetMarkerSize(0.2)
-    self.prediction_projection_hist.SetMarkerColor(self.config.predicted_background_color)
-
-    self.projections_legend.AddEntry(self.true_projection_hist, self.config.true_background_description, "fl")
-    self.projections_legend.AddEntry(
-      self.prediction_projection_hist, self.config.predicted_background_description, "pl"
+    label.DrawLatexNDC(0.12, 0.95, "Individual significance at common cuts")
+    point = self.result["physical_boundaries"]
+    label.DrawLatexNDC(
+      0.12,
+      0.89,
+      f"Quadrant {self.result['quadrant']}, x={point['x']:g}, y={point['y']:g}; sum={sum(values.values()):.4g}",
     )
-
-    self.projections_pads["main"].cd()
-    self.true_projection_hist.Draw("PLE2")
-    self.prediction_projection_hist.Draw("SAME PE")
-
-    self.true_projection_hist.GetYaxis().SetRangeUser(0, self.config.y_max)
-    current_title = self.true_projection_hist.GetYaxis().GetTitle()
-    new_title = current_title + self.config.projection_y_title
-    self.true_projection_hist.GetYaxis().SetTitle(new_title)
-    self.true_projection_hist.GetYaxis().SetTitleOffset(1.2)
-    self.true_projection_hist.GetYaxis().SetLabelSize(0.04)
-    self.true_projection_hist.GetYaxis().SetTitleSize(0.04)
-
-  def plot_signal_projections(self):
-    for mass in self.config.masses:
-      for ctau in self.config.ctaus:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        self.signal_projections[(mass, ctau)] = self.abcdHelper.get_projection_true(
-          self.signal_hists[(mass, ctau)], self.variable_2_max
-        )
-        self.signal_projections[(mass, ctau)], _ = self.histogramsHelper.rebin(
-          self.signal_projections[(mass, ctau)], self.smart_binning
-        )
-
-        if self.signal_projections[(mass, ctau)] is None:
-          continue
-
-        color = self.config.signal_colors[(mass, ctau)] if (mass, ctau) in self.config.signal_colors else ROOT.kRed
-        self.signal_projections[(mass, ctau)].SetLineColor(color)
-
-        # normalize signal to background in A
-        signal_integral = self.signal_projections[(mass, ctau)].Integral()
-        scale = self.true_projection_hist.Integral() / signal_integral if signal_integral > 0 else 1
-        self.signal_projections[(mass, ctau)].Scale(scale)
-
-        self.signal_projections[(mass, ctau)].Draw("SAME")
-
-        self.projections_legend.AddEntry(self.signal_projections[(mass, ctau)], f"Signal {mass} GeV, {ctau} mm", "l")
-
-    self.projections_legend.Draw()
-
-  def plot_projections_ratio(self):
-    if self.prediction_projection_hist is None or not isinstance(self.prediction_projection_hist, ROOT.TH1):
-      return
-
-    if self.true_projection_hist is None or not isinstance(self.true_projection_hist, ROOT.TH1):
-      return
-
-    self.projections_pads["ratio"].cd()
-
-    self.ratio_hist = self.prediction_projection_hist.Clone()
-    self.ratio_hist.SetTitle("")
-    self.ratio_hist.Divide(self.prediction_projection_hist, self.true_projection_hist, 1.0, 1.0, "B")
-
-    self.ratio_hist_err = self.true_projection_hist.Clone()
-    for i in range(1, self.ratio_hist_err.GetNbinsX() + 1):
-      A = self.true_projection_hist.GetBinContent(i)
-      err_A = self.true_projection_hist.GetBinError(i)
-
-      if A > 0:
-        err_ratio = ((err_A / A) ** 2 + (err_A / A) ** 2) ** 0.5
-      else:
-        err_ratio = 0
-
-      self.ratio_hist_err.SetBinContent(i, 1)
-      self.ratio_hist_err.SetBinError(i, err_ratio)
-
-    self.ratio_hist_err.SetFillColorAlpha(ROOT.kRed, 0.5)
-
-    self.ratio_hist.GetXaxis().SetTitle(
-      self.ratio_hist.GetXaxis().GetTitle() + self.abcdHelper.get_nice_name(self.config.variable_2)
-    )
-    self.ratio_hist.GetXaxis().SetTitleOffset(1.1)
-    self.ratio_hist.GetXaxis().SetLabelSize(0.1)
-    self.ratio_hist.GetXaxis().SetTitleSize(0.1)
-
-    self.ratio_hist.GetYaxis().SetTitle(self.config.ratio_y_title)
-    self.ratio_hist.GetYaxis().SetTitleOffset(0.5)
-    self.ratio_hist.GetYaxis().SetLabelSize(0.1)
-    self.ratio_hist.GetYaxis().SetTitleSize(0.1)
-
-    self.ratio_hist.Draw()
-    self.ratio_hist_err.Draw("SAME PLE2")
-
-    self.ratio_hist.GetYaxis().SetRangeUser(0, self.config.y_max_ratio)
-
-  def __get_lines(self):
-    i, j = self.config.abcd_point
-    x = self.background_hist.GetXaxis().GetBinLowEdge(i)
-    y = self.background_hist.GetYaxis().GetBinLowEdge(j)
-
-    line_x = ROOT.TLine(x, self.variable_2_min, x, self.variable_2_max)
-    line_y = ROOT.TLine(self.variable_1_min, y, self.variable_1_max, y)
-
-    line_x.SetLineColor(self.config.abcd_line_color)
-    line_x.SetLineWidth(self.config.abcd_line_width)
-
-    line_y.SetLineColor(self.config.abcd_line_color)
-    line_y.SetLineWidth(self.config.abcd_line_width)
-
-    return line_x, line_y
-
-  def save_background_canvas(self):
-    canvas = self.canvases["background"]
-    canvas.cd()
-
-    lines = self.__get_lines()
-    lines[0].Draw()
-    lines[1].Draw()
-
-    canvas.Update()
-    canvas.SaveAs(
-      f"{self.config.output_path}/abcd_hists_background_{self.config.variable_1}_vs_{self.config.variable_2}.pdf"
-    )
-
-  def save_canvases(self):
-    lines = self.__get_lines()
-
-    for key, canvas in self.canvases.items():
-      if key in ["closure", "error", "min_n_events", "background"]:
-        canvas.cd()
-        ROOT.gStyle.SetOptStat(0)
-        lines[0].Draw()
-        lines[1].Draw()
-
-      canvas.Update()
-      canvas.SaveAs(
-        f"{self.config.output_path}/abcd_hists_{key}_{self.config.variable_1}_vs_{self.config.variable_2}.pdf"
-      )
-
-  def print_params_for_selected_point(self):
-    a, b, c, d, a_err_, b_err_, c_err_, d_err_ = self.abcdHelper.get_abcd(self.background_hist, self.config.abcd_point)
-
-    self.background_hist.SaveAs("ABCDPlotter_background_hist.root")
-
-    info(f"\n\nSelected point: {self.config.abcd_point[0]:.2f}, {self.config.abcd_point[1]:.2f}")
-    i, j = self.config.abcd_point
-    y = self.background_hist.GetYaxis().GetBinCenter(i)
-    x = self.background_hist.GetXaxis().GetBinCenter(j)
-    info(f"{i=}, {j=}")
-    info(f"{y=:.2f}, {x=:.2f}")
-
-    a_err = a**0.5
-    b_err = b**0.5
-    c_err = c**0.5
-    d_err = d**0.5
-
-    info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
-    info(f"True background in B: {b:.2f} +/- {b_err:.2f}")
-    info(f"True background in C: {c:.2f} +/- {c_err:.2f}")
-    info(f"True background in D: {d:.2f} +/- {d_err:.2f}")
-    abcd_err2 = 0
-    for val, err in [(a, a_err), (b, b_err), (c, c_err), (d, d_err)]:
-      if val > 0:
-        abcd_err2 += err**2
-    info(f"True background in ABCD: {a + b + c + d:.2f} +/- {math.sqrt(abcd_err2):.2f}")
-
-    if b != 0 and c != 0 and d != 0:
-      prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
-      closure = self.abcdHelper.get_closure(a, prediction)
-      error = self.abcdHelper.get_error(a, a_err, prediction, prediction_err)
-      min_n_events = min(a, b, c, d)
-      info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
-      if prediction != 0:
-        rel_unc = prediction_err / prediction
-        info(f"Relative predicted uncertainty in A: {rel_unc:.2f}")
-      info("\n\nOptimization values (re-calculated):")
-      info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
-
-    # extract optimization values from histograms for a cross check
-    closure = self.optimization_hists["closure"].GetBinContent(i, j)
-    error = self.optimization_hists["error"].GetBinContent(i, j)
-    min_n_events = self.optimization_hists["min_n_events"].GetBinContent(i, j)
-    info("\nOptimization values (from hists):")
-    info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
-
-    info("\n\nSignal parameters:")
-    for mass in self.config.masses:
-      for ctau in self.config.ctaus:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        significance_hist = self.significance_hists[(mass, ctau)]
-        contamination_hist = self.contamination_hists[(mass, ctau)]
-
-        if significance_hist is None or type(significance_hist) is not ROOT.TH2D:
-          continue
-
-        if contamination_hist is None or type(contamination_hist) is not ROOT.TH2D:
-          continue
-
-        significance = significance_hist.GetBinContent(i, j)
-        contamination = contamination_hist.GetBinContent(i, j)
-        info(f"Signal {mass} GeV, {ctau} mm: Significance: {significance:.2e} Contamination: {contamination:.2e}")
-
-    info("\n\n")
-
-  def print_params_for_varied_points(self):
-
-    max_rel_unc = -1
-    for point in (0, 1):
-      for variation in (-1, 1):
-        abcd_point = self.config.abcd_point
-        abcd_point_list = list(abcd_point)
-        abcd_point_list[point] = abcd_point_list[point] + variation
-        abcd_point = tuple(abcd_point_list)
-        a, b, c, d, a_err_, b_err_, c_err_, d_err_ = self.abcdHelper.get_abcd(self.background_hist, abcd_point)
-
-        info(f"\n\nVarying abcd points to: {abcd_point[0]:.2f}, {abcd_point[1]:.2f}")
-        i = abcd_point[0]
-        j = abcd_point[1]
-        y = self.background_hist.GetYaxis().GetBinCenter(i)
-        x = self.background_hist.GetXaxis().GetBinCenter(j)
-        info(f"{y=:.2f}, {x=:.2f}")
-
-        a_err = a**0.5
-        b_err = b**0.5
-        c_err = c**0.5
-        d_err = d**0.5
-
-        info(f"True background in A: {a:.2f} +/- {a_err:.2f}")
-
-        if b != 0 and c != 0 and d != 0:
-          prediction, prediction_err = self.abcdHelper.get_prediction(b, c, d, b_err, c_err, d_err)
-          closure = self.abcdHelper.get_closure(a, prediction)
-          error = self.abcdHelper.get_error(a, a_err, prediction, prediction_err)
-          min_n_events = min(a, b, c, d)
-          info(f"Predicted background in A: {prediction:.2f} +/- {prediction_err:.2f}")
-          info("\n\nOptimization values (re-calculated):")
-          info(f"Closure: {closure:.2f}, error: {error:.2f}, min_n_events: {min_n_events:.1f}")
-          if prediction != 0:
-            info(f"Relative predicted uncertainty in A: {prediction_err / prediction:.2f}")
-            if (prediction_err / prediction) > max_rel_unc:
-              max_rel_unc = prediction_err / prediction
-    info(f"---- Max relative predicted uncertainty: {max_rel_unc:.2f}")
-
-  def __load_background_histograms(self):
-
-    for sample in self.config.background_samples:
-      hist = Histogram2D(
-        name=self.background_hist_name,
-        norm_type=NormalizationType.to_lumi,
-        x_rebin=self.config.rebin_2D,
-        y_rebin=self.config.rebin_2D,
-      )
-
-      path = sample.file_path
-
-      try:
-        self.background_files[path] = ROOT.TFile.Open(path)
-      except OSError:
-        warn(f"Could not open file {path}")
-        continue
-
-      if not self.background_files[path]:
-        warn(f"Could not open file {path}")
-        continue
-
-      hist.load(self.background_files[path])
-      hist.setup(sample)
-      self.normalizer.normalize(hist, sample, None, None)
-
-      n_entries = hist.hist.GetEntries()
-
-      if n_entries < self.config.exclude_backgrounds_for_years[sample.year]:
-        warn(
-          (
-            f"Histogram {sample.name} has less than "
-            f"{self.config.exclude_backgrounds_for_years[sample.year]} entries and will be excluded."
-          )
-        )
-        continue
-
-      self.background_hists[path] = hist.hist
-
-  def __setup_backgrounds_sum_histogram(self):
-    if self.config.do_data:
-      for year in self.config.years:
-        data_path = self.config.data_paths[year]
-        path = f"{self.config.base_path}/{data_path}"
-
-        hist = Histogram2D(
-          name=self.background_hist_name,
-          norm_type=NormalizationType.to_lumi,
-          x_rebin=self.config.rebin_2D,
-          y_rebin=self.config.rebin_2D,
-        )
-
-        self.data_file = ROOT.TFile.Open(path)
-
-        if not self.data_file:
-          warn(f"Could not open file {path}")
-          return
-
-        hist.load(self.data_file)
-        hist.setup()
-
-        if not hist.hist:
-          warn(f"Could not open histogram {self.background_hist_name} in file {path}")
-          continue
-
-        cloned_hist = hist.hist.Clone()
-        cloned_hist.SetDirectory(0)
-
-        if self.background_hist is None:
-          self.background_hist = cloned_hist
-        else:
-          self.background_hist.Add(cloned_hist)
-
-    else:
-      for path, hist in self.background_hists.items():
-        if hist is None or hist.Integral() == 0:
-          warn(f"Background histogram {path} is empty or has integral=0")
-          continue
-
-        if self.background_hist is None:
-          self.background_hist = hist.Clone()
-        else:
-          self.background_hist.Add(hist)
-
-      if not self.background_hist:
-        fatal("No background histograms found")
-        exit()
-
-    self.background_hist.SetFillColorAlpha(self.config.background_color, 0.5)
-    self.background_hist.SetTitle("")
-
-  def __load_signal_hists(self):
-    for mass in self.config.masses:
-      for ctau in self.config.ctaus:
-        for year in self.config.years:
-          input_path = self.config.signal_path_pattern.format(
-            year, mass, ctau, self.config.signal_skim[0], self.config.signal_hist_path
-          )
-
-          try:
-            self.signal_files[input_path] = ROOT.TFile(f"{self.config.base_path}/{input_path}")
-          except OSError:
-            continue
-
-          signal_hist = self.signal_files[input_path].Get(self.signal_hist_name)
-          if signal_hist is None or not isinstance(signal_hist, ROOT.TH2):
-            info(f"Could not open histogram {self.signal_hist_name} in file {input_path}")
-            continue
-
-          signal_hist.Rebin2D(self.config.rebin_2D, self.config.rebin_2D)
-          if self.config.signal_cross_section:
-            luminosity = get_luminosity(year)
-            cutflow_histogram = self.signal_files[input_path].Get("cutFlow")
-            if cutflow_histogram is None:
-              warn(f"Could not open cutFlow histogram in file {input_path}")
-              continue
-            initial_weight_sum = cutflow_histogram.GetBinContent(1)
-            if initial_weight_sum == 0:
-              warn(f"Initial weight sum is zero for file {input_path}")
-              continue
-            cross_section = self.config.signal_cross_section
-            if self.config.signal_cross_section == -1:
-              mass_ = float(mass.replace("p", "."))
-              cross_section = get_theory_cross_section(mass_, year)
-            scale = luminosity * cross_section / initial_weight_sum
-            self.signal_scales[(mass, ctau, year)] = scale
-
-          if (mass, ctau) not in self.signal_hists:
-            self.signal_hists[(mass, ctau)] = signal_hist
-            self.signal_hists[(mass, ctau)].SetName(f"signal_{mass}_{ctau}")
-            self.signal_hists[(mass, ctau)].SetFillColorAlpha(self.config.signal_color, 0.5)
-          else:
-            self.signal_hists[(mass, ctau)].Add(signal_hist)
-
-  def __setup_canvases(self):
-    self.canvases = {
-      "grid": ROOT.TCanvas(
-        "grid",
-        "grid",
-        self.config.canvas_size * len(self.config.ctaus),
-        self.config.canvas_size * len(self.config.masses),
-      ),
-      "background": ROOT.TCanvas("background", "background", self.config.canvas_size, self.config.canvas_size),
-      "significance": ROOT.TCanvas(
-        "significance",
-        "significance",
-        self.config.canvas_size * len(self.config.ctaus),
-        self.config.canvas_size * len(self.config.masses),
-      ),
-      "closure": ROOT.TCanvas("closure", "closure", self.config.canvas_size, self.config.canvas_size),
-      "error": ROOT.TCanvas("error", "error", self.config.canvas_size, self.config.canvas_size),
-      "min_n_events": ROOT.TCanvas("min_n_events", "min_n_events", self.config.canvas_size, self.config.canvas_size),
-      "projections": ROOT.TCanvas("projections", "projections", self.config.canvas_size, self.config.canvas_size),
-    }
-
-    for key in ["grid", "significance"]:
-      self.canvases[key].Divide(len(self.config.ctaus), len(self.config.masses))
-
-    for key in ["closure", "error", "min_n_events", "background"]:
-      self.canvases[key].cd()
-      ROOT.gPad.SetLeftMargin(0.15)
-      ROOT.gPad.SetRightMargin(0.25)
-      ROOT.gPad.SetTopMargin(0.15)
-      ROOT.gPad.SetBottomMargin(0.15)
-
-    self.canvases["projections"].cd()
-
-    self.projections_pads["main"] = ROOT.TPad("pad_main", "pad_main", 0, 0.3, 1, 1)
-    self.projections_pads["main"].SetBottomMargin(0)
-    self.projections_pads["main"].Draw()
-
-    self.projections_pads["ratio"] = ROOT.TPad("pad_ratio", "pad_ratio", 0, 0, 1, 0.3)
-    self.projections_pads["ratio"].SetTopMargin(0)
-    self.projections_pads["ratio"].SetBottomMargin(0.3)
-    self.projections_pads["ratio"].Draw()
-
-  def set_pad_style(self):
-    ROOT.gPad.SetLeftMargin(0.11)
-    ROOT.gPad.SetRightMargin(0.01)
-    ROOT.gPad.SetTopMargin(0.01)
-    ROOT.gPad.SetBottomMargin(0.12)
-
-  def __setup_signal_hists(self):
-    for mass in self.config.masses:
-      for ctau in self.config.ctaus:
-        if (mass, ctau) not in self.signal_hists:
-          continue
-
-        self.significance_hists[(mass, ctau)] = self.abcdHelper.get_significance_hist(
-          self.signal_hists[(mass, ctau)], self.background_hist
-        )
-
-        self.contamination_hists[(mass, ctau)] = self.abcdHelper.get_signal_contramination_hist(
-          self.signal_hists[(mass, ctau)]
-        )
-
-  def __get_input_dict(self):
-    results = {}
-
-    with open(self.best_points_path, "r") as f:
-      lines = f.readlines()
-
-      for line in lines[1:]:
-        parts = line.split(",")
-
-        mass = float(parts[0].replace("p", "."))
-        ctau = float(parts[1])
-
-        best_x = float(parts[2])
-        best_y = float(parts[3])
-
-        closure = float(parts[4])
-        error = float(parts[5])
-        min_n_events = float(parts[6])
-        significance = float(parts[7])
-        contamination = float(parts[8])
-
-        results[(mass, ctau)] = {
-          "best_x": best_x,
-          "best_y": best_y,
-          "closure": closure,
-          "error": error,
-          "min_n_events": min_n_events,
-          "significance": significance,
-          "contamination": contamination,
-        }
-
-    return results
-
-  def plot_optimal_points(self):
-    ROOT.gStyle.SetOptStat(0)
-
-    results = self.__get_input_dict()
-
-    mass_to_bin = {
-      0.35: 1,
-      1: 2,
-      2: 3,
-      12: 4,
-      30: 5,
-      60: 6,
-    }
-
-    ctau_to_bin = {
-      1e-5: 1,
-      1e0: 2,
-      1e1: 3,
-      1e2: 4,
-      1e3: 5,
-      1e5: 6,
-    }
-
-    canvas = ROOT.TCanvas("canvas", "", 800, 800)
-    hist = ROOT.TH2D("hist", "", len(mass_to_bin), 0, len(mass_to_bin), len(ctau_to_bin), 0, len(ctau_to_bin))
-
-    for mass, x in mass_to_bin.items():
-      hist.GetXaxis().SetBinLabel(x, str(mass))
-
-    for ctau, y in ctau_to_bin.items():
-      hist.GetYaxis().SetBinLabel(y, f"{ctau:.0e}")
-
-    assigned_colors = {}
-
-    max_so_far = 1
-
-    for (mass, ctau), params in results.items():
-      x = mass_to_bin[mass]
-      y = ctau_to_bin[ctau]
-
-      best_x = params["best_x"]
-      best_y = params["best_y"]
-
-      if (best_x, best_y) not in assigned_colors:
-        assigned_colors[(best_x, best_y)] = max_so_far
-        max_so_far += 1
-
-      hist.SetBinContent(x, y, assigned_colors[(best_x, best_y)])
-
-    hist.Draw("colz")
-
-    latex = ROOT.TLatex()
-    latex.SetTextSize(0.03)
-    latex.SetTextAlign(22)  # Center alignment
-
-    for (mass, ctau), params in results.items():
-      x = mass_to_bin[mass]
-      y = ctau_to_bin[ctau]
-      best_x = params["best_x"]
-      best_y = params["best_y"]
-      x = hist.GetXaxis().GetBinCenter(x)
-      y = hist.GetYaxis().GetBinCenter(y)
-      latex.DrawLatex(x, y, f"{best_x}, {best_y}")
-
-    canvas.SaveAs(self.best_points_path.replace(".txt", ".pdf"))
+    canvas.SaveAs(str(output / "model_summary.pdf"))
+    kept.extend([h, label])

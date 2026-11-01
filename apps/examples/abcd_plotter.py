@@ -1,77 +1,52 @@
-import ROOT
-import importlib
+#!/usr/bin/env python3
+"""Run config-driven common-signal ABCD optimization and PDF diagnostics."""
+
+from __future__ import annotations
+
 import argparse
+import importlib
+import hashlib
+import json
+from pathlib import Path
+import sys
 
-from ABCDPlotter import ABCDPlotter
-from Logger import warn, logger_print, info
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--config", type=str, default="", help="Path to the config file.")
-parser.add_argument("--max_correlation", type=float, default=1.0, help="Max correlation for the background histograms.")
-parser.add_argument("--min_signals", type=int, default=0, help="Min number of good signals.")
-parser.add_argument("--max_overlap", type=float, default=1.0, help="Max overlap between background and signal.")
-parser.add_argument("--max_error", type=float, default=10.0, help="Max allowed error expressed in number of sigmas.")
-parser.add_argument("--max_closure", type=float, default=1.0, help="Max allowed closure.")
-parser.add_argument("--min_n_events", type=int, default=0, help="Min number of events in any of the ABCD bins.")
-parser.add_argument(
-  "--max_signal_contamination",
-  type=float,
-  default=1.00,
-  help="Max allowed signal contamination in any of the ABCD bins.",
-)
-args = parser.parse_args()
+import numpy as np
+import ROOT
+from ABCDPlotter import ABCDPlotter, DEFAULTS
 
 
-def getConfig(path):
-  if ".py" in path:
-    path = path[:-3]
-  config = importlib.import_module(path)
-  return config
-
-
-def main():
-  ROOT.gStyle.SetOptStat(0)
+def main() -> int:
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument("--config", required=True, help="Bare config module basename")
+  for key in DEFAULTS:
+    if key == "overlap_metric":
+      parser.add_argument("--overlap_metric", choices=("cosine", "intersection"))
+    else:
+      parser.add_argument("--" + key, type=int if key == "min_signals" else float)
+  args = parser.parse_args()
   ROOT.gROOT.SetBatch(True)
-
-  config = getConfig(args.config)
-  abcdPlotter = ABCDPlotter(config, args)
-
-  correlation = abcdPlotter.get_background_correlation()
-  info(f"Background correlation: {correlation:.2f}")
-
-  if abs(correlation) > args.max_correlation:
-    warn("Correlation is too high, skipping the signal plots")
-    return
-
-  abcdPlotter.calculate_best_points()
-
-  n_points_found = abcdPlotter.get_n_signals_with_good_binning()
-
-  if n_points_found < args.min_signals:
-    warn("Too few optimal points found, skipping the signal plots.")
-    return
-
-  info(f"Found {n_points_found} optimal points with good binning.")
-
-  abcdPlotter.plot_background_hist()
-  abcdPlotter.plot_optimization_hists()
-  abcdPlotter.plot_per_signal_hists()
-
-  abcdPlotter.plot_background_projections()
-  abcdPlotter.plot_signal_projections()
-  abcdPlotter.plot_projections_ratio()
-  abcdPlotter.plot_and_save_best_abcd_points()
-
-  abcdPlotter.save_canvases()
-  abcdPlotter.print_params_for_selected_point()
-  if config.do_binning_uncertainty:
-    abcdPlotter.print_params_for_varied_points()
-  abcdPlotter.plot_optimal_points()
-
-  abcdPlotter.print_params_for_best_point()
-
-  logger_print()
+  if "/" in args.config or args.config.endswith(".py"):
+    raise ValueError("Pass a bare config basename without .py")
+  config = importlib.import_module(args.config)
+  plotter = ABCDPlotter(config, args)
+  result = plotter.calculate_best_points()
+  result["provenance"]["config_sha256"] = hashlib.sha256(Path(config.__file__).read_bytes()).hexdigest()
+  result["config"] = args.config
+  output = Path(config.output_path)
+  output.mkdir(parents=True, exist_ok=True)
+  (output / "result.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+  np.savez_compressed(
+    output / "metric_maps.npz",
+    **{f"{q}_{name}": values for q, fields in plotter.maps.items() for name, values in fields.items()},
+  )
+  plotter.render()
+  print(f"ABCD {result['status']}: {result.get('reason', result.get('physical_boundaries'))}", flush=True)
+  return 0
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    sys.exit(main())
+  except Exception as error:
+    print(f"ABCD FAILED: {error}", file=sys.stderr, flush=True)
+    sys.exit(1)

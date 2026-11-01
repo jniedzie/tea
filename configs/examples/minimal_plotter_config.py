@@ -21,6 +21,8 @@ samples = (
 output_path = "../plots"
 
 # fmt: off
+# For stored log10(x), use de_loggify_x_axis=True and log_x=False to show x
+# values on the axis. Set x_label to the physical quantity; limits stay in log10(x).
 histograms = (
   # name        title         logx   logy   norm_type                  rebin  xmin  xmax  ymin  ymax  xlabel         ylabel
   Histogram("Muon_pt" , "Muon p_{T}", False, True , NormalizationType.to_lumi,     5, None, None, None, None, "p_{T} [GeV]", "# events (2018)"),

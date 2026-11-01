@@ -25,12 +25,18 @@ fi
 
 _build_sh_script_dir="$(cd "$(dirname "${_build_sh_self}")" && pwd)"
 _build_sh_macos_sdk_override="${CONDA_BUILD_SYSROOT:-${SDKROOT:-}}"
+echo "tea: starting build in $(cd "${_build_sh_script_dir}/.." && pwd)"
+echo "tea: preparing and activating the dependency environment..."
+_build_sh_started=${SECONDS}
 # shellcheck source=environment/activate.sh
 source "${_build_sh_script_dir}/environment/activate.sh"
 if tea_env_activate; then
   _build_sh_status=0
+  echo "tea: environment ready at ${TEA_ENV_PREFIX} ($((SECONDS - _build_sh_started))s)"
 else
   _build_sh_status=$?
+  echo "tea: environment activation failed (exit ${_build_sh_status})" >&2
+  unset _build_sh_started
   [[ "${_build_sh_restore_history}" -eq 1 ]] && set -o history
   if [[ "${_build_sh_sourced}" -eq 1 ]]; then
     return "${_build_sh_status}"
@@ -40,6 +46,19 @@ fi
 
 build_main() (
   set -euo pipefail
+
+  # Keep commands in the foreground so Ctrl-C works for sourced builds too.
+  build_step() {
+    local label="$1" started=${SECONDS} command_status=0
+    shift
+    echo "tea: ${label}..."
+    "$@" || command_status=$?
+    if [[ "${command_status}" -ne 0 ]]; then
+      echo "tea: ${label} failed after $((SECONDS - started))s (exit ${command_status})" >&2
+      return "${command_status}"
+    fi
+    echo "tea: ${label} finished ($((SECONDS - started))s)"
+  }
 
   repo_root="$(cd "${_build_sh_script_dir}/.." && pwd)"
   build_dir="${repo_root}/build"
@@ -68,6 +87,7 @@ build_main() (
     find "${build_dir}" "${bin_dir}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
   fi
 
+  echo "tea: checking build tools and cached environment..."
   current_build_env="$(
     printf 'ROOTSYS=%s\n' "${ROOTSYS:-}"
     printf 'CONDA_PREFIX=%s\n' "${CONDA_PREFIX:-}"
@@ -97,26 +117,45 @@ build_main() (
   cd "${build_dir}"
 
   if command -v correction >/dev/null 2>&1; then
-    correction_cmake_args=()
-    while IFS= read -r correction_cmake_arg; do
-      [[ -n "${correction_cmake_arg}" ]] && correction_cmake_args+=("${correction_cmake_arg}")
-    done < <(PYTHONNOUSERSITE=1 correction config --cmake | tr '[:space:]' '\n')
-    if [[ "${#correction_cmake_args[@]}" -gt 0 ]]; then
+    echo "tea: locating correctionlib CMake configuration..."
+    # The CLI imports correctionlib, numpy, pydantic and rich just to print a
+    # path. Finding the package spec avoids those slow imports on shared disks.
+    correction_cmake_dir="$(PYTHONNOUSERSITE=1 python3 -c '
+import importlib.util
+from pathlib import Path
+
+spec = importlib.util.find_spec("correctionlib")
+if spec is not None and spec.origin:
+    cmake_dir = Path(spec.origin).parent / "cmake"
+    if (cmake_dir / "correctionlibConfig.cmake").is_file():
+        print(cmake_dir)
+')" || return $?
+    if [[ -n "${correction_cmake_dir}" ]]; then
+      cmake_args=("-Dcorrectionlib_DIR=${correction_cmake_dir}" "${cmake_args[@]}")
+    else
+      # Capture the fallback CLI status; process substitution hides failures.
+      echo "tea: querying correction config --cmake (package layout not found)..."
+      correction_config="$(PYTHONNOUSERSITE=1 correction config --cmake)" || return $?
+      correction_cmake_args=()
+      while IFS= read -r correction_cmake_arg; do
+        [[ -n "${correction_cmake_arg}" ]] && correction_cmake_args+=("${correction_cmake_arg}")
+      done < <(printf '%s\n' "${correction_config}" | tr '[:space:]' '\n')
       cmake_args=("${correction_cmake_args[@]}" "${cmake_args[@]}")
     fi
   fi
 
-  if ! cmake "${cmake_args[@]}"; then
+  if ! build_step "configuring CMake in ${build_dir}" cmake "${cmake_args[@]}"; then
     echo "Initial CMake configure failed; retrying with a fresh cache..."
     rm -f CMakeCache.txt
     rm -rf CMakeFiles
-    cmake "${cmake_args[@]}" || return $?
+    build_step "configuring CMake with a fresh cache" cmake "${cmake_args[@]}" || return $?
   fi
 
-  cmake --build . --parallel --target install || return $?
+  build_step "compiling and installing into ${bin_dir}" cmake --build . --parallel --target install || return $?
 
   # Link python files even when CMake has nothing to rebuild.
-  find "${repo_root}" \
+  build_step "linking Python files into ${bin_dir}" find "${repo_root}" \
+    -name .git -prune -o \
     -path "${bin_dir}" -prune -o \
     -path "${build_dir}" -prune -o \
     -name "*.py" -type f -exec ln -sf {} "${bin_dir}" \; || return $?
@@ -127,6 +166,7 @@ if build_main "$@"; then
   if [[ "${_build_sh_sourced}" -eq 1 ]]; then
     # A sourced build should leave the shell ready to run the analysis too.
     # setup.sh supplies PYTHONPATH and the runtime library search path.
+    echo "tea: setting up the analysis runtime..."
     source "${_build_sh_script_dir}/setup.sh" || _build_sh_status=$?
   else
     echo "Build complete. Activate this analysis before running it with:"
@@ -137,6 +177,13 @@ else
 fi
 
 unset -f build_main
+
+if [[ "${_build_sh_status}" -eq 0 ]]; then
+  echo "tea: build complete ($((SECONDS - _build_sh_started))s)"
+else
+  echo "tea: build failed (exit ${_build_sh_status})" >&2
+fi
+unset _build_sh_started
 
 if [[ "${_build_sh_sourced}" -eq 1 ]]; then
   [[ "${_build_sh_restore_history}" -eq 1 ]] && set -o history

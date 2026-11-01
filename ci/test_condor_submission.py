@@ -26,6 +26,7 @@ class CondorSubmissionTest(unittest.TestCase):
     manager.submission_system = MODULE.SubmissionSystem.condor
     manager.condor_stage_dir = None
     manager.condor_transfer_files = []
+    manager.condor_spool = False
     return manager
 
   def test_factory_paths_default_to_afs_instead_of_eos_checkout(self):
@@ -53,14 +54,28 @@ class CondorSubmissionTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "--max_materialize must be at least 1"):
           self.manager().run_condor(args)
 
-  def test_eos_staging_override_is_rejected(self):
-    manager = self.manager()
-    with (
-      patch.object(MODULE, "get_facility", return_value="lxplus"),
-      patch.dict(os.environ, {"TEA_CONDOR_DIR": "/eos/user/t/test/condor"}),
-      self.assertRaisesRegex(RuntimeError, "must be on AFS"),
+  def test_eos_checkout_runtime_or_staging_enables_spooling(self):
+    afs = "/afs/cern.ch/user/t/test"
+    eos = "/eos/home-t/test"
+    for work_dir, python, staging_root, spool in (
+      (eos + "/analysis/bin", afs + "/env/bin/python", afs + "/condor", True),
+      (afs + "/analysis/bin", eos + "/env/bin/python", afs + "/condor", True),
+      (afs + "/analysis/bin", afs + "/env/bin/python", "/eos/user/t/test/condor", True),
+      (afs + "/analysis/bin", afs + "/env/bin/python", afs + "/condor", False),
     ):
-      manager._SubmissionManager__setup_temp_file_paths()
+      with self.subTest(work_dir=work_dir, python=python, staging_root=staging_root):
+        manager = self.manager()
+        with (
+          patch.object(MODULE, "get_facility", return_value="lxplus"),
+          patch.dict(os.environ, {"TEA_CONDOR_DIR": staging_root}),
+          patch.object(MODULE.os, "getcwd", return_value=work_dir),
+          patch.object(MODULE.sys, "executable", python),
+          patch.object(MODULE.os.path, "realpath", side_effect=lambda path: path),
+          patch.object(MODULE.os, "makedirs"),
+          patch.object(MODULE.tempfile, "mkdtemp", return_value=staging_root + "/submission"),
+        ):
+          manager._SubmissionManager__setup_temp_file_paths()
+        self.assertEqual(manager.condor_spool, spool)
 
   def test_local_parallel_keeps_local_paths(self):
     manager = self.manager()
@@ -72,7 +87,75 @@ class CondorSubmissionTest(unittest.TestCase):
       manager._SubmissionManager__setup_temp_file_paths()
     make_temporary.assert_not_called()
     self.assertIsNone(manager.condor_stage_dir)
+    self.assertFalse(manager.condor_spool)
     self.assertTrue(manager.condor_run_script_name.startswith("tmp/"))
+
+  def test_submit_command_and_factory_options_match_spooling_mode(self):
+    for spool, save_logs, dry in ((False, True, False), (True, True, False), (True, False, False), (True, True, True)):
+      with self.subTest(spool=spool, save_logs=save_logs, dry=dry), tempfile.TemporaryDirectory() as temporary:
+        manager = self.manager()
+        manager.files_config = SimpleNamespace(input_file_list=["input.root"])
+        manager.app_name = "selector"
+        manager.config_path = "config.py"
+        manager.extra_args = None
+        args = SimpleNamespace(
+          job_flavour="espresso",
+          memory=1,
+          max_materialize=500,
+          resubmit_job=None,
+          resubmit_failed=False,
+          save_logs=save_logs,
+          dry=dry,
+        )
+        work_dir = "/eos/user/t/test/analysis/bin" if spool else "/afs/cern.ch/user/t/test/analysis/bin"
+        python = "/eos/home-t/test/env/bin/python" if spool else "/afs/cern.ch/user/t/test/env/bin/python"
+
+        def copy_templates(manager=manager):
+          shutil.copyfile(FRAMEWORK / "templates/condor_run.template.sh", manager.condor_run_script_name)
+          shutil.copyfile(FRAMEWORK / "templates/condor_config_lxplus.template.sub", manager.condor_config_name)
+
+        with (
+          patch.object(MODULE, "get_facility", return_value="lxplus"),
+          patch.dict(os.environ, {"TEA_CONDOR_DIR": temporary, "LD_LIBRARY_PATH": "/test/conda/lib"}),
+          patch.object(MODULE.os, "getcwd", return_value=work_dir),
+          patch.object(MODULE.sys, "executable", python),
+          patch.object(manager, "_SubmissionManager__copy_templates", side_effect=copy_templates),
+          patch.object(manager, "_SubmissionManager__setup_voms_proxy", return_value="unset X509_USER_PROXY"),
+          patch.object(MODULE, "info") as messages,
+          patch.object(MODULE.subprocess, "run", return_value=SimpleNamespace(stdout="12345.0 - 12345.0\n")) as submit,
+        ):
+          jobs = manager.run_condor(args)
+        expected = ["condor_submit", "-spool", "-terse"] if spool else ["condor_submit"]
+        if dry:
+          submit.assert_not_called()
+          self.assertEqual(manager.condor_cluster_ids, [])
+          self.assertFalse((Path(manager.condor_stage_dir) / "cluster_id").exists())
+          continue
+        submit.assert_called_once()
+        self.assertEqual(submit.call_args.args[0], expected + [manager.condor_config_name])
+        self.assertEqual(submit.call_args.kwargs["cwd"], manager.condor_stage_dir)
+        self.assertNotIn("LD_LIBRARY_PATH", submit.call_args.kwargs["env"])
+        self.assertTrue(submit.call_args.kwargs["check"])
+        self.assertEqual(jobs, [(manager.condor_run_script_name, 1, manager.submission_id)])
+        if spool:
+          self.assertEqual(manager.condor_cluster_ids, [12345])
+          self.assertEqual((Path(manager.condor_stage_dir) / "cluster_id").read_text(), "12345\n")
+          output = "\n".join(call.args[0] for call in messages.call_args_list)
+          self.assertIn("condor_transfer_data 12345", output)
+          self.assertEqual("only after retrieval" in output, save_logs)
+          self.assertEqual(submit.call_args.kwargs["stdout"], subprocess.PIPE)
+          self.assertTrue(submit.call_args.kwargs["text"])
+        else:
+          self.assertEqual(manager.condor_cluster_ids, [])
+          self.assertFalse((Path(manager.condor_stage_dir) / "cluster_id").exists())
+        script = Path(manager.condor_run_script_name).read_text()
+        self.assertIn(f"exec {python} condor_runner.py", script)
+        subprocess.run(["bash", "-n", manager.condor_run_script_name], check=True)
+        description = Path(manager.condor_config_name).read_text()
+        self.assertEqual("max_materialize" in description, not spool)
+        self.assertEqual("max_idle" in description, not spool)
+        self.assertIn("should_transfer_files   = YES", description)
+        self.assertIn(manager.input_files_list_file_name, description)
 
   def test_valid_proxy_and_manifest_are_transferred_and_cd_failure_is_fatal(self):
     with tempfile.TemporaryDirectory() as temporary:

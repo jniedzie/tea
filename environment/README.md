@@ -49,11 +49,33 @@ conda-lock lock \
 `virtual-packages.yml` fixes the assumed glibc and macOS compatibility floors.
 Review all three lock diffs and let CI install them without an existing cache.
 `tea` installs the active lock at the stable, editor-friendly prefix
-`${TEA_HOME:-~/.tea}/environments/tea`. Changing a lock replaces that
-environment, and activation removes obsolete hash-named environments created by
-older `tea` versions. Never edit an explicit lock by hand. If the same home
-directory is shared concurrently across different operating systems, configure
-a separate `TEA_HOME` for each system.
+`${TEA_HOME:-~/.tea}/environments/tea`. Activation preserves existing environments,
+including older hash-named prefixes. A failed fresh installation removes only
+the incomplete prefix created by that attempt, so rerunning the build can retry.
+An existing prefix with a missing completion marker is never assumed safe to
+delete. Installation lock waits print their path and the installer's host/PID;
+check that process on its host before removing an abandoned lock.
+
+When dependencies change, choose a new, empty home. Migration also rebuilds the
+analysis binaries, so first stop jobs and shells using this analysis checkout,
+or migrate a separate checkout while they finish. From that analysis directory,
+run:
+
+```bash
+./tea/migrate.sh --tea-home /new/absolute/tea-home
+```
+
+This records the new home and builds there without replacing the old runtime.
+`build.sh --clean` only cleans analysis build products; it does not replace an
+environment. For a prefix left incomplete by a killed installer or an older
+version, first check that no installer, jobs, or shells still use it. Then either
+use the new-home migration above, or move that prefix aside to an unused backup
+path and rerun the build. Moving a runtime is only safe after its users stop;
+keep it at its original path while any user remains active.
+
+Never edit an explicit lock by hand. If the same home directory is shared
+concurrently across different operating systems, configure a separate `TEA_HOME`
+for each system.
 
 The formatting tools are pinned in `environment.yml` and must match
 `.pre-commit-config.yaml`. In particular, `tea` uses clang-format 19.1.7 because

@@ -8,9 +8,7 @@ combine_path = "/afs/cern.ch/work/j/jniedzie/public/combine/CMSSW_14_1_0_pre4/sr
 skip_combine = False
 
 # Definition of the input and output files and directories.
-datacards_output_path = "../significance/datacards/"
-plots_output_path = "../significance/plots/"
-results_output_path = "../significance/results/"
+limits_output_path = "../significance"
 
 # If True, poisson error on empty bins (1.84) will be added to data histograms. We can leave it False here.
 add_uncertainties_on_zero = False
@@ -60,13 +58,3 @@ nuisances = {
     "tt_semi": 1.017,
   }
 }
-
-# Plotting parameters for the limit plot (brazil plot).
-x_min = 1.0
-x_max = 60.0
-
-y_min = 1e-6
-y_max = 1e-1
-
-x_title = "m_{a} [GeV]"
-y_title = "#sigma(pp #rightarrow t#bar{t}a) #times B(a #rightarrow #mu#mu) [pb]"
