@@ -2,7 +2,7 @@
 """Plot explicitly configured points or labeled JSON limit results."""
 
 import argparse
-from Logger import info, info_frame
+from Logger import info
 from LimitConfig import load_config, plot_inputs, plot_paths
 
 
@@ -27,7 +27,7 @@ def main() -> None:
       save_canvas(canvas, path)
   finally:
     canvas.Close()
-  info_frame("Limit plots were saved to:\n" + "\n".join(map(str, paths)))
+  info("Limit plots were saved to:\n" + "\n".join(map(str, paths)))
 
 
 if __name__ == "__main__":
