@@ -704,6 +704,7 @@ class HistogramPlotter:
         diagonal.SetLineColor(ROOT.kBlack)
         diagonal.SetLineStyle(ROOT.kSolid)
         diagonal.Draw("same")
+      self.cmsLabelsManager.drawLabels(canvas, update=False)
       canvas.Update()
       for output_format in self.output_formats:
         extension = output_format.lstrip(".")

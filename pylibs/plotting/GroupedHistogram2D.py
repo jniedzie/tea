@@ -262,7 +262,12 @@ class GroupedHistogram2DPlotter:
         item.SetMinimum(minimum)
         item.SetMaximum(maximum)
         item.SetContour(len(opaque))
-    legend_config = getattr(self.config, "legend2D", Legend(0.16, 0.72, 0.46, 0.88, "f", fill_color=ROOT.kWhite))
+    default_legend = (
+      Legend(0.16, 0.76, 0.86, 0.80, text_size=14)
+      if compact
+      else Legend(0.16, 0.72, 0.46, 0.88, "f", fill_color=ROOT.kWhite)
+    )
+    legend_config = getattr(self.config, "legend2D", default_legend)
     legend = legend_config.getRootLegend()
     frame = clone_histogram(groups[0][1], "frame")
     frame.Reset()
@@ -280,7 +285,7 @@ class GroupedHistogram2DPlotter:
       label = group.legend_description
       if not any(item.GetBinContent(x, y) > 0 for x, y in displayed_bins(item)):
         label += " (no positive displayed weight)"
-      legend.AddEntry(swatch, label, "f")
+      legend.AddEntry(ROOT.nullptr if compact else swatch, label, "" if compact else "f")
       self.retained.extend((item, swatch))
     contours_enabled = (
       getattr(self.config, "show_contours_2D", False) if hist.show_contours is None else hist.show_contours
@@ -348,7 +353,8 @@ class GroupedHistogram2DPlotter:
       diagonal.Draw("same")
       self.retained.append(diagonal)
     plot.RedrawAxis()
-    legend.Draw()
+    if not compact:
+      legend.Draw()
     self.retained.extend((plot, legend))
     self.palette_exec(saved_palette)
     for index, (group, item) in enumerate([] if compact else heatmaps):
