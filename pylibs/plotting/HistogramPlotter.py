@@ -704,7 +704,7 @@ class HistogramPlotter:
         diagonal.SetLineColor(ROOT.kBlack)
         diagonal.SetLineStyle(ROOT.kSolid)
         diagonal.Draw("same")
-      self.cmsLabelsManager.drawLabels(canvas, update=False)
+      self.cmsLabelsManager.drawLabels2D(canvas, update=False)
       canvas.Update()
       for output_format in self.output_formats:
         extension = output_format.lstrip(".")
@@ -717,7 +717,7 @@ class HistogramPlotter:
         groups = resolve_groups(self.config, hist)
         if groups:
           canvas, basename = self.grouped2D.draw(hist, self.histosamples2D)
-          self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
+          self.cmsLabelsManager.drawLabels2D(canvas.GetPad(1))
           canvas.Modified()
           canvas.Update()
           for output_format in self.output_formats:

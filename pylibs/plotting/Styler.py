@@ -103,6 +103,8 @@ class Styler:
     top_margin = margins.get("top", self.topMargin)
     pad_width = pad.GetWw() * pad.GetAbsWNDC()
     pad_height = pad.GetWh() * pad.GetAbsHNDC()
+    if getattr(self.config, "show_cms_labels", False) and pad_height > 0:
+      top_margin = max(top_margin, (26 + 10 + 4) / pad_height)
     minimum_margin = self.minimum2DRightMargin if with_colorbar else 0.0
     if with_colorbar and pad_width > 0:
       minimum_margin = max(minimum_margin, self.minimum2DRightMarginPixels / pad_width)

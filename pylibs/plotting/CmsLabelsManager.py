@@ -1,5 +1,7 @@
 import ROOT
 import ctypes
+from copy import copy
+from typing import Any
 from enum import Enum
 
 
@@ -210,40 +212,7 @@ class CmsLabelsManager:
     latex.GetBoundingBox(width, height)
     return width.value
 
-  def drawLabels2D(self, canvas):
-    if self.cmsText is not None:
-      latex = ROOT.TLatex()
-      latex.SetTextFont(self.cmsTextFont)
-      latex.SetTextSize(self.cmsTextSize)
-      latex.SetTextAlign(13)
-      latex.SetNDC()
-      latex.DrawLatex(0.1, 0.99, self.cmsText)
-
-    canvas.Update()
-    cms_width = 0.0
-    if self.cmsText is not None:
-      cms_text_width = self.__textWidth(self.cmsText, self.cmsTextFont, self.cmsTextSize)
-      space_width = self.__textWidth("CMS x", self.cmsTextFont, self.cmsTextSize) - self.__textWidth(
-        "CMSx", self.cmsTextFont, self.cmsTextSize
-      )
-      cms_width = (cms_text_width + space_width) / canvas.GetWw()
-
-    if self.extraText is not None:
-      latex = ROOT.TLatex()
-      latex.SetTextFont(self.extraTextFont)
-      latex.SetTextAlign(13)
-      latex.SetTextSize(self.labelTextSize)
-      latex.SetNDC()
-      posX_ = 0.1 if self.cmsText is None else 0.1 + cms_width
-      posY_ = 0.99 if self.cmsText is None else 0.99 - 0.01
-      latex.DrawLatex(posX_, posY_, self.extraText)
-
-    lumiText = self.lumi + self.collision_energy
-    latex = ROOT.TLatex()
-    latex.SetNDC()
-    latex.SetTextAngle(0)
-    latex.SetTextColor(ROOT.kBlack)
-    latex.SetTextFont(43)
-    latex.SetTextAlign(31)
-    latex.SetTextSize(self.labelTextSize)
-    latex.DrawLatex(1 - self.right, 1 - self.top + 2 * self.lumiTextOffset * self.top + 0.01, lumiText)
+  def drawLabels2D(self, canvas: Any, update: bool = True) -> None:
+    labels = copy(self)
+    labels.label_outside_axes = True
+    labels.drawLabels(canvas, update=update)
