@@ -84,7 +84,7 @@ def main():
   plotter.drawProfiles2D()
 
   logger_print()
-  info(f"Plots were saved to:\n{os.path.abspath(config.output_path)}")
+  info(f"\nPlots were saved to:\n\n{os.path.abspath(config.output_path)}")
 
 
 if __name__ == "__main__":
