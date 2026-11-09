@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from Logger import error, info, info_frame, logger_print, ProgressBar
+from Logger import error, info, logger_print, ProgressBar
 import importlib
 import argparse
 import os
@@ -84,7 +84,7 @@ def main():
   plotter.drawProfiles2D()
 
   logger_print()
-  info_frame(f"Plots were saved to:\n{os.path.abspath(config.output_path)}")
+  info(f"\nPlots were saved to:\n\n{os.path.abspath(config.output_path)}")
 
 
 if __name__ == "__main__":
