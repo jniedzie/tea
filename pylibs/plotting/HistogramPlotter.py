@@ -713,14 +713,15 @@ class HistogramPlotter:
     if hasattr(self.config, "histograms2D"):
       legacy_names = set()
       for hist in self.config.histograms2D:
-        if resolve_groups(self.config, hist):
-          canvas = self.grouped2D.draw(hist, self.histosamples2D)
+        groups = resolve_groups(self.config, hist)
+        if groups:
+          canvas, basename = self.grouped2D.draw(hist, self.histosamples2D)
           self.cmsLabelsManager.drawLabels(canvas.GetPad(1))
           canvas.Modified()
           canvas.Update()
           for output_format in self.output_formats:
             extension = output_format.lstrip(".")
-            path = self.config.output_path + "/" + hist.getOutputName() + "_grouped." + extension
+            path = self.config.output_path + "/" + basename + "." + extension
             save_canvas(canvas, path)
         else:
           legacy_names.add(hist.getName())

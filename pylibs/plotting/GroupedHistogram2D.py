@@ -212,7 +212,7 @@ class GroupedHistogram2DPlotter:
     self.retained.append(execution)
     return execution
 
-  def draw(self, hist: Any, objects: list[tuple[Any, Any]]) -> Any:
+  def draw(self, hist: Any, objects: list[tuple[Any, Any]]) -> tuple[Any, str]:
     groups = self.prepare_groups(hist, objects)
     saved_palette = tuple(ROOT.gStyle.GetColorPalette(index) for index in range(ROOT.gStyle.GetNumberOfColors()))
     try:
@@ -220,19 +220,27 @@ class GroupedHistogram2DPlotter:
     finally:
       ROOT.gStyle.SetPalette(len(saved_palette), array("i", saved_palette))
 
-  def _draw(self, hist: Any, groups: list[tuple[HistogramGroup2D, Any]], saved_palette: tuple[int, ...]) -> Any:
+  def _draw(
+    self, hist: Any, groups: list[tuple[HistogramGroup2D, Any]], saved_palette: tuple[int, ...]
+  ) -> tuple[Any, str]:
     size = getattr(self.config, "canvas_size_2Dhists", self.config.canvas_size)
     heatmaps = [(group, item) for group, item in groups if group.draw_heatmap]
-    column_width = 160
+    compact = (
+      len(groups) == 1
+      and groups[0][0].draw_heatmap
+      and groups[0][0].alpha == 1.0
+      and groups[0][0].show_contours is False
+    )
+    column_width = 0 if compact else 160
     width = size[0] + column_width * len(heatmaps)
-    name = hist.getOutputName() + "_grouped"
+    name = hist.getOutputName() + ("" if compact else "_grouped")
     canvas = ROOT.TCanvas(f"{name}_{next(_ids)}", hist.title, width, size[1])
     canvas.SetCanvasSize(width, size[1])
     plot = ROOT.TPad(f"tea_plot_{next(_ids)}", "", 0, 0, size[0] / width, 1)
     plot.SetNumber(1)
     plot.Draw()
     plot.cd()
-    self.styler.setup_2d_pad(plot, square_frame=hist.comparable_axes, with_colorbar=False)
+    self.styler.setup_2d_pad(plot, square_frame=hist.comparable_axes, with_colorbar=compact)
     plot.SetLogx(hist.log_x)
     plot.SetLogy(hist.log_y)
     plot.SetLogz(hist.log_z and bool(heatmaps))
@@ -264,8 +272,8 @@ class GroupedHistogram2DPlotter:
     self.retained.append(frame)
     for group, item in heatmaps:
       opaque, transparent = palettes[group.name]
-      self.palette_exec(transparent)
-      item.Draw("COL1 SAME")
+      self.palette_exec(opaque if compact else transparent)
+      item.Draw("COLZ SAME" if compact else "COL1 SAME")
       swatch = ROOT.TBox()
       swatch.SetFillColor(opaque[len(opaque) // 2] if group.palette == ROOT.kGreyScale else opaque[-1])
       swatch.SetFillStyle(1001)
@@ -343,7 +351,7 @@ class GroupedHistogram2DPlotter:
     legend.Draw()
     self.retained.extend((plot, legend))
     self.palette_exec(saved_palette)
-    for index, (group, item) in enumerate(heatmaps):
+    for index, (group, item) in enumerate([] if compact else heatmaps):
       opaque, _ = palettes[group.name]
       canvas.cd()
       bar_pad = ROOT.TPad(
@@ -374,4 +382,4 @@ class GroupedHistogram2DPlotter:
     canvas.Modified()
     canvas.Update()
     self.canvases.append(canvas)
-    return canvas
+    return canvas, name
